@@ -1,0 +1,306 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout
+    title="Tim Shores - Data Storyteller"
+    description="Data Storyteller & Communication Strategist - Turning Complexity into Clear Decisions"
+>
+    <div class="hero-section">
+        <div class="hero-text">
+            <h1>Hi, I'm Tim</h1>
+            <div class="subtitle-group">
+                <p class="subtitle-main">Data Storyteller</p>
+                <p class="subtitle-secondary">Community Facilitator</p>
+                <p class="subtitle-accent">Turning Complexity into Strategy</p>
+            </div>
+        </div>
+        <div class="portrait-container">
+            <img id="portrait" src="/portrait-a.png" alt="Tim Shores" class="portrait-image" />
+        </div>
+    </div>
+    
+    <h2>About Me</h2>
+    <div class="about-card">
+        <p>
+            I help people make sense of complex information — finding the signal, shaping the story, and making it useful.
+        </p>
+        <p>
+            My work lives at the intersection of data, storytelling, strategy, and community. I turn systems thinking, technical details, and messy datasets into clear insights people can act on.
+        </p>
+        <p>
+            With this in mind, always: <em>"By the time it can be captured in numbers, it's too late"</em> — Peter Drucker. The future is too complex to behave according to our frameworks.
+        </p>
+    </div>
+    
+    <h2>Skills</h2>
+    <ul class="skills-list">
+        <li>Data analysis</li>
+        <li>Communication strategy</li>
+        <li>Social entrepreneurship</li>
+        <li>Policy analysis</li>
+    </ul>
+    
+    <h2>Experience</h2>
+    <div class="experience-item">
+        <h3>Job Title</h3>
+        <p class="company">Company Name • 2020 - Present</p>
+        <p>Brief description of your role and accomplishments.</p>
+    </div>
+    
+    <div class="experience-item">
+        <h3>Previous Job Title</h3>
+        <p class="company">Previous Company • 2018 - 2020</p>
+        <p>Brief description of your role and accomplishments.</p>
+    </div>
+</Layout>
+
+<script>
+    let isAlternate = false;
+    const portrait = document.getElementById('portrait');
+
+    if (portrait) {
+        portrait.addEventListener('click', () => {
+            isAlternate = !isAlternate;
+            portrait.src = isAlternate ? '/portrait-b.png' : '/portrait-a.png';
+        });
+    }
+</script>
+
+<style>
+    .hero-section {
+        display: flex;
+        align-items: center;
+        gap: 2rem;  /* Reduced from 3rem */
+        margin-bottom: 3rem;
+    }
+
+    .hero-text {
+        flex: 1;
+    }
+
+    .subtitle-group {
+        margin-top: 0.5rem;
+    }
+
+    .subtitle-main,
+	.subtitle-secondary,
+	.subtitle-accent {
+		font-size: 1.2rem;
+		color: var(--ink-fade);
+		margin-bottom: 0.25rem;
+		font-weight: 400;
+	}
+
+	.subtitle-accent {
+		margin-bottom: 0;
+	}
+
+    .portrait-container {
+        flex-shrink: 0;
+        position: relative;
+    }
+
+    .portrait-image {
+        width: 400px;
+        height: 400px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 3px solid var(--manila-dark);
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        position: relative;
+        cursor: default;
+    }
+
+    .portrait-image:hover {
+        transform: translate(-8px, -8px);
+        box-shadow:
+            1px 1px 0 0 var(--accent),
+            2px 2px 0 0 var(--accent),
+            3px 3px 0 0 var(--accent),
+            4px 4px 0 0 var(--accent),
+            5px 5px 0 0 var(--accent),
+            6px 6px 0 0 var(--accent),
+            7px 7px 0 0 var(--accent),
+            8px 8px 0 0 var(--accent),
+            9px 9px 0 0 var(--accent),
+            10px 10px 0 0 var(--accent),
+            11px 11px 0 0 var(--accent),
+            12px 12px 0 0 var(--accent),
+            13px 13px 0 0 var(--accent),
+            14px 14px 0 0 var(--accent),
+            15px 15px 0 0 var(--accent),
+            16px 16px 0 0 var(--accent),
+            17px 17px 0 0 var(--accent),
+            18px 18px 0 0 var(--accent),
+            19px 19px 0 0 var(--accent),
+            20px 20px 0 0 var(--accent),
+            21px 21px 0 0 var(--accent),
+            22px 22px 0 0 var(--accent),
+            23px 23px 0 0 var(--accent),
+            24px 24px 0 0 var(--accent),
+            25px 25px 0 0 var(--accent);
+    }
+
+    .skills-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        list-style: none;
+        margin: 1.5rem 0;
+        padding: 1rem;
+    }
+
+    .skills-list li {
+        padding: 0.5rem 1rem;
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 0.5rem;
+        font-weight: 500;
+        color: var(--ink-light);
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        position: relative;
+    }
+
+    .skills-list li:hover {
+        transform: translate(-4px, -4px);
+        box-shadow: 
+            1px 1px 0 0 var(--accent),
+            2px 2px 0 0 var(--accent),
+            3px 3px 0 0 var(--accent),
+            4px 4px 0 0 var(--accent),
+            5px 5px 0 0 var(--accent),
+            6px 6px 0 0 var(--accent),
+            7px 7px 0 0 var(--accent),
+            8px 8px 0 0 var(--accent),
+            9px 9px 0 0 var(--accent),
+            10px 10px 0 0 var(--accent),
+            11px 11px 0 0 var(--accent),
+            12px 12px 0 0 var(--accent);
+    }
+
+    .about-card {
+        padding: 2rem;
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 0.5rem;
+        margin: 1rem 0 2rem 0;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        position: relative;
+    }
+
+    .about-card:hover {
+        transform: translate(-8px, -8px);
+        box-shadow: 
+            1px 1px 0 0 var(--accent),
+            2px 2px 0 0 var(--accent),
+            3px 3px 0 0 var(--accent),
+            4px 4px 0 0 var(--accent),
+            5px 5px 0 0 var(--accent),
+            6px 6px 0 0 var(--accent),
+            7px 7px 0 0 var(--accent),
+            8px 8px 0 0 var(--accent),
+            9px 9px 0 0 var(--accent),
+            10px 10px 0 0 var(--accent),
+            11px 11px 0 0 var(--accent),
+            12px 12px 0 0 var(--accent),
+            13px 13px 0 0 var(--accent),
+            14px 14px 0 0 var(--accent),
+            15px 15px 0 0 var(--accent),
+            16px 16px 0 0 var(--accent),
+            17px 17px 0 0 var(--accent),
+            18px 18px 0 0 var(--accent),
+            19px 19px 0 0 var(--accent),
+            20px 20px 0 0 var(--accent),
+            21px 21px 0 0 var(--accent),
+            22px 22px 0 0 var(--accent),
+            23px 23px 0 0 var(--accent),
+            24px 24px 0 0 var(--accent),
+            25px 25px 0 0 var(--accent);
+    }
+
+    .about-card p {
+        margin-bottom: 1rem;
+        max-width: none;  /* Override the global 65ch limit */
+    }
+
+    .about-card p:last-child {
+        margin-bottom: 0;
+    }
+
+    .experience-item {
+        margin: 2rem 0;
+        padding: 1.5rem;
+        border-left: 2px solid var(--manila-dark);
+        background: var(--card);
+        border-radius: 0 0.5rem 0.5rem 0;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        position: relative;
+    }
+
+    .experience-item:hover {
+        transform: translate(-8px, -8px);
+        box-shadow: 
+            1px 1px 0 0 var(--accent),
+            2px 2px 0 0 var(--accent),
+            3px 3px 0 0 var(--accent),
+            4px 4px 0 0 var(--accent),
+            5px 5px 0 0 var(--accent),
+            6px 6px 0 0 var(--accent),
+            7px 7px 0 0 var(--accent),
+            8px 8px 0 0 var(--accent),
+            9px 9px 0 0 var(--accent),
+            10px 10px 0 0 var(--accent),
+            11px 11px 0 0 var(--accent),
+            12px 12px 0 0 var(--accent),
+            13px 13px 0 0 var(--accent),
+            14px 14px 0 0 var(--accent),
+            15px 15px 0 0 var(--accent),
+            16px 16px 0 0 var(--accent),
+            17px 17px 0 0 var(--accent),
+            18px 18px 0 0 var(--accent),
+            19px 19px 0 0 var(--accent),
+            20px 20px 0 0 var(--accent),
+            21px 21px 0 0 var(--accent),
+            22px 22px 0 0 var(--accent),
+            23px 23px 0 0 var(--accent),
+            24px 24px 0 0 var(--accent),
+            25px 25px 0 0 var(--accent);
+    }
+
+    .company {
+        color: var(--ink-fade);
+        font-size: 0.875rem;
+        margin-bottom: 0.75rem;
+    }
+
+    @media (max-width: 768px) {
+        .hero-section {
+            flex-direction: column-reverse;
+            text-align: center;
+            gap: 1.5rem;
+        }
+
+        .portrait-placeholder,
+        .portrait-image {
+            width: 200px;
+            height: 200px;
+        }
+
+        .subtitle-main {
+            font-size: 1.25rem;
+        }
+
+        .subtitle-secondary {
+            font-size: 1.1rem;
+        }
+
+        .subtitle-accent {
+            font-size: 0.9rem;
+        }
+
+        .skills-list {
+            justify-content: center;
+        }
+    }
+</style>

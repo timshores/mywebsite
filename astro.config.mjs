@@ -1,0 +1,6 @@
+// @ts-check
+import { defineConfig } from 'astro/config';
+
+export default defineConfig({
+  site: 'https://timshores.com',  // Your actual domain
+});

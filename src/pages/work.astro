@@ -1,0 +1,208 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout
+    title="Work - Tim Shores"
+    description="View my portfolio and projects"
+>
+    <h1>My Work</h1>
+    <p class="subtitle">A selection of projects I've worked on</p>
+    
+    <div class="project-grid">
+        <article class="project-card">
+            <span class="project-tag">Web Development</span>
+            <h3>Project Name 1</h3>
+            <p>Brief description of the project, what it does, and what technologies were used.</p>
+            <div class="project-tech">
+                <span>React</span>
+                <span>TypeScript</span>
+                <span>Node.js</span>
+            </div>
+            <div class="project-links">
+                <!-- <a href="#" target="_blank" rel="noopener noreferrer">View Project →</a>
+                <a href="#" target="_blank" rel="noopener noreferrer">GitHub →</a> -->
+            </div>
+        </article>
+
+        <article class="project-card">
+            <span class="project-tag">Design</span>
+            <h3>Project Name 2</h3>
+            <p>Brief description of the project, what it does, and what technologies were used.</p>
+            <div class="project-tech">
+                <span>Figma</span>
+                <span>UI/UX</span>
+                <span>Prototyping</span>
+            </div>
+            <div class="project-links">
+                <!-- <a href="#" target="_blank" rel="noopener noreferrer">View Project →</a> -->
+            </div>
+        </article>
+
+        <article class="project-card">
+            <span class="project-tag">Full Stack</span>
+            <h3>Project Name 3</h3>
+            <p>Brief description of the project, what it does, and what technologies were used.</p>
+            <div class="project-tech">
+                <span>Python</span>
+                <span>Django</span>
+                <span>PostgreSQL</span>
+            </div>
+            <div class="project-links">
+                <!-- <a href="#" target="_blank" rel="noopener noreferrer">View Project →</a>
+                <a href="#" target="_blank" rel="noopener noreferrer">GitHub →</a> -->
+            </div>
+        </article>
+        
+        <article class="project-card">
+            <span class="project-tag">Data Analysis</span>
+            <h3>Policy Impact Study</h3>
+            <p>Analyzed complex datasets to identify trends and create actionable insights for decision-makers.</p>
+            <div class="project-tech">
+                <span>Python</span>
+                <span>R</span>
+                <span>Tableau</span>
+            </div>
+        </article>
+        
+        <article class="project-card">
+            <span class="project-tag">Strategy</span>
+            <h3>Communication Framework</h3>
+            <p>Developed comprehensive communication strategies to translate technical complexity for diverse audiences.</p>
+            <div class="project-tech">
+                <span>Research</span>
+                <span>Writing</span>
+                <span>Facilitation</span>
+            </div>
+        </article>
+        
+        <article class="project-card">
+            <span class="project-tag">Community</span>
+            <h3>Social Impact Initiative</h3>
+            <p>Led community-driven project connecting data insights with grassroots organizing efforts.</p>
+            <div class="project-tech">
+                <span>Organizing</span>
+                <span>Data Viz</span>
+                <span>Outreach</span>
+            </div>
+        </article>
+    </div>
+</Layout>
+
+<style>
+    .subtitle {
+        font-size: 1.25rem;
+        color: var(--ink-fade);
+        margin-bottom: 2rem;
+        font-weight: 400;
+    }
+
+    .project-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+        gap: 3rem;
+        margin: 2rem 0;
+        padding: 2rem;
+    }
+
+    .project-card {
+        background: var(--card);
+        border: 1px solid var(--line);
+        padding: 1.5rem;
+        transition: all 0.2s ease;
+        position: relative;
+        border-radius: 0.75rem;
+    }
+
+    .project-card:hover {
+    transform: translate(-8px, -8px);
+    box-shadow: 
+        1px 1px 0 0 var(--accent),
+        2px 2px 0 0 var(--accent),
+        3px 3px 0 0 var(--accent),
+        4px 4px 0 0 var(--accent),
+        5px 5px 0 0 var(--accent),
+        6px 6px 0 0 var(--accent),
+        7px 7px 0 0 var(--accent),
+        8px 8px 0 0 var(--accent),
+        9px 9px 0 0 var(--accent),
+        10px 10px 0 0 var(--accent),
+        11px 11px 0 0 var(--accent),
+        12px 12px 0 0 var(--accent),
+        13px 13px 0 0 var(--accent),
+        14px 14px 0 0 var(--accent),
+        15px 15px 0 0 var(--accent),
+        16px 16px 0 0 var(--accent),
+        17px 17px 0 0 var(--accent),
+        18px 18px 0 0 var(--accent),
+        19px 19px 0 0 var(--accent),
+        20px 20px 0 0 var(--accent),
+        21px 21px 0 0 var(--accent),
+        22px 22px 0 0 var(--accent),
+        23px 23px 0 0 var(--accent),
+        24px 24px 0 0 var(--accent),
+        25px 25px 0 0 var(--accent);
+}
+
+    .project-tag {
+        display: inline-block;
+        padding: 0.25rem 0.75rem;
+        background: var(--manila);
+        color: var(--ink);
+        border-radius: 1rem;
+        font-size: 0.75rem;
+        font-weight: 500;
+        margin-bottom: 0.75rem;
+    }
+
+    .project-card h3 {
+        margin-bottom: 0.75rem;
+    }
+
+    .project-card p {
+        color: var(--ink-light);
+        margin-bottom: 1rem;
+    }
+
+    .project-tech {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        margin: 1rem 0;
+    }
+
+    .project-tech span {
+        padding: 0.25rem 0.5rem;
+        background: var(--paper);
+        border: 1px solid var(--line);
+        border-radius: 0.25rem;
+        font-size: 0.875rem;
+        color: var(--ink-light);
+    }
+
+    .project-links {
+        display: flex;
+        gap: 1rem;
+        flex-wrap: wrap;
+        margin-top: 1rem;
+    }
+
+    .project-links a {
+        color: var(--accent);
+        font-weight: 500;
+        text-decoration: none;
+        transition: color 0.2s;
+        font-size: 0.875rem;
+    }
+
+    .project-links a:hover {
+        color: var(--ink);
+        text-decoration: underline;
+    }
+
+    @media (max-width: 768px) {
+        .project-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>

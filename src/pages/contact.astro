@@ -1,0 +1,186 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout
+    title="Contact - Tim Shores"
+    description="Get in touch with me"
+>
+    <h1>Get in Touch</h1>
+    <p class="subtitle">I'd love to hear from you</p>
+    
+    <div class="contact-grid">
+        <div class="contact-item">
+            <div class="contact-label">Email</div>
+            <a href="mailto:your.email@example.com" class="contact-value">your.email@example.com</a>
+        </div>
+        
+        <div class="contact-item">
+            <div class="contact-label">Location</div>
+            <span class="contact-value">City, Country</span>
+        </div>
+        
+        <div class="contact-item">
+            <div class="contact-label">Social</div>
+            <div class="social-links">
+                <!-- Uncomment and update with your actual links -->
+                <!-- <a href="https://github.com/yourusername" target="_blank" rel="noopener noreferrer" class="contact-value">
+                    GitHub
+                </a>
+                <a href="https://linkedin.com/in/yourusername" target="_blank" rel="noopener noreferrer" class="contact-value">
+                    LinkedIn
+                </a>
+                <a href="https://twitter.com/yourusername" target="_blank" rel="noopener noreferrer" class="contact-value">
+                    Twitter
+                </a> -->
+                <span class="contact-value">Coming soon</span>
+            </div>
+        </div>
+    </div>
+    
+    <div class="contact-note">
+        <p>
+            Currently available for freelance projects and collaborations. Feel free to reach out via email or connect with me on social media.
+        </p>
+    </div>
+    
+    <h2>Availability</h2>
+    <p>
+        I'm open to select consulting engagements and collaborative projects that align with my focus on making complex information actionable. I'm particularly interested in work that combines data analysis, strategic communication, and community impact.
+    </p>
+</Layout>
+
+<style>
+    .subtitle {
+        font-size: 1.25rem;
+        color: var(--ink-fade);
+        margin-bottom: 3rem;
+        font-weight: 400;
+    }
+
+    .contact-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 2rem;
+        margin: 2rem 0 3rem 0;
+        padding: 1rem;
+    }
+
+    .contact-item {
+        padding: 1.5rem;
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 0.5rem;
+        text-align: center;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        position: relative;
+    }
+
+    .contact-item:hover {
+        transform: translate(-8px, -8px);
+        box-shadow: 
+            1px 1px 0 0 var(--accent),
+            2px 2px 0 0 var(--accent),
+            3px 3px 0 0 var(--accent),
+            4px 4px 0 0 var(--accent),
+            5px 5px 0 0 var(--accent),
+            6px 6px 0 0 var(--accent),
+            7px 7px 0 0 var(--accent),
+            8px 8px 0 0 var(--accent),
+            9px 9px 0 0 var(--accent),
+            10px 10px 0 0 var(--accent),
+            11px 11px 0 0 var(--accent),
+            12px 12px 0 0 var(--accent),
+            13px 13px 0 0 var(--accent),
+            14px 14px 0 0 var(--accent),
+            15px 15px 0 0 var(--accent),
+            16px 16px 0 0 var(--accent),
+            17px 17px 0 0 var(--accent),
+            18px 18px 0 0 var(--accent),
+            19px 19px 0 0 var(--accent),
+            20px 20px 0 0 var(--accent),
+            21px 21px 0 0 var(--accent),
+            22px 22px 0 0 var(--accent),
+            23px 23px 0 0 var(--accent),
+            24px 24px 0 0 var(--accent),
+            25px 25px 0 0 var(--accent);
+    }
+
+    .contact-label {
+        font-size: 0.875rem;
+        color: var(--ink-fade);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 0.5rem;
+    }
+
+    .contact-value {
+        color: var(--ink);
+        text-decoration: none;
+        font-weight: 500;
+        transition: color 0.2s ease;
+        display: inline-block;
+    }
+
+    .contact-value:hover {
+        color: var(--accent);
+    }
+
+    .social-links {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        align-items: center;
+    }
+
+    .contact-note {
+        padding: 1.5rem;
+        background: var(--card);
+        border-left: 3px solid var(--manila-dark);
+        border-radius: 0 0.5rem 0.5rem 0;
+        margin: 3rem 0;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        position: relative;
+    }
+
+    .contact-note:hover {
+        transform: translate(-8px, -8px);
+        box-shadow: 
+            1px 1px 0 0 var(--accent),
+            2px 2px 0 0 var(--accent),
+            3px 3px 0 0 var(--accent),
+            4px 4px 0 0 var(--accent),
+            5px 5px 0 0 var(--accent),
+            6px 6px 0 0 var(--accent),
+            7px 7px 0 0 var(--accent),
+            8px 8px 0 0 var(--accent),
+            9px 9px 0 0 var(--accent),
+            10px 10px 0 0 var(--accent),
+            11px 11px 0 0 var(--accent),
+            12px 12px 0 0 var(--accent),
+            13px 13px 0 0 var(--accent),
+            14px 14px 0 0 var(--accent),
+            15px 15px 0 0 var(--accent),
+            16px 16px 0 0 var(--accent),
+            17px 17px 0 0 var(--accent),
+            18px 18px 0 0 var(--accent),
+            19px 19px 0 0 var(--accent),
+            20px 20px 0 0 var(--accent),
+            21px 21px 0 0 var(--accent),
+            22px 22px 0 0 var(--accent),
+            23px 23px 0 0 var(--accent),
+            24px 24px 0 0 var(--accent),
+            25px 25px 0 0 var(--accent);
+    }
+
+    .contact-note p {
+        margin: 0;
+        color: var(--ink-light);
+    }
+
+    @media (max-width: 768px) {
+        .contact-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
