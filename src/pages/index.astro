@@ -280,6 +280,24 @@ import Layout from '../layouts/Layout.astro';
             25px 25px 0 0 var(--accent);
     }
 
+    .experience-item p,
+    .experience-item ul,
+    .experience-item ol {
+        color: var(--ink-light);
+        max-width: none;  /* Override the global 65ch limit */
+    }
+
+    .experience-item ul,
+    .experience-item ol {
+        margin-left: 1.5rem;
+        margin-bottom: 1rem;
+    }
+
+    .experience-item li {
+        color: var(--ink-light);
+        margin-bottom: 0.5rem;
+    }
+
     .company {
         color: var(--ink-fade);
         font-size: 0.875rem;
