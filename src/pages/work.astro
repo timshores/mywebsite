@@ -1,242 +1,143 @@
 ---
-import Layout from '../layouts/Layout.astro';
+import Layout from "../layouts/Layout.astro";
+import { profile } from "../data/profile";
 ---
 
-<Layout
-    title="Work - Tim Shores"
-    description="View my portfolio and projects"
->
-    <h1>My Work</h1>
-    <p class="subtitle">A selection of projects I've worked on</p>
-    
-    <div class="project-grid">
-        <article class="project-card">
-            <div class="project-content">
-                <span class="project-tag">Community Organizing</span>
-                <h3>The Leverett Comprehensive Plan</h3>
-                <p>Years in the making. Community-based participatory methods. Two year-long grant cycles, with multiple months of deliberation and public relations on both ends and throughout. Multiple surveys. Multiple mailers. Multiple trips to the print shops. Multiple rounds of improvised public speaking. Two separate citizen working groups. Communicating to help people distinguish what is obligated by policy and what is up for discretion. Enduring the unexpected. I loved every minute of it.</p>
-                <div class="project-details">
-                    <span>Action Research</span>
-                    <span>Planning</span>
-                    <span>Land Use</span>
-                </div>
-                <div class="project-links">
-                    <!-- <a href="#" target="_blank" rel="noopener noreferrer">View Project →</a>
-                    <a href="#" target="_blank" rel="noopener noreferrer">GitHub →</a> -->
-                </div>
-            </div>
-            <!-- <img src="/path-to-image.jpg" alt="Project image" class="project-photo" /> -->
-        </article>
+<Layout title={`Work - ${profile.name}`} description="Selected projects and outcomes">
+  <h1>Selected Work</h1>
+  <p class="subtitle">
+    Work focused on making technical, organizational, and policy complexity usable for
+    people making decisions.
+  </p>
 
-        <article class="project-card">
-            <div class="project-content">
-                <span class="project-tag">Design</span>
-                <h3>Project Name 2</h3>
-                <p>Brief description of the project, what it does, and what technologies were used.</p>
-                <div class="project-details">
-                    <span>Figma</span>
-                    <span>UI/UX</span>
-                    <span>Prototyping</span>
-                </div>
-                <div class="project-links">
-                    <!-- <a href="#" target="_blank" rel="noopener noreferrer">View Project →</a> -->
-                </div>
-            </div>
-        </article>
+  <div class="project-grid">
+    {profile.selectedWork.map((project) => (
+      <article class="project-card" data-expandable data-keep-left-rail>
+        <div class="project-content">
+          <span class="project-tag">{project.domain}</span>
+          <h3>{project.title}</h3>
+          <p>{project.description}</p>
+          <p class="impact">{project.impact}</p>
+          <div class="project-details">
+            {project.skills.map((skill) => <span data-expandable>{skill}</span>)}
+          </div>
+        </div>
+      </article>
+    ))}
+  </div>
 
-        <article class="project-card">
-            <div class="project-content">
-                <span class="project-tag">Full Stack</span>
-                <h3>Project Name 3</h3>
-                <p>Brief description of the project, what it does, and what technologies were used.</p>
-                <div class="project-details">
-                    <span>Python</span>
-                    <span>Django</span>
-                    <span>PostgreSQL</span>
-                </div>
-                <div class="project-links">
-                    <!-- <a href="#" target="_blank" rel="noopener noreferrer">View Project →</a>
-                    <a href="#" target="_blank" rel="noopener noreferrer">GitHub →</a> -->
-                </div>
-            </div>
-        </article>
+  <h2>Methods I Use</h2>
+  <ul class="method-list">
+    <li>Translate expert language into usable operational guidance.</li>
+    <li>Map where knowledge gets trapped and design paths to make it findable.</li>
+    <li>Combine technical writing, data analysis, and facilitation for action.</li>
+    <li>Partner with product, engineering, UX, data science, and policy teams.</li>
+  </ul>
 
-        <article class="project-card">
-            <div class="project-content">
-                <span class="project-tag">Data Analysis</span>
-                <h3>Policy Impact Study</h3>
-                <p>Analyzed complex datasets to identify trends and create actionable insights for decision-makers.</p>
-                <div class="project-details">
-                    <span>Python</span>
-                    <span>R</span>
-                    <span>Tableau</span>
-                </div>
-            </div>
-        </article>
-
-        <article class="project-card">
-            <div class="project-content">
-                <span class="project-tag">Strategy</span>
-                <h3>Communication Framework</h3>
-                <p>Developed comprehensive communication strategies to translate technical complexity for diverse audiences.</p>
-                <div class="project-details">
-                    <span>Research</span>
-                    <span>Writing</span>
-                    <span>Facilitation</span>
-                </div>
-            </div>
-        </article>
-
-        <article class="project-card">
-            <div class="project-content">
-                <span class="project-tag">Community</span>
-                <h3>Social Impact Initiative</h3>
-                <p>Led community-driven project connecting data insights with grassroots organizing efforts.</p>
-                <div class="project-details">
-                    <span>Organizing</span>
-                    <span>Data Viz</span>
-                    <span>Outreach</span>
-                </div>
-            </div>
-        </article>
-    </div>
+  <h2>Additional Experience</h2>
+  <div class="timeline">
+    {profile.experience.slice(6).map((item) => (
+      <article class="timeline-item" data-expandable data-keep-left-rail>
+        <h3>{item.role}</h3>
+        <p class="company">
+          {item.company} | {item.period}
+        </p>
+        <ul>
+          {item.highlights.map((line) => <li>{line}</li>)}
+        </ul>
+      </article>
+    ))}
+  </div>
 </Layout>
 
 <style>
-    .subtitle {
-        font-size: 1.25rem;
-        color: var(--ink-fade);
-        margin-bottom: 2rem;
-        font-weight: 400;
-    }
+  .subtitle {
+    font-size: 1.08rem;
+    margin-bottom: 1.45rem;
+  }
 
-    .project-grid {
-        display: flex;
-        flex-direction: column;
-        gap: 3rem;
-        margin: 2rem 0;
-        padding: 2rem;
-    }
+  .project-grid {
+    display: grid;
+    gap: 0.95rem;
+  }
 
-    .project-card {
-        display: flex;
-        gap: 2rem;
-        background: var(--card);
-        border-left: 2px solid var(--manila-dark);
-        padding: 1.5rem;
-        transition: transform 0.2s ease, box-shadow 0.2s ease;
-        position: relative;
-        border-radius: 0 0.5rem 0.5rem 0;
-    }
+  .project-card {
+    border-top: 1px solid var(--line);
+    border-right: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+    border-left: 4px solid var(--accent-2);
+    border-radius: 0 1rem 1rem 0;
+    background: var(--card);
+    padding: 1rem;
+    box-shadow: 0 8px 20px rgba(31, 31, 28, 0.06);
+  }
 
-    .project-content {
-        flex: 1;
-    }
+  .project-tag {
+    display: inline-block;
+    margin-bottom: 0.6rem;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 0.22rem 0.62rem;
+    font-size: 0.76rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
 
-    .project-photo {
-        width: 200px;
-        height: 200px;
-        object-fit: cover;
-        border-radius: 0.5rem;
-        flex-shrink: 0;
-    }
+  .project-card p {
+    max-width: none;
+  }
 
-    .project-card:hover {
-    transform: translate(-8px, -8px);
-    box-shadow: 
-        1px 1px 0 0 var(--accent),
-        2px 2px 0 0 var(--accent),
-        3px 3px 0 0 var(--accent),
-        4px 4px 0 0 var(--accent),
-        5px 5px 0 0 var(--accent),
-        6px 6px 0 0 var(--accent),
-        7px 7px 0 0 var(--accent),
-        8px 8px 0 0 var(--accent),
-        9px 9px 0 0 var(--accent),
-        10px 10px 0 0 var(--accent),
-        11px 11px 0 0 var(--accent),
-        12px 12px 0 0 var(--accent),
-        13px 13px 0 0 var(--accent),
-        14px 14px 0 0 var(--accent),
-        15px 15px 0 0 var(--accent),
-        16px 16px 0 0 var(--accent),
-        17px 17px 0 0 var(--accent),
-        18px 18px 0 0 var(--accent),
-        19px 19px 0 0 var(--accent),
-        20px 20px 0 0 var(--accent),
-        21px 21px 0 0 var(--accent),
-        22px 22px 0 0 var(--accent),
-        23px 23px 0 0 var(--accent),
-        24px 24px 0 0 var(--accent),
-        25px 25px 0 0 var(--accent);
-}
+  .impact {
+    color: var(--ink);
+  }
 
-    .project-tag {
-        display: inline-block;
-        padding: 0.25rem 0.75rem;
-        background: var(--manila);
-        color: var(--ink);
-        border-radius: 1rem;
-        font-size: 0.75rem;
-        font-weight: 500;
-        margin-bottom: 0.75rem;
-    }
+  .project-details {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+    margin-top: 0.55rem;
+  }
 
-    .project-card h3 {
-        margin-bottom: 0.75rem;
-    }
+  .project-details span {
+    border: 1px solid var(--line);
+    background: #fff;
+    border-radius: 0.5rem;
+    padding: 0.2rem 0.48rem;
+    font-size: 0.85rem;
+  }
 
-    .project-card p {
-        color: var(--ink-light);
-        margin-bottom: 1rem;
-        max-width: none;
-    }
+  .method-list {
+    margin-left: 1.15rem;
+    color: var(--ink-soft);
+  }
 
-    .project-details {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 0.5rem;
-        margin: 1rem 0;
-    }
+  .method-list li {
+    margin-bottom: 0.5rem;
+  }
 
-    .project-details span {
-        padding: 0.25rem 0.5rem;
-        background: var(--paper);
-        border: 1px solid var(--line);
-        border-radius: 0.25rem;
-        font-size: 0.875rem;
-        color: var(--ink-light);
-    }
+  .timeline {
+    display: grid;
+    gap: 0.75rem;
+  }
 
-    .project-links {
-        display: flex;
-        gap: 1rem;
-        flex-wrap: wrap;
-        margin-top: 1rem;
-    }
+  .timeline-item {
+    border-left: 4px solid var(--accent-2);
+    border-radius: 0 0.75rem 0.75rem 0;
+    border-top: 1px solid var(--line);
+    border-right: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+    background: var(--card);
+    padding: 0.82rem 0.95rem;
+  }
 
-    .project-links a {
-        color: var(--accent);
-        font-weight: 500;
-        text-decoration: none;
-        transition: color 0.2s;
-        font-size: 0.875rem;
-    }
+  .timeline-item ul {
+    margin-left: 1rem;
+    color: var(--ink-soft);
+  }
 
-    .project-links a:hover {
-        color: var(--ink);
-        text-decoration: underline;
-    }
-
-    @media (max-width: 768px) {
-        .project-card {
-            flex-direction: column;
-        }
-
-        .project-photo {
-            width: 100%;
-            height: 200px;
-            order: -1;
-        }
-    }
+  .company {
+    color: var(--ink-soft);
+    font-size: 0.88rem;
+    margin-bottom: 0.45rem;
+  }
 </style>

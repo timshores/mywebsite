@@ -1,46 +1,38 @@
-# Astro Starter Kit: Basics
+# Tim Shores Portfolio Site
 
-```sh
-npm create astro@latest -- --template basics
-```
+Astro site for `timshores.com`, deployed from GitHub.
 
-> 🧑‍🚀 **Seasoned astronaut?** Delete this file. Have fun!
+## Commands
 
-## 🚀 Project Structure
+- `npm install`
+- `npm run dev`
+- `npm run build`
+- `npm run preview`
 
-Inside of your Astro project, you'll see the following folders and files:
+## Content Source
 
-```text
-/
-├── public/
-│   └── favicon.svg
-├── src
-│   ├── assets
-│   │   └── astro.svg
-│   ├── components
-│   │   └── Welcome.astro
-│   ├── layouts
-│   │   └── Layout.astro
-│   └── pages
-│       └── index.astro
-└── package.json
-```
+Main profile content is in `src/data/profile.ts`.
 
-To learn more about the folder structure of an Astro project, refer to [our guide on project structure](https://docs.astro.build/en/basics/project-structure/).
+- Home page: `src/pages/index.astro`
+- Work page: `src/pages/work.astro`
+- Contact page: `src/pages/contact.astro`
 
-## 🧞 Commands
+## LinkedIn PDF Sync (No Paid API Needed)
 
-All commands are run from the root of the project, from a terminal:
+This project includes a simple sync step:
 
-| Command                   | Action                                           |
-| :------------------------ | :----------------------------------------------- |
-| `npm install`             | Installs dependencies                            |
-| `npm run dev`             | Starts local dev server at `localhost:4321`      |
-| `npm run build`           | Build your production site to `./dist/`          |
-| `npm run preview`         | Preview your build locally, before deploying     |
-| `npm run astro ...`       | Run CLI commands like `astro add`, `astro check` |
-| `npm run astro -- --help` | Get help using the Astro CLI                     |
+- Source: `../Profile.pdf` (repo root)
+- Target: `public/Profile.pdf`
+- Script: `scripts/sync-profile-pdf.mjs`
 
-## 👀 Want to learn more?
+`npm run dev` and `npm run build` both run `profile:sync` first.
+If you replace `Profile.pdf`, the next build/dev run updates the public copy.
 
-Feel free to check [our documentation](https://docs.astro.build) or jump into our [Discord server](https://astro.build/chat).
+## Update Flow
+
+1. Export your latest LinkedIn profile PDF and replace `Profile.pdf` at repo root.
+2. Update `src/data/profile.ts` if headline/summary/work details changed.
+3. Run `npm run build`.
+4. Commit and push to trigger your existing GitHub-to-production deploy.
+
+This keeps your public resume PDF and site content aligned without paid LinkedIn integrations.
