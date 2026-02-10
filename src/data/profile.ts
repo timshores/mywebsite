@@ -2,8 +2,8 @@ export const profile = {
   name: "Tim Shores",
   headline: "I make complex systems legible and trapped knowledge valuable",
   headlineLines: [
-    "I make complex systems legible and",
-    "trapped knowledge valuable",
+    "I make complex systems legible",
+    "and trapped knowledge valuable",
   ],
   location: "Leverett, Massachusetts, United States",
   email: "timothylshores@gmail.com",
