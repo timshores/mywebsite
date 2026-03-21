@@ -107,7 +107,7 @@ export const profile = {
     },
     {
       company: "Town Common Research",
-      role: "Researcher",
+      role: "Community Action Researcher",
       period: "January 2022 - August 2023",
       highlights: [
         "Community-based participatory research and age-friendly needs assessment data collection and reporting.",
