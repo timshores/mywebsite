@@ -36,3 +36,21 @@ If you replace `Profile.pdf`, the next build/dev run updates the public copy.
 4. Commit and push to trigger your existing GitHub-to-production deploy.
 
 This keeps your public resume PDF and site content aligned without paid LinkedIn integrations.
+
+## Deployment
+
+Production deploys automatically from GitHub Actions on pushes to `main`.
+
+Workflow file:
+- `.github/workflows/deploy.yml`
+
+Current deploy stack:
+- `actions/checkout@v6`
+- `actions/setup-node@v6`
+- Node `22`
+- `SamKirkland/FTP-Deploy-Action@v4.3.4`
+
+If deploys suddenly fail again, check these first:
+- YAML indentation in `deploy.yml`
+- valid GitHub Action version tags
+- FTP secrets: `FTP_SERVER`, `FTP_USERNAME`, `FTP_PASSWORD`
