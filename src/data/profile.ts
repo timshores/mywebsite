@@ -9,10 +9,12 @@ export const profile = {
   email: "timothylshores@gmail.com",
   linkedin: "https://www.linkedin.com/in/timshores",
   summary: [
-    "Most useful information is stuck. It lives in people's heads, buried in systems nobody reads, jargon nobody outside the room understands, or data waiting to be shaped into a decision.",
-    "At Cisco, that means content strategy and information architecture for security products so customers can quickly find and act on what they need.",
-    "Before that, it meant building databases of European Parliament voting patterns for a forest policy campaign, designing donor data systems and concept notes for a Haiti-focused nonprofit, and building a knowledge base that cut support call volume by 20% at a software company.",
-    "I use AI tools, Python, and open-source data as part of making institutional knowledge accessible at scale.",
+    "Most useful information is stuck. It's in people's heads, buried in systems nobody reads, jargon nobody outside the room understands, or data waiting to be shaped into a decision. I've spent my career finding it and making it useful.",
+    "At Cisco, that means leading content strategy and information architecture for security products — structuring technical knowledge so customers can find and act on what they need. I'm currently a member of a cross-organizational tiger team transforming Cisco's technical communications into an AI-native content system, focused on content modeling and context engineering that structure knowledge for AI reasoning and dynamic, persona-driven experiences. This builds on earlier work documenting Cisco's LLM-powered assistant feature and prototyping AI generation of identity-based technical content.",
+    "Before Cisco, it meant building databases of European Parliament voting patterns for a forest policy campaign, designing donor data systems and writing program concept notes for a Haiti-focused nonprofit, and constructing the knowledge base that cut support call volume by 20% at a software company.",
+    "Outside work, I serve on a planning board and two school committees in Western Massachusetts and on the board of The 'MPOWER Project. Municipal budgets, policy, and community needs all hold trapped knowledge, and the value comes when it's made legible to the people making decisions about them.",
+    "My range of work is deliberate. Illegible complexity shows up everywhere, and the work of solving it transfers across contexts more than people expect.",
+    "I work regularly with AI tools, Python, and open-source data as part of how I approach making institutional knowledge accessible at scale. I'm building professionally toward the intersection where structured content, AI reasoning, and human judgment work together.",
   ],
   focusAreas: [
     "Knowledge architecture",
@@ -23,12 +25,9 @@ export const profile = {
     "Community facilitation",
   ],
   topSkills: [
-    "Law, Regulation, and Compliance",
-    "Compliance Management",
-    "Business Ethics",
-    "Data Analysis",
-    "Communication Strategy",
-    "Knowledge Management",
+    "DFIR",
+    "Digital Forensics",
+    "Policy Analysis",
   ],
   certifications: [
     "The Data Scientist's Toolbox",
@@ -42,10 +41,10 @@ export const profile = {
       title: "Cisco Secure Access Content Strategy",
       domain: "Cybersecurity",
       description:
-        "Led technical education content for Cisco Secure Access in partnership with product, engineering, and UX teams.",
+        "Content strategy lead for Cisco Secure Access, architecting end-to-end content strategy and launching documentation for SASE Management in close collaboration with product, engineering, UX, and CX teams.",
       impact:
-        "Delivered documentation and research-informed content across 20+ quarterly sprint cycles, including Cisco Assistant LLM feature docs and proof-of-concept support.",
-      skills: ["Technical Writing", "UX Research", "LLM Features", "Content Operations"],
+        "Member of Cisco's AI-Native Content Strategy tiger team, focused on content modeling and context engineering for graphRAG-structured knowledge, AI reasoning, and dynamic persona-driven content experiences.",
+      skills: ["Content Strategy", "Information Architecture", "AI-Native Content", "Content Modeling"],
     },
     {
       title: "Duo Customer Communications Program",
@@ -90,9 +89,9 @@ export const profile = {
       role: "Technical Education Content Developer",
       period: "May 2024 - Present",
       highlights: [
-        "Researching and delivering Cisco Secure Access technical documentation with product, engineering, and UX teams.",
-        "Facilitating UX research and content design projects in 20+ quarterly sprints aligned to customer outcomes and product goals.",
-        "Researched and wrote Cisco Assistant LLM feature documentation and supported a dynamic user identity-based content proof of concept.",
+        "Content strategy lead for Cisco Secure Access; architected end-to-end content strategy, launched documentation for SASE Management, and drove quality improvements to IPsec tunnels documentation.",
+        "Member of the Content Modeling workstream on Cisco's AI-Native Content Strategy initiative — a cross-organizational tiger team transforming Cisco's technical communications into graphRAG-structured knowledge work focused on content modeling and context engineering for AI reasoning and dynamic, persona-driven experiences.",
+        "Developing information architecture expertise as a formal IA mentee, applying it to AI-ready content structures across the Secure Access product line and leading context engineering work in support of AI tooling adoption. Earlier work includes documenting the Cisco Assistant LLM feature and co-developing a hackathon proof-of-concept for LLM-generated, identity-based technical content.",
       ],
     },
     {
@@ -167,6 +166,15 @@ export const profile = {
         "Contributed to migrations, implementations, QA, and feature support for database software customers.",
       ],
     },
+    {
+      company: "Borders Group Inc",
+      role: "Helpdesk Technician",
+      period: "January 1999 - September 2000",
+      highlights: [
+        "Remote support for Windows NT and OS/2 systems across Borders and Waldenbooks stores, connected by VSAT.",
+        "Supported email, inventory, and point-of-sale applications.",
+      ],
+    },
   ],
   education: [
     {
@@ -176,8 +184,8 @@ export const profile = {
     },
     {
       school: "University of Michigan",
-      credential: "BGS, Linguistics, Literature, Philosophy",
-      period: "",
+      credential: "BGS, Linguistics, Philosophy, and Psychology",
+      period: "September 1998 - June 2004",
     },
     {
       school: "Coursera and Johns Hopkins Bloomberg School of Public Health",
@@ -187,7 +195,7 @@ export const profile = {
   ],
   civicRoles: [
     "Planning board member in Western Massachusetts",
-    "School committee service in Western Massachusetts",
-    "Board member, The MPOWER Project",
+    "Two school committees in Western Massachusetts",
+    "Board member, The 'MPOWER Project",
   ],
 } as const;
