@@ -3,40 +3,15 @@ import Layout from "../layouts/Layout.astro";
 import { profile } from "../data/profile";
 ---
 
-<Layout title={`Work - ${profile.name}`} description="Selected projects and outcomes">
-  <h1>Selected Work</h1>
+<Layout title={`Work - ${profile.name}`} description="Detailed work history and methods">
+  <h1>Work History</h1>
   <p class="subtitle">
-    Work focused on making technical, organizational, and policy complexity usable for
-    people making decisions.
+    Detailed experience across technical communication, knowledge architecture, data,
+    operations, policy research, and community work.
   </p>
 
-  <div class="project-grid">
-    {profile.selectedWork.map((project) => (
-      <article class="project-card" data-expandable data-keep-left-rail>
-        <div class="project-content">
-          <span class="project-tag">{project.domain}</span>
-          <h3>{project.title}</h3>
-          <p>{project.description}</p>
-          <p class="impact">{project.impact}</p>
-          <div class="project-details">
-            {project.skills.map((skill) => <span data-expandable>{skill}</span>)}
-          </div>
-        </div>
-      </article>
-    ))}
-  </div>
-
-  <h2>Methods I Use</h2>
-  <ul class="method-list">
-    <li>Translate expert language into usable operational guidance.</li>
-    <li>Map where knowledge gets trapped and design paths to make it findable.</li>
-    <li>Combine technical writing, data analysis, and facilitation for action.</li>
-    <li>Partner with product, engineering, UX, data science, and policy teams.</li>
-  </ul>
-
-  <h2>Additional Experience</h2>
   <div class="timeline">
-    {profile.experience.slice(6).map((item) => (
+    {profile.experience.map((item) => (
       <article class="timeline-item" data-expandable data-keep-left-rail>
         <h3>{item.role}</h3>
         <p class="company">
@@ -48,62 +23,20 @@ import { profile } from "../data/profile";
       </article>
     ))}
   </div>
+
+  <h2>Methods I Use</h2>
+  <ul class="method-list">
+    <li>Translate expert language into usable operational guidance.</li>
+    <li>Map where knowledge gets trapped and design paths to make it findable.</li>
+    <li>Combine technical writing, data analysis, and facilitation for action.</li>
+    <li>Partner with product, engineering, UX, data science, and policy teams.</li>
+  </ul>
 </Layout>
 
 <style>
   .subtitle {
     font-size: 1.08rem;
     margin-bottom: 1.45rem;
-  }
-
-  .project-grid {
-    display: grid;
-    gap: 0.95rem;
-  }
-
-  .project-card {
-    border-top: 1px solid var(--line);
-    border-right: 1px solid var(--line);
-    border-bottom: 1px solid var(--line);
-    border-left: 4px solid var(--accent-2);
-    border-radius: 0 1rem 1rem 0;
-    background: var(--card);
-    padding: 1rem;
-    box-shadow: 0 8px 20px rgba(31, 31, 28, 0.06);
-  }
-
-  .project-tag {
-    display: inline-block;
-    margin-bottom: 0.6rem;
-    border: 1px solid var(--line);
-    border-radius: 999px;
-    padding: 0.22rem 0.62rem;
-    font-size: 0.76rem;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-  }
-
-  .project-card p {
-    max-width: none;
-  }
-
-  .impact {
-    color: var(--ink);
-  }
-
-  .project-details {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.45rem;
-    margin-top: 0.55rem;
-  }
-
-  .project-details span {
-    border: 1px solid var(--line);
-    background: #fff;
-    border-radius: 0.5rem;
-    padding: 0.2rem 0.48rem;
-    font-size: 0.85rem;
   }
 
   .method-list {

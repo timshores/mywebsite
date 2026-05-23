@@ -11,7 +11,8 @@ Astro site for `timshores.com`, deployed from GitHub.
 
 ## Content Source
 
-Main profile content is in `src/data/profile.ts`.
+Main generated profile content is in `src/data/profile.ts`.
+Curated display choices for skills and certifications are in `src/data/profileDisplay.ts`.
 
 - Home page: `src/pages/index.astro`
 - Work page: `src/pages/work.astro`
@@ -26,14 +27,27 @@ This project includes a simple sync step:
 - Script: `scripts/sync-profile-pdf.mjs`
 
 `npm run dev` and `npm run build` both run `profile:sync` first.
-If you replace `Profile.pdf`, the next build/dev run updates the public copy.
+If you replace `Profile.pdf`, the next build/dev run updates the public copy and regenerates the LinkedIn-backed fields in `src/data/profile.ts`.
+
+The sync keeps hand-curated site fields from `profile.ts` that are not cleanly represented in the LinkedIn PDF:
+
+- `focusAreas`
+- `selectedWork`
+- `civicRoles`
+
+The sync also uses `src/data/profileDisplay.ts` instead of LinkedIn's top-of-list defaults for:
+
+- `topSkills`
+- `certifications`
 
 ## Update Flow
 
 1. Export your latest LinkedIn profile PDF and replace `Profile.pdf` at repo root.
-2. Update `src/data/profile.ts` if headline/summary/work details changed.
-3. Run `npm run build`.
-4. Commit and push to trigger your existing GitHub-to-production deploy.
+2. Edit `src/data/profileDisplay.ts` if you want different displayed skills or certifications.
+3. Run `npm run profile:sync` to preview the generated data changes, or run `npm run dev` / `npm run build`.
+4. Review the generated `src/data/profile.ts` diff, especially if LinkedIn changes the PDF layout.
+5. Run `npm run build`.
+6. Commit and push to trigger your existing GitHub-to-production deploy.
 
 This keeps your public resume PDF and site content aligned without paid LinkedIn integrations.
 

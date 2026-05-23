@@ -25,62 +25,85 @@ export const profile = {
     "Community facilitation",
   ],
   topSkills: [
-    "DFIR",
-    "Digital Forensics",
-    "Policy Analysis",
+    "Content Strategy",
+    "Context Engineering",
+    "Cybersecurity",
+    "Data Science",
+    "Communications",
+    "Technical Writing",
+    "Research",
+    "Facilitation",
+    "Storytelling",
+    "Community Development",
   ],
   certifications: [
-    "The Data Scientist's Toolbox",
-    "Quantitative Methods",
-    "Journalism, the future, and you!",
-    "Data Science @Cisco Generative AI",
-    "Green Belt 2024",
+    "AI Foundations for Business Professionals, Saïd Business School (Feb 2026)",
+    "Project Management Professional Certificate (v2), Google (Oct 2025)",
+    "Systems Thinking, Cornell University (Feb 2024)",
+    "Communicating for Impact, IDEO (Jul 2022)",
+    "Dialogue Facilitation Across Divides, Paula Green (Oct 2021)",
+    "Basic Mediation Training, CRG (Jan 2020)",
   ],
   selectedWork: [
     {
       title: "Cisco Secure Access Content Strategy",
       domain: "Cybersecurity",
-      description:
-        "Content strategy lead for Cisco Secure Access, architecting end-to-end content strategy and launching documentation for SASE Management in close collaboration with product, engineering, UX, and CX teams.",
-      impact:
-        "Member of Cisco's AI-Native Content Strategy tiger team, focused on content modeling and context engineering for graphRAG-structured knowledge, AI reasoning, and dynamic persona-driven content experiences.",
-      skills: ["Content Strategy", "Information Architecture", "AI-Native Content", "Content Modeling"],
+      description: "Content strategy lead for Cisco Secure Access, architecting end-to-end content strategy and launching documentation for SASE Management in close collaboration with product, engineering, UX, and CX teams.",
+      impact: "Member of Cisco's AI-Native Content Strategy tiger team, focused on content modeling and context engineering for graphRAG-structured knowledge, AI reasoning, and dynamic persona-driven content experiences.",
+      skills: [
+        "Content Strategy",
+        "Information Architecture",
+        "AI-Native Content",
+        "Content Modeling",
+      ],
     },
     {
       title: "Duo Customer Communications Program",
       domain: "Communication Strategy",
-      description:
-        "Served as customer communications lead for Cisco Security Documentation, translating release and vulnerability changes into clear action-oriented updates.",
-      impact:
-        "Improved communication process consistency while coordinating impact studies with Product and Data Science teams.",
-      skills: ["Release Notes", "Comms Planning", "Risk Communication", "Mentorship"],
+      description: "Served as customer communications lead for Cisco Security Documentation, translating release and vulnerability changes into clear action-oriented updates.",
+      impact: "Improved communication process consistency while coordinating impact studies with Product and Data Science teams.",
+      skills: [
+        "Release Notes",
+        "Comms Planning",
+        "Risk Communication",
+        "Mentorship",
+      ],
     },
     {
       title: "Forest Defenders Alliance Research and Monitoring",
       domain: "Policy Analytics",
-      description:
-        "Managed campaign web and research for the Forest Defenders Alliance and analyzed parliamentary voting patterns and committee memberships.",
-      impact:
-        "Produced campaign monitoring datasets that supported outreach strategy and policy advocacy across the EU context.",
-      skills: ["Data Collection", "Policy Research", "Database Design", "Campaign Strategy"],
+      description: "Managed campaign web and research for the Forest Defenders Alliance and analyzed parliamentary voting patterns and committee memberships.",
+      impact: "Produced campaign monitoring datasets that supported outreach strategy and policy advocacy across the EU context.",
+      skills: [
+        "Data Collection",
+        "Policy Research",
+        "Database Design",
+        "Campaign Strategy",
+      ],
     },
     {
       title: "Hope for Haiti Data and Donor Experience",
       domain: "Nonprofit Systems",
-      description:
-        "Owned revenue data management, grant pipeline operations, and donor support systems.",
-      impact:
-        "Strengthened fundraising operations and decision support for mission-critical programs.",
-      skills: ["Grant Pipeline", "Donor Systems", "Revenue Data", "Operations"],
+      description: "Owned revenue data management, grant pipeline operations, and donor support systems.",
+      impact: "Strengthened fundraising operations and decision support for mission-critical programs.",
+      skills: [
+        "Grant Pipeline",
+        "Donor Systems",
+        "Revenue Data",
+        "Operations",
+      ],
     },
     {
       title: "VentureWell Platform Operations",
       domain: "Automation and CRM",
-      description:
-        "Supported Salesforce planning and implementation for grant, community, and program operations.",
-      impact:
-        "Improved cross-team workflows and user support with scalable platform operations.",
-      skills: ["Salesforce", "Process Builder", "Flow", "Integration"],
+      description: "Supported Salesforce planning and implementation for grant, community, and program operations.",
+      impact: "Improved cross-team workflows and user support with scalable platform operations.",
+      skills: [
+        "Salesforce",
+        "Process Builder",
+        "Flow",
+        "Integration",
+      ],
     },
   ],
   experience: [
@@ -89,9 +112,9 @@ export const profile = {
       role: "Technical Education Content Developer",
       period: "May 2024 - Present",
       highlights: [
-        "Content strategy lead for Cisco Secure Access; architected end-to-end content strategy, launched documentation for SASE Management, and drove quality improvements to IPsec tunnels documentation.",
-        "Member of the Content Modeling workstream on Cisco's AI-Native Content Strategy initiative — a cross-organizational tiger team transforming Cisco's technical communications into graphRAG-structured knowledge work focused on content modeling and context engineering for AI reasoning and dynamic, persona-driven experiences.",
-        "Developing information architecture expertise as a formal IA mentee, applying it to AI-ready content structures across the Secure Access product line and leading context engineering work in support of AI tooling adoption. Earlier work includes documenting the Cisco Assistant LLM feature and co-developing a hackathon proof-of-concept for LLM-generated, identity-based technical content.",
+        "Content strategy lead for Cisco Secure Access, working in close collaboration with product, engineering, UX, and CX teams. Architected end-to-end content strategy for Secure Access, launched a new documentation set for SASE Management, and drove quality and accuracy improvements to IPsec tunnels documentation. Domain range spans SSE/SASE, IPsec tunneling, SSO, and AI assistant integration with SaaS products.",
+        "Member of the Content Modeling workstream on Cisco's AI-Native Content Strategy initiative — a cross-organizational tiger team restructuring Cisco's entire documentation corpus, past and future, into a graphRAG-structured, AI-native content system. Delivered hands-on content modeling and context engineering work for a PRD, designing structures that enable AI reasoning and dynamic, persona-driven content experiences. The broader initiative spans AI-assisted authoring, intent-driven content retrieval and governance, and continuous quality improvement.",
+        "Developing information architecture expertise as a formal IA mentee and applying it to AI-ready content structures across the Secure Access product line. Led collaborative context engineering work supporting AI tooling adoption and culture change across technical communications, including enterprise CMS metadata and content/data analysis for migration prep. Earlier work includes researching and writing documentation for the Cisco Assistant LLM feature and co-developing a hackathon proof-of-concept for LLM-generated, identity-based technical content.",
       ],
     },
     {
@@ -99,18 +122,17 @@ export const profile = {
       role: "Technical Communications Specialist",
       period: "February 2022 - May 2024",
       highlights: [
-        "Duo customer communications lead and content researcher for Cisco Security Documentation.",
-        "Owned communication planning around product changes, vulnerabilities, and required customer actions.",
-        "Coordinated communication impact studies with Product and Data Science teams and mentored early-career coworkers and students.",
+        "Customer communications lead and content researcher for Cisco Duo on the Security Documentation team. Planned and wrote communications connecting cybersecurity product customers with what they needed to know about product changes, vulnerabilities, and required actions. Wrote release notes each sprint and coordinated customer communication impact studies with Product and Data Science teams.",
+        "Worked to extend the Duo communications model to other Cisco Security products. Facilitated discussions with SMEs across design, engineering, and product management, and contributed to content performance analysis and process improvement for the team's publishing operations.",
+        "Mentored early-career coworkers and students.",
       ],
     },
     {
       company: "Town Common Research",
-      role: "Community Action Researcher",
+      role: "Researcher",
       period: "January 2022 - August 2023",
       highlights: [
-        "Community-based participatory research and age-friendly needs assessment data collection and reporting.",
-        "Supported towns and organizers with evidence-based, community-driven knowledge management.",
+        "Community-based participatory research for towns and community organizations in Western Massachusetts. Collected and reported data for Age-Friendly needs assessments and supported equity and justice initiatives, helping local organizers build evidence-based knowledge for community-driven decision-making.",
       ],
     },
     {
@@ -118,16 +140,19 @@ export const profile = {
       role: "Forest Policy Campaign Researcher",
       period: "October 2019 - January 2023",
       highlights: [
-        "Managed website, outreach, research, and writing for forest policy advocacy.",
-        "Built and maintained parliamentary voting and committee datasets to support campaign monitoring and outreach.",
+        "Working to defend forests.",
+        "Researched and wrote in support of the Forest Defenders Alliance campaign to remove forest biomass from the European Union Renewable Energy Directive and end the counting of wood burning toward emissions reduction targets. Managed the campaign website and participated in outreach.",
+        "Built a database of Members of European Parliament tracking party and committee memberships and voting patterns on forests and environmental policy, supporting campaign monitoring and targeted outreach.",
+        "forestdefenders.eu",
       ],
     },
     {
       company: "Hope for Haiti",
-      role: "Director of Data and Donor Experience",
+      role: "Director of Data & Donor Experience",
       period: "August 2019 - February 2022",
       highlights: [
-        "Managed revenue data, grantwriting pipeline operations, and donor services.",
+        "Managed revenue data, grant writing, grant pipeline, and donor services for a nonprofit working to improve quality of life for the Haitian people, particularly children. Designed program concepts for Haitian farmer support initiatives and wrote funding proposals to sustain them. Helped coordinate galas and fundraising events.",
+        "Led fundraising response through an extraordinary sequence of crises: COVID-19, civil unrest, the assassination of President Moïse, and the August 2021 earthquake.",
       ],
     },
     {
@@ -135,17 +160,20 @@ export const profile = {
       role: "Platform Analyst",
       period: "November 2016 - August 2019",
       highlights: [
-        "Supported Salesforce development planning and implementation as first responder for platform delivery.",
-        "Worked across Salesforce Community, Pardot, Service Cloud, Flow, Apex, Lightning Web Components, and third-party integrations.",
+        "Salesforce platform lead for a nonprofit cultivating early-stage STEM ventures.",
+        "First responder for development planning and implementation, second-tier resource for user support and training. Designed and built solutions supporting grants management, impact evaluation, program monitoring, digital marketing, and relationship management across funders, investors, and program participants.",
+        "Worked across Salesforce Community, Pardot, Service Cloud, Process Builder and Flow, Apex, Lightning Web Components, and Nonprofit Success Pack, integrated with NetSuite via SOAP API and supported by tools including Form Assembly, Conga Composer, and RStudio.",
       ],
     },
     {
       company: "Not1More",
-      role: "Program Lead, Tech, Innovation, and Coalition Development",
+      role: "Program Lead, Tech, Innovation, & Coalition Development",
       period: "August 2015 - August 2019",
       highlights: [
-        "Designed and supported technical solutions for environmental defenders in remote forest sites.",
-        "Led coalition strategy, digital systems, and fundraising-aligned innovation programs.",
+        "Technology and coalition development for a global environmental justice organization supporting frontline forest defenders facing violence and reprisals.",
+        "Designed and deployed technology solutions for researchers and defenders in remote forest sites, including Forest Threat Sensor (peer-to-peer alerting and mapping for defenders encountering risk), TIRTL (rights violation documentation and reporting), and DefenderDirect (direct giving fundraising).",
+        "Managed CRM development, data collection design, web development, and digital marketing.",
+        "Built coalition relationships and wrote for fundraising and advocacy. Supported the Forest Defenders Conference, the \"I am Chut Wutty\" documentary campaign, the Bloodwood report on unauthorized rosewood plunder in Guinea-Bissau, and the Amazon Security Framework community of practice for defenders under threat in the Amazon.",
       ],
     },
     {
@@ -153,8 +181,8 @@ export const profile = {
       role: "IT Services Manager",
       period: "January 2013 - November 2014",
       highlights: [
-        "Led a team of 5 to 7 technicians serving 150 business customers.",
-        "Closed 30 contracts through business-goal analysis, clear proposals, and reliable technical delivery.",
+        "Led a team of 5 to 7 technicians serving 150 small business customers at a Berkeley IT service provider and web developer. Personally closed 30 contracts through business goal analysis, clear proposals, and reliable service.",
+        "Collaborated with the President on business operations improvements including CRM implementation, project management templates, cost forecasting, service outcome evaluation, and KPI monitoring.",
       ],
     },
     {
@@ -162,8 +190,8 @@ export const profile = {
       role: "Production Manager and Senior Database Specialist",
       period: "June 2006 - January 2013",
       highlights: [
-        "Reduced support call volume by 20% and improved resolution time by 40% through process and knowledge base improvements.",
-        "Contributed to migrations, implementations, QA, and feature support for database software customers.",
+        "Database software company specializing in the self-storage real estate subsector. Worked on a small team supporting finance and management clients through data migrations, software customization, QA, and feature development on SQL Server.",
+        "Reduced support call volume 20% and improved resolution time 40% by mentoring technicians, constructing and managing a knowledge base, and driving process improvement and automation for QA and ETL workflows.",
       ],
     },
     {
@@ -171,26 +199,20 @@ export const profile = {
       role: "Helpdesk Technician",
       period: "January 1999 - September 2000",
       highlights: [
-        "Remote support for Windows NT and OS/2 systems across Borders and Waldenbooks stores, connected by VSAT.",
-        "Supported email, inventory, and point-of-sale applications.",
+        "Remote support for Windows NT and OS/2 systems across Borders and Waldenbooks stores, connected by VSAT. Supported email, inventory, and point-of-sale applications.",
       ],
     },
   ],
   education: [
-    {
-      school: "University of Massachusetts Amherst",
-      credential: "Graduate Certificate, Data Analytics and Computational Social Science (DACSS)",
-      period: "November 2022 - December 2024",
-    },
     {
       school: "University of Michigan",
       credential: "BGS, Linguistics, Philosophy, and Psychology",
       period: "September 1998 - June 2004",
     },
     {
-      school: "Coursera and Johns Hopkins Bloomberg School of Public Health",
-      credential: "Specialization, Data Science",
-      period: "",
+      school: "University of Massachusetts Amherst",
+      credential: "Graduate Certificate, Data Analytics and Computational Social Science (DACSS)",
+      period: "November 2022 - December 2024",
     },
   ],
   civicRoles: [
