@@ -1,0 +1,126 @@
+---
+import Layout from "../layouts/Layout.astro";
+import { portfolioItems } from "../data/portfolio";
+import { profile } from "../data/profile";
+
+const items = [...portfolioItems].sort((a, b) => b.date.localeCompare(a.date));
+---
+
+<Layout title={`Portfolio - ${profile.name}`} description="Selected reports, research, civic planning, and technology artifacts">
+  <h1>Portfolio</h1>
+  <p class="subtitle">
+    Reports, research, civic planning work, and project artifacts that are easier to understand in one place than scattered across LinkedIn, GitHub, and Drive.
+  </p>
+  <p class="portfolio-statement">
+    Taken together, this is the work I keep trying to do: help people face complicated systems with better evidence, clearer language, more useful tools, and enough shared understanding to make decisions together.
+  </p>
+
+  <div class="portfolio-grid">
+    {items.map((item) => (
+      <article class="portfolio-item" data-expandable data-keep-left-rail>
+        <div class="item-meta">
+          <span>{item.type}</span>
+          <span>{item.period}</span>
+        </div>
+        <h3>{item.title}</h3>
+        <p>{item.summary}</p>
+        {item.details.length > 0 && (
+          <ul>
+            {item.details.map((detail) => <li>{detail}</li>)}
+          </ul>
+        )}
+        {item.links && (
+          <div class="artifact-links">
+            {item.links.map((link) => (
+              <a href={link.url} target="_blank" rel="noreferrer">{link.label}</a>
+            ))}
+          </div>
+        )}
+      </article>
+    ))}
+  </div>
+</Layout>
+
+<style>
+  .subtitle {
+    font-size: 1.08rem;
+    margin-bottom: 0.7rem;
+  }
+
+  .portfolio-statement {
+    max-width: 78ch;
+    color: var(--ink);
+    margin-bottom: 1.45rem;
+  }
+
+  .portfolio-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.85rem;
+    margin-top: 1.6rem;
+  }
+
+  .portfolio-item {
+    border-top: 1px solid var(--line);
+    border-right: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+    border-left: 4px solid var(--accent-2);
+    border-radius: 0 0.8rem 0.8rem 0;
+    background: var(--card);
+    padding: 0.95rem 1rem;
+  }
+
+  .portfolio-item p {
+    max-width: none;
+  }
+
+  .portfolio-item ul {
+    margin-left: 1rem;
+    color: var(--ink-soft);
+  }
+
+  .portfolio-item li {
+    margin-bottom: 0.35rem;
+  }
+
+  .artifact-links {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.45rem;
+    margin-top: 0.75rem;
+  }
+
+  .artifact-links a {
+    border: 1px solid var(--line);
+    border-radius: 0.5rem;
+    background: #fff;
+    padding: 0.28rem 0.58rem;
+    text-decoration: none;
+    font-size: 0.86rem;
+  }
+
+  .item-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+    margin-bottom: 0.55rem;
+  }
+
+  .item-meta span {
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 0.18rem 0.55rem;
+    background: #fff;
+    color: var(--ink-soft);
+    font-size: 0.76rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  @media (max-width: 860px) {
+    .portfolio-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

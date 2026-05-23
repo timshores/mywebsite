@@ -33,6 +33,7 @@ const currentPath = Astro.url.pathname.replace(/\/$/, "") || "/";
         <nav aria-label="Main Navigation">
           <a href="/" class={`nav-tab ${currentPath === "/" ? "active" : ""}`}>About</a>
           <a href="/work" class={`nav-tab ${currentPath === "/work" ? "active" : ""}`}>Work</a>
+          <a href="/portfolio" class={`nav-tab ${currentPath === "/portfolio" ? "active" : ""}`}>Portfolio</a>
           <a href="/contact" class={`nav-tab ${currentPath === "/contact" ? "active" : ""}`}>Contact</a>
         </nav>
       </header>

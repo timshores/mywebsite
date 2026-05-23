@@ -25,9 +25,10 @@ This project includes a simple sync step:
 - Source: `../Profile.pdf` (repo root)
 - Target: `public/Profile.pdf`
 - Script: `scripts/sync-profile-pdf.mjs`
+- Resume generator: `scripts/generate-resume-pdf.mjs`
 
 `npm run dev` and `npm run build` both run `profile:sync` first.
-If you replace `Profile.pdf`, the next build/dev run updates the public copy and regenerates the LinkedIn-backed fields in `src/data/profile.ts`.
+If you replace `Profile.pdf`, the next build/dev run updates the public copy, regenerates the LinkedIn-backed fields in `src/data/profile.ts`, and creates a one-page resume PDF in `public/`.
 
 The sync keeps hand-curated site fields from `profile.ts` that are not cleanly represented in the LinkedIn PDF:
 
@@ -40,12 +41,14 @@ The sync also uses `src/data/profileDisplay.ts` instead of LinkedIn's top-of-lis
 - `topSkills`
 - `certifications`
 
+The generated resume is named `Shores Resume [Month] [Year].pdf`, where month and year come from the source `Profile.pdf` file timestamp. The current resume download target is generated in `src/data/resume.ts` and used by the home page button.
+
 ## Update Flow
 
 1. Export your latest LinkedIn profile PDF and replace `Profile.pdf` at repo root.
 2. Edit `src/data/profileDisplay.ts` if you want different displayed skills or certifications.
 3. Run `npm run profile:sync` to preview the generated data changes, or run `npm run dev` / `npm run build`.
-4. Review the generated `src/data/profile.ts` diff, especially if LinkedIn changes the PDF layout.
+4. Review the generated `src/data/profile.ts` and `src/data/resume.ts` diffs, especially if LinkedIn changes the PDF layout.
 5. Run `npm run build`.
 6. Commit and push to trigger your existing GitHub-to-production deploy.
 

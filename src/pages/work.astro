@@ -3,7 +3,7 @@ import Layout from "../layouts/Layout.astro";
 import { profile } from "../data/profile";
 ---
 
-<Layout title={`Work - ${profile.name}`} description="Detailed work history and methods">
+<Layout title={`Work - ${profile.name}`} description="Detailed work history">
   <h1>Work History</h1>
   <p class="subtitle">
     Detailed experience across technical communication, knowledge architecture, data,
@@ -23,29 +23,12 @@ import { profile } from "../data/profile";
       </article>
     ))}
   </div>
-
-  <h2>Methods I Use</h2>
-  <ul class="method-list">
-    <li>Translate expert language into usable operational guidance.</li>
-    <li>Map where knowledge gets trapped and design paths to make it findable.</li>
-    <li>Combine technical writing, data analysis, and facilitation for action.</li>
-    <li>Partner with product, engineering, UX, data science, and policy teams.</li>
-  </ul>
 </Layout>
 
 <style>
   .subtitle {
     font-size: 1.08rem;
     margin-bottom: 1.45rem;
-  }
-
-  .method-list {
-    margin-left: 1.15rem;
-    color: var(--ink-soft);
-  }
-
-  .method-list li {
-    margin-bottom: 0.5rem;
   }
 
   .timeline {

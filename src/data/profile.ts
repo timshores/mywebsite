@@ -17,12 +17,14 @@ export const profile = {
     "I work regularly with AI tools, Python, and open-source data as part of how I approach making institutional knowledge accessible at scale. I'm building professionally toward the intersection where structured content, AI reasoning, and human judgment work together.",
   ],
   focusAreas: [
+    "Community-based participatory research",
+    "Community building",
     "Knowledge architecture",
-    "Technical communication",
-    "Cybersecurity content strategy",
+    "Technical content strategy",
     "Data storytelling",
-    "Policy and campaign research",
-    "Community facilitation",
+    "Policy and civic research",
+    "Cybersecurity documentation",
+    "Facilitation",
   ],
   topSkills: [
     "Content Strategy",
@@ -122,7 +124,7 @@ export const profile = {
       role: "Technical Communications Specialist",
       period: "February 2022 - May 2024",
       highlights: [
-        "Customer communications lead and content researcher for Cisco Duo on the Security Documentation team. Planned and wrote communications connecting cybersecurity product customers with what they needed to know about product changes, vulnerabilities, and required actions. Wrote release notes each sprint and coordinated customer communication impact studies with Product and Data Science teams.",
+        "Customer communications lead and data-informed content researcher for Cisco Duo on the Security Documentation team. Planned and wrote communications connecting cybersecurity product customers with what they needed to know about product changes, vulnerabilities, and required actions. Wrote release notes each sprint and coordinated customer communication impact studies with Product and Data Science teams.",
         "Worked to extend the Duo communications model to other Cisco Security products. Facilitated discussions with SMEs across design, engineering, and product management, and contributed to content performance analysis and process improvement for the team's publishing operations.",
         "Mentored early-career coworkers and students.",
       ],
@@ -217,7 +219,8 @@ export const profile = {
   ],
   civicRoles: [
     "Planning board member in Western Massachusetts",
+    "Energy committee member in Western Massachusetts",
     "Two school committees in Western Massachusetts",
-    "Board member, The 'MPOWER Project",
+    "Board member, The 'MPOWER Project, NYC",
   ],
 } as const;

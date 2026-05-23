@@ -1,6 +1,7 @@
 ---
 import Layout from "../layouts/Layout.astro";
 import { profile } from "../data/profile";
+import { resume } from "../data/resume";
 ---
 
 <Layout title={`${profile.name} - Portfolio`} description={profile.headline}>
@@ -15,8 +16,7 @@ import { profile } from "../data/profile";
       </p>
       <p class="location">{profile.location}</p>
       <div class="hero-actions">
-        <a href="/work" class="button">See Work</a>
-        <a href="/contact" class="button button-light">Get in Touch</a>
+        <a href={resume.href} class="button" download={resume.fileName}>Download Resume</a>
       </div>
     </div>
     <div class="portrait-container">
@@ -37,9 +37,20 @@ import { profile } from "../data/profile";
   </div>
 
   <h2>Core Focus</h2>
-  <ul class="focus-list">
-    {profile.focusAreas.map((item) => <li data-expandable>{item}</li>)}
-  </ul>
+  <div class="focus-groups">
+    <section class="focus-group" data-expandable>
+      <h3>Practice Areas</h3>
+      <ul class="focus-list">
+        {profile.focusAreas.map((item) => <li>{item}</li>)}
+      </ul>
+    </section>
+    <section class="focus-group" data-expandable>
+      <h3>Working Skills</h3>
+      <ul class="focus-list">
+        {profile.topSkills.map((skill) => <li>{skill}</li>)}
+      </ul>
+    </section>
+  </div>
 
   <h2>Selected Work</h2>
   <div class="experience-grid">
@@ -59,20 +70,13 @@ import { profile } from "../data/profile";
   <h2>Credentials</h2>
   <div class="credentials-grid">
     <section class="credential-card" data-expandable>
-      <h3>Top Skills</h3>
-      <ul>
-        {profile.topSkills.map((skill) => <li>{skill}</li>)}
-      </ul>
-    </section>
-
-    <section class="credential-card" data-expandable>
       <h3>Certifications</h3>
       <ul>
         {profile.certifications.map((cert) => <li>{cert}</li>)}
       </ul>
     </section>
 
-    <section class="credential-card full" data-expandable>
+    <section class="credential-card" data-expandable>
       <h3>Education</h3>
       <ul>
         {profile.education.map((edu) => (
@@ -204,6 +208,19 @@ import { profile } from "../data/profile";
     color: var(--ink-soft);
   }
 
+  .focus-groups {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.8rem;
+  }
+
+  .focus-group {
+    border: 1px solid var(--line);
+    border-radius: 0.8rem;
+    background: var(--card);
+    padding: 0.95rem 1rem;
+  }
+
   .focus-list {
     display: flex;
     flex-wrap: wrap;
@@ -323,6 +340,7 @@ import { profile } from "../data/profile";
       width: min(280px, 75%);
     }
 
+    .focus-groups,
     .credentials-grid {
       grid-template-columns: 1fr;
     }

@@ -1,4 +1,5 @@
 import { copyFileSync, existsSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import { execFileSync } from "node:child_process";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { PDFParse } from "pdf-parse";
@@ -21,6 +22,7 @@ if (!existsSync(sourcePdf)) {
 
 syncPublicPdf();
 await syncProfileData();
+generateResumePdf();
 
 function syncPublicPdf() {
   const sourceStat = statSync(sourcePdf);
@@ -37,6 +39,13 @@ function syncPublicPdf() {
   console.log("[profile:sync] Copied Profile.pdf to public/Profile.pdf");
 }
 
+function generateResumePdf() {
+  execFileSync(process.execPath, [resolve(scriptDir, "generate-resume-pdf.mjs")], {
+    cwd: projectRoot,
+    stdio: "inherit",
+  });
+}
+
 async function syncProfileData() {
   const currentProfile = await readConstExport(profileDataFile, "profile");
   const profileDisplay = await readConstExport(profileDisplayFile, "profileDisplay");
@@ -51,6 +60,7 @@ async function syncProfileData() {
     selectedWork: currentProfile.selectedWork,
     civicRoles: currentProfile.civicRoles,
   };
+  refineGeneratedProfile(nextProfile);
 
   const nextSource = `export const profile = ${formatValue(nextProfile, 0)} as const;\n`;
   const currentSource = readFileSync(profileDataFile, "utf8");
@@ -62,6 +72,18 @@ async function syncProfileData() {
 
   writeFileSync(profileDataFile, nextSource);
   console.log("[profile:sync] Updated src/data/profile.ts from Profile.pdf");
+}
+
+function refineGeneratedProfile(profile) {
+  for (const item of profile.experience ?? []) {
+    if (item.company !== "Cisco" || item.role !== "Technical Communications Specialist") continue;
+    item.highlights = item.highlights.map((highlight) =>
+      highlight.replace(
+        "Customer communications lead and content researcher",
+        "Customer communications lead and data-informed content researcher",
+      ),
+    );
+  }
 }
 
 async function readConstExport(filePath, exportName) {
