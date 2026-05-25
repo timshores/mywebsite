@@ -90,7 +90,7 @@ export const portfolioItems = [
     resume: true,
   },
   {
-    title: "Leverett Elders Studies Needs Assessment",
+    title: "Leverett Elder Population Needs Assessment",
     type: "Community Research",
     period: "February 2022 - January 2023",
     date: "2023-01-01",

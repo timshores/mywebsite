@@ -1,0 +1,122 @@
+---
+import Layout from "../layouts/Layout.astro";
+import { linkedinFeedItems } from "../data/linkedinFeed";
+import { profile } from "../data/profile";
+
+const dateFormatter = new Intl.DateTimeFormat("en-US", {
+  month: "long",
+  day: "numeric",
+  year: "numeric",
+  timeZone: "UTC"
+});
+
+const items = linkedinFeedItems.map((item) => ({
+  ...item,
+  displayDate: dateFormatter.format(new Date(item.date)),
+  isPhoto: item.kind.includes("photo")
+}));
+---
+
+<Layout title={`LinkedIn Feed - ${profile.name}`} description="LinkedIn feed media history from a downloaded data export">
+  <h1>LinkedIn Feed</h1>
+  <p class="subtitle">
+    A local, export-backed record of feed media from LinkedIn. The basic export includes upload dates and media links, but not the full text of each post.
+  </p>
+
+  <div class="feed-list">
+    {items.map((item) => (
+      <article class="feed-item" data-expandable data-keep-left-rail>
+        <div class="feed-meta">
+          <span>{item.displayDate}</span>
+          <span>{item.title}</span>
+        </div>
+        {item.isPhoto ? (
+          <a class="media-frame" href={item.url} target="_blank" rel="noreferrer">
+            <img src={item.url} alt={`LinkedIn ${item.title.toLowerCase()} from ${item.displayDate}`} loading="lazy" />
+          </a>
+        ) : (
+          <a class="document-link" href={item.url} target="_blank" rel="noreferrer">
+            Open LinkedIn document
+          </a>
+        )}
+        {item.description && <p>{item.description}</p>}
+      </article>
+    ))}
+  </div>
+</Layout>
+
+<style>
+  .subtitle {
+    font-size: 1.08rem;
+    margin-bottom: 1.45rem;
+    max-width: 76ch;
+  }
+
+  .feed-list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.85rem;
+  }
+
+  .feed-item {
+    border-top: 1px solid var(--line);
+    border-right: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+    border-left: 4px solid var(--accent-2);
+    border-radius: 0 0.8rem 0.8rem 0;
+    background: var(--card);
+    padding: 0.95rem 1rem;
+  }
+
+  .feed-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .feed-meta span,
+  .document-link {
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 0.22rem 0.58rem;
+    background: #fff;
+    color: var(--ink-soft);
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .media-frame {
+    display: block;
+    overflow: hidden;
+    border: 1px solid var(--line);
+    border-radius: 0.65rem;
+    background: #ebe4d8;
+    aspect-ratio: 4 / 3;
+  }
+
+  .media-frame img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .document-link {
+    display: inline-flex;
+    margin-top: 0.1rem;
+    text-decoration: none;
+  }
+
+  .feed-item p {
+    margin-top: 0.75rem;
+    max-width: none;
+  }
+
+  @media (max-width: 860px) {
+    .feed-list {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

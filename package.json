@@ -4,6 +4,7 @@
   "version": "0.0.1",
   "scripts": {
     "profile:sync": "node scripts/sync-profile-pdf.mjs",
+    "linkedin:sync": "node scripts/sync-linkedin-feed.mjs",
     "dev": "npm run profile:sync && astro dev",
     "build": "npm run profile:sync && astro build",
     "preview": "astro preview",
