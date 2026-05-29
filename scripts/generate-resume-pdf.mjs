@@ -10,6 +10,7 @@ const publicDir = resolve(projectRoot, "public");
 const profileDataFile = resolve(projectRoot, "src", "data", "profile.ts");
 const portfolioDataFile = resolve(projectRoot, "src", "data", "portfolio.ts");
 const resumeDataFile = resolve(projectRoot, "src", "data", "resume.ts");
+const publishedResumeFileName = "Tim-Shores-Resume-2026.pdf";
 
 const colors = {
   ink: "#1f1f1c",
@@ -40,14 +41,20 @@ const portfolioItems = await readConstExport(portfolioDataFile, "portfolioItems"
 const resumeDate = existsSync(sourcePdf) ? statSync(sourcePdf).mtime : new Date();
 const fileName = `Shores Resume ${monthNames[resumeDate.getMonth()]} ${resumeDate.getFullYear()}.pdf`;
 const outputPath = resolve(publicDir, fileName);
+const publishedResumePath = resolve(publicDir, publishedResumeFileName);
 
 if (!existsSync(publicDir)) {
   mkdirSync(publicDir, { recursive: true });
 }
 
-await writeResumePdf(profile, outputPath);
-writeResumeData(fileName);
-console.log(`[resume] Generated ${basename(outputPath)}`);
+if (existsSync(publishedResumePath)) {
+  writeResumeData(publishedResumeFileName);
+  console.log(`[resume] Using existing ${publishedResumeFileName}`);
+} else {
+  await writeResumePdf(profile, outputPath);
+  writeResumeData(fileName);
+  console.log(`[resume] Generated ${basename(outputPath)}`);
+}
 
 async function writeResumePdf(profile, outputPath) {
   await new Promise((resolvePromise, rejectPromise) => {

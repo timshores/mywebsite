@@ -1,4 +1,4 @@
 export const resume = {
-  "fileName": "Shores Resume May 2026.pdf",
-  "href": "/Shores%20Resume%20May%202026.pdf"
+  "fileName": "Tim-Shores-Resume-2026.pdf",
+  "href": "/Tim-Shores-Resume-2026.pdf"
 } as const;
