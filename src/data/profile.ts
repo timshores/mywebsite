@@ -1,20 +1,17 @@
 export const profile = {
   name: "Tim Shores",
-  headline: "I make complex systems legible and trapped knowledge valuable",
+  headline: "I make organizations and systems work more effectively",
   headlineLines: [
-    "I make complex systems legible",
-    "and trapped knowledge valuable",
+    "I make organizations",
+    "and systems work more effectively",
   ],
   location: "Leverett, Massachusetts, United States",
   email: "timothylshores@gmail.com",
   linkedin: "https://www.linkedin.com/in/timshores",
   summary: [
-    "Most useful information is stuck. It's in people's heads, buried in systems nobody reads, jargon nobody outside the room understands, or data waiting to be shaped into a decision. I've spent my career finding it and making it useful.",
-    "At Cisco, that means leading content strategy and information architecture for security products — structuring technical knowledge so customers can find and act on what they need. I'm currently a member of a cross-organizational tiger team transforming Cisco's technical communications into an AI-native content system, focused on content modeling and context engineering that structure knowledge for AI reasoning and dynamic, persona-driven experiences. This builds on earlier work documenting Cisco's LLM-powered assistant feature and prototyping AI generation of identity-based technical content.",
-    "Before Cisco, it meant building databases of European Parliament voting patterns for a forest policy campaign, designing donor data systems and writing program concept notes for a Haiti-focused nonprofit, and constructing the knowledge base that cut support call volume by 20% at a software company.",
-    "Outside work, I serve on a planning board and two school committees in Western Massachusetts and on the board of The 'MPOWER Project. Municipal budgets, policy, and community needs all hold trapped knowledge, and the value comes when it's made legible to the people making decisions about them.",
-    "My range of work is deliberate. Illegible complexity shows up everywhere, and the work of solving it transfers across contexts more than people expect.",
-    "I work regularly with AI tools, Python, and open-source data as part of how I approach making institutional knowledge accessible at scale. I'm building professionally toward the intersection where structured content, AI reasoning, and human judgment work together.",
+    "I make organizations and systems work more effectively. Here's how: most useful knowledge is stuck — in people's heads, social systems, team silos, processes nobody interrogates, or data waiting to be shaped into a decision. I find it and work with people to restructure how the organization stores and represents it, making that knowledge useful. The goal is always to support people in making and measuring better decisions.",
+    "At Cisco, that meant leading content strategy and information architecture for security products, treating technical content as a problem of business systems and team alignment, not a pile of deliverables. I served on a cross-organizational tiger team transforming Cisco's technical communications into an AI-native content system, collaborating on content modeling and context engineering that structured institutional knowledge for accurate, efficient delivery by generative AI products. This built on earlier work documenting Cisco's LLM-powered assistant and prototyping AI generation of identity-based technical content.",
+    "Before Cisco, I built databases of European Parliament voting patterns for multistakeholder forest policy campaigns, designed donor data systems for a rapidly growing Haiti-focused nonprofit, constructed the knowledge base that cut support call volume by 20% at a software company, and wound down an unprofitable service line at an IT business. In civil society, I lead data and operations on the board of The 'MPOWER Project, and serve on a planning board, an energy committee, and two school committees in Western Massachusetts. Nonprofit capacity, municipal budgeting, policy analysis, performance evaluation, and community needs assessments all drill down to trapped knowledge, and the value is making it legible to the people responsible for decisions and communicating to the public. How do I do it? I walk around and talk to people. Sometimes I get lucky enough to help a group rope a grant, and my walking and talking becomes facilitated group work with mixed-methods research, followed by a dense but charming report and rounds of public interest communications. My wide range of work is deliberate. Organizations get stuck in knowledge tarpits — knowledge trapped in silos, legacies of practice, in-group dynamics that hush some voices, complexity outrunning management structures, decisions starved of information that already exists somewhere in the building. The whiteboard-and-dialogue work of getting unstuck transfers across domains. The trick is getting the group to trust the process enough to try something new.",
   ],
   focusAreas: [
     "Community-based participatory research",
@@ -112,7 +109,7 @@ export const profile = {
     {
       company: "Cisco",
       role: "Technical Education Content Developer",
-      period: "May 2024 - Present",
+      period: "May 2024 - July 2026",
       highlights: [
         "Content strategy lead for Cisco Secure Access, working in close collaboration with product, engineering, UX, and CX teams. Architected end-to-end content strategy for Secure Access, launched a new documentation set for SASE Management, and drove quality and accuracy improvements to IPsec tunnels documentation. Domain range spans SSE/SASE, IPsec tunneling, SSO, and AI assistant integration with SaaS products.",
         "Member of the Content Modeling workstream on Cisco's AI-Native Content Strategy initiative — a cross-organizational tiger team restructuring Cisco's entire documentation corpus, past and future, into a graphRAG-structured, AI-native content system. Delivered hands-on content modeling and context engineering work for a PRD, designing structures that enable AI reasoning and dynamic, persona-driven content experiences. The broader initiative spans AI-assisted authoring, intent-driven content retrieval and governance, and continuous quality improvement.",
@@ -131,7 +128,7 @@ export const profile = {
     },
     {
       company: "Town Common Research",
-      role: "Researcher",
+      role: "Community Based Participatory Researcher",
       period: "January 2022 - August 2023",
       highlights: [
         "Community-based participatory research for towns and community organizations in Western Massachusetts. Collected and reported data for Age-Friendly needs assessments and supported equity and justice initiatives, helping local organizers build evidence-based knowledge for community-driven decision-making.",
@@ -144,7 +141,7 @@ export const profile = {
       highlights: [
         "Working to defend forests.",
         "Researched and wrote in support of the Forest Defenders Alliance campaign to remove forest biomass from the European Union Renewable Energy Directive and end the counting of wood burning toward emissions reduction targets. Managed the campaign website and participated in outreach.",
-        "Built a database of Members of European Parliament tracking party and committee memberships and voting patterns on forests and environmental policy, supporting campaign monitoring and targeted outreach.",
+        "Built and supported a Google Data Studio database and UI to support campaigners tracking European Parliament communications, parliamentary committee actions, and voting patterns on forests and environmental policy, supporting campaign monitoring and targeted outreach.",
         "forestdefenders.eu",
       ],
     },
@@ -153,7 +150,7 @@ export const profile = {
       role: "Director of Data & Donor Experience",
       period: "August 2019 - February 2022",
       highlights: [
-        "Managed revenue data, grant writing, grant pipeline, and donor services for a nonprofit working to improve quality of life for the Haitian people, particularly children. Designed program concepts for Haitian farmer support initiatives and wrote funding proposals to sustain them. Helped coordinate galas and fundraising events.",
+        "Managed revenue data, grant writing, grant pipeline, and donor services for a nonprofit working to improve quality of life for the Haitian people, particularly children. Streamlined donation processing by replacing manual workflows with Python scripts, reducing processing time and data entry errors. Designed program concepts for Haitian farmer support initiatives and wrote funding proposals to sustain them. Helped coordinate galas and fundraising events.",
         "Led fundraising response through an extraordinary sequence of crises: COVID-19, civil unrest, the assassination of President Moïse, and the August 2021 earthquake.",
       ],
     },
@@ -184,7 +181,7 @@ export const profile = {
       period: "January 2013 - November 2014",
       highlights: [
         "Led a team of 5 to 7 technicians serving 150 small business customers at a Berkeley IT service provider and web developer. Personally closed 30 contracts through business goal analysis, clear proposals, and reliable service.",
-        "Collaborated with the President on business operations improvements including CRM implementation, project management templates, cost forecasting, service outcome evaluation, and KPI monitoring.",
+        "Collaborated with the President on business operations improvements including WordPress CRM implementation, project management templates, cost forecasting, service outcome evaluation, and KPI monitoring.",
       ],
     },
     {
