@@ -1,20 +1,17 @@
 export const profile = {
-  name: "Tim Shores",
-  headline: "I make organizations and systems work more effectively",
+  name: "Business analyst — I make organizations and systems work more",
+  headline: "effectively",
   headlineLines: [
-    "I make organizations",
-    "and systems work more effectively",
+    "effectively",
+    "",
   ],
   location: "Leverett, Massachusetts, United States",
   email: "timothylshores@gmail.com",
   linkedin: "https://www.linkedin.com/in/timshores",
   summary: [
-    "I make organizations and systems work more effectively.",
-    "Here's how: most useful knowledge is stuck — in people's heads, social systems, team silos, processes nobody interrogates, or data waiting to be shaped into a decision. I find it and work with people to restructure how the organization stores and represents it, making that knowledge useful. The goal is always to support people in making and measuring better decisions.",
+    "I make organizations and systems work more effectively. Here's how: most useful knowledge is stuck — in people's heads, social systems, team silos, processes nobody interrogates, or data waiting to be shaped into a decision. I find it and work with people to restructure how the organization stores and represents it, making that knowledge useful. The goal is always to support people in making and measuring better decisions.",
     "At Cisco, that meant leading content strategy and information architecture for security products, treating technical content as a problem of business systems and team alignment, not a pile of deliverables. I served on a cross-organizational tiger team transforming Cisco's technical communications into an AI-native content system, collaborating on content modeling and context engineering that structured institutional knowledge for accurate, efficient delivery by generative AI products. This built on earlier work documenting Cisco's LLM-powered assistant and prototyping AI generation of identity-based technical content.",
-    "Before Cisco, I built databases of European Parliament voting patterns for multistakeholder forest policy campaigns, designed donor data systems for a rapidly growing Haiti-focused nonprofit, constructed the knowledge base that cut support call volume by 20% at a software company, and wound down an unprofitable service line at an IT business.",
-    "In civil society, I lead data and operations on the board of The 'MPOWER Project, and serve on a planning board, an energy committee, and two school committees in Western Massachusetts. Nonprofit capacity, municipal budgeting, policy analysis, performance evaluation, and community needs assessments all drill down to trapped knowledge, and the value is making it legible to the people responsible for decisions and communicating to the public. How do I do it? I walk around and talk to people. Sometimes I get lucky enough to help a group rope a grant, and my walking and talking becomes facilitated group work with mixed-methods research, followed by a dense but charming report and rounds of public interest communications.",
-    "I've deliberately pursued a wide range of work. Organizations get stuck in knowledge tarpits — knowledge trapped in silos, legacies of practice, in-group dynamics that hush some voices, complexity outrunning management structures, decisions starved of information that already exists somewhere in the building. The whiteboard-and-dialogue work of getting unstuck transfers across domains. The trick is getting the group to trust the process enough to try something new.",
+    "Before Cisco, I built databases of European Parliament voting patterns for multistakeholder forest policy campaigns, designed donor data systems for a rapidly growing Haiti-focused nonprofit, constructed the knowledge base that cut support call volume by 20% at a software company, and wound down an unprofitable service line at an IT business. In civil society, I lead data and operations on the board of The 'MPOWER Project, and serve on a planning board, an energy committee, and two school committees in Western Massachusetts. Nonprofit capacity, municipal budgeting, policy analysis, performance evaluation, and community needs assessments all drill down to trapped knowledge, and the value is making it legible to the people responsible for decisions and communicating to the public. How do I do it? I walk around and talk to people. Sometimes I get lucky enough to help a group rope a grant, and my walking and talking becomes facilitated group work with mixed-methods research, followed by a dense but charming report and rounds of public interest communications. I've deliberately pursued a wide range of work. Organizations get stuck in knowledge tarpits — knowledge trapped in silos, legacies of practice, in-group dynamics that hush some voices, complexity outrunning management structures, decisions starved of information that already exists somewhere in the building. The whiteboard-and-dialogue work of getting unstuck transfers across domains. The trick is getting the group to trust the process enough to try something new.",
   ],
   focusAreas: [
     "Community-based participatory research",
@@ -114,9 +111,12 @@ export const profile = {
       role: "Technical Education Content Developer",
       period: "May 2024 - July 2026",
       highlights: [
-        "Content strategy lead for Cisco Secure Access, working in close collaboration with product, engineering, UX, and CX teams. Architected end-to-end content strategy for Secure Access, launched a new documentation set for SASE Management, and drove quality and accuracy improvements to IPsec tunnels documentation. Domain range spans SSE/SASE, IPsec tunneling, SSO, and AI assistant integration with SaaS products.",
-        "Member of the Content Modeling workstream on Cisco's AI-Native Content Strategy initiative — a cross-organizational tiger team restructuring Cisco's entire documentation corpus, past and future, into a graphRAG-structured, AI-native content system. Delivered hands-on content modeling and context engineering work for a PRD, designing structures that enable AI reasoning and dynamic, persona-driven content experiences. The broader initiative spans AI-assisted authoring, intent-driven content retrieval and governance, and continuous quality improvement.",
-        "Developing information architecture expertise as a formal IA mentee and applying it to AI-ready content structures across the Secure Access product line. Led collaborative context engineering work supporting AI tooling adoption and culture change across technical communications, including enterprise CMS metadata and content/data analysis for migration prep. Earlier work includes researching and writing documentation for the Cisco Assistant LLM feature and co-developing a hackathon proof-of-concept for LLM-generated, identity-based technical content.",
+        "I led content strategy for Cisco Secure Access, across AI, technical content, and product experience.",
+        "Most of my energy went to Cisco's AI-Native Content Strategy initiative, a cross-organizational effort to restructure the entire documentation corpus into a graphRAG-based, AI-ready system. On the Content Modeling workstream, I did hands-on content modeling and context engineering: designing structures that let AI reason over content and deliver dynamic, persona-driven experiences. I did the business analysis behind a PRD — defining requirements and building the content model and context engineering to support them — and developed formal information architecture expertise (as an IA mentee), applying it to AI-ready structures across the product line.",
+        "Alongside that, I owned end-to-end content strategy for Secure Access, spanning SSE/SASE, IPsec tunneling, SSO, and AI-assistant integration with SaaS products. I architected the strategy through facilitated discussions with SMEs and other content developers, launched a new SASE Management documentation set, and drove accuracy improvements to IPsec tunnel content.",
+        "I also ran the content analysis that enabled migration decisions — auditing enterprise CMS metadata and content to assess the corpus and prepare it for restructuring.",
+        "I interviewed engineers, product managers, business developers, and customer experience reps to gather technical detail and customer persona data and turn it into clear content, led team sessions to keep everyone aligned through major redesigns, and coached colleagues on adopting structured content processes and AI tooling — the culture-change work that determines whether any of it lasts.",
+        "Earlier: documentation for the Cisco Assistant LLM feature, and a hackathon proof-of-concept for LLM-generated, identity-based technical content.",
       ],
     },
     {
@@ -124,9 +124,9 @@ export const profile = {
       role: "Technical Communications Specialist",
       period: "February 2022 - May 2024",
       highlights: [
-        "Customer communications lead and data-informed content researcher for Cisco Duo on the Security Documentation team. Planned and wrote communications connecting cybersecurity product customers with what they needed to know about product changes, vulnerabilities, and required actions. Wrote release notes each sprint and coordinated customer communication impact studies with Product and Data Science teams.",
-        "Worked to extend the Duo communications model to other Cisco Security products. Facilitated discussions with SMEs across design, engineering, and product management, and contributed to content performance analysis and process improvement for the team's publishing operations.",
-        "Mentored early-career coworkers and students.",
+        "I led customer communications and content research for Cisco Duo on the Security Documentation team — the work of connecting cybersecurity customers with the critical information they needed about product changes, vulnerabilities, and the actions those required.",
+        "I wrote release notes each sprint and coordinated customer communication impact studies with Product and Data Science teams, using quantitative and qualitative research on how communications were received to improve what we sent and how. Alongside that, I worked to extend the Duo communications model to other Cisco Security products, facilitating discussions with SMEs across design, engineering, and product management, and contributing to content performance analysis and process improvement for the team's publishing operations.",
+        "I also mentored early-career coworkers and students.",
       ],
     },
     {
@@ -134,7 +134,8 @@ export const profile = {
       role: "Community Based Participatory Researcher",
       period: "January 2022 - August 2023",
       highlights: [
-        "Community-based participatory research for towns and community organizations in Western Massachusetts. Collected and reported data for Age-Friendly needs assessments and supported equity and justice initiatives, helping local organizers build evidence-based knowledge for community-driven decision-making.",
+        "I conducted community-based participatory research for towns and community organizations across Western Massachusetts, partnering with residents and local organizers throughout the process — from study design through data collection and reporting.",
+        "For Age-Friendly needs assessments, I collected and reported data using surveys, key informant interviews, and focus groups, then turned it into evidence local organizers could act on. This work supported Council on Aging initiatives with an empirical basis for decisions — including a needs assessment whose findings helped make the case for two new part-time roles: a library program director to expand events for seniors, and a community worker who meets with seniors regularly. I reported and presented findings in forms usable by community decision-makers rather than specialist audiences.",
       ],
     },
     {
@@ -142,10 +143,8 @@ export const profile = {
       role: "Forest Policy Campaign Researcher",
       period: "October 2019 - January 2023",
       highlights: [
-        "Working to defend forests.",
-        "Researched and wrote in support of the Forest Defenders Alliance campaign to remove forest biomass from the European Union Renewable Energy Directive and end the counting of wood burning toward emissions reduction targets. Managed the campaign website and participated in outreach.",
-        "Built and supported a Google Data Studio database and UI to support campaigners tracking European Parliament communications, parliamentary committee actions, and voting patterns on forests and environmental policy, supporting campaign monitoring and targeted outreach.",
-        "forestdefenders.eu",
+        "I researched and wrote in support of the Forest Defenders Alliance campaign to remove forest biomass from the EU Renewable Energy Directive and end the counting of wood burning toward emissions-reduction targets.",
+        "I built a database of Members of European Parliament to track party and committee memberships and voting patterns on forest and environmental policy, in support of campaign monitoring and targeted outreach. I also managed the campaign website and took part in outreach.",
       ],
     },
     {
@@ -153,8 +152,9 @@ export const profile = {
       role: "Director of Data & Donor Experience",
       period: "August 2019 - February 2022",
       highlights: [
-        "Managed revenue data, grant writing, grant pipeline, and donor services for a nonprofit working to improve quality of life for the Haitian people, particularly children. Streamlined donation processing by replacing manual workflows with Python scripts, reducing processing time and data entry errors. Designed program concepts for Haitian farmer support initiatives and wrote funding proposals to sustain them. Helped coordinate galas and fundraising events.",
-        "Led fundraising response through an extraordinary sequence of crises: COVID-19, civil unrest, the assassination of President Moïse, and the August 2021 earthquake.",
+        "I managed revenue data, grant writing, grant pipeline, and donor services for a nonprofit working to improve quality of life for the Haitian people, particularly children.",
+        "I streamlined donation processing by replacing manual workflows with Python scripts, cutting processing time and data-entry errors. I designed program concepts for Haitian farmer support initiatives and wrote the funding proposals to sustain them, and I helped coordinate galas and fundraising events.",
+        "I led the fundraising response through an extraordinary sequence of crises: COVID-19, civil unrest, the assassination of President Moïse, and the August 2021 earthquake.",
       ],
     },
     {
@@ -162,20 +162,18 @@ export const profile = {
       role: "Platform Analyst",
       period: "November 2016 - August 2019",
       highlights: [
-        "Salesforce platform lead for a nonprofit cultivating early-stage STEM ventures.",
-        "First responder for development planning and implementation, second-tier resource for user support and training. Designed and built solutions supporting grants management, impact evaluation, program monitoring, digital marketing, and relationship management across funders, investors, and program participants.",
-        "Worked across Salesforce Community, Pardot, Service Cloud, Process Builder and Flow, Apex, Lightning Web Components, and Nonprofit Success Pack, integrated with NetSuite via SOAP API and supported by tools including Form Assembly, Conga Composer, and RStudio.",
+        "I was the Salesforce platform lead for a nonprofit cultivating early-stage STEM ventures — first responder for development planning and implementation, and second-tier resource for user support and training.",
+        "I designed and built solutions supporting grants management, impact evaluation, program monitoring, digital marketing, and relationship management across funders, investors, and program participants. The stack ran across Salesforce Community, Pardot, Service Cloud, Process Builder and Flow, Apex, Lightning Web Components, and Nonprofit Success Pack — integrated with NetSuite via SOAP API and supported by tools including Form Assembly, Conga Composer, and RStudio.",
       ],
     },
     {
       company: "Not1More",
-      role: "Program Lead, Tech, Innovation, & Coalition Development",
+      role: "Program Lead, Tech, Innovation, & Coalition Development - Freelance",
       period: "August 2015 - August 2019",
       highlights: [
-        "Technology and coalition development for a global environmental justice organization supporting frontline forest defenders facing violence and reprisals.",
-        "Designed and deployed technology solutions for researchers and defenders in remote forest sites, including Forest Threat Sensor (peer-to-peer alerting and mapping for defenders encountering risk), TIRTL (rights violation documentation and reporting), and DefenderDirect (direct giving fundraising).",
-        "Managed CRM development, data collection design, web development, and digital marketing.",
-        "Built coalition relationships and wrote for fundraising and advocacy. Supported the Forest Defenders Conference, the \"I am Chut Wutty\" documentary campaign, the Bloodwood report on unauthorized rosewood plunder in Guinea-Bissau, and the Amazon Security Framework community of practice for defenders under threat in the Amazon.",
+        "I led technology and coalition development for a global environmental justice organization supporting frontline forest defenders facing violence and reprisals.",
+        "I designed and deployed technology for researchers and defenders working in remote forest sites: Forest Threat Sensor, a peer-to-peer alerting and mapping tool for defenders encountering risk; TIRTL, for documenting and reporting rights violations; and DefenderDirect, a direct-giving fundraising tool. I also managed CRM development, data collection design, web development, and digital marketing.",
+        "Alongside the technology work, I built coalition relationships and wrote for fundraising and advocacy. I supported the Forest Defenders Conference, the \"I am Chut Wutty\" documentary campaign, the Bloodwood report on unauthorized rosewood plunder in Guinea-Bissau, and the Amazon Security Framework community of practice for defenders under threat in the Amazon.",
       ],
     },
     {
@@ -183,8 +181,8 @@ export const profile = {
       role: "IT Services Manager",
       period: "January 2013 - November 2014",
       highlights: [
-        "Led a team of 5 to 7 technicians serving 150 small business customers at a Berkeley IT service provider and web developer. Personally closed 30 contracts through business goal analysis, clear proposals, and reliable service.",
-        "Collaborated with the President on business operations improvements including WordPress CRM implementation, project management templates, cost forecasting, service outcome evaluation, and KPI monitoring.",
+        "I led a team of 5 to 7 technicians serving 150 small-business customers at a Berkeley IT service provider and web developer. I personally closed 30 contracts through business goal analysis, clear proposals, and reliable service.",
+        "I worked with the President on business operations improvements — CRM implementation, project management templates, cost forecasting, service outcome evaluation, and KPI monitoring.",
       ],
     },
     {
@@ -192,8 +190,8 @@ export const profile = {
       role: "Production Manager and Senior Database Specialist",
       period: "June 2006 - January 2013",
       highlights: [
-        "Database software company specializing in the self-storage real estate subsector. Worked on a small team supporting finance and management clients through data migrations, software customization, QA, and feature development on SQL Server.",
-        "Reduced support call volume 20% and improved resolution time 40% by mentoring technicians, constructing and managing a knowledge base, and driving process improvement and automation for QA and ETL workflows.",
+        "I worked on a small team at a database software company specializing in the self-storage real estate subsector, supporting finance and management clients through data migrations, software customization, QA, and feature development on SQL Server.",
+        "I reduced support call volume by 20% and improved resolution time by 40% — mentoring technicians, building and managing a knowledge base, and driving process improvement and automation for QA and ETL workflows.",
       ],
     },
     {
