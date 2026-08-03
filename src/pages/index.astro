@@ -15,17 +15,19 @@ import { resumeVariants } from "../data/resumeVariants";
         {profile.headlineLines[1]}
       </p>
       <p class="location">{profile.location}</p>
-      <p class="actions-label">Download resume</p>
-      <div class="hero-actions">
-        {resumeVariants.map((variant, index) => (
-          <a
-            href={variant.href}
-            class={index === 0 ? "button" : "button button-light"}
-            download={variant.fileName}
-            title={variant.description}
-            aria-label={`Download ${variant.label.toLowerCase()} resume (PDF): ${variant.description}`}
-          >{variant.label}</a>
-        ))}
+      <div class="resume-downloads">
+        <p class="actions-label">Download resume</p>
+        <div class="hero-actions">
+          {resumeVariants.map((variant, index) => (
+            <a
+              href={variant.href}
+              class={index === 0 ? "button" : "button button-light"}
+              download={variant.fileName}
+              title={variant.description}
+              aria-label={`Download ${variant.label.toLowerCase()} resume (PDF): ${variant.description}`}
+            >{variant.label}</a>
+          ))}
+        </div>
       </div>
     </div>
     <div class="portrait-container">
@@ -143,8 +145,17 @@ import { resumeVariants } from "../data/resumeVariants";
     margin-top: 0.25rem;
   }
 
-  .actions-label {
+  .resume-downloads {
+    width: fit-content;
+    max-width: 100%;
     margin-top: 1.1rem;
+    padding: 0.7rem 0.85rem 0.8rem;
+    border: 1px solid var(--line);
+    border-radius: 0.9rem;
+    background: var(--card);
+  }
+
+  .actions-label {
     font-size: 0.77rem;
     text-transform: uppercase;
     letter-spacing: 0.08em;
