@@ -16,8 +16,8 @@ This is the plain-language version of what the project is doing and why:
 >
 > 1. I update my LinkedIn profile.
 > 2. I export the LinkedIn profile PDF.
-> 3. I drop that PDF into my local website project.
-> 4. Codex-developed Node scripts parse the PDF and refresh my structured profile data stored in TypeScript files.
+> 3. I drop that PDF into the website project's private `local-data` folder.
+> 4. Node scripts parse the PDF into a review candidate and report. After I approve the diff, a separate command refreshes the site's structured profile data.
 > 5. The same workflow generates a one-page PDF resume named by month and year.
 > 6. ... And it refreshes the local version of my Astro framework website.
 > 7. I push to GitHub.
@@ -33,6 +33,9 @@ This is the plain-language version of what the project is doing and why:
 - `npm run dev`
 - `npm run build`
 - `npm run preview`
+- `npm run profile:import`
+- `npm run profile:apply`
+- `npm run profile:check`
 
 ## Content Source
 
@@ -47,13 +50,19 @@ Curated display choices for skills and certifications are in `src/data/profileDi
 
 This project includes a simple sync step:
 
-- Source: `../Profile.pdf` (repo root)
+- Private source: `local-data/Profile.pdf`
 - Target: `public/Profile.pdf`
 - Script: `scripts/sync-profile-pdf.mjs`
 - Resume generator: `scripts/generate-resume-pdf.mjs`
 
-`npm run dev` and `npm run build` both run `profile:sync` first.
-If you replace `Profile.pdf`, the next build/dev run updates the public copy, regenerates the LinkedIn-backed fields in `src/data/profile.ts`, and creates a one-page resume PDF in `public/`.
+`npm run profile:import` parses the private PDF into two ignored, local review artifacts:
+
+- `local-data/profile-candidate.ts`
+- `local-data/profile-import-report.md`
+
+It does not alter the live site data. Review both artifacts, then run `npm run profile:apply` to update `src/data/profile.ts`, copy the source PDF into `public/`, and regenerate the published resume. Imports fail integrity checks when identity or required content looks malformed, or when too much experience disappears.
+
+`npm run dev` and `npm run build` never import content. They run `profile:check` and then build from reviewed, committed data, so local development and GitHub Actions are deterministic.
 
 The sync keeps hand-curated site fields from `profile.ts` that are not cleanly represented in the LinkedIn PDF:
 
@@ -66,7 +75,7 @@ The sync also uses `src/data/profileDisplay.ts` instead of LinkedIn's top-of-lis
 - `topSkills`
 - `certifications`
 
-The generated resume is named `Shores Resume [Month] [Year].pdf`, where month and year come from the source `Profile.pdf` file timestamp. The current resume download target is generated in `src/data/resume.ts` and used by the home page button.
+The generated resume replaces `public/Tim-Shores-Resume-2026.pdf`. The stable download target is recorded in `src/data/resume.ts` and used by the home page button.
 
 ## LinkedIn Feed Export
 
@@ -82,12 +91,14 @@ The current basic LinkedIn export includes `Rich_Media.csv`, which provides feed
 
 ## Update Flow
 
-1. Export your latest LinkedIn profile PDF and replace `Profile.pdf` at repo root.
+1. Export your latest LinkedIn profile PDF to `local-data/Profile.pdf`.
 2. Edit `src/data/profileDisplay.ts` if you want different displayed skills or certifications.
-3. Run `npm run profile:sync` to preview the generated data changes, or run `npm run dev` / `npm run build`.
-4. Review the generated `src/data/profile.ts` and `src/data/resume.ts` diffs, especially if LinkedIn changes the PDF layout.
-5. Run `npm run build`.
-6. Commit and push to trigger your existing GitHub-to-production deploy.
+3. Run `npm run profile:import`.
+4. Review `local-data/profile-import-report.md` and `local-data/profile-candidate.ts`, especially if LinkedIn changed its PDF layout.
+5. Run `npm run profile:apply` only after the candidate looks right.
+6. Review the tracked changes to `src/data/profile.ts`, `src/data/resume.ts`, and the public PDFs.
+7. Run `npm run build`.
+8. Commit and push to trigger your existing GitHub-to-production deploy.
 
 This keeps your public resume PDF and site content aligned without paid LinkedIn integrations.
 

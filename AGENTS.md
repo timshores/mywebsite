@@ -8,8 +8,12 @@ Common commands:
 
 - `npm run dev`
 - `npm run build`
-- `npm run profile:sync`
+- `npm run profile:import` (creates ignored review artifacts; does not update the site)
+- `npm run profile:apply` (applies a reviewed candidate and regenerates public files)
+- `npm run profile:check`
 - `npm run linkedin:sync`
+
+LinkedIn profile PDFs belong at `local-data/Profile.pdf`. Never make profile import an implicit side effect of dev or build. Review `local-data/profile-import-report.md` and `local-data/profile-candidate.ts` before applying an import.
 
 ## LinkedIn Feed Work In Progress
 

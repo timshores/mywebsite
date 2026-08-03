@@ -3,10 +3,14 @@
   "type": "module",
   "version": "0.0.1",
   "scripts": {
-    "profile:sync": "node scripts/sync-profile-pdf.mjs",
+    "profile:import": "node scripts/sync-profile-pdf.mjs",
+    "profile:sync": "npm run profile:import",
+    "profile:apply": "node scripts/sync-profile-pdf.mjs --apply",
+    "profile:check": "node scripts/check-profile-data.mjs",
+    "resume:generate": "node scripts/generate-resume-pdf.mjs",
     "linkedin:sync": "node scripts/sync-linkedin-feed.mjs",
-    "dev": "npm run profile:sync && astro dev",
-    "build": "npm run profile:sync && astro build",
+    "dev": "npm run profile:check && astro dev",
+    "build": "npm run profile:check && astro build",
     "preview": "astro preview",
     "astro": "astro"
   },

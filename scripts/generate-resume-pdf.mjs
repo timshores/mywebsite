@@ -1,16 +1,16 @@
-import { createWriteStream, existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import { createWriteStream, existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { basename, dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import PDFDocument from "pdfkit";
 
 const scriptDir = dirname(fileURLToPath(import.meta.url));
 const projectRoot = resolve(scriptDir, "..");
-const sourcePdf = resolve(projectRoot, "..", "Profile.pdf");
 const publicDir = resolve(projectRoot, "public");
 const profileDataFile = resolve(projectRoot, "src", "data", "profile.ts");
 const portfolioDataFile = resolve(projectRoot, "src", "data", "portfolio.ts");
 const resumeDataFile = resolve(projectRoot, "src", "data", "resume.ts");
 const publishedResumeFileName = "Tim-Shores-Resume-2026.pdf";
+const temporaryResumePath = resolve(publicDir, `.${publishedResumeFileName}.tmp`);
 
 const colors = {
   ink: "#1f1f1c",
@@ -21,40 +21,23 @@ const colors = {
   paper: "#fefcf7",
 };
 
-const monthNames = [
-  "January",
-  "February",
-  "March",
-  "April",
-  "May",
-  "June",
-  "July",
-  "August",
-  "September",
-  "October",
-  "November",
-  "December",
-];
-
 const profile = await readConstExport(profileDataFile, "profile");
 const portfolioItems = await readConstExport(portfolioDataFile, "portfolioItems");
-const resumeDate = existsSync(sourcePdf) ? statSync(sourcePdf).mtime : new Date();
-const fileName = `Shores Resume ${monthNames[resumeDate.getMonth()]} ${resumeDate.getFullYear()}.pdf`;
-const outputPath = resolve(publicDir, fileName);
 const publishedResumePath = resolve(publicDir, publishedResumeFileName);
 
 if (!existsSync(publicDir)) {
   mkdirSync(publicDir, { recursive: true });
 }
 
-if (existsSync(publishedResumePath)) {
-  writeResumeData(publishedResumeFileName);
-  console.log(`[resume] Using existing ${publishedResumeFileName}`);
-} else {
-  await writeResumePdf(profile, outputPath);
-  writeResumeData(fileName);
-  console.log(`[resume] Generated ${basename(outputPath)}`);
+try {
+  await writeResumePdf(profile, temporaryResumePath);
+  renameSync(temporaryResumePath, publishedResumePath);
+} catch (error) {
+  rmSync(temporaryResumePath, { force: true });
+  throw error;
 }
+writeResumeData(publishedResumeFileName);
+console.log(`[resume] Generated ${basename(publishedResumePath)}`);
 
 async function writeResumePdf(profile, outputPath) {
   await new Promise((resolvePromise, rejectPromise) => {
@@ -82,12 +65,12 @@ async function writeResumePdf(profile, outputPath) {
       doc.text("", 0, 0);
     }
 
-    if (pageCount > 1) {
-      throw new Error(`Resume overflowed to ${pageCount} pages; tighten generated content before publishing.`);
-    }
-
     if (process.env.RESUME_DEBUG) {
       console.log(`[resume] Used through y=${Math.round(usedBottom)} of ${Math.round(doc.page.height - doc.page.margins.bottom)}`);
+    }
+
+    if (pageCount > 1) {
+      throw new Error(`Resume overflowed to ${pageCount} pages; tighten generated content before publishing.`);
     }
 
     doc.end();
@@ -176,6 +159,7 @@ function drawResume(doc, profile, portfolioItems) {
       });
     doc.y += 4;
     for (const project of resumeSelectedWork(profile, portfolioItems)) {
+      debugPosition(doc, `portfolio: ${project.title}`);
       doc
         .font("Helvetica-Bold")
         .fontSize(10.25)
@@ -193,6 +177,7 @@ function drawResume(doc, profile, portfolioItems) {
 
   const experienceY = section(doc, "Experience", mainX, doc.y + 9, mainW, () => {
     for (const item of resumeExperience(profile.experience)) {
+      debugPosition(doc, `experience: ${item.role}`);
       const roleLine = `${item.role}, ${item.company}`;
       doc.font("Helvetica-Bold").fontSize(10).fillColor(colors.ink).text(roleLine, mainX, doc.y, {
         width: mainW - 120,
@@ -232,7 +217,7 @@ function resumeSelectedWork(profile, portfolioItems) {
         "Built field technology, CRM, data collection, web, and advocacy systems for remote forest-defense work.",
     },
     ...featured,
-  ].filter(Boolean);
+  ].filter(Boolean).slice(0, 4);
 }
 
 function resumeExperience(experience) {
@@ -354,4 +339,9 @@ function writeResumeData(fileName) {
   const href = `/${encodeURIComponent(fileName)}`;
   const source = `export const resume = ${JSON.stringify({ fileName, href }, null, 2)} as const;\n`;
   writeFileSync(resumeDataFile, source);
+}
+
+function debugPosition(doc, label) {
+  if (!process.env.RESUME_DEBUG) return;
+  console.log(`[resume] ${label}: page ${doc.bufferedPageRange().count}, y=${Math.round(doc.y)}`);
 }
