@@ -1,0 +1,614 @@
+---
+import Layout from "../../layouts/Layout.astro";
+---
+
+<Layout
+  title="Western MA school spending explorer - Tim Shores"
+  description="Per-pupil spending, enrollment, and Chapter 70 aid for Western Massachusetts school districts, FY2009 to FY2025"
+>
+  <section id="explorer" class="explorer is-loading">
+    <p class="eyebrow">Western Massachusetts · FY2009–FY<span data-latest>2025</span></p>
+    <h1>School spending explorer</h1>
+    <p class="lede">
+      Per-pupil spending, enrollment, and state aid for 65 Western Massachusetts school districts, from the
+      data behind my report on
+      <a href="/artifacts/western-ma-ppe-report.pdf">per-pupil expenditure in Western Massachusetts</a>.
+    </p>
+
+    <form class="controls" onsubmit="return false">
+      <label class="control">
+        <span>District</span>
+        <select id="pick-district"></select>
+      </label>
+      <label class="control">
+        <span>Compare with</span>
+        <select id="pick-compare">
+          <option value="cohort">Its cohort average</option>
+          <option value="western">Western MA average</option>
+          <option value="none">No comparison</option>
+        </select>
+      </label>
+      <fieldset class="control toggle">
+        <legend>Dollars</legend>
+        <div class="toggle-options">
+          <label><input type="radio" name="dollars" value="nominal" checked /><span>Nominal</span></label>
+          <label><input type="radio" name="dollars" value="real" /><span>FY<span data-latest>2025</span> dollars</span></label>
+        </div>
+      </fieldset>
+    </form>
+
+    <header class="entity">
+      <h2 id="entity-name">Loading…</h2>
+      <p id="entity-meta"></p>
+    </header>
+
+    <div id="tiles" class="tiles"></div>
+
+    <div id="panels" class="panels">
+      <figure id="fig-ppe" class="panel">
+        <h3>Spending per pupil by category</h3>
+        <p class="panel-sub" id="ppe-sub"></p>
+        <ul class="legend" id="legend-ppe"></ul>
+        <svg id="svg-ppe" tabindex="0" role="img" aria-label="Stacked columns of spending per pupil by category for each fiscal year. Use the arrow keys to read each year; the data table below has every value."></svg>
+        <div class="tooltip" role="status" hidden></div>
+        <details class="table-view">
+          <summary>Data table</summary>
+          <div class="table-scroll" id="table-ppe"></div>
+        </details>
+      </figure>
+
+      <figure id="fig-enroll" class="panel">
+        <h3>Enrollment</h3>
+        <p class="panel-sub" id="enroll-sub"></p>
+        <ul class="legend" id="legend-enroll"></ul>
+        <svg id="svg-enroll" tabindex="0" role="img" aria-label="Lines of in-district, foundation, and out-of-district enrollment for each fiscal year. Use the arrow keys to read each year; the data table below has every value."></svg>
+        <div class="tooltip" role="status" hidden></div>
+        <details class="table-view">
+          <summary>Data table</summary>
+          <div class="table-scroll" id="table-enroll"></div>
+        </details>
+      </figure>
+
+      <figure id="fig-nss" class="panel">
+        <h3>Chapter 70 aid and net school spending</h3>
+        <p class="panel-sub" id="nss-sub"></p>
+        <ul class="legend" id="legend-nss"></ul>
+        <svg id="svg-nss" tabindex="0" role="img" aria-label="Stacked columns of Chapter 70 aid, required local contribution, and spending above the requirement per foundation pupil for each fiscal year. Use the arrow keys to read each year; the data table below has every value."></svg>
+        <div class="tooltip" role="status" hidden></div>
+        <details class="table-view">
+          <summary>Data table</summary>
+          <div class="table-scroll" id="table-nss"></div>
+        </details>
+      </figure>
+    </div>
+
+    <section class="notes">
+      <h2>About the data</h2>
+      <p>
+        <strong>Spending per pupil</strong> is the Massachusetts Department of Elementary and Secondary Education's
+        (DESE) per-pupil expenditure from each district's end-of-year report, divided by in-district FTE and grouped
+        into the report's nine categories. It leaves out tuition for pupils educated elsewhere, because, as DESE puts
+        it, those costs "vary greatly depending on the reason for going out of district."
+      </p>
+      <p>
+        <strong>Enrollment</strong> comes in three measures. In-district FTE is full-year enrollment of students who
+        live in the district or are choiced or tuitioned into it. Foundation enrollment counts the residents the
+        district is financially responsible for on October 1 of the prior year. Out-of-district FTE counts the
+        district's pupils educated elsewhere.
+      </p>
+      <p>
+        <strong>Chapter 70 aid and net school spending</strong> are per foundation pupil. The state sets a required
+        level of net school spending for each district each year. Chapter 70 aid pays part of it, and the town, or a
+        regional district's member towns, pays the required local contribution. Anything above that is a local choice. Because spending per pupil and
+        net school spending use different denominators, the two charts are not the same measure: they are a picture
+        of apples in the morning compared with a picture of apples in the evening. Both dollar charts share one scale.
+      </p>
+      <p>
+        <strong>Cohorts</strong> group districts by FY<span data-latest>2025</span> in-district FTE, using the
+        boundaries the report set from FY2024 enrollment: Tiny up to 200 FTE, Small 201–800, Medium 801–1,600, and
+        Large 1,601–10,000. Springfield stands apart. Cohort and Western MA spending averages are weighted by
+        in-district FTE, Chapter 70 averages by foundation enrollment, and enrollment averages are per district. The
+        Western MA average covers the 64 districts other than Springfield.
+      </p>
+      <p>
+        <strong>FY<span data-latest>2025</span> dollars</strong> adjust for inflation with the Bureau of Labor
+        Statistics' consumer price index for the Northeast (CPI-U, series CUUR0100SA0), averaged over each July–June
+        fiscal year.
+      </p>
+      <p>
+        <strong>Sources:</strong>
+        <a href="https://educationtocareer.data.mass.gov/d/er3w-dyti">DESE District Expenditures by Spending Category</a>
+        (Education-to-Career hub),
+        <a href="https://www.doe.mass.edu/finance/chapter70/default.html">DESE Chapter 70 district profiles</a>, and
+        <a href="https://data.bls.gov/timeseries/CUUR0100SA0">BLS CPI-U Northeast</a>. Built by Tim Shores with
+        Claude Code. The code that prepares the data is at
+        <a href="https://github.com/timshores/schools">github.com/timshores/schools</a>.
+      </p>
+    </section>
+  </section>
+</Layout>
+
+<script>
+  import { startExplorer } from "../../lib/massppe/explorer";
+  startExplorer();
+</script>
+
+<style>
+  .explorer {
+    --surface: var(--paper);
+    --grid: #e9e3d7;
+    --axis: #b9b1a2;
+    --muted: #6d695e;
+    font-variant-numeric: normal;
+  }
+
+  .explorer.is-loading .panels {
+    opacity: 0.4;
+  }
+
+  .eyebrow {
+    font-size: 0.85rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 0.35rem;
+  }
+
+  .lede {
+    font-size: 1.05rem;
+    max-width: 68ch;
+  }
+
+  /* Controls: one row above everything they scope */
+  .controls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 0.75rem 1.25rem;
+    margin: 1.4rem 0 1.6rem;
+    padding: 0.9rem 1rem;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.55);
+  }
+
+  .control {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    font-size: 0.82rem;
+    font-weight: 500;
+    color: var(--ink-soft);
+    border: 0;
+    min-width: 0;
+  }
+
+  .control select {
+    font: inherit;
+    font-size: 0.95rem;
+    font-weight: 400;
+    color: var(--ink);
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 0.45rem 0.6rem;
+    max-width: 100%;
+  }
+
+  #pick-district {
+    min-width: 15rem;
+  }
+
+  .toggle legend {
+    padding: 0;
+    margin-bottom: 0.3rem;
+  }
+
+  .toggle-options {
+    display: flex;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    overflow: hidden;
+    background: var(--paper);
+  }
+
+  .toggle-options label {
+    position: relative;
+    cursor: pointer;
+  }
+
+  .toggle-options input {
+    position: absolute;
+    opacity: 0;
+    inset: 0;
+    cursor: pointer;
+  }
+
+  .toggle-options span {
+    display: block;
+    padding: 0.45rem 0.8rem;
+    font-size: 0.95rem;
+    font-weight: 400;
+    color: var(--ink-soft);
+  }
+
+  .toggle-options span span {
+    display: inline;
+    padding: 0;
+    color: inherit;
+  }
+
+  .toggle-options label + label {
+    border-left: 1px solid var(--line);
+  }
+
+  .toggle-options input:checked + span {
+    background: var(--ink);
+    color: var(--paper);
+  }
+
+  .toggle-options input:checked + span span {
+    background: none;
+  }
+
+  .toggle-options input:focus-visible + span {
+    outline: 2px dashed var(--accent);
+    outline-offset: -4px;
+  }
+
+  .entity h2 {
+    margin: 0 0 0.25rem;
+  }
+
+  .entity p {
+    margin-bottom: 1rem;
+  }
+
+  /* Stat tiles */
+  .tiles {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.75rem;
+    margin-bottom: 1.8rem;
+  }
+
+  .tiles :global(.tile) {
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 0.8rem 0.9rem;
+  }
+
+  .tiles :global(.tile-label) {
+    font-size: 0.8rem;
+    color: var(--ink-soft);
+    line-height: 1.3;
+  }
+
+  .tiles :global(.tile-value) {
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: var(--ink);
+    margin: 0.2rem 0 0.15rem;
+  }
+
+  .tiles :global(.tile-detail) {
+    font-size: 0.8rem;
+    color: var(--muted);
+    line-height: 1.35;
+  }
+
+  /* Panels */
+  .panels {
+    display: grid;
+    gap: 2rem;
+    transition: opacity 0.2s ease;
+  }
+
+  .panel {
+    position: relative;
+    margin: 0;
+  }
+
+  .panel h3 {
+    margin-bottom: 0.15rem;
+  }
+
+  .panel-sub {
+    font-size: 0.88rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .legend {
+    list-style: none;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem 1rem;
+    font-size: 0.82rem;
+    color: var(--ink-soft);
+    margin-bottom: 0.4rem;
+  }
+
+  .legend :global(li) {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+
+  .panel :global(.key) {
+    flex: none;
+    display: inline-block;
+  }
+
+  .panel :global(.key.rect) {
+    width: 11px;
+    height: 11px;
+    border-radius: 3px;
+    background: var(--c);
+  }
+
+  .panel :global(.key.line) {
+    width: 16px;
+    height: 2px;
+    border-radius: 1px;
+    background: var(--c);
+  }
+
+  .panel :global(.key.hatch) {
+    width: 11px;
+    height: 11px;
+    border-radius: 3px;
+    background: repeating-linear-gradient(45deg, var(--c) 0 1px, transparent 1px 4px);
+    box-shadow: inset 0 0 0 1px var(--axis);
+  }
+
+  .panel :global(.key.none) {
+    width: 16px;
+  }
+
+  .panel svg {
+    display: block;
+    width: 100%;
+    height: auto;
+    overflow: visible;
+    font-family: "Space Grotesk", sans-serif;
+    touch-action: pan-y;
+  }
+
+  .panel svg:focus-visible {
+    outline: 2px dashed var(--accent);
+    outline-offset: 4px;
+    border-radius: 6px;
+  }
+
+  .panel :global(.gridline) {
+    stroke: var(--grid);
+    stroke-width: 1;
+  }
+
+  .panel :global(.baseline) {
+    stroke: var(--axis);
+    stroke-width: 1;
+  }
+
+  .panel :global(.tick) {
+    font-size: 12px;
+    fill: var(--muted);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .panel :global(.cap),
+  .panel :global(.end-label) {
+    font-size: 12px;
+    font-weight: 500;
+    fill: var(--ink-soft);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .panel :global(.band) {
+    fill: var(--ink);
+    opacity: 0.045;
+  }
+
+  .panel :global(.hit) {
+    fill: transparent;
+    cursor: crosshair;
+  }
+
+  .panel :global(.col) {
+    transition: opacity 0.12s ease;
+  }
+
+  .panel :global(svg.has-hover .col:not(.is-hover)) {
+    opacity: 0.55;
+  }
+
+  .panel :global(svg .col.faded),
+  .panel :global(svg.has-hover .col.faded:not(.is-hover)) {
+    opacity: 0.35;
+  }
+
+  .panel :global(.hatch-bg) {
+    fill: var(--surface);
+  }
+
+  .panel :global(.hatch-line) {
+    stroke: var(--ink-soft);
+    stroke-width: 1.5;
+  }
+
+  .panel :global(.overlay-line),
+  .panel :global(.series-line) {
+    fill: none;
+    stroke-width: 2;
+    stroke-linejoin: round;
+    stroke-linecap: round;
+  }
+
+  .panel :global(.dot) {
+    stroke: var(--surface);
+    stroke-width: 2;
+  }
+
+  .panel :global(.crosshair) {
+    stroke: var(--axis);
+    stroke-width: 1;
+  }
+
+  .panel :global(.hit),
+  .panel :global(.overlay),
+  .panel :global(.lines) {
+    pointer-events: none;
+  }
+
+  .panel :global(.hit) {
+    pointer-events: all;
+  }
+
+  /* Tooltip: value first, label after, line keys */
+  .tooltip {
+    position: absolute;
+    z-index: 3;
+    min-width: 13rem;
+    max-width: min(25rem, calc(100% - 8px));
+    padding: 0.6rem 0.75rem;
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    box-shadow: 0 8px 22px var(--shadow);
+    pointer-events: none;
+    font-size: 0.82rem;
+  }
+
+  .tooltip :global(.tip-title) {
+    font-weight: 700;
+    color: var(--ink);
+    margin-bottom: 0.3rem;
+  }
+
+  .tooltip :global(.tip-row) {
+    display: grid;
+    grid-template-columns: 16px auto 1fr;
+    align-items: center;
+    gap: 0.5rem;
+    line-height: 1.5;
+  }
+
+  .tooltip :global(.tip-value) {
+    font-weight: 600;
+    color: var(--ink);
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+    min-width: 4.6rem;
+  }
+
+  .tooltip :global(.tip-label) {
+    color: var(--ink-soft);
+    white-space: nowrap;
+  }
+
+  .tooltip :global(.tip-row.strong) {
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 0.2rem;
+    margin-bottom: 0.2rem;
+  }
+
+  .tooltip :global(.tip-note) {
+    margin-top: 0.3rem;
+    color: var(--muted);
+  }
+
+  /* Table view */
+  .table-view {
+    margin-top: 0.6rem;
+    font-size: 0.85rem;
+  }
+
+  .table-view summary {
+    cursor: pointer;
+    color: var(--accent);
+    font-weight: 500;
+    width: max-content;
+  }
+
+  .table-scroll {
+    overflow-x: auto;
+    margin-top: 0.5rem;
+  }
+
+  .table-scroll :global(table) {
+    border-collapse: collapse;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  .table-scroll :global(caption) {
+    text-align: left;
+    color: var(--ink-soft);
+    padding-bottom: 0.4rem;
+  }
+
+  .table-scroll :global(th),
+  .table-scroll :global(td) {
+    padding: 0.25rem 0.6rem;
+    border-bottom: 1px solid var(--grid);
+    text-align: right;
+  }
+
+  .table-scroll :global(thead th) {
+    color: var(--ink-soft);
+    font-weight: 500;
+    vertical-align: bottom;
+    white-space: normal;
+    min-width: 5.5rem;
+  }
+
+  .table-scroll :global(tbody th) {
+    text-align: left;
+    font-weight: 500;
+  }
+
+  .notes {
+    margin-top: 2.5rem;
+    border-top: 1px solid var(--line);
+    padding-top: 0.5rem;
+  }
+
+  .notes p {
+    font-size: 0.92rem;
+  }
+
+  .notes strong {
+    color: var(--ink);
+  }
+
+  .explorer :global(.load-error) {
+    color: var(--ink);
+  }
+
+  @media (max-width: 860px) {
+    .tiles {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (max-width: 520px) {
+    .controls {
+      padding: 0.75rem;
+    }
+
+    .control,
+    .control select,
+    #pick-district {
+      width: 100%;
+      min-width: 0;
+    }
+
+    .tiles :global(.tile-value) {
+      font-size: 1.3rem;
+    }
+
+    .tooltip :global(.tip-label) {
+      white-space: normal;
+    }
+  }
+</style>
