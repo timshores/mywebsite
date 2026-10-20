@@ -25,8 +25,13 @@ import Layout from "../../layouts/Layout.astro";
         <select id="pick-compare">
           <option value="cohort">Its cohort average</option>
           <option value="western">Western MA average</option>
+          <option value="other">Another district or average</option>
           <option value="none">No comparison</option>
         </select>
+      </label>
+      <label class="control" id="vs-control" hidden>
+        <span>Comparison district</span>
+        <select id="pick-vs"></select>
       </label>
       <fieldset class="control toggle">
         <legend>Dollars</legend>
@@ -35,6 +40,7 @@ import Layout from "../../layouts/Layout.astro";
           <label><input type="radio" name="dollars" value="real" /><span>FY<span data-latest>2025</span> dollars</span></label>
         </div>
       </fieldset>
+      <p class="controls-note" id="dollars-note"></p>
     </form>
 
     <header class="entity">
@@ -200,6 +206,24 @@ import Layout from "../../layouts/Layout.astro";
     min-width: 0;
   }
 
+  .control[hidden] {
+    display: none;
+  }
+
+  .controls-note {
+    flex-basis: 100%;
+    max-width: 92ch;
+    margin: 0.1rem 0 0;
+    font-size: 0.82rem;
+    line-height: 1.5;
+    color: var(--ink-soft);
+  }
+
+  .controls-note :global(strong) {
+    color: var(--ink);
+    font-weight: 600;
+  }
+
   .control select {
     font: inherit;
     font-size: 0.95rem;
@@ -212,7 +236,8 @@ import Layout from "../../layouts/Layout.astro";
     max-width: 100%;
   }
 
-  #pick-district {
+  #pick-district,
+  #pick-vs {
     min-width: 15rem;
   }
 
@@ -875,7 +900,8 @@ import Layout from "../../layouts/Layout.astro";
 
     .control,
     .control select,
-    #pick-district {
+    #pick-district,
+    #pick-vs {
       width: 100%;
       min-width: 0;
     }

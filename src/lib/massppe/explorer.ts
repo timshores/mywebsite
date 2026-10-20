@@ -33,7 +33,7 @@ interface Data {
   entities: Entity[];
 }
 
-type Compare = "cohort" | "western" | "none";
+type Compare = "cohort" | "western" | "other" | "none";
 type Dollars = "nominal" | "real";
 type StackPanel = "ppe" | "nss";
 
@@ -121,30 +121,40 @@ export async function startExplorer() {
 
   // ---- State, from the URL ----
   const params = new URLSearchParams(location.search);
+  const vsParam = params.get("vs");
   const state = {
     d: byId.has(params.get("d") ?? "") ? params.get("d")! : "leverett",
-    cmp: (["cohort", "western", "none"].includes(params.get("cmp") ?? "") ? params.get("cmp") : "cohort") as Compare,
+    cmp: (["cohort", "western", "other", "none"].includes(params.get("cmp") ?? "") ? params.get("cmp") : "cohort") as Compare,
+    // The entity picked in the second dropdown when comparing with another district or average
+    vs: vsParam && byId.has(vsParam) ? vsParam : null as string | null,
     usd: (params.get("usd") === "real" ? "real" : "nominal") as Dollars,
   };
+  if (state.cmp === "other" && !state.vs) state.cmp = "cohort";
   // Legend selections; empty means every segment shows. Kept across districts so
   // one category can be followed from district to district.
   const isolated: Record<StackPanel, Set<string>> = { ppe: new Set(), nss: new Set() };
 
   // ---- Controls ----
-  const select = $<HTMLSelectElement>("pick-district");
-  const averages = document.createElement("optgroup");
-  averages.label = "Averages";
-  for (const e of data.entities.filter((x) => x.kind !== "district")) averages.append(new Option(e.name, e.id));
-  select.append(averages);
-  for (const key of Object.keys(meta.cohorts)) {
-    const group = document.createElement("optgroup");
-    group.label = cohortTitle(meta, key);
-    data.entities
-      .filter((e) => e.kind === "district" && e.cohort === key)
-      .sort((a, b) => a.name.localeCompare(b.name))
-      .forEach((e) => group.append(new Option(e.name, e.id)));
-    if (group.children.length) select.append(group);
+  // The district menu and its duplicate for comparisons list the same entities
+  function fillEntities(sel: HTMLSelectElement) {
+    const averages = document.createElement("optgroup");
+    averages.label = "Averages";
+    for (const e of data.entities.filter((x) => x.kind !== "district")) averages.append(new Option(e.name, e.id));
+    sel.append(averages);
+    for (const key of Object.keys(meta.cohorts)) {
+      const group = document.createElement("optgroup");
+      group.label = cohortTitle(meta, key);
+      data.entities
+        .filter((e) => e.kind === "district" && e.cohort === key)
+        .sort((a, b) => a.name.localeCompare(b.name))
+        .forEach((e) => group.append(new Option(e.name, e.id)));
+      if (group.children.length) sel.append(group);
+    }
   }
+  const select = $<HTMLSelectElement>("pick-district");
+  const vsSelect = $<HTMLSelectElement>("pick-vs");
+  fillEntities(select);
+  fillEntities(vsSelect);
   const compareSelect = $<HTMLSelectElement>("pick-compare");
   const dollarInputs = document.querySelectorAll<HTMLInputElement>('input[name="dollars"]');
   document.querySelectorAll("[data-latest]").forEach((n) => (n.textContent = String(meta.latest)));
@@ -153,13 +163,20 @@ export async function startExplorer() {
   compareSelect.value = state.cmp;
   dollarInputs.forEach((r) => (r.checked = r.value === state.usd));
   select.addEventListener("change", () => update({ d: select.value }));
-  compareSelect.addEventListener("change", () => update({ cmp: compareSelect.value as Compare }));
+  compareSelect.addEventListener("change", () => {
+    const cmp = compareSelect.value as Compare;
+    // Start the second menu on whatever was being compared, so nothing jumps
+    const vs = cmp === "other" && !state.vs ? (comparisonFor(byId.get(state.d)!)?.id ?? "western-ma") : state.vs;
+    update({ cmp, vs });
+  });
+  vsSelect.addEventListener("change", () => update({ vs: vsSelect.value }));
   dollarInputs.forEach((r) => r.addEventListener("change", () => r.checked && update({ usd: r.value as Dollars })));
 
   function update(patch: Partial<typeof state>) {
     Object.assign(state, patch);
     const q = new URLSearchParams({ d: state.d });
     if (state.cmp !== "cohort") q.set("cmp", state.cmp);
+    if (state.cmp === "other" && state.vs) q.set("vs", state.vs);
     if (state.usd !== "nominal") q.set("usd", state.usd);
     history.replaceState(null, "", `${location.pathname}?${q}`);
     render();
@@ -174,10 +191,17 @@ export async function startExplorer() {
 
   function comparisonFor(e: Entity): Entity | null {
     if (state.cmp === "none") return null;
+    if (state.cmp === "other") {
+      const v = state.vs ? byId.get(state.vs) : undefined;
+      return v && v.id !== e.id ? v : null;
+    }
     if (state.cmp === "western") return e.id === "western-ma" ? null : byId.get("western-ma") ?? null;
     if (e.kind === "district") return byId.get(e.compare ?? "western-ma") ?? null;
     return e.kind === "cohort" ? byId.get("western-ma") ?? null : null;
   }
+
+  /** "Shutesbury" or "the Tiny cohort average", for use mid-sentence. */
+  const refName = (c: Entity) => (c.kind === "district" ? c.name : `the ${c.name}`);
 
   const ppeSeries = (e: Entity): Series[] =>
     meta.categories.map((c, k) => ({ key: c, label: sentence(c), color: PPE_COLORS[k], values: deflate(e.ppe[c]) }));
@@ -362,7 +386,8 @@ export async function startExplorer() {
   // shaded against the comparison ----
   interface CmpRow { label: string; color: string; mark: "rect" | "line"; values: Values; base: Values | null; total?: boolean }
 
-  function compareTable(holder: HTMLElement, caption: string, rowLabel: string, rows: CmpRow[], kind: "usd" | "fte", cName: string | null) {
+  function compareTable(holder: HTMLElement, caption: string, rowLabel: string, rows: CmpRow[], kind: "usd" | "fte", cmp: Entity | null) {
+    const cName = cmp ? cmp.name : null;
     const fmt = kind === "usd" ? usd : fte;
     const unit = kind === "usd" ? " $/pupil" : "";
     const prior = last - 1;
@@ -441,7 +466,7 @@ export async function startExplorer() {
       chips.className = "chips";
       chips.append(chip(ABOVE_SHADES[2], `Above ${cName}`), chip(BELOW_SHADES[2], `Below ${cName}`));
       note.append(chips, text("p",
-        `Shaded where a value differs from the ${cName} by 5% or more (${kind === "usd" ? "dollars" : "enrollment"}) ` +
+        `Shaded where a value differs from ${refName(cmp!)} by 5% or more (${kind === "usd" ? "dollars" : "enrollment"}) ` +
         "or a growth rate by 0.5 percentage points or more; darker shading marks a larger gap. " +
         "Hover a cell for the comparison value. CAGR is the compound annual growth rate, (end\u00a0÷\u00a0start)^(1\u00a0÷\u00a0years)\u00a0−\u00a01."));
     } else {
@@ -473,13 +498,19 @@ export async function startExplorer() {
     const dollarsNote = real ? `FY${meta.latest} dollars` : "Nominal dollars";
     const perDistrict = e.kind === "district" ? "" : ", average per district";
 
+    // Comparison menu: shown only for "Another district or average"
+    $("vs-control").hidden = state.cmp !== "other";
+    if (state.vs) vsSelect.value = state.vs;
+    for (const o of vsSelect.options) o.disabled = o.value === e.id;
+
     // Heading
     $("entity-name").textContent = e.name;
     const bits =
       e.kind === "district"
         ? [e.cohort ? cohortTitle(meta, e.cohort) : "", `${fte(e.fte ?? 0)} in-district FTE in FY${meta.latest}`]
         : [`${e.members} districts`, "averages weighted by enrollment"];
-    if (c) bits.push(`compared with the ${c.name.replace(/ average$/, "")} average`);
+    if (c) bits.push(`compared with ${refName(c)}`);
+    else if (state.cmp === "other") bits.push("pick a different district or average to compare with");
     $("entity-meta").textContent = bits.join(" · ");
 
     // Series
@@ -565,7 +596,7 @@ export async function startExplorer() {
         base: cPpe ? cPpe[ppe.length - 1 - k].values : null,
       })),
       { label: "Total", color: "", mark: "rect" as const, values: ppeTotal, base: cPpeTotal, total: true },
-    ], "usd", c ? cName : null);
+    ], "usd", c);
     fullTables.ppe = { caption: `Spending per in-district FTE pupil by category, ${e.name} (${dollarsNote.toLowerCase()})`, cols: [
       ...ppe.map((s) => ({ label: s.label, values: s.values, fmt: usd })),
       { label: "Total", values: ppeTotal, fmt: usd },
@@ -579,7 +610,7 @@ export async function startExplorer() {
     legend($("legend-enroll"), enroll.map((s) => ({ label: s.label, color: s.color, mark: "line" as const })));
     compareTable($("cmp-enroll"), `Enrollment, ${e.name}${perDistrict}`, "Measure",
       enroll.map((s, k) => ({ label: s.label, color: s.color, mark: "line" as const, values: s.values, base: cEnroll ? cEnroll[k].values : null })),
-      "fte", c ? cName : null);
+      "fte", c);
     fullTables.enroll = { caption: `Enrollment, ${e.name}${perDistrict}`, cols: enroll.map((s) => ({ label: s.label, values: s.values, fmt: fte })) };
 
     // Panel 3: Chapter 70 and net school spending
@@ -617,7 +648,7 @@ export async function startExplorer() {
         base: cNss ? cNss[nss.length - 1 - k].values : null,
       })),
       { label: "Actual net school spending", color: "", mark: "rect" as const, values: nssTotal, base: cNssTotal, total: true },
-    ], "usd", c ? cName : null);
+    ], "usd", c);
     fullTables.nss = { caption: `Chapter 70 aid and net school spending per foundation pupil, ${e.name} (${dollarsNote.toLowerCase()})`, cols: [
       ...nss.map((s) => ({ label: s.label, values: s.values, fmt: usd })),
       { label: "Actual NSS", values: nssTotal, fmt: usd },
@@ -683,6 +714,17 @@ export async function startExplorer() {
       document.querySelector<HTMLButtonElement>(`#legend-${panel} [data-key="${CSS.escape(key)}"]`)?.focus();
     }
   }
+
+  // Plain-language note on the two dollar modes, with a worked example from the index
+  const factor = meta.cpi[String(meta.latest)] / meta.cpi[String(meta.start)];
+  $("dollars-note").replaceChildren(
+    text("strong", "Nominal dollars"),
+    ` are the amounts districts reported spending each year, with no adjustment for inflation. `,
+    text("strong", `FY${meta.latest} dollars`),
+    ` restate every year in what a dollar bought in FY${meta.latest}, using the Northeast consumer price index: ` +
+      `$1,000 spent in FY${meta.start} is about ${usd(1000 * factor)} in FY${meta.latest} dollars. ` +
+      "Use them to see whether spending grew faster than prices.",
+  );
 
   render();
   ["svg-ppe", "svg-enroll", "svg-nss"].forEach((id) => keyboard($(id) as unknown as SVGSVGElement));
