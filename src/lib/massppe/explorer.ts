@@ -317,10 +317,14 @@ export async function startExplorer() {
     list.replaceChildren(...nodes);
   }
 
-  // ---- Full data table: every year ----
-  function table(holder: HTMLElement, caption: string, cols: { label: string; values: Values; fmt: (v: number) => string }[]) {
+  // ---- Full data table: every year, shown in an overlay wider than the page column ----
+  type TableCol = { label: string; values: Values; fmt: (v: number) => string };
+  const fullTables: Record<string, { caption: string; cols: TableCol[] }> = {};
+  const dialog = $<HTMLDialogElement>("table-dialog");
+
+  function table(cols: TableCol[]) {
     const t = document.createElement("table");
-    t.append(text("caption", caption));
+    t.setAttribute("aria-labelledby", "table-dialog-title");
     const head = t.createTHead().insertRow();
     head.append(text("th", "Fiscal year"));
     cols.forEach((c) => head.append(text("th", c.label)));
@@ -335,8 +339,24 @@ export async function startExplorer() {
         row.append(text("td", v == null ? "–" : c.fmt(v)));
       });
     });
-    holder.replaceChildren(t);
+    return t;
   }
+
+  document.querySelectorAll<HTMLButtonElement>(".table-open").forEach((btn) =>
+    btn.addEventListener("click", () => {
+      const spec = fullTables[btn.dataset.table ?? ""];
+      if (!spec) return;
+      $("table-dialog-title").textContent = spec.caption;
+      $("table-dialog-body").replaceChildren(table(spec.cols));
+      $("table-dialog-body").scrollTo(0, 0);
+      dialog.showModal();
+    }),
+  );
+  dialog.querySelector(".dialog-close")!.addEventListener("click", () => dialog.close());
+  // A click on the dimmed backdrop lands on the dialog element itself
+  dialog.addEventListener("click", (ev) => {
+    if (ev.target === dialog) dialog.close();
+  });
 
   // ---- Comparison table: the report's start year, growth rates and last two years,
   // shaded against the comparison ----
@@ -427,7 +447,11 @@ export async function startExplorer() {
     } else {
       note.append(text("p", "Choose a comparison above to shade this table against it. CAGR is the compound annual growth rate, (end\u00a0÷\u00a0start)^(1\u00a0÷\u00a0years)\u00a0−\u00a01."));
     }
-    holder.replaceChildren(t, note);
+    // The box takes the table's width; the note stretches to match it
+    const box = document.createElement("div");
+    box.className = "compare-box";
+    box.append(t, note);
+    holder.replaceChildren(box);
   }
 
   // ---- Stat tiles ----
@@ -542,11 +566,11 @@ export async function startExplorer() {
       })),
       { label: "Total", color: "", mark: "rect" as const, values: ppeTotal, base: cPpeTotal, total: true },
     ], "usd", c ? cName : null);
-    table($("table-ppe"), `Spending per in-district FTE pupil by category, ${e.name} (${dollarsNote.toLowerCase()})`, [
+    fullTables.ppe = { caption: `Spending per in-district FTE pupil by category, ${e.name} (${dollarsNote.toLowerCase()})`, cols: [
       ...ppe.map((s) => ({ label: s.label, values: s.values, fmt: usd })),
       { label: "Total", values: ppeTotal, fmt: usd },
       ...(c ? [{ label: `${cName}, total`, values: cPpeTotal!, fmt: usd }] : []),
-    ]);
+    ] };
 
     // Panel 2: enrollment
     $("enroll-sub").textContent = `Full-time-equivalent pupils${perDistrict}. Not adjusted for dollars.`;
@@ -556,7 +580,7 @@ export async function startExplorer() {
     compareTable($("cmp-enroll"), `Enrollment, ${e.name}${perDistrict}`, "Measure",
       enroll.map((s, k) => ({ label: s.label, color: s.color, mark: "line" as const, values: s.values, base: cEnroll ? cEnroll[k].values : null })),
       "fte", c ? cName : null);
-    table($("table-enroll"), `Enrollment, ${e.name}${perDistrict}`, enroll.map((s) => ({ label: s.label, values: s.values, fmt: fte })));
+    fullTables.enroll = { caption: `Enrollment, ${e.name}${perDistrict}`, cols: enroll.map((s) => ({ label: s.label, values: s.values, fmt: fte })) };
 
     // Panel 3: Chapter 70 and net school spending
     const nssShown = visible(nss, "nss");
@@ -594,11 +618,11 @@ export async function startExplorer() {
       })),
       { label: "Actual net school spending", color: "", mark: "rect" as const, values: nssTotal, base: cNssTotal, total: true },
     ], "usd", c ? cName : null);
-    table($("table-nss"), `Chapter 70 aid and net school spending per foundation pupil, ${e.name} (${dollarsNote.toLowerCase()})`, [
+    fullTables.nss = { caption: `Chapter 70 aid and net school spending per foundation pupil, ${e.name} (${dollarsNote.toLowerCase()})`, cols: [
       ...nss.map((s) => ({ label: s.label, values: s.values, fmt: usd })),
       { label: "Actual NSS", values: nssTotal, fmt: usd },
       ...(c ? [{ label: `${cName}, actual NSS`, values: cNssTotal!, fmt: usd }] : []),
-    ]);
+    ] };
 
     // Tooltips
     panels = [

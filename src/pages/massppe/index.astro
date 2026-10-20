@@ -55,10 +55,9 @@ import Layout from "../../layouts/Layout.astro";
           <summary>Comparison table</summary>
           <div class="table-scroll" id="cmp-ppe"></div>
         </details>
-        <details class="table-view">
-          <summary>Full data table</summary>
-          <div class="table-scroll" id="table-ppe"></div>
-        </details>
+        <button type="button" class="table-open" data-table="ppe" aria-haspopup="dialog">
+          <span class="table-open-icon" aria-hidden="true">⤢</span> Full data table
+        </button>
       </figure>
 
       <figure id="fig-enroll" class="panel">
@@ -71,10 +70,9 @@ import Layout from "../../layouts/Layout.astro";
           <summary>Comparison table</summary>
           <div class="table-scroll" id="cmp-enroll"></div>
         </details>
-        <details class="table-view">
-          <summary>Full data table</summary>
-          <div class="table-scroll" id="table-enroll"></div>
-        </details>
+        <button type="button" class="table-open" data-table="enroll" aria-haspopup="dialog">
+          <span class="table-open-icon" aria-hidden="true">⤢</span> Full data table
+        </button>
       </figure>
 
       <figure id="fig-nss" class="panel">
@@ -87,12 +85,19 @@ import Layout from "../../layouts/Layout.astro";
           <summary>Comparison table</summary>
           <div class="table-scroll" id="cmp-nss"></div>
         </details>
-        <details class="table-view">
-          <summary>Full data table</summary>
-          <div class="table-scroll" id="table-nss"></div>
-        </details>
+        <button type="button" class="table-open" data-table="nss" aria-haspopup="dialog">
+          <span class="table-open-icon" aria-hidden="true">⤢</span> Full data table
+        </button>
       </figure>
     </div>
+
+    <dialog id="table-dialog" class="table-dialog" aria-labelledby="table-dialog-title">
+      <div class="dialog-head">
+        <h3 id="table-dialog-title"></h3>
+        <button type="button" class="dialog-close" aria-label="Close the table">×</button>
+      </div>
+      <div class="dialog-body table-scroll" id="table-dialog-body"></div>
+    </dialog>
 
     <section class="notes">
       <h2>About the data</h2>
@@ -594,8 +599,124 @@ import Layout from "../../layouts/Layout.astro";
     width: max-content;
   }
 
-  .table-view + .table-view {
+  /* Full data table: a button that opens the overlay */
+  .table-open {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
     margin-top: 0.35rem;
+    padding: 0;
+    font: inherit;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--accent);
+    background: none;
+    border: 0;
+    cursor: pointer;
+  }
+
+  .table-open:hover {
+    color: var(--accent-2);
+  }
+
+  .table-open:focus-visible {
+    outline: 2px dashed var(--accent);
+    outline-offset: 3px;
+  }
+
+  .table-open-icon {
+    font-size: 0.8rem;
+    line-height: 1;
+  }
+
+  /* The overlay sizes to the table, past the page's central column, up to the
+     viewport less a 16px margin; only very narrow screens still scroll */
+  .table-dialog {
+    margin: auto;
+    width: fit-content;
+    max-width: calc(100vw - 32px);
+    max-height: calc(100vh - 32px);
+    padding: 0;
+    color: var(--ink);
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    box-shadow: 0 24px 60px rgba(31, 31, 28, 0.28);
+  }
+
+  .table-dialog[open] {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .table-dialog::backdrop {
+    background: rgba(31, 31, 28, 0.4);
+  }
+
+  .dialog-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1.5rem;
+    padding: 1rem 1.1rem 0.7rem 1.25rem;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .dialog-head h3 {
+    margin: 0;
+    font-size: 1.05rem;
+    max-width: 60ch;
+  }
+
+  .dialog-close {
+    flex: none;
+    width: 2rem;
+    height: 2rem;
+    font: inherit;
+    font-size: 1.4rem;
+    line-height: 1;
+    color: var(--ink-soft);
+    background: none;
+    border: 1px solid transparent;
+    border-radius: 999px;
+    cursor: pointer;
+  }
+
+  .dialog-close:hover {
+    border-color: var(--line);
+    color: var(--ink);
+  }
+
+  .dialog-close:focus-visible {
+    outline: 2px dashed var(--accent);
+    outline-offset: 2px;
+  }
+
+  .dialog-body.table-scroll {
+    margin: 0;
+    padding: 0 1.25rem 1rem;
+    overflow: auto;
+  }
+
+  .table-dialog .dialog-body :global(table) {
+    font-size: 0.82rem;
+  }
+
+  .table-dialog .dialog-body :global(thead th) {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: var(--paper);
+    min-width: 0;
+    padding-top: 0.7rem;
+    box-shadow: inset 0 -1px 0 var(--line);
+    hyphens: auto;
+    overflow-wrap: break-word;
+  }
+
+  .table-dialog .dialog-body :global(th),
+  .table-dialog .dialog-body :global(td) {
+    padding: 0.3rem 0.4rem;
   }
 
   /* Comparison table: the report's layout and amber/teal shading */
@@ -626,15 +747,31 @@ import Layout from "../../layouts/Layout.astro";
     cursor: help;
   }
 
+  /* The note spans the table's width: it adds nothing to the box's width
+     (width: 0) and stretches to fill it (min-width), but never past the
+     visible scroll area (100cqw), where it stays put as the table scrolls. */
+  .compare-view .table-scroll {
+    container-type: inline-size;
+  }
+
+  .compare-view :global(.compare-box) {
+    display: inline-block;
+    vertical-align: top;
+  }
+
   .compare-view :global(.compare-legend) {
     margin-top: 0.6rem;
-    max-width: 72ch;
+    width: 0;
+    min-width: min(100%, 100cqw);
+    position: sticky;
+    left: 0;
   }
 
   .compare-view :global(.compare-legend p) {
     font-size: 0.8rem;
     color: var(--muted);
     margin: 0.35rem 0 0;
+    max-width: none;
   }
 
   .compare-view :global(.chips) {
