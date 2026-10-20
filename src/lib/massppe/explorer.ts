@@ -2,7 +2,7 @@
 // Data: public/massppe/data/explorer.json, written by the report pipeline
 // (github.com/timshores/schools, ppe_report/export_explorer_data.py).
 
-import { compact, lines, niceTicks, stackedColumns, type Panel, type Series, type Val } from "./charts";
+import { compact, lines, niceTicks, niceTicksRange, stackedColumns, type Panel, type Series, type Val } from "./charts";
 
 type Values = Val[];
 
@@ -35,6 +35,7 @@ interface Data {
 
 type Compare = "cohort" | "western" | "none";
 type Dollars = "nominal" | "real";
+type StackPanel = "ppe" | "nss";
 
 const PPE_COLORS = ["#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#e87ba4", "#008300", "#6250d6", "#e34948", "#8f8a7f"];
 const NSS_SERIES = [
@@ -49,10 +50,25 @@ const ENROLL_SERIES = [
 ] as const;
 const COMPARE_COLOR = "#524f45";
 
-const usd = (v: number) => `$${Math.round(v).toLocaleString("en-US")}`;
+// The report's comparison shading (ppe_report/compose_pdf.py): amber above the
+// baseline, teal below, darker as the gap grows. Dollars and enrollment shade
+// from a 5% relative gap, growth rates from 0.5 percentage points.
+const ABOVE_SHADES = ["#FFF4E6", "#FFE8CC", "#FFD9A8", "#FFC97A", "#FFB84D"];
+const BELOW_SHADES = ["#E0F7FA", "#B2EBF2", "#80DEEA", "#4DD0E1", "#26C6DA"];
+const SHADE_BINS_REL = [0.05, 0.1, 0.15, 0.2];
+const SHADE_BINS_PP = [0.005, 0.01, 0.015, 0.02];
+
+function shade(delta: number | null, bins: number[]) {
+  if (delta == null || !Number.isFinite(delta) || Math.abs(delta) < bins[0]) return null;
+  const idx = Math.min(ABOVE_SHADES.length - 1, bins.filter((b) => b <= Math.abs(delta)).length - 1);
+  return delta > 0 ? ABOVE_SHADES[idx] : BELOW_SHADES[idx];
+}
+
+const usd = (v: number) => `${v < 0 ? "−" : ""}$${Math.abs(Math.round(v)).toLocaleString("en-US")}`;
 const fte = (v: number) => (v >= 100 ? Math.round(v).toLocaleString("en-US") : v.toFixed(1));
 const pct = (v: number) => `${v >= 0 ? "+" : "−"}${Math.abs(v * 100).toFixed(1)}%`;
 const sentence = (s: string) => s.charAt(0) + s.slice(1).toLowerCase();
+const capital = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
 function cohortTitle(meta: Meta, key: string) {
   const c = meta.cohorts[key];
@@ -75,6 +91,12 @@ function sumAt(groups: Values[], i: number): number | null {
   return vals.every((v) => v == null) ? null : vals.reduce<number>((a, v) => a + (v ?? 0), 0);
 }
 
+/** Sum only when every part is present. */
+function sumStrict(groups: Values[], i: number): number | null {
+  const vals = groups.map((g) => g[i]);
+  return vals.some((v) => v == null) ? null : vals.reduce<number>((a, v) => a + v!, 0);
+}
+
 function cagr(first: number | null, last: number | null, years: number) {
   if (first == null || last == null || first <= 0 || last <= 0 || years <= 0) return null;
   return (last / first) ** (1 / years) - 1;
@@ -95,6 +117,7 @@ export async function startExplorer() {
   const byId = new Map(data.entities.map((e) => [e.id, e]));
   const years = meta.years;
   const last = years.length - 1;
+  const span = meta.latest - meta.start;
 
   // ---- State, from the URL ----
   const params = new URLSearchParams(location.search);
@@ -103,6 +126,9 @@ export async function startExplorer() {
     cmp: (["cohort", "western", "none"].includes(params.get("cmp") ?? "") ? params.get("cmp") : "cohort") as Compare,
     usd: (params.get("usd") === "real" ? "real" : "nominal") as Dollars,
   };
+  // Legend selections; empty means every segment shows. Kept across districts so
+  // one category can be followed from district to district.
+  const isolated: Record<StackPanel, Set<string>> = { ppe: new Set(), nss: new Set() };
 
   // ---- Controls ----
   const select = $<HTMLSelectElement>("pick-district");
@@ -160,9 +186,30 @@ export async function startExplorer() {
   const enrollSeries = (e: Entity): Series[] =>
     ENROLL_SERIES.map((s) => ({ ...s, values: e.enroll[s.key] }));
   const totals = (series: Series[]): Values => years.map((_, i) => sumAt(series.map((s) => s.values), i));
+  const strictTotals = (series: Series[]): Values => years.map((_, i) => sumStrict(series.map((s) => s.values), i));
   // Actual NSS is the full stack, so it exists only where DESE reported actual spending
   const actualNss = (series: Series[]): Values =>
     years.map((_, i) => (series[2].values[i] == null ? null : sumAt(series.map((s) => s.values), i)));
+  const visible = (series: Series[], panel: StackPanel) =>
+    isolated[panel].size ? series.filter((s) => isolated[panel].has(s.key)) : series;
+  /** "teachers", "3 selected categories", or null when everything shows. */
+  const selectionName = (shown: Series[], all: Series[], noun: string) =>
+    shown.length === all.length ? null : shown.length === 1 ? shown[0].label.toLowerCase() : `${shown.length} selected ${noun}`;
+
+  /** Ticks fitted to the columns actually drawn, including any that hang below zero. */
+  function fitTicks(series: Series[], overlay: Values | null) {
+    let lo = 0;
+    let hi = 0;
+    years.forEach((_, i) => {
+      const vals = series.map((s) => s.values[i]);
+      const pos = vals.reduce<number>((a, v) => a + Math.max(0, v ?? 0), 0);
+      const tot = vals.reduce<number>((a, v) => a + (v ?? 0), 0);
+      const o = overlay?.[i] ?? 0;
+      hi = Math.max(hi, pos, o);
+      lo = Math.min(lo, pos === 0 ? tot : 0, o);
+    });
+    return niceTicksRange(lo * 1.04, hi * 1.04);
+  }
 
   // ---- Hover: one year highlighted across every panel, tooltip in the active one ----
   let panels: { panel: Panel; figure: HTMLElement; tip: (i: number) => TipContent }[] = [];
@@ -217,20 +264,60 @@ export async function startExplorer() {
     });
   }
 
-  // ---- Legend and table builders ----
-  function legend(list: HTMLElement, items: { label: string; color: string; mark: "rect" | "line" | "hatch" }[]) {
-    list.replaceChildren(
-      ...items.map((it) => {
-        const li = document.createElement("li");
-        const key = document.createElement("span");
-        key.className = `key ${it.mark}`;
-        key.style.setProperty("--c", it.color);
-        li.append(key, text("span", it.label));
+  // ---- Legend: stacked segments are toggle buttons that isolate them ----
+  interface LegendItem { label: string; color: string; mark: "rect" | "line" | "hatch"; key?: string }
+  let refocus: { panel: StackPanel; key: string } | null = null;
+
+  function legend(list: HTMLElement, items: LegendItem[], panel?: StackPanel) {
+    const set = panel ? isolated[panel] : null;
+    const toggles = items.filter((it) => it.key);
+    const swatch = (it: LegendItem) => {
+      const key = document.createElement("span");
+      key.className = `key ${it.mark}`;
+      key.style.setProperty("--c", it.color);
+      return key;
+    };
+    const nodes = items.map((it) => {
+      const li = document.createElement("li");
+      if (!set || !it.key) {
+        li.className = "legend-static";
+        li.append(swatch(it), text("span", it.label));
         return li;
-      }),
-    );
+      }
+      const key = it.key;
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "legend-btn";
+      btn.dataset.key = key;
+      btn.setAttribute("aria-pressed", String(set.has(key)));
+      if (set.size && !set.has(key)) btn.classList.add("is-off");
+      btn.append(swatch(it), text("span", it.label));
+      btn.addEventListener("click", () => {
+        if (set.has(key)) set.delete(key);
+        else set.add(key);
+        if (set.size === toggles.length) set.clear();
+        refocus = { panel: panel!, key };
+        render();
+      });
+      li.append(btn);
+      return li;
+    });
+    if (set?.size) {
+      const li = document.createElement("li");
+      const reset = text("button", "Show all", "legend-reset") as HTMLButtonElement;
+      reset.type = "button";
+      reset.addEventListener("click", () => {
+        set.clear();
+        refocus = { panel: panel!, key: toggles[0].key! };
+        render();
+      });
+      li.append(reset);
+      nodes.push(li);
+    }
+    list.replaceChildren(...nodes);
   }
 
+  // ---- Full data table: every year ----
   function table(holder: HTMLElement, caption: string, cols: { label: string; values: Values; fmt: (v: number) => string }[]) {
     const t = document.createElement("table");
     t.append(text("caption", caption));
@@ -251,6 +338,98 @@ export async function startExplorer() {
     holder.replaceChildren(t);
   }
 
+  // ---- Comparison table: the report's start year, growth rates and last two years,
+  // shaded against the comparison ----
+  interface CmpRow { label: string; color: string; mark: "rect" | "line"; values: Values; base: Values | null; total?: boolean }
+
+  function compareTable(holder: HTMLElement, caption: string, rowLabel: string, rows: CmpRow[], kind: "usd" | "fte", cName: string | null) {
+    const fmt = kind === "usd" ? usd : fte;
+    const unit = kind === "usd" ? " $/pupil" : "";
+    const prior = last - 1;
+    const windows = [span, 10, 5];
+    const t = document.createElement("table");
+    t.append(text("caption", caption));
+    const head = t.createTHead().insertRow();
+    const blank = text("th", "");
+    blank.className = "swatch-col";
+    head.append(blank, text("th", rowLabel, "label-col"), text("th", `${years[0]}${unit}`),
+      ...windows.map((n) => text("th", `CAGR ${n}y`)),
+      text("th", `${years[prior]}${unit}`), text("th", `${years[last]}${unit}`));
+
+    const sr = (above: boolean) => text("span", above ? " (above comparison)" : " (below comparison)", "sr-only");
+    const level = (r: CmpRow, i: number) => {
+      const v = r.values[i];
+      const td = text("td", v == null ? "—" : fmt(v));
+      const b = r.base?.[i];
+      if (v != null && b != null && b > 0 && cName) {
+        const rel = (v - b) / b;
+        const bg = shade(rel, SHADE_BINS_REL);
+        td.title = `${cName}: ${fmt(b)} (${rel >= 0 ? "+" : "−"}${Math.abs(rel * 100).toFixed(0)}%)`;
+        if (bg) {
+          td.style.background = bg;
+          td.append(sr(rel > 0));
+        }
+      }
+      return td;
+    };
+    const growth = (r: CmpRow, n: number) => {
+      const g = cagr(r.values[last - n], r.values[last], n);
+      const td = text("td", g == null ? "—" : pct(g));
+      const gb = r.base ? cagr(r.base[last - n], r.base[last], n) : null;
+      if (g != null && gb != null && cName) {
+        const delta = g - gb;
+        const bg = shade(delta, SHADE_BINS_PP);
+        td.title = `${cName}: ${pct(gb)} (${delta >= 0 ? "+" : "−"}${Math.abs(delta * 100).toFixed(1)} pp)`;
+        if (bg) {
+          td.style.background = bg;
+          td.append(sr(delta > 0));
+        }
+      }
+      return td;
+    };
+
+    const body = t.createTBody();
+    for (const r of rows) {
+      const tr = body.insertRow();
+      if (r.total) tr.className = "total";
+      const sw = document.createElement("td");
+      sw.className = "swatch-col";
+      if (!r.total) {
+        const key = document.createElement("span");
+        key.className = `key ${r.mark}`;
+        key.style.setProperty("--c", r.color);
+        sw.append(key);
+      }
+      const th = text("th", r.label);
+      th.setAttribute("scope", "row");
+      tr.append(sw, th, level(r, 0), ...windows.map((n) => growth(r, n)), level(r, prior), level(r, last));
+    }
+
+    const note = document.createElement("div");
+    note.className = "compare-legend";
+    if (cName) {
+      const chip = (color: string, label: string) => {
+        const s = document.createElement("span");
+        s.className = "chip";
+        const box = document.createElement("span");
+        box.className = "chip-box";
+        box.style.background = color;
+        s.append(box, text("span", label));
+        return s;
+      };
+      const chips = document.createElement("div");
+      chips.className = "chips";
+      chips.append(chip(ABOVE_SHADES[2], `Above ${cName}`), chip(BELOW_SHADES[2], `Below ${cName}`));
+      note.append(chips, text("p",
+        `Shaded where a value differs from the ${cName} by 5% or more (${kind === "usd" ? "dollars" : "enrollment"}) ` +
+        "or a growth rate by 0.5 percentage points or more; darker shading marks a larger gap. " +
+        "Hover a cell for the comparison value. CAGR is the compound annual growth rate, (end\u00a0÷\u00a0start)^(1\u00a0÷\u00a0years)\u00a0−\u00a01."));
+    } else {
+      note.append(text("p", "Choose a comparison above to shade this table against it. CAGR is the compound annual growth rate, (end\u00a0÷\u00a0start)^(1\u00a0÷\u00a0years)\u00a0−\u00a01."));
+    }
+    holder.replaceChildren(t, note);
+  }
+
   // ---- Stat tiles ----
   function tile(label: string, value: string, details: string[]) {
     const div = document.createElement("div");
@@ -266,7 +445,6 @@ export async function startExplorer() {
   function render() {
     const e = byId.get(state.d)!;
     const c = comparisonFor(e);
-    const span = meta.latest - meta.start;
     const real = state.usd === "real";
     const dollarsNote = real ? `FY${meta.latest} dollars` : "Nominal dollars";
     const perDistrict = e.kind === "district" ? "" : ", average per district";
@@ -284,13 +462,16 @@ export async function startExplorer() {
     const ppe = ppeSeries(e);
     const nss = nssSeries(e);
     const enroll = enrollSeries(e);
+    const cPpe = c ? ppeSeries(c) : null;
+    const cNss = c ? nssSeries(c) : null;
+    const cEnroll = c ? enrollSeries(c) : null;
     const ppeTotal = totals(ppe);
     const nssTotal = actualNss(nss);
-    const cPpeTotal = c ? totals(ppeSeries(c)) : null;
-    const cNssTotal = c ? actualNss(nssSeries(c)) : null;
+    const cPpeTotal = cPpe ? totals(cPpe) : null;
+    const cNssTotal = cNss ? actualNss(cNss) : null;
     const cName = c ? c.name : "";
 
-    // Tiles
+    // Tiles (always whole totals, whatever the legend isolates)
     const g = cagr(ppeTotal[0], ppeTotal[last], span);
     const enrollChange =
       e.enroll.in_district[0] && e.enroll.in_district[last]
@@ -299,7 +480,6 @@ export async function startExplorer() {
     const aid = nss[0].values[last];
     const above = nss[2].values[last];
     const aidShare = aid != null && nssTotal[last] ? aid / nssTotal[last]! : null;
-    const unreported = years.filter((_, i) => nss[2].values[i] == null && nss[0].values[i] != null);
     $("tiles").replaceChildren(
       tile(`Spending per pupil, FY${meta.latest}`, ppeTotal[last] != null ? usd(ppeTotal[last]!) : "–", [
         g != null ? `${pct(g)} a year since FY${meta.start}${real ? ", after inflation" : ""}` : "",
@@ -311,15 +491,15 @@ export async function startExplorer() {
       ]),
       tile(`Chapter 70 aid per foundation pupil, FY${meta.latest}`, aid != null ? usd(aid) : "–", [
         aidShare != null ? `${Math.round(aidShare * 100)}% of actual net school spending` : "",
-        c && c.nss.ch70_aid[last] != null ? `${cName}: ${usd(nssSeries(c)[0].values[last]!)}` : "",
+        cNss && cNss[0].values[last] != null ? `${cName}: ${usd(cNss[0].values[last]!)}` : "",
       ]),
       tile(`Spending above required, FY${meta.latest}`, above != null ? usd(above) : "Not reported", [
         above != null ? "Per foundation pupil" : `DESE has not reported FY${meta.latest} actual spending`,
-        c && c.nss.above_required[last] != null ? `${cName}: ${usd(nssSeries(c)[2].values[last]!)}` : "",
+        cNss && cNss[2].values[last] != null ? `${cName}: ${usd(cNss[2].values[last]!)}` : "",
       ]),
     );
 
-    // Shared dollar scale for both dollar panels
+    // Shared dollar scale for both dollar panels while nothing is isolated
     const stackTop = (series: Series[], i: number) => series.reduce((a, s) => a + Math.max(0, s.values[i] ?? 0), 0);
     let dollarMax = 0;
     years.forEach((_, i) => {
@@ -334,17 +514,34 @@ export async function startExplorer() {
     const tall = width < 520 ? 260 : 320;
     const frame = (height: number) => ({ width, height, years });
     const fmtUsd = (v: number) => compact(v, "$");
+    const yoy = (vals: Values, i: number) =>
+      i > 0 && vals[i] != null && vals[i - 1] ? `${pct(vals[i]! / vals[i - 1]! - 1)} from FY${years[i - 1]}` : undefined;
 
     // Panel 1: spending by category
-    const fig1 = $("fig-ppe");
-    $("ppe-sub").textContent = `${dollarsNote} per in-district FTE pupil${c ? `. Line: ${cName}, total.` : "."}`;
-    const ppeOverlay = c ? { key: "cmp", label: `${cName}, total`, color: COMPARE_COLOR, values: cPpeTotal! } : null;
-    const p1 = stackedColumns($("svg-ppe") as unknown as SVGSVGElement, frame(tall), ppe, ppeOverlay, dollarTicks, fmtUsd, setHover,
-      { value: ppeTotal[last], text: usd });
+    const ppeShown = visible(ppe, "ppe");
+    const ppeSel = selectionName(ppeShown, ppe, "categories");
+    const ppeShownTotal = totals(ppeShown);
+    const cPpeShownTotal = cPpe ? totals(visible(cPpe, "ppe")) : null;
+    const ppeOverlay = c ? { key: "cmp", label: `${cName}, ${ppeSel ?? "total"}`, color: COMPARE_COLOR, values: cPpeShownTotal! } : null;
+    $("ppe-sub").textContent =
+      `${dollarsNote} per in-district FTE pupil.${c ? ` Line: ${ppeOverlay!.label}.` : ""} ` +
+      (ppeSel
+        ? `Showing ${ppeShown.length} of ${ppe.length} categories, with the scale fitted to them.`
+        : "Select categories in the legend to isolate them.");
+    const p1 = stackedColumns($("svg-ppe") as unknown as SVGSVGElement, frame(tall), ppeShown, ppeOverlay,
+      ppeSel ? fitTicks(ppeShown, cPpeShownTotal) : dollarTicks, fmtUsd, setHover,
+      { value: ppeShownTotal[last], text: usd });
     legend($("legend-ppe"), [
-      ...ppe.map((s) => ({ label: s.label, color: s.color, mark: "rect" as const })),
+      ...ppe.map((s) => ({ key: s.key, label: s.label, color: s.color, mark: "rect" as const })),
       ...(ppeOverlay ? [{ label: ppeOverlay.label, color: COMPARE_COLOR, mark: "line" as const }] : []),
-    ]);
+    ], "ppe");
+    compareTable($("cmp-ppe"), `Spending per in-district FTE pupil, ${e.name} (${dollarsNote.toLowerCase()})`, "Category", [
+      ...[...ppe].reverse().map((s, k) => ({
+        label: s.label, color: s.color, mark: "rect" as const, values: s.values,
+        base: cPpe ? cPpe[ppe.length - 1 - k].values : null,
+      })),
+      { label: "Total", color: "", mark: "rect" as const, values: ppeTotal, base: cPpeTotal, total: true },
+    ], "usd", c ? cName : null);
     table($("table-ppe"), `Spending per in-district FTE pupil by category, ${e.name} (${dollarsNote.toLowerCase()})`, [
       ...ppe.map((s) => ({ label: s.label, values: s.values, fmt: usd })),
       { label: "Total", values: ppeTotal, fmt: usd },
@@ -356,24 +553,47 @@ export async function startExplorer() {
     const p2 = lines($("svg-enroll") as unknown as SVGSVGElement, frame(width < 520 ? 200 : 230), enroll, enrollTicks,
       (v) => compact(v), fte, setHover);
     legend($("legend-enroll"), enroll.map((s) => ({ label: s.label, color: s.color, mark: "line" as const })));
+    compareTable($("cmp-enroll"), `Enrollment, ${e.name}${perDistrict}`, "Measure",
+      enroll.map((s, k) => ({ label: s.label, color: s.color, mark: "line" as const, values: s.values, base: cEnroll ? cEnroll[k].values : null })),
+      "fte", c ? cName : null);
     table($("table-enroll"), `Enrollment, ${e.name}${perDistrict}`, enroll.map((s) => ({ label: s.label, values: s.values, fmt: fte })));
 
     // Panel 3: Chapter 70 and net school spending
+    const nssShown = visible(nss, "nss");
+    const nssSel = selectionName(nssShown, nss, "components");
+    const showsAbove = nssShown.some((s) => s.key === "above_required");
+    const nssShownTotal = nssSel ? strictTotals(nssShown) : nssTotal;
+    const cNssShownTotal = cNss ? (nssSel ? strictTotals(visible(cNss, "nss")) : cNssTotal) : null;
+    const nssOverlay = c
+      ? { key: "cmp", label: `${cName}, ${nssSel ?? "actual NSS"}`, color: COMPARE_COLOR, values: cNssShownTotal! }
+      : null;
+    const unreported = showsAbove ? years.filter((_, i) => nss[2].values[i] == null && nss[0].values[i] != null) : [];
     $("nss-sub").textContent =
-      `${dollarsNote} per foundation pupil. Column height is actual net school spending` +
-      (c ? `. Line: ${cName}, actual net school spending.` : ".") +
+      `${dollarsNote} per foundation pupil. ` +
+      (nssSel
+        ? `Showing ${nssShown.length} of ${nss.length} components, with the scale fitted to them.`
+        : "Column height is actual net school spending.") +
+      (c ? ` Line: ${nssOverlay!.label}.` : "") +
       (unreported.length
-        ? ` DESE has not reported actual spending for FY${unreported.join(", FY")}, so ${unreported.length > 1 ? "those faded columns stop" : "that faded column stops"} at the requirement.`
+        ? ` DESE has not reported actual spending for FY${unreported.join(", FY")}, so ${unreported.length > 1 ? "those faded columns stop" : "that faded column stops"} short.`
         : "");
-    const nssOverlay = c ? { key: "cmp", label: `${cName}, actual NSS`, color: COMPARE_COLOR, values: cNssTotal! } : null;
-    const p3 = stackedColumns($("svg-nss") as unknown as SVGSVGElement, frame(tall), nss, nssOverlay, dollarTicks, fmtUsd, setHover,
-      { value: nssTotal[last], text: usd }, years.map((_, i) => nss[2].values[i] == null));
-    const hasShortfall = nss[2].values.some((v) => v != null && v < 0);
+    const p3 = stackedColumns($("svg-nss") as unknown as SVGSVGElement, frame(tall), nssShown, nssOverlay,
+      nssSel ? fitTicks(nssShown, cNssShownTotal) : dollarTicks, fmtUsd, setHover,
+      { value: nssShownTotal[last], text: usd }, years.map((_, i) => showsAbove && nss[2].values[i] == null));
+    // The hatch only appears when a shortfall sits on top of other segments
+    const hasShortfall = showsAbove && nssShown.length > 1 && nss[2].values.some((v) => v != null && v < 0);
     legend($("legend-nss"), [
-      ...nss.map((s) => ({ label: s.label, color: s.color, mark: "rect" as const })),
+      ...nss.map((s) => ({ key: s.key, label: s.label, color: s.color, mark: "rect" as const })),
       ...(hasShortfall ? [{ label: "Below required (shortfall)", color: "#524f45", mark: "hatch" as const }] : []),
       ...(nssOverlay ? [{ label: nssOverlay.label, color: COMPARE_COLOR, mark: "line" as const }] : []),
-    ]);
+    ], "nss");
+    compareTable($("cmp-nss"), `Chapter 70 aid and net school spending per foundation pupil, ${e.name} (${dollarsNote.toLowerCase()})`, "Component", [
+      ...[...nss].reverse().map((s, k) => ({
+        label: s.label, color: s.color, mark: "rect" as const, values: s.values,
+        base: cNss ? cNss[nss.length - 1 - k].values : null,
+      })),
+      { label: "Actual net school spending", color: "", mark: "rect" as const, values: nssTotal, base: cNssTotal, total: true },
+    ], "usd", c ? cName : null);
     table($("table-nss"), `Chapter 70 aid and net school spending per foundation pupil, ${e.name} (${dollarsNote.toLowerCase()})`, [
       ...nss.map((s) => ({ label: s.label, values: s.values, fmt: usd })),
       { label: "Actual NSS", values: nssTotal, fmt: usd },
@@ -381,21 +601,26 @@ export async function startExplorer() {
     ]);
 
     // Tooltips
-    const yoy = (vals: Values, i: number) =>
-      i > 0 && vals[i] != null && vals[i - 1] ? `${pct(vals[i]! / vals[i - 1]! - 1)} from FY${years[i - 1]}` : undefined;
     panels = [
       {
-        panel: p1, figure: fig1,
-        tip: (i) => ({
-          title: `FY${years[i]}`,
-          rows: [
-            { value: ppeTotal[i] != null ? usd(ppeTotal[i]!) : "–", label: "Total per pupil", strong: true },
-            ...[...ppe].reverse().filter((s) => s.values[i] != null && s.values[i]! > 0)
-              .map((s) => ({ value: usd(s.values[i]!), label: s.label, color: s.color, mark: "line" as const })),
-            ...(c && cPpeTotal?.[i] != null ? [{ value: usd(cPpeTotal[i]!), label: `${cName}, total`, color: COMPARE_COLOR, mark: "line" as const }] : []),
-          ],
-          note: yoy(ppeTotal, i),
-        }),
+        panel: p1, figure: $("fig-ppe"),
+        tip: (i) => {
+          const money = (v: number | null) => (v == null ? "–" : usd(v));
+          const rows: TipRow[] = [];
+          const segments = [...ppeShown].reverse().filter((s) => s.values[i] != null && s.values[i]! > 0)
+            .map((s) => ({ value: usd(s.values[i]!), label: s.label, color: s.color, mark: "line" as const }));
+          if (!ppeSel) {
+            rows.push({ value: money(ppeTotal[i]), label: "Total per pupil", strong: true }, ...segments);
+          } else {
+            rows.push({ value: money(ppeShownTotal[i]), label: capital(ppeSel), strong: true });
+            if (ppeShown.length > 1) rows.push(...segments);
+            rows.push({ value: money(ppeTotal[i]), label: "Total per pupil, all categories" });
+          }
+          if (ppeOverlay && ppeOverlay.values[i] != null) {
+            rows.push({ value: usd(ppeOverlay.values[i]!), label: ppeOverlay.label, color: COMPARE_COLOR, mark: "line" });
+          }
+          return { title: `FY${years[i]}`, rows, note: yoy(ppeSel ? ppeShownTotal : ppeTotal, i) };
+        },
       },
       {
         panel: p2, figure: $("fig-enroll"),
@@ -416,16 +641,23 @@ export async function startExplorer() {
             rows: [
               { value: reported ? usd(nssTotal[i]!) : "Not reported", label: "Actual net school spending", strong: true },
               ...(reported ? [{ value: usd(nss[2].values[i]!), label: nss[2].values[i]! < 0 ? "Below required" : nss[2].label, color: nss[2].color, mark: "line" as const }] : []),
-              { value: usd(required), label: "Required net school spending", color: undefined },
+              { value: usd(required), label: "Required net school spending" },
               { value: nss[1].values[i] != null ? usd(nss[1].values[i]!) : "–", label: nss[1].label, color: nss[1].color, mark: "line" as const },
               { value: nss[0].values[i] != null ? usd(nss[0].values[i]!) : "–", label: nss[0].label, color: nss[0].color, mark: "line" as const },
-              ...(c && cNssTotal?.[i] != null ? [{ value: usd(cNssTotal[i]!), label: `${cName}, actual NSS`, color: COMPARE_COLOR, mark: "line" as const }] : []),
+              ...(nssOverlay && nssOverlay.values[i] != null ? [{ value: usd(nssOverlay.values[i]!), label: nssOverlay.label, color: COMPARE_COLOR, mark: "line" as const }] : []),
             ],
           };
         },
       },
     ];
     if (hovered != null) setHover(null, null);
+
+    // Keep keyboard focus on the legend button that was just pressed
+    if (refocus) {
+      const { panel, key } = refocus;
+      refocus = null;
+      document.querySelector<HTMLButtonElement>(`#legend-${panel} [data-key="${CSS.escape(key)}"]`)?.focus();
+    }
   }
 
   render();

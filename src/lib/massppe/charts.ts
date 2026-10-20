@@ -34,26 +34,35 @@ export function svgEl<K extends keyof SVGElementTagNameMap>(
   return node;
 }
 
-/** Clean axis ticks from 0 to a rounded-up max. */
-export function niceTicks(max: number, count = 5): number[] {
-  if (!(max > 0)) return [0, 1];
-  const raw = max / count;
+/** Clean axis ticks covering min..max, always including 0. */
+export function niceTicksRange(min: number, max: number, count = 5): number[] {
+  const lo = Math.min(0, min);
+  const hi = Math.max(0, max);
+  if (!(hi - lo > 0)) return [0, 1];
+  const raw = (hi - lo) / count;
   const mag = 10 ** Math.floor(Math.log10(raw));
   const step = [1, 2, 2.5, 5, 10].map((f) => f * mag).find((s) => s >= raw) ?? raw;
   const ticks: number[] = [];
-  for (let v = 0; v <= Math.ceil(max / step) * step + step / 1e6; v += step) {
+  for (let v = Math.floor(lo / step) * step; v <= Math.ceil(hi / step) * step + step / 1e6; v += step) {
     ticks.push(Math.round(v * 1e6) / 1e6);
   }
   return ticks;
 }
 
+/** Clean axis ticks from 0 to a rounded-up max. */
+export function niceTicks(max: number, count = 5): number[] {
+  return niceTicksRange(0, max, count);
+}
+
 export function compact(v: number, prefix = ""): string {
   if (v === 0) return `${prefix}0`;
-  if (Math.abs(v) >= 1000) {
-    const k = v / 1000;
-    return `${prefix}${Number.isInteger(k) ? k : k.toFixed(1)}K`;
+  const sign = v < 0 ? "−" : "";
+  const a = Math.abs(v);
+  if (a >= 1000) {
+    const k = a / 1000;
+    return `${sign}${prefix}${Number.isInteger(k) ? k : k.toFixed(1)}K`;
   }
-  return `${prefix}${Math.round(v)}`;
+  return `${sign}${prefix}${Math.round(a)}`;
 }
 
 export class Axis {
@@ -62,18 +71,20 @@ export class Axis {
   readonly plotW: number;
   readonly plotH: number;
   readonly yMax: number;
+  readonly yMin: number;
   constructor(readonly frame: Frame, readonly ticks: number[]) {
     this.n = frame.years.length;
     this.plotW = Math.max(10, frame.width - MARGIN.left - MARGIN.right);
     this.plotH = frame.height - MARGIN.top - MARGIN.bottom;
     this.step = this.plotW / this.n;
     this.yMax = ticks[ticks.length - 1];
+    this.yMin = ticks[0];
   }
   x(i: number) {
     return MARGIN.left + this.step * (i + 0.5);
   }
   y(v: number) {
-    return MARGIN.top + this.plotH * (1 - v / this.yMax);
+    return MARGIN.top + (this.plotH * (this.yMax - v)) / (this.yMax - this.yMin);
   }
   indexAt(px: number) {
     return Math.min(this.n - 1, Math.max(0, Math.floor((px - MARGIN.left) / this.step)));
@@ -105,6 +116,11 @@ function drawGrid(svg: SVGSVGElement, ax: Axis, fmt: (v: number) => string) {
 function topRoundedRect(x: number, y: number, w: number, h: number, r: number) {
   const rr = Math.max(0, Math.min(r, h, w / 2));
   return `M${x},${y + h}V${y + rr}Q${x},${y} ${x + rr},${y}H${x + w - rr}Q${x + w},${y} ${x + w},${y + rr}V${y + h}Z`;
+}
+
+function bottomRoundedRect(x: number, y: number, w: number, h: number, r: number) {
+  const rr = Math.max(0, Math.min(r, h, w / 2));
+  return `M${x},${y}V${y + h - rr}Q${x},${y + h} ${x + rr},${y + h}H${x + w - rr}Q${x + w},${y + h} ${x + w},${y + h - rr}V${y}Z`;
 }
 
 function linePath(ax: Axis, values: Val[]) {
@@ -143,7 +159,8 @@ function hoverLayer(svg: SVGSVGElement, ax: Axis, onHover: (i: number | null, so
 /**
  * Stacked columns, bottom to top in series order, with an optional overlay line.
  * A negative last segment (spending below the requirement) clips the solid stack
- * at the actual total and hatches the shortfall up to the requirement.
+ * at the actual total and hatches the shortfall up to the requirement. A column
+ * with no positive parts (one negative segment shown alone) hangs below zero.
  */
 export function stackedColumns(
   svg: SVGSVGElement,
@@ -179,6 +196,12 @@ export function stackedColumns(
     const total = vals.reduce<number>((acc, v) => acc + (v ?? 0), 0);
     const solidTop = Math.min(positiveTop, Math.max(0, total));
     const x = ax.x(i) - w / 2;
+    if (positiveTop === 0 && total < 0) {
+      const color = stacks.find((s, k) => (vals[k] ?? 0) < 0)?.color ?? "currentColor";
+      const h = ax.y(total) - ax.y(0);
+      if (h > 0.5) svgEl("path", { d: bottomRoundedRect(x, ax.y(0), w, h, RADIUS), fill: color }, g);
+      return;
+    }
     let base = 0;
     const segs: { s: Series; lo: number; hi: number }[] = [];
     stacks.forEach((s, k) => {
@@ -227,13 +250,34 @@ export function stackedColumns(
     const i = frame.years.length - 1;
     const vals = stacks.map((s) => s.values[i]);
     if (vals.some((v) => v != null)) {
-      const columnTop = ax.y(vals.reduce<number>((a, v) => a + Math.max(0, v ?? 0), 0));
-      const labelY = columnTop - 9;
+      const positiveTop = vals.reduce<number>((a, v) => a + Math.max(0, v ?? 0), 0);
+      const hangs = positiveTop === 0 && cap.value < 0;
+      const columnEnd = ax.y(hangs ? cap.value : positiveTop);
+      const labelY = hangs ? columnEnd + 18 : columnEnd - 9;
+      // Text box of a 12px label set on labelY, about 3.6px per character
+      const label = cap.text(cap.value);
+      const half = label.length * 3.6;
+      const text = { top: labelY - 10, bottom: labelY + 1, left: ax.x(i) - half };
       const dot = overlay?.values[i];
-      const collides = dot != null && ax.y(dot) > labelY - 18 && ax.y(dot) < columnTop + 6;
+      const prev = overlay?.values[i - 1];
+      // The comparison dot (8px with its ring) on or near the label
+      let collides = dot != null && ax.y(dot) > text.top - 6 && ax.y(dot) < text.bottom + 6;
+      // The comparison line's last segment, under the label's left half
+      if (!collides && dot != null && prev != null) {
+        const x0 = ax.x(i - 1);
+        const x1 = ax.x(i);
+        const xl = Math.max(x0, text.left);
+        const yl = ax.y(prev) + ((ax.y(dot) - ax.y(prev)) * (xl - x0)) / (x1 - x0);
+        collides = Math.max(yl, ax.y(dot)) > text.top - 2 && Math.min(yl, ax.y(dot)) < text.bottom + 2;
+      }
+      // A taller neighboring column the label would spill onto (narrow screens)
+      if (!collides && half > ax.step - w / 2) {
+        const prevTop = stacks.reduce((a, s) => a + Math.max(0, s.values[i - 1] ?? 0), 0);
+        collides = ax.y(prevTop) < text.bottom;
+      }
       if (!collides) {
         const t = svgEl("text", { x: ax.x(i), y: labelY, "text-anchor": "middle", class: "cap" }, svg);
-        t.textContent = cap.text(cap.value);
+        t.textContent = label;
       }
     }
   }
