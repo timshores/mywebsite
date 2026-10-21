@@ -1,7 +1,9 @@
 // The Western MA school spending explorer: a district view and a town view.
-// Data: public/massppe/data/explorer.json (districts) and towns.json (towns,
-// loaded when the Towns tab first opens), written by the report pipeline
-// (github.com/timshores/schools, ppe_report/export_explorer_data.py).
+// Data: src/data/massppe/explorer.json (districts) and towns.json (towns, loaded
+// when the Towns tab first opens), written by the report pipeline
+// (github.com/timshores/schools, ppe_report/export_explorer_data.py). Both are
+// imported rather than fetched, so they ship as hashed JavaScript chunks, which the
+// host compresses (it sends .json uncompressed: 193 KB instead of about 50 KB).
 
 import { compact, lines, niceTicks, niceTicksRange, stackedColumns, type Panel, type Series, type Val } from "./charts";
 
@@ -214,9 +216,7 @@ export async function startExplorer() {
   const root = $("explorer");
   let data: Data;
   try {
-    const res = await fetch("/massppe/data/explorer.json");
-    if (!res.ok) throw new Error(String(res.status));
-    data = await res.json();
+    data = (await import("../../data/massppe/explorer.json")).default as unknown as Data;
   } catch {
     root.replaceChildren(text("p", "The explorer data didn't load. Reload the page to try again.", "load-error"));
     return;
@@ -259,9 +259,7 @@ export async function startExplorer() {
   async function loadTowns() {
     if (towns || townsFailed) return;
     try {
-      const res = await fetch("/massppe/data/towns.json");
-      if (!res.ok) throw new Error(String(res.status));
-      towns = (await res.json()) as TownData;
+      towns = (await import("../../data/massppe/towns.json")).default as unknown as TownData;
     } catch {
       townsFailed = true;
       return;
