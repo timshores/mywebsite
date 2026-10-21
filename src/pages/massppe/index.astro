@@ -4,7 +4,7 @@ import Layout from "../../layouts/Layout.astro";
 
 <Layout
   title="Western MA school spending explorer - Tim Shores"
-  description="Per-pupil spending, enrollment, and Chapter 70 aid for Western Massachusetts school districts, FY2009 to FY2025"
+  description="Per-pupil spending, enrollment, Chapter 70 aid, and revenue by source for Western Massachusetts school districts, and the general fund budgets of their towns, FY2009 to FY2025"
 >
   <section id="explorer" class="explorer is-loading">
     <p class="eyebrow">Western Massachusetts · FY2009–FY<span data-latest>2025</span></p>
@@ -12,15 +12,23 @@ import Layout from "../../layouts/Layout.astro";
     <p class="lede">
       Per-pupil spending, enrollment, and state aid for 65 Western Massachusetts school districts, from the
       data behind my report on
-      <a href="/artifacts/western-ma-ppe-report.pdf">per-pupil expenditure in Western Massachusetts</a>.
+      <a href="/artifacts/western-ma-ppe-report.pdf">per-pupil expenditure in Western Massachusetts</a>,
+      and revenue by source for the 19 regional districts. The Towns tab shows the general fund budgets of the 97
+      towns those districts serve.
     </p>
 
+    <div class="view-tabs" role="tablist" aria-label="Explorer view">
+      <button type="button" role="tab" id="tab-districts" data-view="districts" aria-controls="view-panel" aria-selected="true">School districts</button>
+      <button type="button" role="tab" id="tab-towns" data-view="towns" aria-controls="view-panel" aria-selected="false" tabindex="-1">Towns</button>
+    </div>
+
+    <div id="view-panel" role="tabpanel" aria-labelledby="tab-districts">
     <form class="controls" onsubmit="return false">
-      <label class="control">
+      <label class="control" data-view-only="districts">
         <span>District</span>
         <select id="pick-district"></select>
       </label>
-      <label class="control">
+      <label class="control" data-view-only="districts">
         <span>Compare with</span>
         <select id="pick-compare">
           <option value="cohort">Its cohort average</option>
@@ -33,6 +41,23 @@ import Layout from "../../layouts/Layout.astro";
         <span>Comparison district</span>
         <select id="pick-vs"></select>
       </label>
+      <label class="control" data-view-only="towns" hidden>
+        <span>Town</span>
+        <select id="pick-town"></select>
+      </label>
+      <label class="control" data-view-only="towns" hidden>
+        <span>Compare with</span>
+        <select id="pick-town-compare">
+          <option value="peer">Its peer group average</option>
+          <option value="western">Western MA towns average</option>
+          <option value="other">Another town or average</option>
+          <option value="none">No comparison</option>
+        </select>
+      </label>
+      <label class="control" id="town-vs-control" hidden>
+        <span>Comparison town or average</span>
+        <select id="pick-town-vs"></select>
+      </label>
       <fieldset class="control toggle">
         <legend>Dollars</legend>
         <div class="toggle-options">
@@ -40,7 +65,15 @@ import Layout from "../../layouts/Layout.astro";
           <label><input type="radio" name="dollars" value="real" /><span>FY<span data-latest>2025</span> dollars</span></label>
         </div>
       </fieldset>
+      <fieldset class="control checks">
+        <legend>Chart lines</legend>
+        <div class="check-options">
+          <label><input type="checkbox" id="show-trend" checked /><span class="swatch dash" aria-hidden="true"></span>Trend</label>
+          <label><input type="checkbox" id="show-cline" checked /><span class="swatch solid" aria-hidden="true"></span>Comparison</label>
+        </div>
+      </fieldset>
       <p class="controls-note" id="dollars-note"></p>
+      <div class="relations" id="relations" hidden></div>
     </form>
 
     <header class="entity">
@@ -50,7 +83,7 @@ import Layout from "../../layouts/Layout.astro";
 
     <div id="tiles" class="tiles"></div>
 
-    <div id="panels" class="panels">
+    <div id="panels" class="panels" data-view-only="districts">
       <figure id="fig-ppe" class="panel">
         <h3>Spending per pupil by category</h3>
         <p class="panel-sub" id="ppe-sub"></p>
@@ -95,6 +128,68 @@ import Layout from "../../layouts/Layout.astro";
           <span class="table-open-icon" aria-hidden="true">⤢</span> Full data table
         </button>
       </figure>
+
+      <figure id="fig-rev" class="panel">
+        <h3>Revenue per pupil by source</h3>
+        <p class="panel-sub" id="rev-sub"></p>
+        <p class="panel-none" id="rev-none" hidden></p>
+        <div id="rev-body">
+          <ul class="legend" id="legend-rev" aria-label="Revenue sources. Select one or more to show only those."></ul>
+          <svg id="svg-rev" tabindex="0" role="img" aria-label="Stacked columns of revenue per pupil by source for each fiscal year. Use the arrow keys to read each year; the data table below has every value."></svg>
+          <div class="tooltip" role="status" hidden></div>
+          <details class="table-view compare-view">
+            <summary>Comparison table</summary>
+            <div class="table-scroll" id="cmp-rev"></div>
+          </details>
+          <button type="button" class="table-open" data-table="rev" aria-haspopup="dialog">
+            <span class="table-open-icon" aria-hidden="true">⤢</span> Full data table
+          </button>
+        </div>
+      </figure>
+    </div>
+
+    <div id="town-panels" class="panels" data-view-only="towns" hidden>
+      <figure id="fig-tspend" class="panel">
+        <h3>General fund spending per resident by function</h3>
+        <p class="panel-sub" id="tspend-sub"></p>
+        <ul class="legend" id="legend-tspend" aria-label="Spending functions. Select one or more to show only those."></ul>
+        <svg id="svg-tspend" tabindex="0" role="img" aria-label="Stacked columns of general fund spending per resident by function for each fiscal year. Use the arrow keys to read each year; the data table below has every value."></svg>
+        <div class="tooltip" role="status" hidden></div>
+        <details class="table-view compare-view">
+          <summary>Comparison table</summary>
+          <div class="table-scroll" id="cmp-tspend"></div>
+        </details>
+        <button type="button" class="table-open" data-table="tspend" aria-haspopup="dialog">
+          <span class="table-open-icon" aria-hidden="true">⤢</span> Full data table
+        </button>
+      </figure>
+
+      <figure id="fig-trev" class="panel">
+        <h3>General fund revenue per resident by source</h3>
+        <p class="panel-sub" id="trev-sub"></p>
+        <ul class="legend" id="legend-trev" aria-label="Revenue sources. Select one or more to show only those."></ul>
+        <svg id="svg-trev" tabindex="0" role="img" aria-label="Stacked columns of general fund revenue per resident by source for each fiscal year. Use the arrow keys to read each year; the data table below has every value."></svg>
+        <div class="tooltip" role="status" hidden></div>
+        <details class="table-view compare-view">
+          <summary>Comparison table</summary>
+          <div class="table-scroll" id="cmp-trev"></div>
+        </details>
+        <button type="button" class="table-open" data-table="trev" aria-haspopup="dialog">
+          <span class="table-open-icon" aria-hidden="true">⤢</span> Full data table
+        </button>
+      </figure>
+
+      <figure id="fig-tpop" class="panel">
+        <h3>Population</h3>
+        <p class="panel-sub" id="tpop-sub"></p>
+        <ul class="legend" id="legend-tpop"></ul>
+        <svg id="svg-tpop" tabindex="0" role="img" aria-label="Line of population for each fiscal year. Use the arrow keys to read each year; the data table below has every value."></svg>
+        <div class="tooltip" role="status" hidden></div>
+        <button type="button" class="table-open" data-table="tpop" aria-haspopup="dialog">
+          <span class="table-open-icon" aria-hidden="true">⤢</span> Full data table
+        </button>
+      </figure>
+    </div>
     </div>
 
     <dialog id="table-dialog" class="table-dialog" aria-labelledby="table-dialog-title">
@@ -109,18 +204,26 @@ import Layout from "../../layouts/Layout.astro";
       <h2>About the data</h2>
       <p>
         <strong>Spending per pupil</strong> is the Massachusetts Department of Elementary and Secondary Education's
-        (DESE) per-pupil expenditure from each district's end-of-year report, divided by in-district FTE and grouped
-        into the report's nine categories. It leaves out tuition for pupils educated elsewhere, because, as DESE puts
+        (DESE) <a href="https://educationtocareer.data.mass.gov/d/er3w-dyti">per-pupil expenditure</a>
+        (<a href="/massppe/data/districts-spending-per-pupil.csv" download>CSV</a>) from each district's end-of-year report, divided by in-district FTE and grouped
+        into the report's nine categories; its Other combines DESE's professional development and instructional
+        materials, equipment, and technology. It leaves out tuition for pupils educated elsewhere, because, as DESE puts
         it, those costs "vary greatly depending on the reason for going out of district."
       </p>
       <p>
         <strong>Enrollment</strong> comes in three measures. In-district FTE is full-year enrollment of students who
         live in the district or are choiced or tuitioned into it. Foundation enrollment counts the residents the
         district is financially responsible for on October 1 of the prior year. Out-of-district FTE counts the
-        district's pupils educated elsewhere.
+        district's pupils educated elsewhere. In-district and out-of-district FTE come from
+        <a href="https://educationtocareer.data.mass.gov/d/er3w-dyti">DESE's expenditure data</a>
+        (<a href="/massppe/data/districts-spending-per-pupil.csv" download>CSV</a>), foundation enrollment from its
+        <a href="https://www.doe.mass.edu/finance/chapter70/default.html">Chapter 70 district profiles</a>
+        (<a href="/massppe/data/districts-chapter70.csv" download>CSV</a>).
       </p>
       <p>
-        <strong>Chapter 70 aid and net school spending</strong> are per foundation pupil. The state sets a required
+        <strong>Chapter 70 aid and net school spending</strong> are per foundation pupil, from DESE's
+        <a href="https://www.doe.mass.edu/finance/chapter70/default.html">Chapter 70 district profiles</a>
+        (<a href="/massppe/data/districts-chapter70.csv" download>CSV</a>). The state sets a required
         level of net school spending for each district each year. Chapter 70 aid pays part of it, and the town, or a
         regional district's member towns, pays the required local contribution. Anything above that is a local choice. Because spending per pupil and
         net school spending use different denominators, the two charts are not the same measure: they are a picture
@@ -128,23 +231,67 @@ import Layout from "../../layouts/Layout.astro";
       </p>
       <p>
         <strong>Cohorts</strong> group districts by FY<span data-latest>2025</span> in-district FTE, using the
-        boundaries the report set from FY2024 enrollment: Tiny up to 200 FTE, Small 201–800, Medium 801–1,600, and
+        boundaries <a href="/artifacts/western-ma-ppe-report.pdf">the report</a> set from FY2024 enrollment: Tiny up to 200 FTE, Small 201–800, Medium 801–1,600, and
         Large 1,601–10,000. Springfield stands apart. Cohort and Western MA spending averages are weighted by
         in-district FTE, Chapter 70 averages by foundation enrollment, and enrollment averages are per district. The
         Western MA average covers the 64 districts other than Springfield.
       </p>
       <p>
+        <strong>Revenue by source</strong> comes from the Census Bureau's
+        <a href="https://www.census.gov/programs-surveys/school-finances.html">Annual Survey of School System Finances</a>
+        (<a href="/massppe/data/districts-revenue.csv" download>CSV</a>, in dollars, each column naming the Census items it adds up),
+        divided by in-district FTE like spending. It covers the 19 regional districts only: for many town-run
+        districts, Census's local revenue is only part of what the town spends on its schools (for Amherst in FY2024,
+        $18.4 million of revenue against $37.6 million of spending). Payments from towns include a regional
+        district's member-town assessments; payments from other school districts include tuition for pupils they
+        send. Revenue per pupil usually runs about a third above spending per pupil, because it also pays for what
+        the spending measure leaves out, such as tuition for pupils educated elsewhere, school buildings, and the
+        teachers' pensions the state pays into the teachers' retirement system on districts' behalf. School building
+        aid can arrive in one large payment. In FY2009 the state paid $412 million of Chapter 70 aid with federal
+        stimulus money, so Census counts about a tenth of that year's Chapter 70 aid as federal. Census publishes
+        each year's figures more than a year after it ends.
+      </p>
+      <p>
+        <strong>Town budgets</strong> come from each town's <a href="https://dls-gw.dor.state.ma.us/reports/rdPage.aspx?rdReport=ScheduleA.GenFund_MAIN">Schedule A</a>
+        (CSVs: <a href="/massppe/data/towns-spending.csv" download>spending</a>, <a href="/massppe/data/towns-revenue.csv" download>revenue</a>, each with population), the year-end report of general fund revenue and
+        spending that town accountants file with the state Division of Local Services. Enterprise, capital, and other
+        funds are not included. The towns are the 97 that the explorer's districts serve, by DESE's
+        <a href="https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025.html">FY2025 membership lists</a>
+        (<a href="/massppe/data/towns-school-districts.csv" download>CSV</a>, with each town's required contributions), and the Western MA towns average pools them per resident, without Springfield. Peer groups put each
+        town with others its size, by the July 2024 population estimate: under 1,000 residents (20 towns),
+        1,000–2,499 (35), 2,500–9,999 (21), and 10,000 or more (20, without Springfield). Half the towns have fewer
+        than 1,900 residents, so the groups are narrow at the small end. Peer averages pool their towns per resident,
+        like the Western MA average. Dollars are per
+        resident, using the Census Bureau's <a href="https://www.census.gov/programs-surveys/popest.html">population estimate</a> for July 1 at the start of each fiscal year. For FY2021
+        the April 1, 2020 estimate stands in, because the July 2020 estimate drops by more than a quarter in Amherst
+        and recovers a year later.
+      </p>
+      <p>
+        <strong>Town and school budgets overlap without lining up.</strong> Education includes the town's own school
+        department and what it pays regional and vocational school districts, so it does not match any one district's
+        spending, and health insurance and pensions for a town's own school employees usually sit in fixed costs.
+        State aid includes Chapter 70 aid for a town's own school district; aid to a regional district goes to the
+        district. Intergovernmental assessments are the state and county charges on each town's Cherry Sheet, such as
+        charter school and school choice tuition. Required local contributions are what the
+        <a href="https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025.html">Chapter 70 formula</a> sets
+        for each town and district in FY2025.
+      </p>
+      <p>
+        <strong>Revenue groups</strong> combine <a href="https://dls-gw.dor.state.ma.us/reports/rdPage.aspx?rdReport=ScheduleA.GenFund_MAIN">Schedule A</a>'s eleven sources into six: charges, fees, and fines are
+        service charges, licenses and permits, fines and forfeitures, and special assessments; other revenue is
+        miscellaneous revenue and revenue from other governments; transfers and other financing are transfers and
+        other financing sources. Figures are as each town filed them, and a few look like one-time entries: Lee's
+        FY2024 revenue includes $27.3 million of miscellaneous revenue, more than half its total.
+      </p>
+      <p>
         <strong>FY<span data-latest>2025</span> dollars</strong> adjust for inflation with the Bureau of Labor
-        Statistics' consumer price index for the Northeast (CPI-U, series CUUR0100SA0), averaged over each July–June
+        Statistics' <a href="https://data.bls.gov/timeseries/CUUR0100SA0">consumer price index for the Northeast</a>
+        (<a href="/massppe/data/cpi.csv" download>CSV</a>; CPI-U, series CUUR0100SA0), averaged over each July–June
         fiscal year.
       </p>
       <p>
-        <strong>Sources:</strong>
-        <a href="https://educationtocareer.data.mass.gov/d/er3w-dyti">DESE District Expenditures by Spending Category</a>
-        (Education-to-Career hub),
-        <a href="https://www.doe.mass.edu/finance/chapter70/default.html">DESE Chapter 70 district profiles</a>, and
-        <a href="https://data.bls.gov/timeseries/CUUR0100SA0">BLS CPI-U Northeast</a>. Built by Tim Shores with
-        Claude Code. The code that prepares the data is at
+        The CSVs hold the data for these districts and towns as each agency published it, except that the revenue
+        file adds Census items up into the chart's sources, and every row links to its source. Built by Tim Shores with Claude Code. The code that prepares the data is at
         <a href="https://github.com/timshores/schools">github.com/timshores/schools</a>.
       </p>
     </section>
@@ -241,9 +388,50 @@ import Layout from "../../layouts/Layout.astro";
     min-width: 15rem;
   }
 
-  .toggle legend {
+  .toggle legend,
+  .checks legend {
     padding: 0;
     margin-bottom: 0.3rem;
+  }
+
+  /* Chart-line checkboxes, each with the line it controls */
+  .check-options {
+    display: flex;
+    gap: 0.9rem;
+    min-height: 2.35rem;
+    align-items: center;
+  }
+
+  .check-options label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.95rem;
+    font-weight: 400;
+    color: var(--ink);
+    cursor: pointer;
+  }
+
+  .check-options input {
+    width: 1rem;
+    height: 1rem;
+    margin: 0;
+    accent-color: var(--ink);
+    cursor: pointer;
+  }
+
+  .check-options .swatch {
+    width: 18px;
+    height: 2px;
+    border-radius: 1px;
+  }
+
+  .check-options .swatch.dash {
+    background: repeating-linear-gradient(90deg, var(--accent) 0 5px, transparent 5px 8px);
+  }
+
+  .check-options .swatch.solid {
+    background: var(--ink-soft);
   }
 
   .toggle-options {
@@ -298,8 +486,159 @@ import Layout from "../../layouts/Layout.astro";
     outline-offset: -4px;
   }
 
+  /* View tabs: an underline marks the open view */
+  .view-tabs {
+    display: flex;
+    gap: 0.25rem;
+    margin-top: 1.4rem;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .view-tabs [role="tab"] {
+    font: inherit;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--ink-soft);
+    background: none;
+    border: 0;
+    border-radius: 8px 8px 0 0;
+    padding: 0.55rem 1rem;
+    margin-bottom: -1px;
+    cursor: pointer;
+  }
+
+  .view-tabs [role="tab"]:hover {
+    color: var(--ink);
+    background: rgba(255, 255, 255, 0.55);
+  }
+
+  .view-tabs [role="tab"][aria-selected="true"] {
+    color: var(--ink);
+    box-shadow: inset 0 -3px 0 var(--accent);
+  }
+
+  .view-tabs [role="tab"]:focus-visible {
+    outline: 2px dashed var(--accent);
+    outline-offset: -4px;
+  }
+
+  .view-tabs + #view-panel .controls {
+    margin-top: 1rem;
+  }
+
+  .panels[hidden] {
+    display: none;
+  }
+
   .entity h2 {
     margin: 0 0 0.25rem;
+  }
+
+  /* Relations outline: the selected district's towns or town's districts, with tree lines */
+  .relations {
+    flex-basis: 100%;
+    margin-top: 0.2rem;
+    padding-top: 0.8rem;
+    border-top: 1px solid var(--line);
+    font-size: 0.88rem;
+    color: var(--ink-soft);
+  }
+
+  .relations[hidden] {
+    display: none;
+  }
+
+  .relations :global(.rel-head) {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.2rem 0.6rem;
+    margin-bottom: 0.25rem;
+  }
+
+  .relations :global(.rel-head strong) {
+    color: var(--ink);
+    font-size: 0.95rem;
+  }
+
+  .relations :global(.rel-note) {
+    font-size: 0.8rem;
+    color: var(--muted);
+  }
+
+  .relations :global(.rel-tree) {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .relations :global(.rel-tree li) {
+    position: relative;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.1rem 0.9rem;
+    padding: 0.2rem 0 0.2rem 1.5rem;
+    line-height: 1.45;
+  }
+
+  /* Tree lines: a trunk down the left, a branch to each row, the trunk stopping at the last */
+  .relations :global(.rel-tree li::before) {
+    content: "";
+    position: absolute;
+    left: 0.45rem;
+    top: 0;
+    bottom: 0;
+    border-left: 1px solid var(--axis);
+  }
+
+  .relations :global(.rel-tree li:last-child::before) {
+    bottom: calc(100% - 0.95rem);
+  }
+
+  .relations :global(.rel-tree li::after) {
+    content: "";
+    position: absolute;
+    left: 0.45rem;
+    top: 0.95rem;
+    width: 0.7rem;
+    border-top: 1px solid var(--axis);
+  }
+
+  .relations :global(.rel-name) {
+    min-width: 11rem;
+    color: var(--ink);
+    font-weight: 500;
+  }
+
+  .relations :global(.rel-kind) {
+    min-width: 6.5rem;
+  }
+
+  .relations :global(.rel-amt) {
+    min-width: 6.5rem;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .relations :global(.rel-extra) {
+    flex: 1 1 18rem;
+    color: var(--muted);
+  }
+
+  .relations :global(.rel-more) {
+    font: inherit;
+    color: var(--accent);
+    background: none;
+    border: 0;
+    padding: 0;
+    cursor: pointer;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+
+  .relations :global(.rel-more:focus-visible) {
+    outline: 2px dashed var(--accent);
+    outline-offset: 2px;
   }
 
   .entity p {
@@ -362,6 +701,21 @@ import Layout from "../../layouts/Layout.astro";
   .panel-sub {
     font-size: 0.88rem;
     margin-bottom: 0.5rem;
+  }
+
+  /* In place of a chart the entity has no data for */
+  .panel-none {
+    font-size: 0.92rem;
+    max-width: 72ch;
+    padding: 0.8rem 1rem;
+    border: 1px dashed var(--line);
+    border-radius: 12px;
+    color: var(--ink-soft);
+  }
+
+  #rev-body[hidden],
+  .panel-none[hidden] {
+    display: none;
   }
 
   .legend {
@@ -447,6 +801,12 @@ import Layout from "../../layouts/Layout.astro";
     background: var(--c);
   }
 
+  .panel :global(.key.dash) {
+    width: 16px;
+    height: 2px;
+    background: repeating-linear-gradient(90deg, var(--c) 0 5px, transparent 5px 8px);
+  }
+
   .panel :global(.key.hatch) {
     width: 11px;
     height: 11px;
@@ -498,6 +858,14 @@ import Layout from "../../layouts/Layout.astro";
     font-variant-numeric: tabular-nums;
   }
 
+  /* A halo, so the latest value stays readable where a line passes behind it */
+  .panel :global(.cap) {
+    paint-order: stroke;
+    stroke: var(--surface);
+    stroke-width: 4px;
+    stroke-linejoin: round;
+  }
+
   .panel :global(.band) {
     fill: var(--ink);
     opacity: 0.045;
@@ -530,6 +898,23 @@ import Layout from "../../layouts/Layout.astro";
     stroke-width: 1.5;
   }
 
+  /* Trend: dashed, on a paper-colored halo that keeps it legible across the columns */
+  .panel :global(.trend-halo) {
+    fill: none;
+    stroke: var(--surface);
+    stroke-width: 5;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    opacity: 0.85;
+  }
+
+  .panel :global(.trend-line) {
+    fill: none;
+    stroke-width: 2.25;
+    stroke-dasharray: 7 5;
+    stroke-linecap: round;
+  }
+
   .panel :global(.overlay-line),
   .panel :global(.series-line) {
     fill: none;
@@ -550,6 +935,7 @@ import Layout from "../../layouts/Layout.astro";
 
   .panel :global(.hit),
   .panel :global(.overlay),
+  .panel :global(.trend),
   .panel :global(.lines) {
     pointer-events: none;
   }

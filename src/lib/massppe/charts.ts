@@ -157,7 +157,8 @@ function hoverLayer(svg: SVGSVGElement, ax: Axis, onHover: (i: number | null, so
 }
 
 /**
- * Stacked columns, bottom to top in series order, with an optional overlay line.
+ * Stacked columns, bottom to top in series order, with an optional overlay line
+ * (the comparison) and an optional dashed trend line (the columns' own fitted trend).
  * A negative last segment (spending below the requirement) clips the solid stack
  * at the actual total and hatches the shortfall up to the requirement. A column
  * with no positive parts (one negative segment shown alone) hangs below zero.
@@ -170,8 +171,9 @@ export function stackedColumns(
   ticks: number[],
   fmt: (v: number) => string,
   onHover: (i: number | null, source: SVGSVGElement) => void,
-  cap?: { value: number | null; text: (v: number) => string },
+  cap?: { value: number | null; text: (v: number) => string; index?: number },
   faded: boolean[] = [],
+  trend: Series | null = null,
 ): Panel {
   svg.replaceChildren();
   svg.setAttribute("viewBox", `0 0 ${frame.width} ${frame.height}`);
@@ -232,6 +234,17 @@ export function stackedColumns(
     }
   });
 
+  // Trend under the comparison line, so the comparison's dots stay on top. Clipped to
+  // the plot: a straight line fitted to lumpy columns can run past the axis.
+  if (trend && trend.values.some((v) => v != null)) {
+    const clip = svgEl("clipPath", { id: `${svg.id}-plot` }, defs);
+    svgEl("rect", { x: MARGIN.left, y: MARGIN.top, width: ax.plotW, height: ax.plotH }, clip);
+    const tg = svgEl("g", { class: "trend", "clip-path": `url(#${svg.id}-plot)` }, svg);
+    const d = linePath(ax, trend.values);
+    svgEl("path", { d, class: "trend-halo" }, tg);
+    svgEl("path", { d, class: "trend-line", stroke: trend.color }, tg);
+  }
+
   let overlayDots: SVGGElement | null = null;
   if (overlay && overlay.values.some((v) => v != null)) {
     const og = svgEl("g", { class: "overlay" }, svg);
@@ -243,11 +256,12 @@ export function stackedColumns(
     });
   }
 
-  // Value on the cap of the latest column. Skipped when the comparison dot would
+  // Value on the cap of the latest column (or the column at cap.index, for a
+  // source that trails the other panels). Skipped when the comparison dot would
   // sit on it, so the label never reads as the comparison's value; the tile,
   // tooltip and table still carry it.
   if (cap && cap.value != null) {
-    const i = frame.years.length - 1;
+    const i = cap.index ?? frame.years.length - 1;
     const vals = stacks.map((s) => s.values[i]);
     if (vals.some((v) => v != null)) {
       const positiveTop = vals.reduce<number>((a, v) => a + Math.max(0, v ?? 0), 0);

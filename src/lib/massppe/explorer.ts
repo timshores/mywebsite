@@ -1,5 +1,6 @@
-// District view of the Western MA per-pupil expenditure explorer.
-// Data: public/massppe/data/explorer.json, written by the report pipeline
+// The Western MA school spending explorer: a district view and a town view.
+// Data: public/massppe/data/explorer.json (districts) and towns.json (towns,
+// loaded when the Towns tab first opens), written by the report pipeline
 // (github.com/timshores/schools, ppe_report/export_explorer_data.py).
 
 import { compact, lines, niceTicks, niceTicksRange, stackedColumns, type Panel, type Series, type Val } from "./charts";
@@ -17,7 +18,53 @@ interface Entity {
   ppe: Record<string, Values>;
   enroll: { in_district: Values; foundation: Values; out_of_district: Values };
   nss: { ch70_aid: Values; required_local: Values; above_required: Values };
+  /** Districts only: a regional district, the kind with Census revenue figures */
+  regional?: boolean;
+  /** Revenue by source per in-district FTE pupil: regional districts and averages of enough of them */
+  rev?: Record<string, Values>;
+  /** Averages only: how many regional districts they include */
+  rev_members?: number;
+  /** Town-run districts only: Census's latest totals, in dollars */
+  rev_check?: { fy: number; revenue: number; expenditure: number };
+  /** Districts only: the town itself, or a regional district's member towns, each with what it must
+   * contribute to this district and the other districts it belongs to */
+  towns?: { id: string; name: string; contribution: number | null; also: TownDistrict[] }[];
 }
+
+/** A town, or the pooled Western MA towns average, from towns.json */
+interface Town {
+  id: string;
+  name: string;
+  kind: "town" | "average";
+  county?: string | null;
+  /** Towns: the id of its peer group's average (none for Springfield) */
+  peer?: string | null;
+  members?: number;
+  /** Peer group averages: mid-sentence name, and the population range */
+  ref?: string;
+  label?: string;
+  /** Residents: the town's, or the average's combined population */
+  pop: Values;
+  /** General fund spending by function and revenue by source, per resident */
+  spend: Record<string, Values>;
+  rev: Record<string, Values>;
+  /** Dollars, all towns combined for the average */
+  spend_total: Values;
+  rev_total: Values;
+  /** Its school districts, each with the town's required contribution and the district's other member towns */
+  districts?: (TownDistrict & { contribution: number | null; with: { name: string; id: string | null }[] })[];
+}
+
+/** A school district a town belongs to; id is null for districts outside the explorer */
+interface TownDistrict { name: string; id: string | null; kind: "town" | "regional" | "vocational" }
+
+interface TownData {
+  meta: { years: number[]; latest: number; members_fy: number; excluded: string[]; peer_year: number };
+  towns: Town[];
+}
+
+/** What a comparison needs: a name, whether it reads with "the", or its own mid-sentence name */
+interface Named { name: string; kind: string; ref?: string }
 
 interface Meta {
   years: number[];
@@ -26,6 +73,8 @@ interface Meta {
   categories: string[];
   cohorts: Record<string, { label: string; short: string; range: [number, number | null] }>;
   cpi: Record<string, number>;
+  /** Census revenue years, which trail the DESE years */
+  revenue: { first: number; latest: number; min_members: number } | null;
 }
 
 interface Data {
@@ -34,8 +83,10 @@ interface Data {
 }
 
 type Compare = "cohort" | "western" | "other" | "none";
+type TownCompare = "peer" | "western" | "other" | "none";
 type Dollars = "nominal" | "real";
-type StackPanel = "ppe" | "nss";
+type View = "districts" | "towns";
+type StackPanel = "ppe" | "nss" | "rev" | "tspend" | "trev";
 
 const PPE_COLORS = ["#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#e87ba4", "#008300", "#6250d6", "#e34948", "#8f8a7f"];
 const NSS_SERIES = [
@@ -43,12 +94,52 @@ const NSS_SERIES = [
   { key: "required_local", label: "Required local contribution", color: "#eda100" },
   { key: "above_required", label: "Spending above required", color: "#6250d6" },
 ] as const;
+// Bottom to top, as the export orders them (ppe_report/export_explorer_data.py
+// REVENUE). Chapter 70 and the towns' share keep their colors from the NSS chart;
+// building aid sits on top because it comes in large, irregular payments.
+const REV_SERIES = [
+  { key: "towns", label: "Payments from towns", color: "#eda100" },
+  { key: "ch70", label: "Chapter 70 state aid", color: "#008300" },
+  { key: "retirement", label: "Teacher retirement paid by the state", color: "#2a78d6" },
+  { key: "transport", label: "Transportation aid", color: "#1baf7a" },
+  { key: "other_state", label: "Other state aid", color: "#6250d6" },
+  { key: "federal", label: "Federal", color: "#e34948" },
+  { key: "districts", label: "From other school districts", color: "#eb6834" },
+  { key: "other_local", label: "Other local", color: "#e87ba4" },
+  { key: "building", label: "School building aid", color: "#8f8a7f" },
+] as const;
+// Town view: Schedule A functions and grouped revenue sources, bottom to top as
+// the export orders them (TOWN_SPEND, TOWN_REV). Education sits at the bottom so
+// its share is easy to follow; taxes and state aid keep the local and state colors.
+const TOWN_SPEND_SERIES = [
+  { key: "education", label: "Education", color: "#2a78d6" },
+  { key: "fixed", label: "Fixed costs (benefits, insurance)", color: "#eb6834" },
+  { key: "safety", label: "Public safety", color: "#e34948" },
+  { key: "works", label: "Public works", color: "#1baf7a" },
+  { key: "general", label: "General government", color: "#eda100" },
+  { key: "debt", label: "Debt service", color: "#8f8a7f" },
+  { key: "assessments", label: "Intergovernmental assessments", color: "#6250d6" },
+  { key: "human", label: "Human services", color: "#e87ba4" },
+  { key: "culture", label: "Culture and recreation", color: "#008300" },
+  { key: "other", label: "Other", color: "#c4bba9" },
+] as const;
+const TOWN_REV_SERIES = [
+  { key: "taxes", label: "Taxes", color: "#eda100" },
+  { key: "state", label: "State aid", color: "#008300" },
+  { key: "federal", label: "Federal", color: "#e34948" },
+  { key: "charges", label: "Charges, fees, and fines", color: "#1baf7a" },
+  { key: "other", label: "Other revenue", color: "#e87ba4" },
+  { key: "transfers", label: "Transfers and other financing", color: "#8f8a7f" },
+] as const;
+const POP_COLOR = "#2a78d6";
 const ENROLL_SERIES = [
   { key: "in_district", label: "In-district FTE", color: "#2a78d6" },
   { key: "foundation", label: "Foundation enrollment", color: "#eb6834" },
   { key: "out_of_district", label: "Out-of-district FTE", color: "#1baf7a" },
 ] as const;
 const COMPARE_COLOR = "#524f45";
+// The site accent (Layout.astro --accent), dashed, so the trend reads apart from the comparison
+const TREND_COLOR = "#b65c3d";
 
 // The report's comparison shading (ppe_report/compose_pdf.py): amber above the
 // baseline, teal below, darker as the gap grows. Dollars and enrollment shade
@@ -67,6 +158,10 @@ function shade(delta: number | null, bins: number[]) {
 const usd = (v: number) => `${v < 0 ? "−" : ""}$${Math.abs(Math.round(v)).toLocaleString("en-US")}`;
 const fte = (v: number) => (v >= 100 ? Math.round(v).toLocaleString("en-US") : v.toFixed(1));
 const pct = (v: number) => `${v >= 0 ? "+" : "−"}${Math.abs(v * 100).toFixed(1)}%`;
+const millions = (v: number) => `$${(v / 1e6).toFixed(v >= 1e8 ? 0 : 1)} million`;
+/** "A", "A and B", "A, B, and C" */
+const list = (items: string[]) =>
+  items.length < 3 ? items.join(" and ") : `${items.slice(0, -1).join(", ")}, and ${items[items.length - 1]}`;
 const sentence = (s: string) => s.charAt(0) + s.slice(1).toLowerCase();
 const capital = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
@@ -95,6 +190,19 @@ function sumAt(groups: Values[], i: number): number | null {
 function sumStrict(groups: Values[], i: number): number | null {
   const vals = groups.map((g) => g[i]);
   return vals.some((v) => v == null) ? null : vals.reduce<number>((a, v) => a + v!, 0);
+}
+
+/** Least-squares straight line through the years that have a value, drawn across those years;
+ * all null with fewer than three values. */
+function linearTrend(values: Values): Values {
+  const pts = values.flatMap((v, i) => (v == null ? [] : [[i, v] as const]));
+  if (pts.length < 3) return values.map(() => null);
+  const n = pts.length;
+  const mx = pts.reduce((a, [x]) => a + x, 0) / n;
+  const my = pts.reduce((a, [, y]) => a + y, 0) / n;
+  const slope = pts.reduce((a, [x, y]) => a + (x - mx) * (y - my), 0) / pts.reduce((a, [x]) => a + (x - mx) ** 2, 0);
+  const [first, lastAt] = [pts[0][0], pts[n - 1][0]];
+  return values.map((_, i) => (i < first || i > lastAt ? null : my + slope * (i - mx)));
 }
 
 function cagr(first: number | null, last: number | null, years: number) {
@@ -128,11 +236,45 @@ export async function startExplorer() {
     // The entity picked in the second dropdown when comparing with another district or average
     vs: vsParam && byId.has(vsParam) ? vsParam : null as string | null,
     usd: (params.get("usd") === "real" ? "real" : "nominal") as Dollars,
+    // Chart lines, both on unless the URL turns them off
+    trend: params.get("trend") !== "off",
+    cline: params.get("cline") !== "off",
+    view: (params.get("view") === "towns" ? "towns" : "districts") as View,
+    // Town view: checked against the town list once towns.json loads
+    t: params.get("t") ?? "leverett",
+    tcmp: (["peer", "western", "other", "none"].includes(params.get("tcmp") ?? "") ? params.get("tcmp") : "peer") as TownCompare,
+    tvs: params.get("tvs"),
   };
   if (state.cmp === "other" && !state.vs) state.cmp = "cohort";
   // Legend selections; empty means every segment shows. Kept across districts so
   // one category can be followed from district to district.
-  const isolated: Record<StackPanel, Set<string>> = { ppe: new Set(), nss: new Set() };
+  const isolated: Record<StackPanel, Set<string>> = {
+    ppe: new Set(), nss: new Set(), rev: new Set(), tspend: new Set(), trev: new Set(),
+  };
+
+  // Town data, fetched the first time the Towns tab opens
+  let towns: TownData | null = null;
+  let townById = new Map<string, Town>();
+  let townsFailed = false;
+  async function loadTowns() {
+    if (towns || townsFailed) return;
+    try {
+      const res = await fetch("/massppe/data/towns.json");
+      if (!res.ok) throw new Error(String(res.status));
+      towns = (await res.json()) as TownData;
+    } catch {
+      townsFailed = true;
+      return;
+    }
+    townById = new Map(towns.towns.map((t) => [t.id, t]));
+    if (!townById.has(state.t)) state.t = "leverett";
+    if (state.tvs && !townById.has(state.tvs)) state.tvs = null;
+    if (state.tcmp === "other" && !state.tvs) state.tcmp = "peer";
+    for (const sel of [townSelect, townVsSelect]) fillTowns(sel);
+    townSelect.value = state.t;
+    townCompareSelect.value = state.tcmp;
+    if (state.tvs) townVsSelect.value = state.tvs;
+  }
 
   // ---- Controls ----
   // The district menu and its duplicate for comparisons list the same entities
@@ -171,15 +313,91 @@ export async function startExplorer() {
   });
   vsSelect.addEventListener("change", () => update({ vs: vsSelect.value }));
   dollarInputs.forEach((r) => r.addEventListener("change", () => r.checked && update({ usd: r.value as Dollars })));
+  const trendBox = $<HTMLInputElement>("show-trend");
+  const clineBox = $<HTMLInputElement>("show-cline");
+  trendBox.checked = state.trend;
+  clineBox.checked = state.cline;
+  trendBox.addEventListener("change", () => update({ trend: trendBox.checked }));
+  clineBox.addEventListener("change", () => update({ cline: clineBox.checked }));
+
+  // Town controls: the average first, then towns by county
+  const townSelect = $<HTMLSelectElement>("pick-town");
+  const townVsSelect = $<HTMLSelectElement>("pick-town-vs");
+  const townCompareSelect = $<HTMLSelectElement>("pick-town-compare");
+  function fillTowns(sel: HTMLSelectElement) {
+    sel.replaceChildren();
+    const averages = document.createElement("optgroup");
+    averages.label = "Averages";
+    const counties = new Map<string, HTMLOptGroupElement>();
+    for (const t of towns!.towns) {
+      if (t.kind === "average") {
+        averages.append(new Option(t.name, t.id));
+        continue;
+      }
+      const label = `${t.county ?? "Other"} County`;
+      if (!counties.has(label)) {
+        const g = document.createElement("optgroup");
+        g.label = label;
+        counties.set(label, g);
+      }
+      counties.get(label)!.append(new Option(t.name, t.id));
+    }
+    sel.append(averages, ...[...counties.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([, g]) => g));
+  }
+  townSelect.addEventListener("change", () => update({ t: townSelect.value }));
+  townCompareSelect.addEventListener("change", () => {
+    const tcmp = townCompareSelect.value as TownCompare;
+    const tvs = tcmp === "other" && !state.tvs ? (townComparison(townById.get(state.t)!)?.id ?? "western-towns") : state.tvs;
+    update({ tcmp, tvs });
+  });
+  townVsSelect.addEventListener("change", () => update({ tvs: townVsSelect.value }));
+
+  // Tabs: arrow keys move between them, as for any tab list
+  const tabs = [...document.querySelectorAll<HTMLButtonElement>('[role="tab"]')];
+  tabs.forEach((tab, k) => {
+    tab.addEventListener("click", () => update({ view: tab.dataset.view as View }));
+    tab.addEventListener("keydown", (ev) => {
+      const next = { ArrowLeft: k - 1, ArrowRight: k + 1, Home: 0, End: tabs.length - 1 }[ev.key];
+      if (next == null) return;
+      ev.preventDefault();
+      const target = tabs[(next + tabs.length) % tabs.length];
+      target.focus();
+      update({ view: target.dataset.view as View });
+    });
+  });
 
   function update(patch: Partial<typeof state>) {
     Object.assign(state, patch);
-    const q = new URLSearchParams({ d: state.d });
-    if (state.cmp !== "cohort") q.set("cmp", state.cmp);
-    if (state.cmp === "other" && state.vs) q.set("vs", state.vs);
+    const q = new URLSearchParams();
+    if (state.view === "towns") {
+      q.set("view", "towns");
+      q.set("t", state.t);
+      if (state.tcmp !== "peer") q.set("tcmp", state.tcmp);
+      if (state.tcmp === "other" && state.tvs) q.set("tvs", state.tvs);
+    } else {
+      q.set("d", state.d);
+      if (state.cmp !== "cohort") q.set("cmp", state.cmp);
+      if (state.cmp === "other" && state.vs) q.set("vs", state.vs);
+    }
     if (state.usd !== "nominal") q.set("usd", state.usd);
+    if (!state.trend) q.set("trend", "off");
+    if (!state.cline) q.set("cline", "off");
     history.replaceState(null, "", `${location.pathname}?${q}`);
     render();
+  }
+
+  /** A link that opens a district or town in the explorer, in place or in a new tab. */
+  function viewLink(label: string, patch: Partial<typeof state>) {
+    const q = patch.view === "towns" ? `?view=towns&t=${patch.t}` : `?d=${patch.d}`;
+    const a = text("a", label) as HTMLAnchorElement;
+    a.href = q;
+    a.addEventListener("click", (ev) => {
+      if (ev.metaKey || ev.ctrlKey || ev.shiftKey || ev.button !== 0) return;
+      ev.preventDefault();
+      update(patch);
+      $("entity-name").scrollIntoView({ block: "nearest" });
+    });
+    return a;
   }
 
   // ---- Helpers that depend on state ----
@@ -201,7 +419,35 @@ export async function startExplorer() {
   }
 
   /** "Shutesbury" or "the Tiny cohort average", for use mid-sentence. */
-  const refName = (c: Entity) => (c.kind === "district" ? c.name : `the ${c.name}`);
+  const refName = (c: Named) => c.ref ?? (c.kind === "district" || c.kind === "town" ? c.name : `the ${c.name}`);
+
+  function townComparison(t: Town): Town | null {
+    if (state.tcmp === "none") return null;
+    if (state.tcmp === "other") {
+      const v = state.tvs ? townById.get(state.tvs) : undefined;
+      return v && v.id !== t.id ? v : null;
+    }
+    if (state.tcmp === "western") return t.id === "western-towns" ? null : townById.get("western-towns") ?? null;
+    // Its peer group: a town's own, an average's the Western MA one
+    if (t.kind === "town") return townById.get(t.peer ?? "western-towns") ?? null;
+    return t.id === "western-towns" ? null : townById.get("western-towns") ?? null;
+  }
+
+  /** Why an entity has no revenue chart, in the chart's place. */
+  function noRevenue(e: Entity): string {
+    const peers = regionalIn(e.cohort).map((x) => x.name);
+    if (e.kind === "district") {
+      const r = e.rev_check;
+      return "This chart covers regional districts only. Census's revenue figures for town-run districts are " +
+        "unreliable: for many of them, its local revenue falls well short of what the town spends on its schools." +
+        (r ? ` For ${e.name} in FY${r.fy}, Census reports ${millions(r.revenue)} of revenue against ${millions(r.expenditure)} of spending.` : "") +
+        (peers.length ? ` Regional districts in the ${meta.cohorts[e.cohort!].short} cohort: ${list(peers)}.` : "");
+    }
+    const n = e.rev_members ?? 0;
+    if (n === 0) return `The ${e.name} includes no regional districts, so it has no revenue average.`;
+    return `The ${e.name} includes ${n === 1 ? `one regional district, ${peers[0]}` : `only ${n} regional districts (${list(peers)})`}, ` +
+      `too few for a revenue average. Choose ${n === 1 ? "it" : "one"} in the district menu to see its revenue.`;
+  }
 
   const ppeSeries = (e: Entity): Series[] =>
     meta.categories.map((c, k) => ({ key: c, label: sentence(c), color: PPE_COLORS[k], values: deflate(e.ppe[c]) }));
@@ -209,6 +455,12 @@ export async function startExplorer() {
     NSS_SERIES.map((s) => ({ ...s, values: deflate(e.nss[s.key]) }));
   const enrollSeries = (e: Entity): Series[] =>
     ENROLL_SERIES.map((s) => ({ ...s, values: e.enroll[s.key] }));
+  const revSeries = (e: Entity): Series[] | null =>
+    e.rev ? REV_SERIES.map((s) => ({ ...s, values: deflate(e.rev![s.key]) })) : null;
+  /** Revenue averages cover only their regional districts, and say so. */
+  const revName = (c: Entity) => (c.kind === "district" ? c.name : c.name.replace(/ average$/, " regional average"));
+  const regionalIn = (cohort: string | null) =>
+    data.entities.filter((x) => x.kind === "district" && x.regional && (cohort == null || x.cohort === cohort));
   const totals = (series: Series[]): Values => years.map((_, i) => sumAt(series.map((s) => s.values), i));
   const strictTotals = (series: Series[]): Values => years.map((_, i) => sumStrict(series.map((s) => s.values), i));
   // Actual NSS is the full stack, so it exists only where DESE reported actual spending
@@ -239,7 +491,7 @@ export async function startExplorer() {
   let panels: { panel: Panel; figure: HTMLElement; tip: (i: number) => TipContent }[] = [];
   let hovered: number | null = null;
 
-  interface TipRow { value: string; label: string; color?: string; mark?: "line" | "rect" | "hatch"; strong?: boolean }
+  interface TipRow { value: string; label: string; color?: string; mark?: "line" | "dash" | "rect" | "hatch"; strong?: boolean }
   interface TipContent { title: string; rows: TipRow[]; note?: string }
 
   function showTip(figure: HTMLElement, panel: Panel, i: number, content: TipContent) {
@@ -289,7 +541,22 @@ export async function startExplorer() {
   }
 
   // ---- Legend: stacked segments are toggle buttons that isolate them ----
-  interface LegendItem { label: string; color: string; mark: "rect" | "line" | "hatch"; key?: string }
+  interface LegendItem { label: string; color: string; mark: "rect" | "line" | "dash" | "hatch"; key?: string }
+
+  // ---- Chart lines: the entity's own trend (dashed) and the comparison (solid, with dots),
+  // each shown unless its checkbox is off. Both follow what the legend isolates. ----
+  const trendFor = (name: string, sel: string | null, shownTotal: Values): Series | null =>
+    state.trend ? { key: "trend", label: `${name} trend${sel ? `, ${sel}` : ""}`, color: TREND_COLOR, values: linearTrend(shownTotal) } : null;
+  const hasLine = (s: Series | null): s is Series => !!s && s.values.some((v) => v != null);
+  /** " Dashed line: Leverett trend. Solid line: Tiny cohort average, total." */
+  const lineNote = (trend: Series | null, overlay: Series | null) =>
+    (hasLine(trend) ? ` Dashed line: ${trend.label}.` : "") + (overlay ? ` Solid line: ${overlay.label}.` : "");
+  const lineLegend = (trend: Series | null, overlay: Series | null): LegendItem[] => [
+    ...(hasLine(trend) ? [{ label: trend.label, color: TREND_COLOR, mark: "dash" as const }] : []),
+    ...(overlay ? [{ label: overlay.label, color: COMPARE_COLOR, mark: "line" as const }] : []),
+  ];
+  const trendRow = (trend: Series | null, i: number): TipRow[] =>
+    trend && trend.values[i] != null ? [{ value: usd(trend.values[i]!), label: trend.label, color: TREND_COLOR, mark: "dash" }] : [];
   let refocus: { panel: StackPanel; key: string } | null = null;
 
   function legend(list: HTMLElement, items: LegendItem[], panel?: StackPanel) {
@@ -383,15 +650,19 @@ export async function startExplorer() {
   });
 
   // ---- Comparison table: the report's start year, growth rates and last two years,
-  // shaded against the comparison ----
+  // shaded against the comparison. `end` is the last year's index, for a source
+  // that trails the others. ----
   interface CmpRow { label: string; color: string; mark: "rect" | "line"; values: Values; base: Values | null; total?: boolean }
 
-  function compareTable(holder: HTMLElement, caption: string, rowLabel: string, rows: CmpRow[], kind: "usd" | "fte", cmp: Entity | null) {
+  interface CmpOpts { end?: number; noCmpNote?: string; per?: "pupil" | "resident" }
+
+  function compareTable(holder: HTMLElement, caption: string, rowLabel: string, rows: CmpRow[], kind: "usd" | "fte", cmp: Named | null,
+    { end = last, noCmpNote = "Choose a comparison above to shade this table against it.", per = "pupil" }: CmpOpts = {}) {
     const cName = cmp ? cmp.name : null;
     const fmt = kind === "usd" ? usd : fte;
-    const unit = kind === "usd" ? " $/pupil" : "";
-    const prior = last - 1;
-    const windows = [span, 10, 5];
+    const unit = kind === "usd" ? ` $/${per}` : "";
+    const prior = end - 1;
+    const windows = [end, 10, 5];
     const t = document.createElement("table");
     t.append(text("caption", caption));
     const head = t.createTHead().insertRow();
@@ -399,7 +670,7 @@ export async function startExplorer() {
     blank.className = "swatch-col";
     head.append(blank, text("th", rowLabel, "label-col"), text("th", `${years[0]}${unit}`),
       ...windows.map((n) => text("th", `CAGR ${n}y`)),
-      text("th", `${years[prior]}${unit}`), text("th", `${years[last]}${unit}`));
+      text("th", `${years[prior]}${unit}`), text("th", `${years[end]}${unit}`));
 
     const sr = (above: boolean) => text("span", above ? " (above comparison)" : " (below comparison)", "sr-only");
     const level = (r: CmpRow, i: number) => {
@@ -418,9 +689,9 @@ export async function startExplorer() {
       return td;
     };
     const growth = (r: CmpRow, n: number) => {
-      const g = cagr(r.values[last - n], r.values[last], n);
+      const g = cagr(r.values[end - n], r.values[end], n);
       const td = text("td", g == null ? "—" : pct(g));
-      const gb = r.base ? cagr(r.base[last - n], r.base[last], n) : null;
+      const gb = r.base ? cagr(r.base[end - n], r.base[end], n) : null;
       if (g != null && gb != null && cName) {
         const delta = g - gb;
         const bg = shade(delta, SHADE_BINS_PP);
@@ -447,7 +718,7 @@ export async function startExplorer() {
       }
       const th = text("th", r.label);
       th.setAttribute("scope", "row");
-      tr.append(sw, th, level(r, 0), ...windows.map((n) => growth(r, n)), level(r, prior), level(r, last));
+      tr.append(sw, th, level(r, 0), ...windows.map((n) => growth(r, n)), level(r, prior), level(r, end));
     }
 
     const note = document.createElement("div");
@@ -470,7 +741,7 @@ export async function startExplorer() {
         "or a growth rate by 0.5 percentage points or more; darker shading marks a larger gap. " +
         "Hover a cell for the comparison value. CAGR is the compound annual growth rate, (end\u00a0÷\u00a0start)^(1\u00a0÷\u00a0years)\u00a0−\u00a01."));
     } else {
-      note.append(text("p", "Choose a comparison above to shade this table against it. CAGR is the compound annual growth rate, (end\u00a0÷\u00a0start)^(1\u00a0÷\u00a0years)\u00a0−\u00a01."));
+      note.append(text("p", `${noCmpNote} CAGR is the compound annual growth rate, (end\u00a0÷\u00a0start)^(1\u00a0÷\u00a0years)\u00a0−\u00a01.`));
     }
     // The box takes the table's width; the note stretches to match it
     const box = document.createElement("div");
@@ -488,18 +759,81 @@ export async function startExplorer() {
     return div;
   }
 
+  // ---- Chart helpers shared by both views ----
+  const stackTop = (series: Series[], i: number) => series.reduce((a, s) => a + Math.max(0, s.values[i] ?? 0), 0);
+  const fmtUsd = (v: number) => compact(v, "$");
+  const yoy = (vals: Values, i: number) =>
+    i > 0 && vals[i] != null && vals[i - 1] ? `${pct(vals[i]! / vals[i - 1]! - 1)} from FY${years[i - 1]}` : undefined;
+  /** Tooltip for a stacked panel: the total (or the isolated selection), its segments, the comparison. */
+  const stackTip = (i: number, shown: Series[], sel: string | null, shownTotal: Values, total: Values,
+    overlay: Series | null, trend: Series | null, totalLabel: string, noun: string): TipContent => {
+    const money = (v: number | null) => (v == null ? "–" : usd(v));
+    const rows: TipRow[] = [];
+    const segments = [...shown].reverse().filter((s) => s.values[i] != null && s.values[i]! > 0)
+      .map((s) => ({ value: usd(s.values[i]!), label: s.label, color: s.color, mark: "line" as const }));
+    if (!sel) {
+      rows.push({ value: money(total[i]), label: totalLabel, strong: true }, ...segments);
+    } else {
+      rows.push({ value: money(shownTotal[i]), label: capital(sel), strong: true });
+      if (shown.length > 1) rows.push(...segments);
+      rows.push({ value: money(total[i]), label: `${totalLabel}, all ${noun}` });
+    }
+    rows.push(...trendRow(trend, i));
+    if (overlay && overlay.values[i] != null) {
+      rows.push({ value: usd(overlay.values[i]!), label: overlay.label, color: COMPARE_COLOR, mark: "line" });
+    }
+    return { title: `FY${years[i]}`, rows, note: yoy(sel ? shownTotal : total, i) };
+  };
+
   // ---- Render ----
   let lastWidth = 0;
+  /** The panel column of the view on screen; every chart is drawn to its width. */
+  const panelBox = () => $(state.view === "towns" ? "town-panels" : "panels");
+
+  /** Show the active view's tab, controls and panels. */
+  function applyView() {
+    const onTowns = state.view === "towns";
+    for (const tab of tabs) {
+      const on = tab.dataset.view === state.view;
+      tab.setAttribute("aria-selected", String(on));
+      tab.tabIndex = on ? 0 : -1;
+    }
+    $("view-panel").setAttribute("aria-labelledby", onTowns ? "tab-towns" : "tab-districts");
+    document.querySelectorAll<HTMLElement>("[data-view-only]").forEach((n) => {
+      n.hidden = n.dataset.viewOnly !== state.view;
+    });
+    $("vs-control").hidden = onTowns || state.cmp !== "other";
+    $("town-vs-control").hidden = !onTowns || state.tcmp !== "other";
+  }
 
   function render() {
+    applyView();
+    if (state.view === "districts") {
+      renderDistricts();
+      restoreFocus();
+      return;
+    }
+    if (towns) {
+      renderTowns();
+      restoreFocus();
+      return;
+    }
+    // First visit to the Towns tab: fetch, then draw
+    $("entity-name").textContent = townsFailed ? "Town data unavailable" : "Loading towns…";
+    $("entity-meta").textContent = townsFailed ? "The town data didn't load. Reload the page to try again." : "";
+    relations(null);
+    $("tiles").replaceChildren();
+    if (!townsFailed) loadTowns().then(() => state.view === "towns" && render());
+  }
+
+  function renderDistricts() {
     const e = byId.get(state.d)!;
     const c = comparisonFor(e);
     const real = state.usd === "real";
     const dollarsNote = real ? `FY${meta.latest} dollars` : "Nominal dollars";
     const perDistrict = e.kind === "district" ? "" : ", average per district";
 
-    // Comparison menu: shown only for "Another district or average"
-    $("vs-control").hidden = state.cmp !== "other";
+    // Comparison menu: shown only for "Another district or average" (applyView)
     if (state.vs) vsSelect.value = state.vs;
     for (const o of vsSelect.options) o.disabled = o.value === e.id;
 
@@ -512,6 +846,16 @@ export async function startExplorer() {
     if (c) bits.push(`compared with ${refName(c)}`);
     else if (state.cmp === "other") bits.push("pick a different district or average to compare with");
     $("entity-meta").textContent = bits.join(" · ");
+    // Its towns, each with its contribution and the other districts it funds
+    relations(e.towns?.length ? {
+      root: e.name,
+      note: `${e.regional ? "Member towns" : "Town"} · FY${meta.latest} required local contribution`,
+      rows: e.towns.map((t) => ({
+        name: viewLink(t.name, { view: "towns", t: t.id }),
+        amount: t.contribution,
+        extra: t.also.length ? ["also funds", t.also.map((a) => districtName(a, true))] : null,
+      })),
+    } : null);
 
     // Series
     const ppe = ppeSeries(e);
@@ -555,7 +899,6 @@ export async function startExplorer() {
     );
 
     // Shared dollar scale for both dollar panels while nothing is isolated
-    const stackTop = (series: Series[], i: number) => series.reduce((a, s) => a + Math.max(0, s.values[i] ?? 0), 0);
     let dollarMax = 0;
     years.forEach((_, i) => {
       dollarMax = Math.max(dollarMax, stackTop(ppe, i), stackTop(nss, i), cPpeTotal?.[i] ?? 0, cNssTotal?.[i] ?? 0);
@@ -564,31 +907,29 @@ export async function startExplorer() {
     const enrollMax = Math.max(...enroll.flatMap((s) => s.values.map((v) => v ?? 0)));
     const enrollTicks = niceTicks(enrollMax * 1.04, 4);
 
-    const width = $("panels").clientWidth;
+    const width = panelBox().clientWidth;
     lastWidth = width;
     const tall = width < 520 ? 260 : 320;
     const frame = (height: number) => ({ width, height, years });
-    const fmtUsd = (v: number) => compact(v, "$");
-    const yoy = (vals: Values, i: number) =>
-      i > 0 && vals[i] != null && vals[i - 1] ? `${pct(vals[i]! / vals[i - 1]! - 1)} from FY${years[i - 1]}` : undefined;
 
     // Panel 1: spending by category
     const ppeShown = visible(ppe, "ppe");
     const ppeSel = selectionName(ppeShown, ppe, "categories");
     const ppeShownTotal = totals(ppeShown);
     const cPpeShownTotal = cPpe ? totals(visible(cPpe, "ppe")) : null;
-    const ppeOverlay = c ? { key: "cmp", label: `${cName}, ${ppeSel ?? "total"}`, color: COMPARE_COLOR, values: cPpeShownTotal! } : null;
+    const ppeOverlay = c && state.cline ? { key: "cmp", label: `${cName}, ${ppeSel ?? "total"}`, color: COMPARE_COLOR, values: cPpeShownTotal! } : null;
+    const ppeTrend = trendFor(e.name, ppeSel, ppeShownTotal);
     $("ppe-sub").textContent =
-      `${dollarsNote} per in-district FTE pupil.${c ? ` Line: ${ppeOverlay!.label}.` : ""} ` +
+      `${dollarsNote} per in-district FTE pupil.${lineNote(ppeTrend, ppeOverlay)} ` +
       (ppeSel
         ? `Showing ${ppeShown.length} of ${ppe.length} categories, with the scale fitted to them.`
         : "Select categories in the legend to isolate them.");
     const p1 = stackedColumns($("svg-ppe") as unknown as SVGSVGElement, frame(tall), ppeShown, ppeOverlay,
-      ppeSel ? fitTicks(ppeShown, cPpeShownTotal) : dollarTicks, fmtUsd, setHover,
-      { value: ppeShownTotal[last], text: usd });
+      ppeSel ? fitTicks(ppeShown, ppeOverlay?.values ?? null) : dollarTicks, fmtUsd, setHover,
+      { value: ppeShownTotal[last], text: usd }, [], ppeTrend);
     legend($("legend-ppe"), [
       ...ppe.map((s) => ({ key: s.key, label: s.label, color: s.color, mark: "rect" as const })),
-      ...(ppeOverlay ? [{ label: ppeOverlay.label, color: COMPARE_COLOR, mark: "line" as const }] : []),
+      ...lineLegend(ppeTrend, ppeOverlay),
     ], "ppe");
     compareTable($("cmp-ppe"), `Spending per in-district FTE pupil, ${e.name} (${dollarsNote.toLowerCase()})`, "Category", [
       ...[...ppe].reverse().map((s, k) => ({
@@ -619,28 +960,29 @@ export async function startExplorer() {
     const showsAbove = nssShown.some((s) => s.key === "above_required");
     const nssShownTotal = nssSel ? strictTotals(nssShown) : nssTotal;
     const cNssShownTotal = cNss ? (nssSel ? strictTotals(visible(cNss, "nss")) : cNssTotal) : null;
-    const nssOverlay = c
+    const nssOverlay = c && state.cline
       ? { key: "cmp", label: `${cName}, ${nssSel ?? "actual NSS"}`, color: COMPARE_COLOR, values: cNssShownTotal! }
       : null;
+    const nssTrend = trendFor(e.name, nssSel ?? "actual NSS", nssShownTotal);
     const unreported = showsAbove ? years.filter((_, i) => nss[2].values[i] == null && nss[0].values[i] != null) : [];
     $("nss-sub").textContent =
       `${dollarsNote} per foundation pupil. ` +
       (nssSel
         ? `Showing ${nssShown.length} of ${nss.length} components, with the scale fitted to them.`
         : "Column height is actual net school spending.") +
-      (c ? ` Line: ${nssOverlay!.label}.` : "") +
+      lineNote(nssTrend, nssOverlay) +
       (unreported.length
         ? ` DESE has not reported actual spending for FY${unreported.join(", FY")}, so ${unreported.length > 1 ? "those faded columns stop" : "that faded column stops"} short.`
         : "");
     const p3 = stackedColumns($("svg-nss") as unknown as SVGSVGElement, frame(tall), nssShown, nssOverlay,
-      nssSel ? fitTicks(nssShown, cNssShownTotal) : dollarTicks, fmtUsd, setHover,
-      { value: nssShownTotal[last], text: usd }, years.map((_, i) => showsAbove && nss[2].values[i] == null));
+      nssSel ? fitTicks(nssShown, nssOverlay?.values ?? null) : dollarTicks, fmtUsd, setHover,
+      { value: nssShownTotal[last], text: usd }, years.map((_, i) => showsAbove && nss[2].values[i] == null), nssTrend);
     // The hatch only appears when a shortfall sits on top of other segments
     const hasShortfall = showsAbove && nssShown.length > 1 && nss[2].values.some((v) => v != null && v < 0);
     legend($("legend-nss"), [
       ...nss.map((s) => ({ key: s.key, label: s.label, color: s.color, mark: "rect" as const })),
       ...(hasShortfall ? [{ label: "Below required (shortfall)", color: "#524f45", mark: "hatch" as const }] : []),
-      ...(nssOverlay ? [{ label: nssOverlay.label, color: COMPARE_COLOR, mark: "line" as const }] : []),
+      ...lineLegend(nssTrend, nssOverlay),
     ], "nss");
     compareTable($("cmp-nss"), `Chapter 70 aid and net school spending per foundation pupil, ${e.name} (${dollarsNote.toLowerCase()})`, "Component", [
       ...[...nss].reverse().map((s, k) => ({
@@ -655,27 +997,69 @@ export async function startExplorer() {
       ...(c ? [{ label: `${cName}, actual NSS`, values: cNssTotal!, fmt: usd }] : []),
     ] };
 
+    // Panel 4: revenue by source, from Census figures that end a year or more
+    // before DESE's, for regional districts and averages of enough of them.
+    // Its own scale: revenue pays for more than the spending measure counts.
+    const rev = revSeries(e);
+    const revYears = meta.revenue;
+    $("rev-body").hidden = !rev;
+    $("rev-none").hidden = !!rev;
+    let p4: Panel | null = null;
+    let revTip: ((i: number) => TipContent) | null = null;
+    if (!rev || !revYears) {
+      $("rev-sub").textContent = "";
+      $("rev-none").textContent = noRevenue(e);
+      delete fullTables.rev;
+    } else {
+      const end = years.indexOf(revYears.latest);
+      const cRev = c ? revSeries(c) : null;
+      const cRevName = c && cRev ? revName(c) : "";
+      const revTotal = totals(rev);
+      const cRevTotal = cRev ? totals(cRev) : null;
+      const revShown = visible(rev, "rev");
+      const revSel = selectionName(revShown, rev, "sources");
+      const revShownTotal = totals(revShown);
+      const cRevShownTotal = cRev ? totals(visible(cRev, "rev")) : null;
+      const revOverlay = cRev && state.cline ? { key: "cmp", label: `${cRevName}, ${revSel ?? "total"}`, color: COMPARE_COLOR, values: cRevShownTotal! } : null;
+      const revTrend = trendFor(e.name, revSel, revShownTotal);
+      $("rev-sub").textContent =
+        `${dollarsNote} per in-district FTE pupil${e.kind === "district" ? "" : `, pooled over its ${e.rev_members} regional districts`}. ` +
+        `Census figures, FY${revYears.first}–FY${revYears.latest}${revYears.latest < meta.latest ? `; FY${meta.latest} is not out yet` : ""}.` +
+        lineNote(revTrend, revOverlay) + (c && !cRev && state.cline ? ` No comparison line: ${refName(c)} has no revenue chart.` : "") + " " +
+        (revSel ? `Showing ${revShown.length} of ${rev.length} sources, with the scale fitted to them.` : "Select sources in the legend to isolate them.");
+      let revMax = 0;
+      years.forEach((_, i) => (revMax = Math.max(revMax, stackTop(rev, i), cRevTotal?.[i] ?? 0)));
+      p4 = stackedColumns($("svg-rev") as unknown as SVGSVGElement, frame(tall), revShown, revOverlay,
+        revSel ? fitTicks(revShown, revOverlay?.values ?? null) : niceTicks(revMax * 1.04), fmtUsd, setHover,
+        { value: revShownTotal[end], text: usd, index: end }, [], revTrend);
+      legend($("legend-rev"), [
+        ...rev.map((s) => ({ key: s.key, label: s.label, color: s.color, mark: "rect" as const })),
+        ...lineLegend(revTrend, revOverlay),
+      ], "rev");
+      compareTable($("cmp-rev"), `Revenue per in-district FTE pupil, ${e.name} (${dollarsNote.toLowerCase()})`, "Source", [
+        ...[...rev].reverse().map((s, k) => ({
+          label: s.label, color: s.color, mark: "rect" as const, values: s.values,
+          base: cRev ? cRev[rev.length - 1 - k].values : null,
+        })),
+        { label: "Total", color: "", mark: "rect" as const, values: revTotal, base: cRevTotal, total: true },
+      ], "usd", cRev ? { ...c!, name: cRevName } : null, {
+        end, noCmpNote: c ? `${capital(refName(c))} has no revenue figures to shade this table against.` : undefined,
+      });
+      fullTables.rev = { caption: `Revenue per in-district FTE pupil by source, ${e.name} (${dollarsNote.toLowerCase()})`, cols: [
+        ...rev.map((s) => ({ label: s.label, values: s.values, fmt: usd })),
+        { label: "Total", values: revTotal, fmt: usd },
+        ...(cRev ? [{ label: `${cRevName}, total`, values: cRevTotal!, fmt: usd }] : []),
+      ] };
+      revTip = (i) => revTotal[i] == null
+        ? { title: `FY${years[i]}`, rows: [{ value: "–", label: "Not yet published by Census" }] }
+        : stackTip(i, revShown, revSel, revShownTotal, revTotal, revOverlay, revTrend, "Total revenue per pupil", "sources");
+    }
+
     // Tooltips
     panels = [
       {
         panel: p1, figure: $("fig-ppe"),
-        tip: (i) => {
-          const money = (v: number | null) => (v == null ? "–" : usd(v));
-          const rows: TipRow[] = [];
-          const segments = [...ppeShown].reverse().filter((s) => s.values[i] != null && s.values[i]! > 0)
-            .map((s) => ({ value: usd(s.values[i]!), label: s.label, color: s.color, mark: "line" as const }));
-          if (!ppeSel) {
-            rows.push({ value: money(ppeTotal[i]), label: "Total per pupil", strong: true }, ...segments);
-          } else {
-            rows.push({ value: money(ppeShownTotal[i]), label: capital(ppeSel), strong: true });
-            if (ppeShown.length > 1) rows.push(...segments);
-            rows.push({ value: money(ppeTotal[i]), label: "Total per pupil, all categories" });
-          }
-          if (ppeOverlay && ppeOverlay.values[i] != null) {
-            rows.push({ value: usd(ppeOverlay.values[i]!), label: ppeOverlay.label, color: COMPARE_COLOR, mark: "line" });
-          }
-          return { title: `FY${years[i]}`, rows, note: yoy(ppeSel ? ppeShownTotal : ppeTotal, i) };
-        },
+        tip: (i) => stackTip(i, ppeShown, ppeSel, ppeShownTotal, ppeTotal, ppeOverlay, ppeTrend, "Total per pupil", "categories"),
       },
       {
         panel: p2, figure: $("fig-enroll"),
@@ -699,27 +1083,288 @@ export async function startExplorer() {
               { value: usd(required), label: "Required net school spending" },
               { value: nss[1].values[i] != null ? usd(nss[1].values[i]!) : "–", label: nss[1].label, color: nss[1].color, mark: "line" as const },
               { value: nss[0].values[i] != null ? usd(nss[0].values[i]!) : "–", label: nss[0].label, color: nss[0].color, mark: "line" as const },
+              ...trendRow(nssTrend, i),
               ...(nssOverlay && nssOverlay.values[i] != null ? [{ value: usd(nssOverlay.values[i]!), label: nssOverlay.label, color: COMPARE_COLOR, mark: "line" as const }] : []),
             ],
           };
         },
       },
+      ...(p4 && revTip ? [{ panel: p4, figure: $("fig-rev"), tip: revTip }] : []),
     ];
     if (hovered != null) setHover(null, null);
 
-    // Keep keyboard focus on the legend button that was just pressed
-    if (refocus) {
-      const { panel, key } = refocus;
-      refocus = null;
-      document.querySelector<HTMLButtonElement>(`#legend-${panel} [data-key="${CSS.escape(key)}"]`)?.focus();
+  }
+
+  /** Keep keyboard focus on the legend button that was just pressed. */
+  function restoreFocus() {
+    if (!refocus) return;
+    const { panel, key } = refocus;
+    refocus = null;
+    document.querySelector<HTMLButtonElement>(`#legend-${panel} [data-key="${CSS.escape(key)}"]`)?.focus();
+  }
+
+  // ---- Relations: the selected district's towns or the selected town's districts, as an
+  // outline in the controls box. Names link across the tabs. ----
+  const DISTRICT_KIND = { town: "town district", regional: "regional", vocational: "vocational" } as const;
+
+  /** A district's name, linked when it is in the explorer, optionally with its kind. */
+  function districtName(d: TownDistrict, withKind: boolean): HTMLElement {
+    const span = document.createElement("span");
+    span.append(d.id ? viewLink(d.name, { view: "districts", d: d.id }) : d.name);
+    if (withKind) span.append(` (${DISTRICT_KIND[d.kind]})`);
+    return span;
+  }
+
+  /** Names separated by commas; past seven, the first six and a button for the rest. */
+  function nameList(items: HTMLElement[]): HTMLElement {
+    const list = document.createElement("span");
+    const show = (n: number) => {
+      list.replaceChildren();
+      items.slice(0, n).forEach((it, k) => list.append(...(k ? [", ", it] : [it])));
+      if (n < items.length) {
+        const more = text("button", `and ${items.length - n} more`, "rel-more") as HTMLButtonElement;
+        more.type = "button";
+        more.addEventListener("click", () => show(items.length));
+        list.append(" ", more);
+      }
+    };
+    show(items.length > 7 ? 6 : items.length);
+    return list;
+  }
+
+  interface RelRow { name: HTMLElement; kind?: string; amount: number | null; extra: [string, HTMLElement[]] | null }
+
+  function relations(spec: { root: string; note: string; rows: RelRow[] } | null) {
+    const box = $("relations");
+    box.hidden = !spec;
+    if (!spec) {
+      box.replaceChildren();
+      return;
     }
+    const head = document.createElement("div");
+    head.className = "rel-head";
+    head.append(text("strong", spec.root), text("span", spec.note, "rel-note"));
+    const tree = document.createElement("ul");
+    tree.className = "rel-tree";
+    for (const r of spec.rows) {
+      const li = document.createElement("li");
+      const name = document.createElement("span");
+      name.className = "rel-name";
+      name.append(r.name);
+      li.append(name);
+      if (r.kind != null) li.append(text("span", r.kind, "rel-kind"));
+      li.append(text("span", r.amount != null ? millions(r.amount) : "–", "rel-amt"));
+      if (r.extra) {
+        const extra = document.createElement("span");
+        extra.className = "rel-extra";
+        extra.append(`${r.extra[0]} `, nameList(r.extra[1]));
+        li.append(extra);
+      }
+      tree.append(li);
+    }
+    box.replaceChildren(head, tree);
+  }
+
+  // ---- Town view ----
+  const count = (v: number) => Math.round(v).toLocaleString("en-US");
+  const share = (part: Val, whole: Val) => (part != null && whole ? part / whole : null);
+  const percent = (v: number) => `${Math.round(v * 100)}%`;
+  /** Index of the latest year with a value, for towns that have not filed recently. */
+  const lastWith = (vals: Values) => {
+    for (let i = vals.length - 1; i >= 0; i--) if (vals[i] != null) return i;
+    return last;
+  };
+
+  interface TownStack {
+    key: "tspend" | "trev";
+    name: string;
+    series: Series[];
+    cSeries: Series[] | null;
+    cmp: Town | null;
+    noun: string;
+    rowLabel: string;
+    caption: string;
+    sub: string;
+    totalLabel: string;
+    end: number;
+    width: number;
+  }
+
+  /** A stacked town panel (spending or revenue): chart, legend, tables; returns it with its tooltip. */
+  function townStack(s: TownStack, dollarsNote: string) {
+    const total = totals(s.series);
+    const cTotal = s.cSeries ? totals(s.cSeries) : null;
+    const shown = visible(s.series, s.key);
+    const sel = selectionName(shown, s.series, s.noun);
+    const shownTotal = totals(shown);
+    const cShownTotal = s.cSeries ? totals(visible(s.cSeries, s.key)) : null;
+    const overlay = s.cmp && cShownTotal && state.cline
+      ? { key: "cmp", label: `${s.cmp.name}, ${sel ?? "total"}`, color: COMPARE_COLOR, values: cShownTotal }
+      : null;
+    const trend = trendFor(s.name, sel, shownTotal);
+    $(`${s.key}-sub`).textContent = `${s.sub}${lineNote(trend, overlay)} ` +
+      (sel ? `Showing ${shown.length} of ${s.series.length} ${s.noun}, with the scale fitted to them.`
+        : `Select ${s.noun} in the legend to isolate them.`);
+    let max = 0;
+    years.forEach((_, i) => (max = Math.max(max, stackTop(s.series, i), cTotal?.[i] ?? 0)));
+    const panel = stackedColumns($(`svg-${s.key}`) as unknown as SVGSVGElement,
+      { width: s.width, height: s.width < 520 ? 260 : 320, years }, shown, overlay,
+      sel ? fitTicks(shown, overlay?.values ?? null) : niceTicks(max * 1.04), fmtUsd, setHover,
+      { value: shownTotal[s.end], text: usd, index: s.end }, [], trend);
+    legend($(`legend-${s.key}`), [
+      ...s.series.map((x) => ({ key: x.key, label: x.label, color: x.color, mark: "rect" as const })),
+      ...lineLegend(trend, overlay),
+    ], s.key);
+    compareTable($(`cmp-${s.key}`), `${s.caption}, ${s.name} (${dollarsNote.toLowerCase()})`, s.rowLabel, [
+      ...[...s.series].reverse().map((x, k) => ({
+        label: x.label, color: x.color, mark: "rect" as const, values: x.values,
+        base: s.cSeries ? s.cSeries[s.series.length - 1 - k].values : null,
+      })),
+      { label: "Total", color: "", mark: "rect" as const, values: total, base: cTotal, total: true },
+    ], "usd", s.cmp, { end: s.end, per: "resident" });
+    fullTables[s.key] = { caption: `${s.caption} by year, ${s.name} (${dollarsNote.toLowerCase()})`, cols: [
+      ...s.series.map((x) => ({ label: x.label, values: x.values, fmt: usd })),
+      { label: "Total", values: total, fmt: usd },
+      ...(s.cmp && cTotal ? [{ label: `${s.cmp.name}, total`, values: cTotal, fmt: usd }] : []),
+    ] };
+    const tip = (i: number): TipContent => total[i] == null
+      ? { title: `FY${years[i]}`, rows: [{ value: "–", label: "Not filed with the state" }] }
+      : stackTip(i, shown, sel, shownTotal, total, overlay, trend, s.totalLabel, s.noun);
+    return { panel, tip, total, cTotal };
+  }
+
+  function renderTowns() {
+    const t = townById.get(state.t)!;
+    const c = townComparison(t);
+    const real = state.usd === "real";
+    const dollarsNote = real ? `FY${meta.latest} dollars` : "Nominal dollars";
+    townSelect.value = t.id;
+    townCompareSelect.value = state.tcmp;
+    if (state.tvs) townVsSelect.value = state.tvs;
+    for (const o of townVsSelect.options) o.disabled = o.value === t.id;
+
+    const spend: Series[] = TOWN_SPEND_SERIES.map((s) => ({ ...s, values: deflate(t.spend[s.key]) }));
+    const rev: Series[] = TOWN_REV_SERIES.map((s) => ({ ...s, values: deflate(t.rev[s.key]) }));
+    const cSpend: Series[] | null = c ? TOWN_SPEND_SERIES.map((s) => ({ ...s, values: deflate(c.spend[s.key]) })) : null;
+    const cRev: Series[] | null = c ? TOWN_REV_SERIES.map((s) => ({ ...s, values: deflate(c.rev[s.key]) })) : null;
+    const spendTotal = totals(spend);
+    const end = lastWith(spendTotal);
+    const fy = years[end];
+    const unfiled = years.filter((_, i) => spendTotal[i] == null);
+
+    // Heading
+    $("entity-name").textContent = t.name;
+    const popNow = t.pop[last];
+    const peer = t.peer ? townById.get(t.peer) : undefined;
+    const bits = t.kind === "town"
+      ? [`${t.county} County`, `${popNow != null ? count(popNow) : "–"} residents (July ${meta.latest - 1} estimate)`]
+      : t.label
+        ? [`${t.members} towns with ${t.label} in July ${towns!.meta.peer_year}`, "pooled per resident"]
+        : [`${t.members} towns, pooled per resident`, `${towns!.meta.excluded.join(", ")} not included`];
+    if (c) bits.push(`compared with ${refName(c)}`);
+    else if (state.tcmp === "other") bits.push("pick a different town to compare with");
+    $("entity-meta").textContent = bits.join(" · ");
+    // Its school districts, with what Chapter 70 requires the town to contribute to each
+    // and the towns it shares them with
+    relations(t.districts?.length ? {
+      root: t.name,
+      note: `School districts · FY${towns!.meta.members_fy} required local contribution`,
+      rows: t.districts.map((d) => ({
+        name: districtName(d, false),
+        kind: DISTRICT_KIND[d.kind],
+        amount: d.contribution,
+        extra: d.with.length
+          ? ["shared with", d.with.map((w) => (w.id ? viewLink(w.name, { view: "towns", t: w.id }) : text("span", w.name)))]
+          : null,
+      })),
+    } : null);
+
+    // Tiles (always whole totals, whatever the legends isolate)
+    const cSpendTotal = cSpend ? totals(cSpend) : null;
+    const revTotal = totals(rev);
+    const cRevTotal = cRev ? totals(cRev) : null;
+    const g = cagr(spendTotal[0], spendTotal[end], end);
+    const eduShare = share(spend[0].values[end], spendTotal[end]);
+    const cEduShare = cSpend ? share(cSpend[0].values[end], cSpendTotal![end]) : null;
+    const taxShare = share(rev[0].values[end], revTotal[end]);
+    const cTaxShare = cRev ? share(cRev[0].values[end], cRevTotal![end]) : null;
+    const popChange = t.pop[0] && popNow ? popNow / t.pop[0] - 1 : null;
+    const allDollars = deflate(t.spend_total)[end];
+    $("tiles").replaceChildren(
+      tile(`General fund spending per resident, FY${fy}`, spendTotal[end] != null ? usd(spendTotal[end]!) : "–", [
+        g != null ? `${pct(g)} a year since FY${meta.start}${real ? ", after inflation" : ""}` : "",
+        t.kind === "town" && allDollars != null ? `${millions(allDollars)} in all` : "",
+        c && cSpendTotal?.[end] != null ? `${c.name}: ${usd(cSpendTotal[end]!)}` : "",
+      ]),
+      tile(`Education's share of spending, FY${fy}`, eduShare != null ? percent(eduShare) : "–", [
+        spend[0].values[end] != null ? `${usd(spend[0].values[end]!)} per resident` : "",
+        c && cEduShare != null ? `${c.name}: ${percent(cEduShare)}` : "",
+      ]),
+      tile(`Taxes' share of revenue, FY${fy}`, taxShare != null ? percent(taxShare) : "–", [
+        rev[0].values[end] != null ? `${usd(rev[0].values[end]!)} per resident` : "",
+        c && cTaxShare != null ? `${c.name}: ${percent(cTaxShare)}` : "",
+      ]),
+      tile(`${t.kind === "town" ? "Population" : "Combined population"}, July ${meta.latest - 1}`, popNow != null ? count(popNow) : "–", [
+        popChange != null ? `${pct(popChange)} since July ${meta.start - 1}` : "",
+        t.kind === "average" ? "Census Bureau estimates" : peer?.label ? `Peer group: towns with ${peer.label}` : "Not in a peer group",
+      ]),
+    );
+
+    const width = panelBox().clientWidth;
+    lastWidth = width;
+    const filed = unfiled.length ? ` ${t.name} has not filed Schedule A for FY${unfiled.join(" or FY")}.` : "";
+
+    // Panel 1: spending by function
+    const p1 = townStack({
+      key: "tspend", name: t.name, series: spend, cSeries: cSpend, cmp: c, noun: "functions", rowLabel: "Function",
+      caption: "General fund spending per resident", totalLabel: "Total per resident", end, width,
+      sub: `${dollarsNote} per resident, as ${t.kind === "town" ? "the town" : "each town"} reported it to the state ` +
+        `Division of Local Services (Schedule A).${filed}`,
+    }, dollarsNote);
+
+    // Panel 2: revenue by source
+    const p2 = townStack({
+      key: "trev", name: t.name, series: rev, cSeries: cRev, cmp: c, noun: "sources", rowLabel: "Source",
+      caption: "General fund revenue per resident", totalLabel: "Total per resident", end, width,
+      sub: `${dollarsNote} per resident.${filed}`,
+    }, dollarsNote);
+
+    // Panel 3: population, the denominator of the two dollar panels
+    const popLabel = t.kind === "town" ? "Residents" : "Combined residents";
+    const pop: Series[] = [{ key: "pop", label: popLabel, color: POP_COLOR, values: t.pop }];
+    $("tpop-sub").textContent = t.kind === "town"
+      ? "Census Bureau estimates for July 1 at the start of each fiscal year (FY2021: April 1, 2020). The dollar charts divide by these."
+      : `All ${t.members} towns combined. The dollar charts pool the towns that filed each year.`;
+    const popMax = Math.max(...t.pop.map((v) => v ?? 0));
+    const p3 = lines($("svg-tpop") as unknown as SVGSVGElement, { width, height: width < 520 ? 200 : 230, years }, pop,
+      niceTicks(popMax * 1.04, 4), (v) => compact(v), count, setHover);
+    legend($("legend-tpop"), [{ label: popLabel, color: POP_COLOR, mark: "line" }]);
+    fullTables.tpop = { caption: `Population, ${t.name}`, cols: [
+      { label: popLabel, values: t.pop, fmt: count },
+      ...(c ? [{ label: c.kind === "town" ? c.name : `${c.name}, combined`, values: c.pop, fmt: count }] : []),
+    ] };
+
+    panels = [
+      { panel: p1.panel, figure: $("fig-tspend"), tip: p1.tip },
+      { panel: p2.panel, figure: $("fig-trev"), tip: p2.tip },
+      {
+        panel: p3, figure: $("fig-tpop"),
+        // FY2021 uses the April 2020 estimates base (update_census_data.py)
+        tip: (i) => ({
+          title: `FY${years[i]}`,
+          rows: [{ value: t.pop[i] != null ? count(t.pop[i]!) : "–", label: popLabel, color: POP_COLOR, mark: "line" }],
+          note: years[i] === 2021 ? "April 1, 2020 estimate" : `July 1, ${years[i] - 1} estimate`,
+        }),
+      },
+    ];
+    if (hovered != null) setHover(null, null);
   }
 
   // Plain-language note on the two dollar modes, with a worked example from the index
   const factor = meta.cpi[String(meta.latest)] / meta.cpi[String(meta.start)];
   $("dollars-note").replaceChildren(
     text("strong", "Nominal dollars"),
-    ` are the amounts districts reported spending each year, with no adjustment for inflation. `,
+    ` are the amounts reported each year, with no adjustment for inflation. `,
     text("strong", `FY${meta.latest} dollars`),
     ` restate every year in what a dollar bought in FY${meta.latest}, using the Northeast consumer price index: ` +
       `$1,000 spent in FY${meta.start} is about ${usd(1000 * factor)} in FY${meta.latest} dollars. ` +
@@ -727,11 +1372,13 @@ export async function startExplorer() {
   );
 
   render();
-  ["svg-ppe", "svg-enroll", "svg-nss"].forEach((id) => keyboard($(id) as unknown as SVGSVGElement));
+  ["svg-ppe", "svg-enroll", "svg-nss", "svg-rev", "svg-tspend", "svg-trev", "svg-tpop"]
+    .forEach((id) => keyboard($(id) as unknown as SVGSVGElement));
   root.classList.remove("is-loading");
 
+  // Redraw at a new width; the root, because the hidden view's panels measure 0
   new ResizeObserver(() => {
-    const w = $("panels").clientWidth;
-    if (Math.abs(w - lastWidth) > 4) requestAnimationFrame(render);
-  }).observe($("panels"));
+    const w = panelBox().clientWidth;
+    if (w > 0 && Math.abs(w - lastWidth) > 4) requestAnimationFrame(render);
+  }).observe(root);
 }
