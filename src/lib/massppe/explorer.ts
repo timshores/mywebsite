@@ -89,6 +89,8 @@ type TownCompare = "peer" | "western" | "other" | "none";
 type Dollars = "nominal" | "real";
 type View = "districts" | "towns";
 type StackPanel = "ppe" | "nss" | "rev" | "tspend" | "trev";
+/** The two lines a stacked chart can draw over its columns */
+type Line = "trend" | "cmp";
 
 const PPE_COLORS = ["#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#e87ba4", "#008300", "#6250d6", "#e34948", "#8f8a7f"];
 const NSS_SERIES = [
@@ -236,9 +238,6 @@ export async function startExplorer() {
     // The entity picked in the second dropdown when comparing with another district or average
     vs: vsParam && byId.has(vsParam) ? vsParam : null as string | null,
     usd: (params.get("usd") === "real" ? "real" : "nominal") as Dollars,
-    // Chart lines, both on unless the URL turns them off
-    trend: params.get("trend") !== "off",
-    cline: params.get("cline") !== "off",
     view: (params.get("view") === "towns" ? "towns" : "districts") as View,
     // Town view: checked against the town list once towns.json loads
     t: params.get("t") ?? "leverett",
@@ -249,6 +248,11 @@ export async function startExplorer() {
   // Legend selections; empty means every segment shows. Kept across districts so
   // one category can be followed from district to district.
   const isolated: Record<StackPanel, Set<string>> = {
+    ppe: new Set(), nss: new Set(), rev: new Set(), tspend: new Set(), trev: new Set(),
+  };
+  // Lines hidden from each chart's legend; both show until clicked off. Kept across
+  // districts and towns, like the isolation sets.
+  const hiddenLines: Record<StackPanel, Set<Line>> = {
     ppe: new Set(), nss: new Set(), rev: new Set(), tspend: new Set(), trev: new Set(),
   };
 
@@ -311,12 +315,6 @@ export async function startExplorer() {
   });
   vsSelect.addEventListener("change", () => update({ vs: vsSelect.value }));
   dollarInputs.forEach((r) => r.addEventListener("change", () => r.checked && update({ usd: r.value as Dollars })));
-  const trendBox = $<HTMLInputElement>("show-trend");
-  const clineBox = $<HTMLInputElement>("show-cline");
-  trendBox.checked = state.trend;
-  clineBox.checked = state.cline;
-  trendBox.addEventListener("change", () => update({ trend: trendBox.checked }));
-  clineBox.addEventListener("change", () => update({ cline: clineBox.checked }));
 
   // Town controls: the average first, then towns by county
   const townSelect = $<HTMLSelectElement>("pick-town");
@@ -378,8 +376,6 @@ export async function startExplorer() {
       if (state.cmp === "other" && state.vs) q.set("vs", state.vs);
     }
     if (state.usd !== "nominal") q.set("usd", state.usd);
-    if (!state.trend) q.set("trend", "off");
-    if (!state.cline) q.set("cline", "off");
     history.replaceState(null, "", `${location.pathname}?${q}`);
     render();
   }
@@ -538,20 +534,25 @@ export async function startExplorer() {
     });
   }
 
-  // ---- Legend: stacked segments are toggle buttons that isolate them ----
-  interface LegendItem { label: string; color: string; mark: "rect" | "line" | "dash" | "hatch"; key?: string }
+  // ---- Legend: stacked segments are toggle buttons that isolate them; the lines are
+  // toggle buttons that hide them on that chart ----
+  interface LegendItem { label: string; color: string; mark: "rect" | "line" | "dash" | "hatch"; key?: string; line?: Line }
 
-  // ---- Chart lines: the entity's own trend (dashed) and the comparison (solid, with dots),
-  // each shown unless its checkbox is off. Both follow what the legend isolates. ----
-  const trendFor = (name: string, sel: string | null, shownTotal: Values): Series | null =>
-    state.trend ? { key: "trend", label: `${name} trend${sel ? `, ${sel}` : ""}`, color: TREND_COLOR, values: linearTrend(shownTotal) } : null;
+  // ---- Chart lines: the entity's own trend (dashed) and the comparison (solid, with dots).
+  // Both follow what the legend isolates; either can be hidden from its legend entry. ----
+  const trendOf = (name: string, sel: string | null, shownTotal: Values): Series =>
+    ({ key: "trend", label: `${name} trend${sel ? `, ${sel}` : ""}`, color: TREND_COLOR, values: linearTrend(shownTotal) });
+  /** The line as drawn: null while its legend entry has it hidden. */
+  const drawn = (panel: StackPanel, line: Line, s: Series | null): Series | null => (hiddenLines[panel].has(line) ? null : s);
+  const legendHint = (noun: string) => `Select ${noun} in the legend to isolate them, or a line to hide it.`;
   const hasLine = (s: Series | null): s is Series => !!s && s.values.some((v) => v != null);
   /** " Dashed line: Leverett trend. Solid line: Tiny cohort average, total." */
   const lineNote = (trend: Series | null, overlay: Series | null) =>
     (hasLine(trend) ? ` Dashed line: ${trend.label}.` : "") + (overlay ? ` Solid line: ${overlay.label}.` : "");
+  /** Legend entries for the lines the chart can draw, hidden ones included so they can come back. */
   const lineLegend = (trend: Series | null, overlay: Series | null): LegendItem[] => [
-    ...(hasLine(trend) ? [{ label: trend.label, color: TREND_COLOR, mark: "dash" as const }] : []),
-    ...(overlay ? [{ label: overlay.label, color: COMPARE_COLOR, mark: "line" as const }] : []),
+    ...(hasLine(trend) ? [{ label: trend.label, color: TREND_COLOR, mark: "dash" as const, line: "trend" as const }] : []),
+    ...(overlay ? [{ label: overlay.label, color: COMPARE_COLOR, mark: "line" as const, line: "cmp" as const }] : []),
   ];
   const trendRow = (trend: Series | null, i: number): TipRow[] =>
     trend && trend.values[i] != null ? [{ value: usd(trend.values[i]!), label: trend.label, color: TREND_COLOR, mark: "dash" }] : [];
@@ -568,6 +569,25 @@ export async function startExplorer() {
     };
     const nodes = items.map((it) => {
       const li = document.createElement("li");
+      if (panel && it.line) {
+        const line = it.line;
+        const off = hiddenLines[panel].has(line);
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = `legend-btn legend-line${off ? " is-off" : ""}`;
+        btn.dataset.key = `line:${line}`;
+        btn.setAttribute("aria-pressed", String(!off));
+        btn.title = off ? "Show this line" : "Hide this line";
+        btn.append(swatch(it), text("span", it.label));
+        btn.addEventListener("click", () => {
+          if (off) hiddenLines[panel].delete(line);
+          else hiddenLines[panel].add(line);
+          refocus = { panel, key: `line:${line}` };
+          render();
+        });
+        li.append(btn);
+        return li;
+      }
       if (!set || !it.key) {
         li.className = "legend-static";
         li.append(swatch(it), text("span", it.label));
@@ -915,19 +935,21 @@ export async function startExplorer() {
     const ppeSel = selectionName(ppeShown, ppe, "categories");
     const ppeShownTotal = totals(ppeShown);
     const cPpeShownTotal = cPpe ? totals(visible(cPpe, "ppe")) : null;
-    const ppeOverlay = c && state.cline ? { key: "cmp", label: `${cName}, ${ppeSel ?? "total"}`, color: COMPARE_COLOR, values: cPpeShownTotal! } : null;
-    const ppeTrend = trendFor(e.name, ppeSel, ppeShownTotal);
+    const ppeOverlayAll = c ? { key: "cmp", label: `${cName}, ${ppeSel ?? "total"}`, color: COMPARE_COLOR, values: cPpeShownTotal! } : null;
+    const ppeTrendAll = trendOf(e.name, ppeSel, ppeShownTotal);
+    const ppeOverlay = drawn("ppe", "cmp", ppeOverlayAll);
+    const ppeTrend = drawn("ppe", "trend", ppeTrendAll);
     $("ppe-sub").textContent =
       `${dollarsNote} per in-district FTE pupil.${lineNote(ppeTrend, ppeOverlay)} ` +
       (ppeSel
         ? `Showing ${ppeShown.length} of ${ppe.length} categories, with the scale fitted to them.`
-        : "Select categories in the legend to isolate them.");
+        : legendHint("categories"));
     const p1 = stackedColumns($("svg-ppe") as unknown as SVGSVGElement, frame(tall), ppeShown, ppeOverlay,
       ppeSel ? fitTicks(ppeShown, ppeOverlay?.values ?? null) : dollarTicks, fmtUsd, setHover,
       { value: ppeShownTotal[last], text: usd }, [], ppeTrend);
     legend($("legend-ppe"), [
       ...ppe.map((s) => ({ key: s.key, label: s.label, color: s.color, mark: "rect" as const })),
-      ...lineLegend(ppeTrend, ppeOverlay),
+      ...lineLegend(ppeTrendAll, ppeOverlayAll),
     ], "ppe");
     compareTable($("cmp-ppe"), `Spending per in-district FTE pupil, ${e.name} (${dollarsNote.toLowerCase()})`, "Category", [
       ...[...ppe].reverse().map((s, k) => ({
@@ -958,16 +980,18 @@ export async function startExplorer() {
     const showsAbove = nssShown.some((s) => s.key === "above_required");
     const nssShownTotal = nssSel ? strictTotals(nssShown) : nssTotal;
     const cNssShownTotal = cNss ? (nssSel ? strictTotals(visible(cNss, "nss")) : cNssTotal) : null;
-    const nssOverlay = c && state.cline
+    const nssOverlayAll = c
       ? { key: "cmp", label: `${cName}, ${nssSel ?? "actual NSS"}`, color: COMPARE_COLOR, values: cNssShownTotal! }
       : null;
-    const nssTrend = trendFor(e.name, nssSel ?? "actual NSS", nssShownTotal);
+    const nssTrendAll = trendOf(e.name, nssSel ?? "actual NSS", nssShownTotal);
+    const nssOverlay = drawn("nss", "cmp", nssOverlayAll);
+    const nssTrend = drawn("nss", "trend", nssTrendAll);
     const unreported = showsAbove ? years.filter((_, i) => nss[2].values[i] == null && nss[0].values[i] != null) : [];
     $("nss-sub").textContent =
       `${dollarsNote} per foundation pupil. ` +
       (nssSel
         ? `Showing ${nssShown.length} of ${nss.length} components, with the scale fitted to them.`
-        : "Column height is actual net school spending.") +
+        : "Column height is actual net school spending. Select a line in the legend to hide it.") +
       lineNote(nssTrend, nssOverlay) +
       (unreported.length
         ? ` DESE has not reported actual spending for FY${unreported.join(", FY")}, so ${unreported.length > 1 ? "those faded columns stop" : "that faded column stops"} short.`
@@ -980,7 +1004,7 @@ export async function startExplorer() {
     legend($("legend-nss"), [
       ...nss.map((s) => ({ key: s.key, label: s.label, color: s.color, mark: "rect" as const })),
       ...(hasShortfall ? [{ label: "Below required (shortfall)", color: "#524f45", mark: "hatch" as const }] : []),
-      ...lineLegend(nssTrend, nssOverlay),
+      ...lineLegend(nssTrendAll, nssOverlayAll),
     ], "nss");
     compareTable($("cmp-nss"), `Chapter 70 aid and net school spending per foundation pupil, ${e.name} (${dollarsNote.toLowerCase()})`, "Component", [
       ...[...nss].reverse().map((s, k) => ({
@@ -1018,13 +1042,15 @@ export async function startExplorer() {
       const revSel = selectionName(revShown, rev, "sources");
       const revShownTotal = totals(revShown);
       const cRevShownTotal = cRev ? totals(visible(cRev, "rev")) : null;
-      const revOverlay = cRev && state.cline ? { key: "cmp", label: `${cRevName}, ${revSel ?? "total"}`, color: COMPARE_COLOR, values: cRevShownTotal! } : null;
-      const revTrend = trendFor(e.name, revSel, revShownTotal);
+      const revOverlayAll = cRev ? { key: "cmp", label: `${cRevName}, ${revSel ?? "total"}`, color: COMPARE_COLOR, values: cRevShownTotal! } : null;
+      const revTrendAll = trendOf(e.name, revSel, revShownTotal);
+      const revOverlay = drawn("rev", "cmp", revOverlayAll);
+      const revTrend = drawn("rev", "trend", revTrendAll);
       $("rev-sub").textContent =
         `${dollarsNote} per in-district FTE pupil${e.kind === "district" ? "" : `, pooled over its ${e.rev_members} regional districts`}. ` +
         `Census figures, FY${revYears.first}–FY${revYears.latest}${revYears.latest < meta.latest ? `; FY${meta.latest} is not out yet` : ""}.` +
-        lineNote(revTrend, revOverlay) + (c && !cRev && state.cline ? ` No comparison line: ${refName(c)} has no revenue chart.` : "") + " " +
-        (revSel ? `Showing ${revShown.length} of ${rev.length} sources, with the scale fitted to them.` : "Select sources in the legend to isolate them.");
+        lineNote(revTrend, revOverlay) + (c && !cRev ? ` No comparison line: ${refName(c)} has no revenue chart.` : "") + " " +
+        (revSel ? `Showing ${revShown.length} of ${rev.length} sources, with the scale fitted to them.` : legendHint("sources"));
       let revMax = 0;
       years.forEach((_, i) => (revMax = Math.max(revMax, stackTop(rev, i), cRevTotal?.[i] ?? 0)));
       p4 = stackedColumns($("svg-rev") as unknown as SVGSVGElement, frame(tall), revShown, revOverlay,
@@ -1032,7 +1058,7 @@ export async function startExplorer() {
         { value: revShownTotal[end], text: usd, index: end }, [], revTrend);
       legend($("legend-rev"), [
         ...rev.map((s) => ({ key: s.key, label: s.label, color: s.color, mark: "rect" as const })),
-        ...lineLegend(revTrend, revOverlay),
+        ...lineLegend(revTrendAll, revOverlayAll),
       ], "rev");
       compareTable($("cmp-rev"), `Revenue per in-district FTE pupil, ${e.name} (${dollarsNote.toLowerCase()})`, "Source", [
         ...[...rev].reverse().map((s, k) => ({
@@ -1196,13 +1222,15 @@ export async function startExplorer() {
     const sel = selectionName(shown, s.series, s.noun);
     const shownTotal = totals(shown);
     const cShownTotal = s.cSeries ? totals(visible(s.cSeries, s.key)) : null;
-    const overlay = s.cmp && cShownTotal && state.cline
+    const overlayAll = s.cmp && cShownTotal
       ? { key: "cmp", label: `${s.cmp.name}, ${sel ?? "total"}`, color: COMPARE_COLOR, values: cShownTotal }
       : null;
-    const trend = trendFor(s.name, sel, shownTotal);
+    const trendAll = trendOf(s.name, sel, shownTotal);
+    const overlay = drawn(s.key, "cmp", overlayAll);
+    const trend = drawn(s.key, "trend", trendAll);
     $(`${s.key}-sub`).textContent = `${s.sub}${lineNote(trend, overlay)} ` +
       (sel ? `Showing ${shown.length} of ${s.series.length} ${s.noun}, with the scale fitted to them.`
-        : `Select ${s.noun} in the legend to isolate them.`);
+        : legendHint(s.noun));
     let max = 0;
     years.forEach((_, i) => (max = Math.max(max, stackTop(s.series, i), cTotal?.[i] ?? 0)));
     const panel = stackedColumns($(`svg-${s.key}`) as unknown as SVGSVGElement,
@@ -1211,7 +1239,7 @@ export async function startExplorer() {
       { value: shownTotal[s.end], text: usd, index: s.end }, [], trend);
     legend($(`legend-${s.key}`), [
       ...s.series.map((x) => ({ key: x.key, label: x.label, color: x.color, mark: "rect" as const })),
-      ...lineLegend(trend, overlay),
+      ...lineLegend(trendAll, overlayAll),
     ], s.key);
     compareTable($(`cmp-${s.key}`), `${s.caption}, ${s.name} (${dollarsNote.toLowerCase()})`, s.rowLabel, [
       ...[...s.series].reverse().map((x, k) => ({
