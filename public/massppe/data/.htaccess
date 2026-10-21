@@ -1,0 +1,5 @@
+# Compress the explorer's data files. The server compresses HTML, CSS and JavaScript
+# on its own, but sends JSON and CSV uncompressed (checked 2026-10-21).
+<IfModule mod_deflate.c>
+  AddOutputFilterByType DEFLATE application/json text/csv
+</IfModule>
