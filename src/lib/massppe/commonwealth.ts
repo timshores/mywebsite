@@ -513,8 +513,6 @@ export function startCommonwealth(root: HTMLElement, data: CwData, opts: { openD
     "<p>Whether a district spends a lot depends on what you compare it with. The factor that lines up most closely " +
     "with spending is the one that most needs holding steady: two districts alike in that factor make a fairer " +
     "comparison than two that are alike only in a weaker one.</p>" +
-    `<p>A <a href="${CAUSATION}">correlation doesn't show cause</a>. These factors travel together, and a strong one ` +
-    "can stand in for another that isn't on the list.</p>" +
     "<h4>Reading ρ</h4>" +
     "<p>Spearman's ρ runs from −1 to 1. It is positive when districts higher on one measure tend to be higher on the " +
     "other, negative when they tend to be lower, and near 0 when there is no consistent order. It compares ranks, so " +
@@ -529,7 +527,11 @@ export function startCommonwealth(root: HTMLElement, data: CwData, opts: { openD
     "pair falls into are listed as cautions under the chart.</p>";
   sideHead.id = "cw-picker-head";
   const sideSub = el("p", "cw-picker-sub");
-  corrPanel.append(sideHead, sideSub, barsKey, bars);
+  // Under the list: what a correlation can't show
+  const cause = el("p", "cw-picker-foot");
+  cause.append("A ", Object.assign(el("a", undefined, "correlation doesn't show cause"), { href: CAUSATION }),
+    ". These factors travel together, and a strong one can stand in for another that isn't on the list.");
+  corrPanel.append(sideHead, sideSub, barsKey, bars, cause);
   side.append(corrPanel);
   body.append(figure, side);
   dialog.append(head, settings, body);
