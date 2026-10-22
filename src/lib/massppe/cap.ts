@@ -15,6 +15,8 @@ interface CapTown {
   pop: number | null; pop_income: number | null;
   eqv: number; income: number; cey: number; foundation: number; max: number; target: number; nocap: number;
   required: number | null; prior: number | null; capped: boolean; floor: boolean;
+  /** How the required contribution moved: the growth factor, any extra increment, and where it started */
+  mrgf: number | null; increment: number | null; preliminary: number | null;
 }
 
 interface CapYear {
@@ -135,7 +137,13 @@ export function startCap(root: HTMLElement, data: CapData, opts: { town: string 
   noneLabel.append(noneRadio, el("span", undefined, "No cap"));
   const levelLabel = el("label", "cap-radio");
   levelLabel.append(levelRadio, el("span", undefined, "A cap of"));
-  scenRow.append(el("span", "cap-scen-lead", "Compare today's 82.5% cap with"), noneLabel, levelLabel, slider, out);
+  // A mark under the slider at today's 82.5%
+  const sliderBox = el("span", "cap-slider");
+  const mark = el("span", "cap-slider-mark", "▲ 82.5%, today");
+  mark.style.setProperty("--at", String((82.5 - 60) / (150 - 60)));
+  mark.setAttribute("aria-hidden", "true");
+  sliderBox.append(slider, mark);
+  scenRow.append(el("span", "cap-scen-lead", "Compare today's 82.5% cap with"), noneLabel, levelLabel, sliderBox, out);
   const scenNote = el("p", "cap-note");
   scen.append(scenHead, scenRow, scenNote);
   const setScenario = () => {
@@ -176,7 +184,34 @@ export function startCap(root: HTMLElement, data: CapData, opts: { town: string 
   select.value = townId;
   pickWrap.append(pickLabel, select);
   const steps = el("div", "cap-steps");
-  lookup.append(el("h3", undefined, "One town, step by step"), pickWrap, steps);
+  lookup.append(pickWrap, steps);
+
+  // Targets and required contributions, explained in a window of their own
+  const help = el("dialog", "cw-sub");
+  help.setAttribute("aria-labelledby", "cap-help-title");
+  const helpHead = el("div", "cw-head");
+  const helpTitle = el("h2", "cw-title", "Targets and required contributions");
+  helpTitle.id = "cap-help-title";
+  const helpClose = el("button", "cw-close", "×");
+  helpClose.type = "button";
+  helpClose.setAttribute("aria-label", "Close");
+  helpClose.addEventListener("click", () => help.close());
+  helpHead.append(helpTitle, helpClose);
+  const helpBody = el("div", "cw-sub-body");
+  help.append(helpHead, helpBody);
+  help.addEventListener("click", (ev) => {
+    if (ev.target === help) help.close();
+  });
+  (root.closest(".explorer") ?? document.body).append(help);
+  const helpButton = (label: string) => {
+    const b = el("button", "cap-help", "?");
+    b.type = "button";
+    b.setAttribute("aria-haspopup", "dialog");
+    b.setAttribute("aria-label", label);
+    b.title = label;
+    b.addEventListener("click", () => help.showModal());
+    return b;
+  };
   const picker = groupedPicker(select, "cap-town-label", "towns");
   select.addEventListener("change", () => {
     townId = select.value;
@@ -272,42 +307,104 @@ export function startCap(root: HTMLElement, data: CapData, opts: { town: string 
     );
 
     scenNote.textContent = (scenario == null
-      ? `With no cap, the percentages would be ${rate(y.property_pct * f)} and ${rate(y.income_pct * f)}. `
-      : `With a ${capPct(scenario)} cap, the percentages would be ${rate(y.property_pct * f)} and ${rate(y.income_pct * f)}, ` +
+      ? `With no cap, the statewide percentages would be ${rate(y.property_pct * f)} of property value and ` +
+        `${rate(y.income_pct * f)} of income. `
+      : `With a ${capPct(scenario)} cap, the statewide percentages would be ${rate(y.property_pct * f)} of property value and ` +
+        `${rate(y.income_pct * f)} of income, ` +
         `and ${atScenarioCap} towns would be at that cap. `) +
       `${down.length} towns' FY${y.fy} targets would fall, by ${big(-downSum)} in all, and ${up.length} towns' would rise by ` +
       `${big(upSum)}` + (up.length ? `, ${upTop} of them among the fifth of towns with the highest income per resident.` : ".") +
       " The town lookup, the chart, and the table below all follow this choice.";
 
-    // One town
-    const prop = t.eqv * y.property_pct;
-    const inc = t.income * y.income_pct;
+    // One town: today's cap beside the one chosen above, line by line
+    const pAlt = y.property_pct * f;
+    const iAlt = y.income_pct * f;
     const ch = change(t);
-    const rows: [string, string, string?][] = [
-      [`Equalized property value, January ${y.eqv_year}`, usd(t.eqv), `× ${rate(y.property_pct)} = ${usd(prop)}`],
-      [`Residents' income, ${y.income_year}`, usd(t.income), `× ${rate(y.income_pct)} = ${usd(inc)}`],
-      ["Combined effort yield", usd(t.cey), t.foundation ? `${pct(t.cey / t.foundation)} of its ${usd(t.foundation)} foundation budget` : "No foundation budget"],
-      [`Target local contribution, FY${y.fy}`, usd(t.target), t.capped ? `Capped at ${pct(y.max_pct, 1)} of foundation` : "Its yield: below the cap"],
-      [capitalize(scenName), usd(alt.get(t.id)!), `${signed(ch)}${t.pop ? `, ${signed(ch / t.pop)} per resident` : ""}`],
-    ];
-    if (t.required != null) {
-      rows.push([`Required contribution, FY${y.fy}`, usd(t.required),
-        t.required < t.target ? "Below its target: requirements climb toward targets a step a year" :
-          t.required > t.target ? "Above its target" : "Equal to its target"]);
-    }
+    const capAlt = scenario == null ? null : Math.round(scenario * t.foundation);
+    const scenCol = scenario == null ? "No cap" : `A ${capPct(scenario)} cap`;
     const table = el("table", "cap-steps-table");
-    for (const [label, value, note] of rows) {
-      const r = table.insertRow();
-      const th = el("th", undefined, label);
+    const hr0 = table.createTHead().insertRow();
+    hr0.append(el("th", undefined, t.name), el("th", "num", "Today: 82.5% cap"), el("th", "num", scenCol), el("th", "num", "Difference"));
+    const tb0 = table.createTBody();
+    // Each cell: the amount, with how it was reached in small type beneath
+    type Cell = string | [string, string];
+    const cell = (c: Cell) => {
+      const td = el("td", "num");
+      if (typeof c === "string") td.textContent = c;
+      else td.append(c[0], el("small", "cap-cell-note", c[1]));
+      return td;
+    };
+    const row = (label: string | HTMLElement, sub: string, today: Cell, other: Cell, diff: Cell, cls = "") => {
+      const r = tb0.insertRow();
+      if (cls) r.className = cls;
+      const th = el("th");
       th.scope = "row";
-      r.append(th, el("td", "num", value), el("td", "note", note ?? ""));
+      th.append(label);
+      if (sub) th.append(el("small", "cap-cell-note", sub));
+      r.append(th, cell(today), cell(other), cell(diff));
+    };
+    const share = (v: number) => (t.foundation ? `${pct(v / t.foundation)} of foundation` : "");
+    row("From property", `${usd(t.eqv)} of equalized value, January ${y.eqv_year}`,
+      [usd(t.eqv * y.property_pct), `× ${rate(y.property_pct)}`], [usd(t.eqv * pAlt), `× ${rate(pAlt)}`],
+      signed(t.eqv * pAlt - t.eqv * y.property_pct));
+    row("From income", `${usd(t.income)} of residents' ${y.income_year} income`,
+      [usd(t.income * y.income_pct), `× ${rate(y.income_pct)}`], [usd(t.income * iAlt), `× ${rate(iAlt)}`],
+      signed(t.income * iAlt - t.income * y.income_pct));
+    row("Combined effort yield", "The two together", [usd(t.cey), share(t.cey)], [usd(t.cey * f), share(t.cey * f)],
+      signed(t.cey * f - t.cey));
+    row("Cap on the target", `As a share of the ${usd(t.foundation)} foundation budget`,
+      [usd(t.max), `${pct(y.max_pct, 1)} of foundation`], capAlt == null ? ["None", ""] : [usd(capAlt), `${capPct(scenario!)} of foundation`], "");
+    const tgtLabel = el("span");
+    tgtLabel.append(`Target local contribution, FY${y.fy} `, helpButton("What is a target local contribution?"));
+    row(tgtLabel, "The yield or the cap, whichever is less", usd(t.target), usd(alt.get(t.id)!),
+      t.pop ? [signed(ch), `${signed(ch / t.pop)} per resident`] : signed(ch), "total");
+    const scroll0 = Object.assign(el("div", "table-scroll"), { tabIndex: 0 });
+    scroll0.append(table);
+
+    // What the town actually pays this year, which moves toward the target over time
+    const pays = el("p", "cap-pays");
+    if (t.required != null) {
+      pays.append(`${t.name} must pay ${usd(t.required)} toward its schools in FY${y.fy} under today's cap` +
+        (t.required < t.target - 1 ? `, ${usd(t.target - t.required)} less than its target. ` : ", its full target. "),
+        helpButton("Why can what a town pays differ from its target?"));
     }
-    const verdict = el("p", "cap-verdict");
-    verdict.textContent = ch < 0
-      ? `${capitalize(scenName)}, ${t.name}'s FY${y.fy} target would be ${usd(-ch)} lower.`
-      : ch > 0 ? `${capitalize(scenName)}, ${t.name}'s FY${y.fy} target would be ${usd(ch)} higher.`
-        : `${capitalize(scenName)}, ${t.name}'s target would not change.`;
-    steps.replaceChildren(table, verdict);
+    steps.replaceChildren(scroll0, pays);
+
+    // The window's explanation, with this town's numbers
+    const explain: (string | HTMLElement)[][] = [
+      [`A town's target local contribution is what the Chapter 70 formula says the town should pay toward its schools, ` +
+        `given its property and income: its combined effort yield, or ${pct(y.max_pct, 1)} of its foundation budget if ` +
+        "that's less."],
+      ["Its required contribution is what the town must actually pay this year, and it doesn't jump to the target all " +
+        "at once. The formula starts from last year's required contribution and grows it by the town's municipal revenue " +
+        "growth factor, a state estimate of how fast the town's own revenue grows. If the result is above the target, " +
+        "the required contribution comes down to the target. If it falls short of the target by more than 2.5% of the " +
+        "foundation budget, the formula adds 1% of last year's amount, or 2% when it falls short by more than 7.5%."],
+    ];
+    if (t.required != null && t.prior != null && t.mrgf != null && t.preliminary != null) {
+      const g = `${(t.mrgf * 100).toFixed(2)}%`;
+      const step = t.required - t.preliminary;
+      explain.push([t.required < t.target - 1
+        ? `For ${t.name} in FY${y.fy}: last year's required contribution, ${usd(t.prior)}, grew by ${t.name}'s growth ` +
+          `factor of ${g} to ${usd(t.preliminary)}.` + (step > 1 ? ` That was more than ${t.increment && t.increment >= 0.02 ? "7.5" : "2.5"}% ` +
+          `of the foundation budget below the target, so the formula added ${t.increment ? `${(t.increment * 100).toFixed(0)}%` : "a share"} ` +
+          `of last year's amount, ${usd(step)}.` : "") +
+          ` ${t.name} must pay ${usd(t.required)}, ${usd(t.target - t.required)} less than its ${usd(t.target)} target.`
+        : t.floor
+          ? `For ${t.name} in FY${y.fy}: its yield is at least 175% of its foundation budget, and a rule for such towns ` +
+            `sets the required contribution at the full target, ${usd(t.required)}.`
+          : `For ${t.name} in FY${y.fy}: last year's required contribution, ${usd(t.prior)}, grown by ${t.name}'s growth ` +
+            `factor of ${g}, would have been ${usd(t.preliminary)}, more than the ${usd(t.target)} target, so ${t.name} ` +
+            `must pay the target.`]);
+    }
+    explain.push(["This page compares targets. Under today's rules, if a town's target fell, its required contribution " +
+      "would come down to the new target the next year; if its target rose, its required contribution would climb toward " +
+      "it a few percent a year."]);
+    helpBody.replaceChildren(...explain.map((parts) => {
+      const para = el("p");
+      para.append(...parts);
+      return para;
+    }));
 
     // The chart: every town, the selected one marked
     const yo = Y_OPTIONS[yKey];
