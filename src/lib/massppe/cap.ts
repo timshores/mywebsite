@@ -808,7 +808,8 @@ export function startCap(root: HTMLElement, data: CapData, opts: { town: string 
       `Change in what's asked, ${scenName}`, "Median change per resident", "Median change as a share of income"]) hr.append(el("th", undefined, h));
     const tb = tbl.createTBody();
     const names = ["Lowest fifth", "Second fifth", "Middle fifth", "Fourth fifth", "Highest fifth"];
-    for (let q = 0; q < 5; q++) {
+    // Highest fifth first
+    for (let q = 4; q >= 0; q--) {
       const part = withIncome.filter(({ x }) => fifthOf.get(x.id) === q);
       const sum = part.reduce((a, { x }) => a + change(x), 0);
       const r = tb.insertRow();
