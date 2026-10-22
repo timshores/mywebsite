@@ -12,8 +12,8 @@ import { compact, lines, niceTicks, niceTicksRange, stackedColumns, type Panel, 
 type Values = Val[];
 
 /** Ids to compare with, one per "Compare with" choice; null where there is none */
-type CmpIds = Partial<Record<"cohort" | "cohort_state" | "region" | "state", string | null>>;
-type TownCmpIds = Partial<Record<"peer" | "peer_state" | "region" | "state", string | null>>;
+type CmpIds = Partial<Record<"cohort" | "cohort_state" | "region" | "state" | "gateway", string | null>>;
+type TownCmpIds = Partial<Record<"peer" | "peer_state" | "region" | "state" | "gateway", string | null>>;
 
 /** A district or a district average, from its region's file */
 interface Entity {
@@ -28,6 +28,8 @@ interface Entity {
   region: string | null;
   members?: number;
   fte?: number;
+  /** Districts: the district of one of the Commonwealth's Gateway Cities */
+  gateway?: boolean;
   cmp: CmpIds;
   chunk: string;
   ppe: Record<string, Values>;
@@ -69,6 +71,8 @@ interface Town {
   region: string | null;
   /** Towns: the id of its statewide peer group's average (none for the cities that stand apart) */
   peer?: string | null;
+  /** Towns: one of the Commonwealth's Gateway Cities */
+  gateway?: boolean;
   scope?: string;
   members?: number;
   /** Peer group averages: mid-sentence name, and the population range */
@@ -123,8 +127,8 @@ interface Data {
   districts: Listed[];
 }
 
-type Compare = "none" | "cohort" | "cohort-state" | "region" | "state" | "other";
-type TownCompare = "none" | "peer" | "peer-state" | "region" | "state" | "other";
+type Compare = "none" | "cohort" | "cohort-state" | "region" | "state" | "gateway" | "other";
+type TownCompare = "none" | "peer" | "peer-state" | "region" | "state" | "gateway" | "other";
 type Dollars = "nominal" | "real";
 type View = "districts" | "towns";
 type StackPanel = "ppe" | "nss" | "rev" | "tspend" | "trev";
@@ -133,10 +137,14 @@ type Line = "trend" | "cmp";
 
 // Each comparison choice, as the ids to try in order: "Its cohort in its region" falls
 // back to the statewide cohort where a region has too few districts of that size
-const CHAIN = { cohort: ["cohort", "cohort_state"], "cohort-state": ["cohort_state"], region: ["region"], state: ["state"] } as const;
-const TOWN_CHAIN = { peer: ["peer", "peer_state"], "peer-state": ["peer_state"], region: ["region"], state: ["state"] } as const;
-const COMPARES: Compare[] = ["none", "cohort", "cohort-state", "region", "state", "other"];
-const TOWN_COMPARES: TownCompare[] = ["none", "peer", "peer-state", "region", "state", "other"];
+const CHAIN = {
+  cohort: ["cohort", "cohort_state"], "cohort-state": ["cohort_state"], region: ["region"], state: ["state"], gateway: ["gateway"],
+} as const;
+const TOWN_CHAIN = {
+  peer: ["peer", "peer_state"], "peer-state": ["peer_state"], region: ["region"], state: ["state"], gateway: ["gateway"],
+} as const;
+const COMPARES: Compare[] = ["none", "cohort", "cohort-state", "region", "state", "gateway", "other"];
+const TOWN_COMPARES: TownCompare[] = ["none", "peer", "peer-state", "region", "state", "gateway", "other"];
 // Ids and choices from before the statewide explorer, so old links still open
 const ALIASES: Record<string, string> = { "western-ma": "region-western", "western-towns": "towns-region-western" };
 const CHOICE_ALIASES: Record<string, string> = { western: "region" };
@@ -1013,7 +1021,7 @@ export async function startExplorer() {
     const place = e.region ? meta.regions[e.region] : "";
     const bits = e.kind === "average" ? [`${e.members} districts`]
       : [e.type === "vocational" ? "Vocational district" : e.type === "charter" ? "Charter school"
-        : `${meta.cohorts[e.cohort!].short} cohort`, place];
+        : `${meta.cohorts[e.cohort!].short} cohort`, place, e.gateway ? "Gateway City" : ""];
     // Said only when "Its cohort in its region" falls back to the statewide cohort
     if (c && state.cmp === "cohort" && e.type === "traditional" && !e.cmp.cohort && place)
       bits.push(`compared statewide: too few ${meta.cohorts[e.cohort!].short} districts in ${place}`);
@@ -1410,7 +1418,7 @@ export async function startExplorer() {
     const popNow = t.pop[last];
     const peerLabel = towns!.meta.peers.find((x) => x.id === t.peer)?.label;
     const place = t.region ? meta.regions[t.region] : "";
-    const bits = t.kind === "town" ? [`${t.county} County`, place] : [`${t.members} towns`];
+    const bits = t.kind === "town" ? [`${t.county} County`, place, t.gateway ? "Gateway City" : ""] : [`${t.members} towns`];
     // Said only when "Its peer group in its region" falls back to the statewide peer group
     if (c && state.tcmp === "peer" && t.kind === "town" && !t.cmp.peer && place)
       bits.push(`compared statewide: too few towns of this size in ${place}`);

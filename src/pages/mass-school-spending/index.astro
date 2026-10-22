@@ -36,6 +36,7 @@ import Layout from "../../layouts/Layout.astro";
           <option value="cohort-state">Its cohort statewide</option>
           <option value="region">Its region</option>
           <option value="state">Statewide</option>
+          <option value="gateway">Gateway Cities</option>
           <option value="other">Another district or average</option>
         </select>
       </label>
@@ -55,6 +56,7 @@ import Layout from "../../layouts/Layout.astro";
           <option value="peer-state">Its peer group statewide</option>
           <option value="region">Its region</option>
           <option value="state">Statewide</option>
+          <option value="gateway">Gateway Cities</option>
           <option value="other">Another town or average</option>
         </select>
       </label>
@@ -247,7 +249,10 @@ import Layout from "../../layouts/Layout.astro";
         the ten very large districts, which have an average of their own. A region with fewer than three districts in a
         cohort has no regional average for it, so "its cohort in its region" uses the statewide cohort there. Spending
         averages are weighted by in-district FTE, Chapter 70 averages by foundation enrollment, and enrollment
-        averages are per district. Two virtual schools, the state's institutional schools, and the Massachusetts
+        averages are per district. <a href="https://www.mass.gov/doc/gatewaycitiesdocx/download">Gateway Cities</a>
+        are the 26 mid-size cities the Commonwealth lists, whose median household income and college attainment fall
+        below the state's (the list dates from 2014). Their districts, and the cities on the Towns tab, have averages
+        of their own, alongside their size cohorts and peer groups. Two virtual schools, the state's institutional schools, and the Massachusetts
         Academy of Math and Science are not included.
       </p>
       <p>
