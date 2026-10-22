@@ -29,7 +29,11 @@ interface CapYear {
   towns: CapTown[];
 }
 
-export interface CapData { meta: { latest: number }; years: Record<string, CapYear> }
+/** How far districts spent above the required minimum, the latest year with actual spending */
+interface Spending { fy: number; districts: number; above: number; median: number; half_again: number; double: number;
+  required: number; over: number }
+
+export interface CapData { meta: { latest: number; spending?: Spending }; years: Record<string, CapYear> }
 
 const usd = (v: number) => `${v < 0 ? "−" : ""}$${Math.abs(Math.round(v)).toLocaleString("en-US")}`;
 const signed = (v: number) => `${v > 0 ? "+" : v < 0 ? "−" : ""}$${Math.abs(Math.round(v)).toLocaleString("en-US")}`;
@@ -194,7 +198,7 @@ export function startCap(root: HTMLElement, data: CapData, opts: { town: string 
   const help = el("dialog", "cw-sub");
   help.setAttribute("aria-labelledby", "cap-help-title");
   const helpHead = el("div", "cw-head");
-  const helpTitle = el("h2", "cw-title", "Targets and required contributions");
+  const helpTitle = el("h2", "cw-title", "How Chapter 70 sets the minimum");
   helpTitle.id = "cap-help-title";
   const helpClose = el("button", "cw-close", "×");
   helpClose.type = "button";
@@ -305,7 +309,7 @@ export function startCap(root: HTMLElement, data: CapData, opts: { town: string 
         [`Of 351; each district's state aid is at least ${pct(1 - y.max_pct, 1)} of its foundation budget`]),
       tile("Statewide percentages", `${rate(y.property_pct)} · ${rate(y.income_pct)}`,
         ["Of property value and of income, with the cap", `With no cap: ${rate(y.property_pct * y.factor)} · ${rate(y.income_pct * y.factor)}`]),
-      tile("What the cap moves", big(y.totals.up_sum), [
+      tile("Wealth redistributed by the cap", big(y.totals.up_sum), [
         `With no cap, ${y.totals.down} towns' targets would fall by ${big(-y.totals.down_sum)} in all`,
         `and ${y.totals.up} towns' would rise by as much`]),
     );
@@ -326,6 +330,9 @@ export function startCap(root: HTMLElement, data: CapData, opts: { town: string 
     const ch = change(t);
     const capAlt = scenario == null ? null : Math.round(scenario * t.foundation);
     const scenCol = scenario == null ? "No cap" : `A ${capPct(scenario)} cap`;
+    const tableHead = el("p", "cap-table-head");
+    tableHead.append(`How Chapter 70 sets ${t.name}'s minimum contribution to its schools, FY${y.fy} `,
+      helpButton("How is the minimum calculated?"));
     const table = el("table", "cap-steps-table");
     const hr0 = table.createTHead().insertRow();
     hr0.append(el("th", undefined, t.name), el("th", "num", "Today: 82.5% cap"), el("th", "num", scenCol), el("th", "num", "Difference"));
@@ -362,24 +369,24 @@ export function startCap(root: HTMLElement, data: CapData, opts: { town: string 
     tgtLabel.append(`Target local contribution, FY${y.fy} `, helpButton("What is a target local contribution?"));
     row(tgtLabel, "The yield or the cap, whichever is less", usd(t.target), usd(alt.get(t.id)!),
       t.pop ? [signed(ch), `${signed(ch / t.pop)} per resident`] : signed(ch), "total");
+    if (t.required != null) {
+      const reqLabel = el("span");
+      reqLabel.append(`Required contribution, FY${y.fy}: the minimum `, helpButton("Why can the minimum differ from the target?"));
+      row(reqLabel, `What ${t.name} must pay toward its schools this year`,
+        [usd(t.required), t.required < t.target - 1 ? `${usd(t.target - t.required)} below the target` : "The full target"],
+        ["–", "Would move toward the new target"], "", "minimum");
+    }
     const scroll0 = Object.assign(el("div", "table-scroll"), { tabIndex: 0 });
     scroll0.append(table);
-
-    // What the town actually pays this year, which moves toward the target over time
-    const pays = el("p", "cap-pays");
-    if (t.required != null) {
-      pays.append(`${t.name} must pay ${usd(t.required)} toward its schools in FY${y.fy} under today's cap` +
-        (t.required < t.target - 1 ? `, ${usd(t.target - t.required)} less than its target. ` : ", its full target. "),
-        helpButton("Why can what a town pays differ from its target?"));
-    }
-    steps.replaceChildren(scroll0, pays);
+    steps.replaceChildren(tableHead, scroll0);
 
     // The window's explanation, with this town's numbers
     const explain: (string | HTMLElement)[][] = [
-      [`A town's target local contribution is what the Chapter 70 formula says the town should pay toward its schools, ` +
-        `given its property and income: its combined effort yield, or ${pct(y.max_pct, 1)} of its foundation budget if ` +
-        "that's less."],
-      ["Its required contribution is what the town must actually pay this year, and it doesn't jump to the target all " +
+      ["Chapter 70 sets a minimum each town must pay toward its schools each year, its required local contribution. " +
+        "The formula works toward a target for that minimum, the target local contribution: the town's combined effort " +
+        "yield, a statewide percentage of its property value plus one of its residents' income, or " +
+        `${pct(y.max_pct, 1)} of its foundation budget if that's less.`],
+      ["The minimum doesn't jump to the target all " +
         "at once. The formula starts from last year's required contribution and grows it by the town's municipal revenue " +
         "growth factor, a state estimate of how fast the town's own revenue grows. If the result is above the target, " +
         "the required contribution comes down to the target. If it falls short of the target by more than 2.5% of the " +
@@ -400,6 +407,15 @@ export function startCap(root: HTMLElement, data: CapData, opts: { town: string 
           : `For ${t.name} in FY${y.fy}: last year's required contribution, ${usd(t.prior)}, grown by ${t.name}'s growth ` +
             `factor of ${g}, would have been ${usd(t.preliminary)}, more than the ${usd(t.target)} target, so ${t.name} ` +
             `must pay the target.`]);
+    }
+    const sp = data.meta.spending;
+    if (sp) {
+      explain.push([`Most districts spend more than the minimum, and some spend much more. In FY${sp.fy}, ${sp.above} of ` +
+        `${sp.districts} districts spent more than their required net school spending, the least a district may spend: ` +
+        "its towns' required contributions plus its Chapter 70 aid. The median district spent " +
+        `${pct(sp.median - 1)} more, ${sp.half_again} spent at least half again as much, and ${sp.double} at least twice ` +
+        `as much: ${big(sp.over)} above a ${big(sp.required)} minimum in all. That extra is the towns' own money, beyond ` +
+        "their required contributions."]);
     }
     explain.push(["This page compares targets. Under today's rules, if a town's target fell, its required contribution " +
       "would come down to the new target the next year; if its target rose, its required contribution would climb toward " +

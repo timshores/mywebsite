@@ -9,7 +9,7 @@ import Layout from "../../layouts/Layout.astro";
   <section id="explorer" class="explorer is-loading">
     <p class="eyebrow">Massachusetts · FY2009–FY<span data-latest>2025</span></p>
     <h1>School spending explorer</h1>
-    <details class="intro" id="intro">
+    <details class="intro" id="intro" data-remember="intro">
     <summary>About this explorer</summary>
     <p class="lede">
       Why do our <span class="swap" data-districts="schools" data-towns="municipal services">schools</span> cost so
@@ -28,15 +28,16 @@ import Layout from "../../layouts/Layout.astro";
     <p class="lede"><em>You'll probably have a better experience exploring on a desktop than a mobile browser. I'll work on making that better.</em></p>
     </details>
     <script is:inline>
-      // Open unless this browser remembers it closed; decided here, before the page paints, so
-      // it never flashes (explorer.ts STORE/CONSENT/INTRO keys)
+      // Open unless this browser remembers it closed; decided here, before the page paints, so it
+      // never flashes. The section is the element just before this script (explorer.ts remembers changes).
       (function () {
+        var d = document.currentScript.previousElementSibling;
         var closed = false;
         try {
           closed = localStorage.getItem("mass-school-spending:remember") === "yes" &&
-            localStorage.getItem("mass-school-spending:intro") === "closed";
+            localStorage.getItem("mass-school-spending:" + d.dataset.remember) === "closed";
         } catch (e) {}
-        if (!closed) document.getElementById("intro").open = true;
+        if (!closed) d.open = true;
       })();
     </script>
 
@@ -128,6 +129,8 @@ import Layout from "../../layouts/Layout.astro";
 
     <section id="cap-view" class="cap-view" data-view-only="cap" hidden>
       <h2 class="cap-title">The 82.5% cap</h2>
+      <details class="intro" id="cap-intro" data-remember="cap-intro">
+      <summary>About this tab</summary>
       <p class="cap-lede">
         Every Massachusetts school district gets at least 17.5% of its foundation budget from the state, however
         wealthy its towns. That guarantee comes from a cap in the Chapter 70 formula: no town's target local
@@ -147,6 +150,20 @@ import Layout from "../../layouts/Layout.astro";
         it surprised me. This tab is where I'm building tools to understand what it means town by town: try another
         cap, look up a town, and see who pays more and who pays less.
       </p>
+      </details>
+      <script is:inline>
+        // Open unless this browser remembers it closed; decided here, before the page paints, so it
+        // never flashes. The section is the element just before this script (explorer.ts remembers changes).
+        (function () {
+          var d = document.currentScript.previousElementSibling;
+          var closed = false;
+          try {
+            closed = localStorage.getItem("mass-school-spending:remember") === "yes" &&
+              localStorage.getItem("mass-school-spending:" + d.dataset.remember) === "closed";
+          } catch (e) {}
+          if (!closed) d.open = true;
+        })();
+      </script>
       <div id="cap-root"></div>
       <section class="cap-section cap-questions">
         <h3>Questions I'm still working through</h3>
@@ -2753,6 +2770,16 @@ import Layout from "../../layouts/Layout.astro";
 
   .explorer :global(.cap-steps-table th[scope="row"]) {
     min-width: 13rem;
+  }
+
+  .explorer :global(.cap-table-head) {
+    font-weight: 600;
+    margin: 0 0 0.4rem;
+  }
+
+  .explorer :global(.cap-steps-table tr.minimum th),
+  .explorer :global(.cap-steps-table tr.minimum td) {
+    background: #fbf6ea;
   }
 
   .explorer :global(.cap-pays) {

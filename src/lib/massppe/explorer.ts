@@ -186,7 +186,6 @@ const CHOICE_ALIASES: Record<string, string> = { western: "region" };
 // Where remembered choices live (localStorage, with permission): this browser only
 const STORE = "mass-school-spending:choices";
 const CONSENT = "mass-school-spending:remember";
-const INTRO = "mass-school-spending:intro";
 
 const PPE_COLORS = ["#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#e87ba4", "#008300", "#6250d6", "#e34948", "#8f8a7f"];
 const NSS_SERIES = [
@@ -414,15 +413,17 @@ export async function startExplorer() {
     if (consent !== "yes") return;
     const sets = (r: Record<string, Set<string>>) => Object.fromEntries(Object.entries(r).map(([k, s]) => [k, [...s]]));
     storage.set(STORE, JSON.stringify({ state, isolated: sets(isolated), hidden: sets(hiddenLines) }));
-    if (intro) storage.set(INTRO, intro.open ? "open" : "closed");
+    folds.forEach((d) => storage.set(foldKey(d), d.open ? "open" : "closed"));
   }
-  // The introduction stays folded or open as it was left, with the other remembered choices.
-  // The page's inline script sets it before the first paint; this remembers changes.
-  const intro = document.querySelector<HTMLDetailsElement>(".intro");
-  intro?.addEventListener("toggle", () => {
+  // Folding sections (the introductions) stay folded or open as they were left, with the other
+  // remembered choices. The page's inline scripts set them before the first paint; this
+  // remembers changes.
+  const folds = [...document.querySelectorAll<HTMLDetailsElement>("details[data-remember]")];
+  const foldKey = (d: HTMLDetailsElement) => `mass-school-spending:${d.dataset.remember}`;
+  folds.forEach((d) => d.addEventListener("toggle", () => {
     askToRemember();
     remember();
-  });
+  }));
   // The question comes once, after someone first changes something, so there is
   // something to remember
   let asked = false;
@@ -437,7 +438,7 @@ export async function startExplorer() {
     if (answer === "yes") remember();
     else {
       storage.drop(STORE);
-      storage.drop(INTRO);
+      folds.forEach((d) => storage.drop(foldKey(d)));
     }
     $("remember-prompt").hidden = true;
     rememberNote();
