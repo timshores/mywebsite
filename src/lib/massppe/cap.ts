@@ -376,7 +376,7 @@ export function startCap(root: HTMLElement, data: CapData, opts: { town: string 
       `${rate(y.property_pct)} of its property value and ${rate(y.income_pct)} of its residents' income. The sum is the ` +
       "town's combined effort yield, what the formula says the town can afford. Meanwhile … no town is asked for more than " +
       `${pct(y.max_pct, 1)} of its foundation budget, the state's estimate of what its schools need. ${y.totals.capped} ` +
-      "towns, the ones with the most property and income for the size of their schools, hit that cap. They're asked " +
+      "towns, the ones with the most property and income for the size of their schools, hit that 82.5% cap. They're asked " +
       `for less than the formula says they can afford, and the state pays at least the other ${pct(1 - y.max_pct, 1)}.`);
     const p2 = el("p");
     p2.append("Someone covers the difference. The state sets the two percentages so that the towns together are asked " +
