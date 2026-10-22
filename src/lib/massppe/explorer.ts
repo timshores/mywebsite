@@ -498,9 +498,9 @@ export async function startExplorer() {
     });
   });
 
-  // A tab switch fades the copy that changes with the tab (the page's .view-copy and
-  // #view-panel styles) out, draws the new view, and fades it back in
-  const FADE_MS = 140;
+  // A tab switch fades what changes with the tab (the page's .swap words and #view-panel)
+  // out, draws the new view, and fades it back in
+  const FADE_MS = 280;
   const calm = matchMedia("(prefers-reduced-motion: reduce)");
   let fading: number | undefined;
 
@@ -1026,6 +1026,10 @@ export async function startExplorer() {
     $("view-panel").setAttribute("aria-labelledby", onTowns ? "tab-towns" : "tab-districts");
     document.querySelectorAll<HTMLElement>("[data-view-only]").forEach((n) => {
       n.hidden = n.dataset.viewOnly !== state.view;
+    });
+    // Words that differ by tab: each .swap holds its words for every view
+    document.querySelectorAll<HTMLElement>(".swap").forEach((n) => {
+      n.textContent = n.dataset[state.view] ?? n.textContent;
     });
     $("vs-control").hidden = onTowns || state.cmp !== "other";
     $("town-vs-control").hidden = !onTowns || state.tcmp !== "other";

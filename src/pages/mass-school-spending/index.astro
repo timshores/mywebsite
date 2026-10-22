@@ -11,15 +11,12 @@ import Layout from "../../layouts/Layout.astro";
     <h1>School spending explorer</h1>
     <details class="intro" open>
     <summary>About this explorer</summary>
-    <p class="lede view-copy" data-view-only="districts">
-      Why do our schools cost so much? Or are we not spending enough tax dollars on our schools? These are difficult
-      questions to answer because it depends on your basis of comparison. Use this Explorer to discover the cost of
-      your school.
-    </p>
-    <p class="lede view-copy" data-view-only="towns" hidden>
-      Why do our municipal services cost so much? Or are we not spending enough tax dollars on our towns? These are
-      difficult questions to answer because it depends on your basis of comparison. Use this Explorer to discover the
-      cost of your town.
+    <p class="lede">
+      Why do our <span class="swap" data-districts="schools" data-towns="municipal services">schools</span> cost so
+      much? Or are we not spending enough tax dollars on our
+      <span class="swap" data-districts="schools" data-towns="towns">schools</span>? These are difficult questions to
+      answer because it depends on your basis of comparison. Use this Explorer to discover the cost of your
+      <span class="swap" data-districts="school" data-towns="town">school</span>.
     </p>
     <p class="lede">
       Per-pupil spending, enrollment, and state aid for every Massachusetts school district, built on the data
@@ -352,19 +349,19 @@ import Layout from "../../layouts/Layout.astro";
     opacity: 0.4;
   }
 
-  /* Switching tabs: what changes with the tab fades out, and the new view fades in */
-  .view-copy,
+  /* Switching tabs: the words and the view that change with the tab fade out, then in */
+  .swap,
   #view-panel {
-    transition: opacity 0.14s ease;
+    transition: opacity 0.28s ease;
   }
 
-  .explorer.is-switching .view-copy,
+  .explorer.is-switching .swap,
   .explorer.is-switching #view-panel {
     opacity: 0;
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .view-copy,
+    .swap,
     #view-panel {
       transition: none;
     }
