@@ -5,6 +5,12 @@ on:
     branches:
       - main
 
+# One deploy at a time: overlapping FTP syncs can delete each other's files (2026-10-21, a
+# stylesheet went missing). A newer push waits for the running deploy, then goes.
+concurrency:
+  group: deploy-namecheap
+  cancel-in-progress: false
+
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
@@ -33,3 +39,6 @@ jobs:
           password: ${{ secrets.FTP_PASSWORD }}
           local-dir: ./dist/
           server-dir: ./
+          # A fresh sync record (2026-10-21): the old one listed a stylesheet an overlapping deploy had
+          # deleted. With no record, the action uploads every file and deletes nothing.
+          state-name: .ftp-deploy-sync-state-v2.json
