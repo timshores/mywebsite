@@ -101,6 +101,23 @@ export function spearman(xs: number[], ys: number[]): number | null {
   return da && db ? num / Math.sqrt(da * db) : null;
 }
 
+/** Pearson's r: the ordinary correlation, on the values themselves. */
+export function pearson(xs: number[], ys: number[]): number | null {
+  const n = xs.length;
+  if (n < 3) return null;
+  const mx = xs.reduce((a, v) => a + v, 0) / n;
+  const my = ys.reduce((a, v) => a + v, 0) / n;
+  let num = 0;
+  let dx = 0;
+  let dy = 0;
+  for (let i = 0; i < n; i++) {
+    num += (xs[i] - mx) * (ys[i] - my);
+    dx += (xs[i] - mx) ** 2;
+    dy += (ys[i] - my) ** 2;
+  }
+  return dx && dy ? num / Math.sqrt(dx * dy) : null;
+}
+
 /** Local linear regression with tricube weights over the nearest `span` of the points. */
 export function loess(xs: number[], ys: number[], span = 0.75, steps = 80): [number, number][] {
   const n = xs.length;

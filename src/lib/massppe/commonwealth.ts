@@ -3,7 +3,7 @@
 // and the factors are ranked by how closely they line up with the vertical measure.
 // Data: src/data/massppe/commonwealth.json (export_explorer_data.commonwealth_data).
 
-import { scatter, spearman, type Group, type Point } from "./scatter";
+import { loess, pearson, scatter, spearman, type Group, type Point } from "./scatter";
 
 type Values = (number | null)[];
 
@@ -57,6 +57,38 @@ const VARS: Var[] = [
   { key: "res_share", label: "Residential share of its towns' assessed value", short: "residential share of value", unit: "pct", role: "factor", src: ["la4"] },
 ];
 const VAR = new Map(VARS.map((v) => [v.key, v]));
+
+// What each measure counts (its numerator or total), to catch a pair that lines up partly by
+// construction: one is a component of the other, or both count the same thing. A shared
+// denominator alone doesn't count. Required spending is aid plus the required local contribution;
+// EQV starts from assessed values.
+const COUNTS: Record<string, string[]> = {
+  nss_pct_fb: ["nss"], nss_pct_req: ["nss"], nss_pfe: ["nss"], above_pfe: ["nss", "req"], ppe: ["ppe"],
+  aid_pfe: ["aid"], aid_share: ["aid"], rlc_pfe: ["rlc"], fe: ["fe"], fte: ["fte"], eqv_res: ["eqv"], av_res: ["av"],
+  income_pc: ["income"], sf_bill: ["bill"], bill_income: ["bill"], res_share: ["av"],
+};
+const BUILT_FROM: Record<string, string[]> = { req: ["aid", "rlc"], eqv: ["av"] };
+const PART_NAME: Record<string, string> = {
+  nss: "net school spending", req: "required spending", aid: "Chapter 70 aid", rlc: "the required local contribution",
+  eqv: "equalized property value", av: "assessed property value", bill: "the single-family tax bill", ppe: "in-district spending",
+  fe: "foundation enrollment", fte: "in-district pupils", income: "income",
+};
+const counted = (key: string) => {
+  const out = new Set<string>();
+  for (const p of COUNTS[key] ?? []) {
+    out.add(p);
+    for (const q of BUILT_FROM[p] ?? []) out.add(q);
+  }
+  return out;
+};
+/** The parts two measures both count, by name; empty when they're independent of each other. */
+function sharedParts(a: string, b: string): string[] {
+  const ca = counted(a);
+  return [...counted(b)].filter((p) => ca.has(p)).map((p) => PART_NAME[p]);
+}
+const TOWN_MEASURES = new Set(["eqv_res", "av_res", "income_pc", "sf_bill", "bill_income", "res_share"]);
+const PAPER = "https://pmc.ncbi.nlm.nih.gov/articles/PMC5079093/";
+const CAUSATION = "https://en.wikipedia.org/wiki/Correlation_does_not_imply_causation";
 
 // Highlights: the first is the Amherst-Pelham region against the rest of the Connecticut
 // River Valley (Franklin, Hampshire and Hampden counties), as in the plot this tab began with
@@ -168,6 +200,144 @@ export function startCommonwealth(root: HTMLElement, data: CwData, opts: { openD
     return { pts, rows, hl };
   }
 
+  interface Caution { label: string; text: string }
+
+  /**
+   * The correlation pitfalls this pair falls into (Aggarwal and Ranganathan 2016), checked on the
+   * districts plotted. Thresholds were set on FY2025 data to flag real problems, not every wobble.
+   */
+  function checkPair(v: View, pts: Point[], rows: Row[]): Caution[] {
+    const yv = VAR.get(v.y)!;
+    const xv = VAR.get(v.x)!;
+    const out: Caution[] = [];
+    const n = pts.length;
+    const shared = sharedParts(v.x, v.y);
+    if (shared.length) {
+      out.push({ label: "Counts the same thing", text: `${capital(yv.short)} and ${xv.short} both count ` +
+        `${shared.join(" and ")}, so they line up partly by construction: one is built from the other, or both from ` +
+        "the same number. Their ρ says less about schools than it seems to." });
+    }
+    if (n < 30) {
+      out.push({ label: "Few districts", text: `Only ${n} districts have both measures in FY${v.fy}. With so few, a ` +
+        "pattern can appear by chance." });
+    }
+    if (n < 8) return out;
+    const xs = pts.map((p) => (v.log ? Math.log10(p.x) : p.x));
+    const ys = pts.map((p) => p.y);
+    const rs = spearman(xs, ys) ?? 0;
+    const rp = pearson(xs, ys);
+    const rowOf = new Map(rows.map((r) => [r.id ?? r.org, r]));
+
+    // Extremes: the ordinary correlation drifts from the rank-based one when a few points sit far out
+    if (rp != null && Math.abs(rp - rs) >= 0.15) {
+      const mean = (a: number[]) => a.reduce((s, x) => s + x, 0) / a.length;
+      const sd = (a: number[], m: number) => Math.sqrt(a.reduce((s, x) => s + (x - m) ** 2, 0) / a.length) || 1;
+      const mx = mean(xs), my = mean(ys), sx = sd(xs, mx), sy = sd(ys, my);
+      const far = pts.map((p, i) => ({ p, d: ((xs[i] - mx) / sx) ** 2 + ((ys[i] - my) / sy) ** 2 }))
+        .sort((a, b) => b.d - a.d).slice(0, 3).map((o) => o.p.name);
+      out.push({ label: "Pulled by a few districts", text: `A few districts far from the rest, such as ` +
+        `${far.join(", ")}, pull the ordinary correlation (Pearson's r = ${rho(rp)}) away from the rank-based ` +
+        `ρ = ${rho(rs)} shown here. ρ resists them, but the picture can look stronger or weaker than it is.` });
+    }
+    // One district: leave each out in turn
+    let worst = 0;
+    let who = -1;
+    let without = rs;
+    for (let i = 0; i < n; i++) {
+      const r = spearman(xs.filter((_, k) => k !== i), ys.filter((_, k) => k !== i)) ?? rs;
+      if (Math.abs(r - rs) > worst) [worst, who, without] = [Math.abs(r - rs), i, r];
+    }
+    if (worst >= 0.05 && who >= 0) {
+      out.push({ label: "One district moves it", text: `Leaving out ${pts[who].name} alone moves ρ from ${rho(rs)} to ` +
+        `${rho(without)}.` });
+    }
+    // Curves: a smooth fit that turns back explains more than a one-way ρ can
+    const order = xs.map((_, i) => i).sort((a, b) => xs[a] - xs[b]);
+    const curve = loess(xs, ys);
+    if (curve.length > 2) {
+      const fitAt = (x: number) => {
+        let k = curve.findIndex(([cx]) => cx >= x);
+        if (k <= 0) return curve[Math.max(0, k)][1];
+        const [x0, y0] = curve[k - 1];
+        const [x1, y1] = curve[k];
+        return y0 + ((y1 - y0) * (x - x0)) / (x1 - x0 || 1);
+      };
+      const fit = xs.map(fitAt);
+      const my = ys.reduce((s, y) => s + y, 0) / n;
+      const r2 = 1 - ys.reduce((s, y, i) => s + (y - fit[i]) ** 2, 0) / (ys.reduce((s, y) => s + (y - my) ** 2, 0) || 1);
+      const cy = curve.map(([, y]) => y);
+      const hi = Math.max(...cy);
+      const lo = Math.min(...cy);
+      const iHi = cy.indexOf(hi);
+      const iLo = cy.indexOf(lo);
+      const back = Math.max(iHi > 0 && iHi < cy.length - 1 ? hi - cy[cy.length - 1] : 0,
+        iLo > 0 && iLo < cy.length - 1 ? cy[cy.length - 1] - lo : 0);
+      if (hi > lo && back / (hi - lo) >= 0.25 && r2 - rs * rs >= 0.08) {
+        const upFirst = iHi > 0 && iHi < cy.length - 1 && (iLo === 0 || iHi < iLo);
+        out.push({ label: "Curves back", text: `The trend ${upFirst ? "rises and then falls" : "falls and then rises"} ` +
+          `instead of going one way, and ρ only measures one-way patterns. The smoothed curve accounts for ` +
+          `${pct(Math.max(0, r2))} of the variation, against ${pct(rs * rs)} for ρ², so ρ understates how closely these ` +
+          "line up." });
+      }
+      // Uneven spread: the scatter around the curve at the two ends
+      const resid = order.map((i) => ys[i] - fit[i]);
+      const fifth = Math.floor(n / 5);
+      if (fifth >= 8) {
+        const iqr = (a: number[]) => {
+          const s2 = [...a].sort((p, q) => p - q);
+          const at = (q: number) => s2[Math.min(s2.length - 1, Math.max(0, Math.round(q * (s2.length - 1))))];
+          return at(0.75) - at(0.25);
+        };
+        const low = iqr(resid.slice(0, fifth));
+        const high = iqr(resid.slice(-fifth));
+        const ratio = Math.max(low, high) / (Math.min(low, high) || 1e-9);
+        if (ratio >= 2) {
+          out.push({ label: "Uneven spread", text: `Districts at the ${low > high ? "low" : "high"} end of ${xv.short} ` +
+            `scatter about ${ratio.toFixed(1)} times as widely around the trend as those at the other end, so the ` +
+            "trend describes one end much better than the other." });
+        }
+      }
+    }
+    // Regions: the pattern within each, against the pattern statewide
+    const byRegion = new Map<string, number[]>();
+    pts.forEach((p, i) => {
+      const reg = rowOf.get(p.id)?.region;
+      if (reg) byRegion.set(reg, [...(byRegion.get(reg) ?? []), i]);
+    });
+    const within = [...byRegion.values()].filter((ix) => ix.length >= 15)
+      .map((ix) => spearman(ix.map((i) => xs[i]), ix.map((i) => ys[i])) ?? 0);
+    if (within.length >= 3) {
+      const med = [...within.map(Math.abs)].sort((a, b) => a - b)[Math.floor(within.length / 2)];
+      // The median within regions, with its sign, for the text
+      const medSigned = [...within].sort((a, b) => a - b)[Math.floor(within.length / 2)];
+      const against = within.filter((r) => Math.abs(r) >= 0.1 && Math.sign(r) !== Math.sign(rs)).length;
+      if (med - Math.abs(rs) >= 0.2) {
+        out.push({ label: "Regions sit apart", text: `Within each region the pattern is stronger (median ρ about ` +
+          `${rho(medSigned)}) than across the state (ρ = ${rho(rs)}). The regions sit at different levels, which blurs ` +
+          "the pattern statewide." });
+      } else if (Math.abs(rs) >= 0.3 && med <= 0.5 * Math.abs(rs)) {
+        out.push({ label: "Regions sit apart", text: `Within regions the pattern mostly fades (median ρ about ` +
+          `${rho(medSigned)}, against ${rho(rs)} statewide). Much of it comes from differences between regions, not ` +
+          "between districts in the same part of the state." });
+      } else if (Math.abs(rs) >= 0.2 && against > within.length / 2) {
+        out.push({ label: "Regions sit apart", text: "In most regions the pattern runs the other way from the statewide " +
+          "one, which comes from differences between regions." });
+      }
+    }
+    // Independence: districts that share towns share their towns' wealth
+    if (TOWN_MEASURES.has(v.x) || TOWN_MEASURES.has(v.y)) {
+      const count = new Map<string, number>();
+      for (const p of pts) for (const t of rowOf.get(p.id)?.towns ?? []) count.set(t, (count.get(t) ?? 0) + 1);
+      const sharing = pts.filter((p) => (rowOf.get(p.id)?.towns ?? []).some((t) => (count.get(t) ?? 0) > 1)).length;
+      if (sharing / n >= 0.1) {
+        out.push({ label: "Shared towns", text: `${sharing} of these ${n} districts share towns with another district ` +
+          "here, such as an elementary district and its regional one. Their towns' wealth counts more than once, so the " +
+          "points aren't fully independent." });
+      }
+    }
+    return out;
+  }
+
   /** Spearman's rho between the vertical measure and every other measure, closest first;
    * measures without data for the year come last. */
   function ranking(v: View) {
@@ -248,6 +418,7 @@ export function startCommonwealth(root: HTMLElement, data: CwData, opts: { openD
   };
   const varOptions = VARS.map((v) => [v.key, capital(v.label), v.role === "outcome" ? "School spending and aid" : "Size and the towns' wealth"] as [string, string, string]);
   const ySel = select("Vertical", varOptions);
+  ySel.parentElement!.classList.add("cw-field-axis");
   const fySel = select("Year", [...years].reverse().map((y) => [String(y), `FY${y}`] as [string, string]));
   const hlSel = select("Highlight", Object.entries(HIGHLIGHTS).map(([k, h]) => [k, h.label] as [string, string]));
   const check = (label: string, help?: string) => {
@@ -295,7 +466,9 @@ export function startCommonwealth(root: HTMLElement, data: CwData, opts: { openD
   const finding = el("p", "cw-finding");
   const findingRow = el("div", "cw-finding-row");
   findingRow.append(finding);
-  figure.append(legend, svg, tip, findingRow, caption);
+  // The pitfalls this pair falls into, if any, under the finding
+  const cautionRow = el("div", "cw-cautions");
+  figure.append(legend, svg, tip, findingRow, cautionRow, caption);
 
   // The horizontal picker: every other measure, ranked by how closely it lines up with the
   // vertical one. It is part of the chart's settings and folds away with them. How to read
@@ -315,6 +488,12 @@ export function startCommonwealth(root: HTMLElement, data: CwData, opts: { openD
     li.append(el("span", `cw-bars-swatch ${cls}`), words);
     barsKey.append(li);
   }
+  {
+    // The ◇ on a pair that counts the same thing as the vertical measure
+    const li = el("li");
+    li.append(el("span", "cw-built", "◇"), el("span", undefined, "Counts the same thing as the vertical measure, so the two line up partly by construction"));
+    barsKey.append(li);
+  }
   const bars = el("ol", "cw-bars");
   const why = el("div", "cw-why");
   why.innerHTML =
@@ -322,13 +501,20 @@ export function startCommonwealth(root: HTMLElement, data: CwData, opts: { openD
     "<p>Whether a district spends a lot depends on what you compare it with. The factor that lines up most closely " +
     "with spending is the one that most needs holding steady: two districts alike in that factor make a fairer " +
     "comparison than two that are alike only in a weaker one.</p>" +
-    "<p>A correlation doesn't show cause. These factors travel together, and a strong one can stand in for another " +
-    "that isn't on the list.</p>" +
+    `<p>A <a href="${CAUSATION}">correlation doesn't show cause</a>. These factors travel together, and a strong one ` +
+    "can stand in for another that isn't on the list.</p>" +
     "<h4>Reading ρ</h4>" +
     "<p>Spearman's ρ runs from −1 to 1. It is positive when districts higher on one measure tend to be higher on the " +
     "other, negative when they tend to be lower, and near 0 when there is no consistent order. It compares ranks, so " +
     "it handles curved patterns like enrollment's and isn't swayed by a few extreme districts. As a rough guide, " +
-    "below 0.3 is weak, 0.3 to 0.6 moderate, and above 0.6 strong.</p>";
+    "below 0.3 is weak, 0.3 to 0.6 moderate, and above 0.6 strong.</p>" +
+    "<h4>When correlation misleads</h4>" +
+    "<p>A strong ρ can still mislead. Each pair on the chart is checked for the common pitfalls that Aggarwal and " +
+    `Ranganathan describe (<a href="${PAPER}">“Common pitfalls in statistical analysis: The use of correlation ` +
+    "techniques,” <i>Perspectives in Clinical Research</i>, 2016</a>): two measures that count the same thing, a " +
+    "pattern that curves back on itself, a few extreme districts that pull the result, regions that sit apart, " +
+    "uneven spread, too few districts, and districts that share towns, so their points aren't independent. Any the " +
+    "pair falls into are listed as cautions under the chart.</p>";
   sideHead.id = "cw-picker-head";
   const sideSub = el("p", "cw-picker-sub");
   corrPanel.append(sideHead, sideSub, barsKey, bars);
@@ -358,6 +544,8 @@ export function startCommonwealth(root: HTMLElement, data: CwData, opts: { openD
     return d;
   }
   const aboutDialog = subDialog("Reading the correlations", why);
+  const cautionList = el("div");
+  const cautionDialog = subDialog("Cautions for this pair", cautionList);
   const tableTitle = el("p", "cw-sub-note");
   const tableWrap = el("div");
   tableWrap.append(tableTitle, tableHolder);
@@ -477,7 +665,8 @@ export function startCommonwealth(root: HTMLElement, data: CwData, opts: { openD
     // The chart takes the room the legend, finding and caption leave, so the view never scrolls
     const width = Math.max(300, figure.clientWidth || 800);
     const pad = parseFloat(getComputedStyle(body).paddingTop) + parseFloat(getComputedStyle(body).paddingBottom);
-    const room = body.clientHeight - pad - legend.offsetHeight - findingRow.offsetHeight - caption.offsetHeight - 24;
+    const room = body.clientHeight - pad - legend.offsetHeight - findingRow.offsetHeight - cautionRow.offsetHeight -
+      caption.offsetHeight - 28;
     const height = Math.round(Math.max(220, Math.min(room, width * 0.75)));
     svg.setAttribute("aria-label", `Scatterplot of ${yv.label.toLowerCase()} against ${xv.label.toLowerCase()} for ` +
       `${pts.length} districts, FY${v.fy}. The data table lists every value.`);
@@ -523,6 +712,32 @@ export function startCommonwealth(root: HTMLElement, data: CwData, opts: { openD
     const yv = VAR.get(v.y)!;
     const xv = VAR.get(v.x)!;
     const n = pts.length;
+    const found = checkPair(v, pts, pointsFor(v).rows);
+    cautionRow.replaceChildren();
+    if (found.length) {
+      cautionRow.append(el("span", "cw-cautions-lead", "Cautions for this pair:"));
+      for (const c of found) {
+        const b = el("button", "cw-caution", c.label);
+        b.type = "button";
+        b.title = c.text;
+        b.addEventListener("click", () => cautionDialog.showModal());
+        cautionRow.append(b);
+      }
+    } else {
+      const how = el("button", "cw-caution quiet", "How pairs are checked");
+      how.type = "button";
+      how.addEventListener("click", () => aboutDialog.showModal());
+      cautionRow.append(el("span", "cw-cautions-lead", "No common correlation pitfalls found for this pair."), how);
+    }
+    const intro = el("p", "cw-sub-note");
+    intro.textContent = `${capital(yv.short)} against ${xv.short}, FY${v.fy}, ${n} districts. ` +
+      (found.length ? "This pair falls into these common pitfalls:" : "This pair falls into none of the common pitfalls checked here.");
+    const src = el("p", "cw-sub-note");
+    src.append("The pitfalls follow Aggarwal and Ranganathan, ", Object.assign(el("a", undefined,
+      "“Common pitfalls in statistical analysis: The use of correlation techniques”"), { href: PAPER }),
+    ", Perspectives in Clinical Research, 2016. And whatever ρ shows, ", Object.assign(el("a", undefined,
+      "correlation doesn't imply causation"), { href: CAUSATION }), ".");
+    cautionList.replaceChildren(intro, ...found.flatMap((c) => [el("h4", undefined, c.label), el("p", undefined, c.text)]), src);
     legend.replaceChildren(...Object.entries(hl.groups).sort((a, b) => b[1].z - a[1].z).map(([, g]) => {
       const li = el("li");
       const key = el("span", `cw-key ${g.shape}`);
@@ -575,8 +790,16 @@ export function startCommonwealth(root: HTMLElement, data: CwData, opts: { openD
         fill.style.width = `${Math.abs(o.r) * 50}%`;
         track.append(fill);
       }
-      b.append(el("span", "cw-bar-label", capital(o.v.short)), track, el("span", "cw-bar-value", o.r == null ? "–" : rho(o.r)));
-      b.title = o.r == null ? `${capital(o.v.label)}: no FY${v.fy} data` : `${capital(o.v.label)}: ρ = ${rho(o.r)} across ${o.n} districts`;
+      const label = el("span", "cw-bar-label", capital(o.v.short));
+      const same = sharedParts(o.v.key, v.y);
+      if (same.length) {
+        // A pair built from the same numbers lines up by construction: marked, and set back
+        b.classList.add("is-built");
+        label.prepend(el("span", "cw-built", "◇ "));
+      }
+      b.append(label, track, el("span", "cw-bar-value", o.r == null ? "–" : rho(o.r)));
+      b.title = (o.r == null ? `${capital(o.v.label)}: no FY${v.fy} data` : `${capital(o.v.label)}: ρ = ${rho(o.r)} across ${o.n} districts`) +
+        (same.length ? `. ◇ Both count ${same.join(" and ")}, so this pair lines up partly by construction.` : "");
       b.disabled = o.r == null;
       b.addEventListener("click", () => {
         view = { ...v, preset: null, x: o.v.key, log: !!o.v.log };
@@ -586,7 +809,7 @@ export function startCommonwealth(root: HTMLElement, data: CwData, opts: { openD
       return li;
     }));
     // The finding sets school measures against size and wealth, not against one another
-    const kind = rank.filter((o) => o.r != null && o.v.role !== yv.role);
+    const kind = rank.filter((o) => o.r != null && o.v.role !== yv.role && !sharedParts(o.v.key, v.y).length);
     const top = kind[0];
     const here = rank.find((o) => o.v.key === v.x && o.r != null);
     const among = yv.role === "outcome" ? "Of the measures of size and the towns' wealth" : "Of the school measures";

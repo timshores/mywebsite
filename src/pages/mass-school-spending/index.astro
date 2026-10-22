@@ -2271,6 +2271,62 @@ import Layout from "../../layouts/Layout.astro";
     margin: 0 0 0.5rem;
   }
 
+  /* The Vertical label reads as a heading, like the Horizontal list's */
+  .explorer :global(.cw-field-axis > span) {
+    font-family: "Fraunces", serif;
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--ink);
+  }
+
+  /* Cautions: the pitfalls a pair falls into, under the finding */
+  .explorer :global(.cw-cautions) {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.35rem 0.45rem;
+    margin-top: 0.35rem;
+    font-size: 0.8rem;
+  }
+
+  .explorer :global(.cw-cautions-lead) {
+    color: var(--ink-soft);
+  }
+
+  .explorer :global(.cw-caution) {
+    font: inherit;
+    font-size: 0.78rem;
+    color: #8a3f22;
+    background: #fbf1ec;
+    border: 1px solid #ecc8b8;
+    border-radius: 999px;
+    padding: 0.12rem 0.6rem;
+    cursor: pointer;
+  }
+
+  .explorer :global(.cw-caution::before) {
+    content: "⚠ ";
+  }
+
+  .explorer :global(.cw-caution.quiet) {
+    color: var(--ink-soft);
+    background: #fff;
+    border-color: var(--line);
+  }
+
+  .explorer :global(.cw-caution.quiet::before) {
+    content: "";
+  }
+
+  /* A pair that counts the same thing: marked and set back in the Horizontal list */
+  .explorer :global(.cw-bar.is-built) {
+    color: var(--muted);
+  }
+
+  .explorer :global(.cw-built) {
+    color: #8a3f22;
+  }
+
   .explorer :global(.cw-bar:disabled) {
     cursor: default;
     color: var(--muted);
