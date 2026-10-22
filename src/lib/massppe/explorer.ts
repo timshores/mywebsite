@@ -8,6 +8,7 @@
 // compresses (it sends .json uncompressed).
 
 import { compact, lines, niceTicks, niceTicksRange, stackedColumns, type Panel, type Series, type Val } from "./charts";
+import { enlargeButton } from "./enlarge";
 import type { CapData } from "./cap";
 import type { CwData } from "./commonwealth";
 import { groupedPicker, type Picker } from "./picker";
@@ -446,12 +447,12 @@ export async function startExplorer() {
     rememberNote();
   }
   function rememberNote() {
-    const btn = text("button", consent === "yes" ? "Forget your choices" : "Remember them", "link-button") as HTMLButtonElement;
+    const btn = text("button", consent === "yes" ? "Forget your choices" : "Remember your choices", "link-button") as HTMLButtonElement;
     btn.type = "button";
     btn.addEventListener("click", () => setConsent(consent === "yes" ? "no" : "yes"));
     $("remember-note").replaceChildren(consent === "yes"
-      ? "This page remembers your choices in this browser, and collects no data about you. "
-      : "This page can remember your choices in this browser, so it reopens where you left off. ", btn);
+      ? "This page remembers your choices in this browser, so it reopens where you left off, but collects no data about you. "
+      : "This page can remember your choices in this browser, so it reopens where you left off, but collects no data about you. ", btn);
   }
   $("remember-yes").addEventListener("click", () => setConsent("yes"));
   $("remember-no").addEventListener("click", () => setConsent("no"));
@@ -808,6 +809,16 @@ export async function startExplorer() {
   interface TipRow { value: string; label: string; color?: string; mark?: "line" | "dash" | "rect" | "hatch"; strong?: boolean }
   interface TipContent { title: string; rows: TipRow[]; note?: string }
 
+  /** A "?" that shows a longer note on hover or focus (.cw-help) */
+  function helpTip(note: string) {
+    const h = text("span", "?", "cw-help wide");
+    h.tabIndex = 0;
+    h.setAttribute("role", "note");
+    h.setAttribute("aria-label", note);
+    h.dataset.tip = note;
+    return h;
+  }
+
   function showTip(figure: HTMLElement, panel: Panel, i: number, content: TipContent) {
     const tip = figure.querySelector<HTMLElement>(".tooltip")!;
     tip.replaceChildren(text("div", content.title, "tip-title"));
@@ -1006,8 +1017,35 @@ export async function startExplorer() {
     return rows;
   }
 
+  /** "above", linked to the view's comparison menu; from an enlarged chart, it closes the window first.
+   * Under the menu, a "Go back" link returns to the table until it's used or the view changes. */
+  const goBack = text("button", "Go back ↓", "link-button go-back") as HTMLButtonElement;
+  goBack.type = "button";
+  let backTo: HTMLElement | null = null;
+  goBack.addEventListener("click", () => {
+    backTo?.scrollIntoView({ behavior: "smooth", block: "center" });
+    backTo?.querySelector<HTMLElement>("summary")?.focus({ preventScroll: true });
+    backTo = null;
+    goBack.remove();
+  });
+  function compareLink() {
+    const a = document.createElement("a");
+    a.textContent = "above";
+    a.href = "#view-panel";
+    a.addEventListener("click", (ev) => {
+      ev.preventDefault();
+      backTo = a.closest<HTMLElement>("details.compare-view") ?? a.closest<HTMLElement>("figure");
+      a.closest("dialog")?.close();
+      const menu = $(state.view === "towns" ? "pick-town-compare" : "pick-compare");
+      menu.after(goBack);
+      menu.scrollIntoView({ behavior: "smooth", block: "center" });
+      menu.focus({ preventScroll: true });
+    });
+    return a;
+  }
+
   function compareTable(holder: HTMLElement, caption: string, rowLabel: string, rows: CmpRow[], kind: "usd" | "fte" | "count",
-    cmp: Named | null, { end = last, noCmpNote = "Choose a comparison above to shade this table against it.", per = "pupil" }: CmpOpts = {}) {
+    cmp: Named | null, { end = last, noCmpNote, per = "pupil" }: CmpOpts = {}) {
     const cName = cmp ? cmp.name : null;
     const fmt = kind === "usd" ? usd : kind === "count" ? (v: number) => Math.round(v).toLocaleString("en-US") : fte;
     const unit = kind === "usd" ? ` $/${per}` : "";
@@ -1091,7 +1129,10 @@ export async function startExplorer() {
         "or a growth rate by 0.5 percentage points or more; darker shading marks a larger gap. " +
         "Hover a cell for the comparison value. CAGR is the compound annual growth rate, (end\u00a0÷\u00a0start)^(1\u00a0÷\u00a0years)\u00a0−\u00a01."));
     } else {
-      note.append(text("p", `${noCmpNote} CAGR is the compound annual growth rate, (end\u00a0÷\u00a0start)^(1\u00a0÷\u00a0years)\u00a0−\u00a01.`));
+      const p = document.createElement("p");
+      p.append(...(noCmpNote ? [noCmpNote] : ["Choose a comparison ", compareLink(), " to shade this table against it."]),
+        " CAGR is the compound annual growth rate, (end\u00a0÷\u00a0start)^(1\u00a0÷\u00a0years)\u00a0−\u00a01.");
+      note.append(p);
     }
     // The box takes the table's width; the note stretches to match it
     const box = document.createElement("div");
@@ -1151,6 +1192,7 @@ export async function startExplorer() {
 
   /** Show the active view's tab, controls and panels. */
   function applyView() {
+    goBack.remove();
     const onTowns = state.view === "towns";
     markTabs();
     $("view-panel").setAttribute("aria-labelledby", `tab-${state.view}`);
@@ -1302,13 +1344,14 @@ export async function startExplorer() {
     ] };
 
     // Panel 2: enrollment
-    $("enroll-sub").textContent = `Pupils counted three ways${perDistrict}. In-district FTE counts the pupils taught in the ` +
-      "district's own schools, including those who come from other towns by school choice or tuition, as full-time " +
-      "equivalents averaged over the year: a pupil enrolled for half the year counts as half. Out-of-district FTE counts " +
-      "the district's own pupils it pays to educate elsewhere, such as charter schools, other districts, and special " +
-      "education schools. Foundation enrollment, the count Chapter 70 uses, counts every pupil the district is " +
-      `financially responsible for on one day, October 1, the fall before the fiscal year begins: FY${meta.latest}'s count is from October 1, ` +
-      `${meta.latest - 2}. Pre-kindergarten and half-day kindergarten pupils count as half.`;
+    $("enroll-sub").replaceChildren(`Pupils counted three ways${perDistrict}. `, helpTip(
+      "In-district FTE: the pupils taught in the district's own schools, including those who come from other towns by " +
+      "school choice or tuition. Full-time equivalents averaged over the year: a pupil enrolled for half the year counts " +
+      "as half.\n\nOut-of-district FTE: the district's own pupils it pays to educate elsewhere, such as charter schools, " +
+      "other districts, and special education schools.\n\nFoundation enrollment: the count Chapter 70 uses. Every pupil " +
+      "the district is financially responsible for on one day, October 1, the fall before the fiscal year begins: " +
+      `FY${meta.latest}'s count is from October 1, ${meta.latest - 2}. Pre-kindergarten and half-day kindergarten pupils ` +
+      "count as half."));
     const p2 = lines($("svg-enroll") as unknown as SVGSVGElement, frame(width < 520 ? 200 : 230, "Pupils"), enroll, enrollTicks,
       (v) => compact(v), fte, setHover);
     legend($("legend-enroll"), enroll.map((s) => ({ label: s.label, color: s.color, mark: "line" as const })));
@@ -1332,7 +1375,7 @@ export async function startExplorer() {
     const unreported = showsAbove ? years.filter((_, i) => nss[2].values[i] == null && nss[0].values[i] != null) : [];
     $("nss-sub").textContent =
       `${dollarsNote} per foundation pupil.` +
-      (nssSel ? " Scale fitted to the selection." : " Column height is actual net school spending.") +
+      (nssSel ? " Scale fitted to the selection." : " Column height is actual net school spending per pupil.") +
       (unreported.length ? ` Faded: DESE has not reported FY${unreported.join(", FY")} actual spending.` : "");
     const p3 = stackedColumns($("svg-nss") as unknown as SVGSVGElement, frame(tall, "Net school spending per pupil", "Spending per pupil"), nssShown, nssOverlay,
       nssSel ? fitTicks(nssShown, nssOverlay?.values ?? null) : dollarTicks, fmtUsd, setHover,
@@ -1922,6 +1965,8 @@ export async function startExplorer() {
   }
 
   await refresh();
+  // Each chart can open enlarged, in a window of its own
+  document.querySelectorAll<HTMLElement>("figure.panel").forEach((f) => f.prepend(enlargeButton(f)));
   ["svg-ppe", "svg-enroll", "svg-nss", "svg-rev", "svg-tspend", "svg-trev", "svg-tlevy", "svg-tbill", "svg-tval", "svg-tpar",
     "svg-teqv", "svg-tpop"]
     .forEach((id) => keyboard($(id) as unknown as SVGSVGElement));

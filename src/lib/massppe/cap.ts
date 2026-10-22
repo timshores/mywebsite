@@ -9,6 +9,7 @@
 
 import { svgEl } from "./charts";
 import { groupedPicker } from "./picker";
+import { enlargeButton, isEnlarged } from "./enlarge";
 import { scatter, spearman, ticksFor, type Group, type Point } from "./scatter";
 
 interface CapTown {
@@ -337,7 +338,11 @@ export function startCap(root: HTMLElement, data: CapData, opts: { town: string 
   const tip = el("div", "cw-tip");
   tip.hidden = true;
   figure.append(legend, svg, tip);
-  chartBox.append(chartHead, chartIntro, chartControls, chartContext, figure);
+  chartBox.append(enlargeButton(chartBox, () => render()), chartHead, chartIntro, chartControls, chartContext, figure);
+  // The width each chart is drawn at; enlarged, it keeps that drawing and scales it up
+  let chartW = 0;
+  let yearsW = 0;
+  const yearsEnlarge = enlargeButton(yearsBox, () => render());
 
   function render() {
     const y = data.years[fy];
@@ -600,7 +605,8 @@ export function startCap(root: HTMLElement, data: CapData, opts: { town: string 
         "asks for, its targets. What a town is required to pay moves toward its target a few percent a year, so its " +
         "bills would have changed more slowly.";
       // Columns: above zero, the target would be higher without today's cap; below, lower
-      const width = Math.max(300, yearsBox.clientWidth || 800);
+      const width = isEnlarged(yearsBox) && yearsW ? yearsW : Math.max(300, yearsBox.clientWidth || 800);
+      yearsW = width;
       const height = 240;
       const m = { top: 12, right: 12, bottom: 58, left: 78 };
       const pw = width - m.left - m.right;
@@ -654,7 +660,7 @@ export function startCap(root: HTMLElement, data: CapData, opts: { town: string 
       }
       const src = el("p", "cap-note");
       src.append("Source: DESE's ", link("Chapter 70 trends workbook", H.source), ` (FY${first}–FY${lastFy - 1}) and FY${lastFy} formula spreadsheet.`);
-      yearsBox.replaceChildren(el("h3", undefined, `${t.name}, year by year`), headline, key, yearsSvg, caveat, src);
+      yearsBox.replaceChildren(yearsEnlarge, el("h3", undefined, `${t.name}, year by year`), headline, key, yearsSvg, caveat, src);
     } else {
       yearsBox.replaceChildren();
     }
@@ -711,7 +717,8 @@ export function startCap(root: HTMLElement, data: CapData, opts: { town: string 
       if (xv == null || yv == null || !isFinite(xv) || !isFinite(yv) || xv <= 0 || !x.foundation) continue;
       pts.push({ x: xv, y: yv, id: x.id, name: x.name, group: x.id === t.id ? "town" : x.capped ? "capped" : "below", label: x.id === t.id });
     }
-    const width = Math.max(300, figure.clientWidth || 800);
+    const width = isEnlarged(chartBox) && chartW ? chartW : Math.max(300, figure.clientWidth || 800);
+    chartW = width;
     const height = Math.round(Math.min(460, Math.max(280, width * 0.5)));
     svg.setAttribute("aria-label", `Scatterplot of the change in target per household against ${xo.title.toLowerCase()} for ${pts.length} towns, FY${y.fy}.`);
     scatter(svg, pts, {
@@ -790,6 +797,7 @@ export function startCap(root: HTMLElement, data: CapData, opts: { town: string 
 
   let lastW = 0;
   new ResizeObserver(() => {
+    if (isEnlarged(chartBox)) return;
     const w = figure.clientWidth;
     if (w > 0 && Math.abs(w - lastW) > 8) {
       lastW = w;
