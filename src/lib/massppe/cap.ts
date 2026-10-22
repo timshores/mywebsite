@@ -365,12 +365,8 @@ export function startCap(root: HTMLElement, data: CapData, opts: { town: string 
     const fifthOf = new Map<string, number>();
     withIncome.forEach(({ x }, k) => fifthOf.set(x.id, Math.min(4, Math.floor((k * 5) / n))));
     const upTop = up.filter((x) => fifthOf.get(x.id) === 4).length;
-    // Today's cap against no cap, whatever the scenario: who it spares and who it costs
-    const spared = towns.filter((x) => x.nocap > x.target);
-    const sparedTop = spared.filter((x) => fifthOf.get(x.id) === 4).length;
 
     // How the cap works, in this year's numbers
-    const lift = 1 / y.factor - 1;
     const p1 = el("p");
     p1.append(`Chapter 70 asks each town to pay a share of its wealth toward its schools: in FY${y.fy}, ` +
       `${rate(y.property_pct)} of its property value and ${rate(y.income_pct)} of its residents' income. The sum is the ` +
@@ -379,14 +375,12 @@ export function startCap(root: HTMLElement, data: CapData, opts: { town: string 
       "towns, the ones with the most property and income for the size of their schools, hit that 82.5% cap. They're asked " +
       `for less than the formula says they can afford, and the state pays at least the other ${pct(1 - y.max_pct, 1)}.`);
     const p2 = el("p");
-    p2.append("Someone has to cover the difference, and that someone is other towns. The state sets the two percentages so that the towns together are asked " +
-      `for 59% of all foundation budgets, ${big(y.totals.target)} in FY${y.fy}. With costs held down for the 82.5% capped towns, the ` +
-      `percentages have to rise for everyone to reach that total: they're ${pct(lift)} higher than they would be with no ` +
-      `cap, which would be ${rate(y.property_pct * y.factor)} of property value and ${rate(y.income_pct * y.factor)} of ` +
-      `income. The result: the cap takes ${big(y.totals.up_sum)} off what ${spared.length} towns are asked for, ` +
-      `${sparedTop} of them in the fifth with the highest income per resident, and adds it to what the other ` +
-      `${y.totals.down} are asked for (`, link(`DESE's FY${y.fy} summary`, y.whitepaper), ", ",
-      link("formula spreadsheet", y.source), ").");
+    p2.append("Someone has to cover the difference, and that someone is other towns. The state sets the two " +
+      `percentages so that the towns together are asked for 59% of all foundation budgets, ${big(y.totals.target)} in ` +
+      `FY${y.fy}. With costs held down for the 82.5% capped towns, the required cost of education has to rise for ` +
+      `everyone to reach that total. The result for FY${y.fy}: the cap gave a ${big(y.totals.up_sum)} education ` +
+      `discount to ${y.totals.up} Massachusetts towns and added it to the required contribution of the other ` +
+      `${y.totals.down} towns.`);
     howText.replaceChildren(p1, p2);
 
     tiles.replaceChildren(
