@@ -128,30 +128,30 @@ const MIN_FE = 20;
 
 /** A blurb marks the measures it names with *stars*, shown bold */
 interface Preset { id: string; title: string; blurb: string; y: string; x: string; log: boolean }
+// The gallery shows only the strongest pairs with the least risk of misleading. Of every school measure
+// set against a measure of size or the towns' wealth in FY2025, these have ρ of 0.4 or more and no
+// caution but shared towns, which every wealth measure carries (most districts share towns with
+// another); near-duplicates are left to the picker. Pairs with no caution at all are weak (|ρ| ≤ 0.35).
 const PRESETS: Preset[] = [
   {
-    id: "enrollment", title: "How much is enough?", y: "nss_pct_fb", x: "fe", log: false,
-    blurb: "*Actual net school spending as a share of each district's foundation budget*, against its *enrollment*. " +
-      "The smaller the district, the further above its foundation budget it tends to spend.",
+    id: "formula", title: "The formula at work", y: "rlc_pfe", x: "eqv_res", log: true,
+    blurb: "*Required local contribution per pupil* against *property value per resident* of each district's towns. " +
+      "Chapter 70 asks more of towns with more property, by design: the closest fit here.",
   },
   {
-    id: "required", title: "Spending above the requirement", y: "nss_pct_req", x: "fe", log: false,
-    blurb: "The same view against *required net school spending*, the least the state lets each district spend.",
+    id: "income", title: "Spending and income", y: "nss_pct_req", x: "income_pc", log: true,
+    blurb: "*Spending as a share of the requirement* against *income per capita* of each district's towns. Districts " +
+      "in towns with higher incomes tend to spend further above the state's minimum.",
   },
   {
-    id: "wealth", title: "Spending and property wealth", y: "nss_pct_fb", x: "eqv_res", log: true,
-    blurb: "*Spending above the foundation budget* against the *property value per resident* of each district's towns. " +
-      "In FY2025 it lines up more closely with property wealth than with enrollment.",
+    id: "bill", title: "Spending and the tax bill", y: "nss_pct_req", x: "sf_bill", log: false,
+    blurb: "*Spending as a share of the requirement* against the *average single-family tax bill* in its towns. " +
+      "Districts that spend further above the minimum tend to be in towns with bigger tax bills.",
   },
   {
-    id: "tax-bill", title: "Spending and the tax bill", y: "nss_pct_fb", x: "bill_income", log: false,
-    blurb: "Against the *average single-family tax bill as a share of income per capita*. Districts that spend more " +
-      "tend to be in towns where the bill takes a smaller share of income.",
-  },
-  {
-    id: "aid", title: "The formula at work", y: "aid_share", x: "eqv_res", log: true,
-    blurb: "*Chapter 70 aid as a share of the foundation budget*, against *property wealth*: the closest fit of any pair " +
-      "here, because the formula is built on it.",
+    id: "property", title: "Spending and property wealth", y: "nss_pfe", x: "eqv_res", log: true,
+    blurb: "*Net school spending per pupil* against *property value per resident* of each district's towns. " +
+      "Districts in towns with more property per resident tend to spend more per pupil.",
   },
 ];
 

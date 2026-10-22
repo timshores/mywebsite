@@ -129,9 +129,9 @@ import Layout from "../../layouts/Layout.astro";
 
     <section id="cw-view" class="cw-view" data-view-only="commonwealth" hidden>
       <p class="cw-intro">
-        Every Massachusetts school district side by side, two measures at a time. Open a plot to choose the
-        measures, the year, and which districts stand out, and to see which factors line up most closely with
-        spending.
+        Every Massachusetts school district side by side, two measures at a time. These plots are the pairs that
+        line up most closely with the fewest cautions. Open one to choose other measures, the year, and which
+        districts stand out, and to see which factors line up most closely with spending.
       </p>
       <div id="cw-root"><p class="tab-loading">Loading the plots…</p></div>
     </section>
@@ -2240,7 +2240,7 @@ import Layout from "../../layouts/Layout.astro";
 
   .explorer :global(.cw-gallery) {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 210px), 1fr));
     gap: 1rem;
   }
 
