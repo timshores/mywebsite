@@ -1272,7 +1272,7 @@ export async function startExplorer() {
     const width = panelBox().clientWidth;
     lastWidth = width;
     const tall = width < 520 ? 260 : 320;
-    const frame = (height: number) => ({ width, height, years });
+    const frame = (height: number, yTitle: string, yTitleShort?: string) => ({ width, height, years, yTitle, yTitleShort });
 
     // Panel 1: spending by category
     const ppeShown = visible(ppe, "ppe");
@@ -1286,7 +1286,7 @@ export async function startExplorer() {
     $("ppe-sub").textContent =
       `${dollarsNote} per in-district FTE pupil.` +
       (ppeSel ? " Scale fitted to the selection." : "");
-    const p1 = stackedColumns($("svg-ppe") as unknown as SVGSVGElement, frame(tall), ppeShown, ppeOverlay,
+    const p1 = stackedColumns($("svg-ppe") as unknown as SVGSVGElement, frame(tall, "Spending per pupil"), ppeShown, ppeOverlay,
       ppeSel ? fitTicks(ppeShown, ppeOverlay?.values ?? null) : dollarTicks, fmtUsd, setHover,
       { value: ppeShownTotal[last], text: usd }, [], ppeTrend);
     legend($("legend-ppe"), [
@@ -1302,8 +1302,14 @@ export async function startExplorer() {
     ] };
 
     // Panel 2: enrollment
-    $("enroll-sub").textContent = `Full-time-equivalent pupils${perDistrict}.`;
-    const p2 = lines($("svg-enroll") as unknown as SVGSVGElement, frame(width < 520 ? 200 : 230), enroll, enrollTicks,
+    $("enroll-sub").textContent = `Pupils counted three ways${perDistrict}. In-district FTE counts the pupils taught in the ` +
+      "district's own schools, including those who come from other towns by school choice or tuition, as full-time " +
+      "equivalents averaged over the year: a pupil enrolled for half the year counts as half. Out-of-district FTE counts " +
+      "the district's own pupils it pays to educate elsewhere, such as charter schools, other districts, and special " +
+      "education schools. Foundation enrollment, the count Chapter 70 uses, counts every pupil the district is " +
+      `financially responsible for on one day, October 1, the fall before the fiscal year begins: FY${meta.latest}'s count is from October 1, ` +
+      `${meta.latest - 2}. Pre-kindergarten and half-day kindergarten pupils count as half.`;
+    const p2 = lines($("svg-enroll") as unknown as SVGSVGElement, frame(width < 520 ? 200 : 230, "Pupils"), enroll, enrollTicks,
       (v) => compact(v), fte, setHover);
     legend($("legend-enroll"), enroll.map((s) => ({ label: s.label, color: s.color, mark: "line" as const })));
     compareTable($("cmp-enroll"), `Enrollment, ${e.name}${perDistrict}`, "Measure",
@@ -1328,7 +1334,7 @@ export async function startExplorer() {
       `${dollarsNote} per foundation pupil.` +
       (nssSel ? " Scale fitted to the selection." : " Column height is actual net school spending.") +
       (unreported.length ? ` Faded: DESE has not reported FY${unreported.join(", FY")} actual spending.` : "");
-    const p3 = stackedColumns($("svg-nss") as unknown as SVGSVGElement, frame(tall), nssShown, nssOverlay,
+    const p3 = stackedColumns($("svg-nss") as unknown as SVGSVGElement, frame(tall, "Net school spending per pupil", "Spending per pupil"), nssShown, nssOverlay,
       nssSel ? fitTicks(nssShown, nssOverlay?.values ?? null) : dollarTicks, fmtUsd, setHover,
       { value: nssShownTotal[last], text: usd }, years.map((_, i) => showsAbove && nss[2].values[i] == null), nssTrend);
     // The hatch only appears when a shortfall sits on top of other segments
@@ -1380,7 +1386,7 @@ export async function startExplorer() {
         (revSel ? " Scale fitted to the selection." : "");
       let revMax = 0;
       years.forEach((_, i) => (revMax = Math.max(revMax, stackTop(rev, i), cRevTotal?.[i] ?? 0)));
-      p4 = stackedColumns($("svg-rev") as unknown as SVGSVGElement, frame(tall), revShown, revOverlay,
+      p4 = stackedColumns($("svg-rev") as unknown as SVGSVGElement, frame(tall, "Revenue per pupil"), revShown, revOverlay,
         revSel ? fitTicks(revShown, revOverlay?.values ?? null) : niceTicks(revMax * 1.04), fmtUsd, setHover,
         { value: revShownTotal[end], text: usd, index: end }, [], revTrend);
       legend($("legend-rev"), [
@@ -1531,6 +1537,8 @@ export async function startExplorer() {
     noun: string;
     rowLabel: string;
     caption: string;
+    /** The vertical axis's name when the caption won't fit */
+    yShort: string;
     sub: string;
     totalLabel: string;
     end: number;
@@ -1563,7 +1571,7 @@ export async function startExplorer() {
     years.forEach((_, i) => (max = Math.max(max, stackTop(s.series, i), cTotal?.[i] ?? 0)));
     const fmt = s.fmt ?? usd;
     const panel = stackedColumns($(`svg-${s.key}`) as unknown as SVGSVGElement,
-      { width: s.width, height: s.width < 520 ? 260 : 320, years }, shown, overlay,
+      { width: s.width, height: s.width < 520 ? 260 : 320, years, yTitle: s.caption, yTitleShort: s.yShort }, shown, overlay,
       sel ? fitTicks(shown, overlay?.values ?? null) : niceTicks(max * 1.04), s.axis ?? fmtUsd, setHover,
       { value: shownTotal[s.end], text: fmt, index: s.end }, [], trend);
     legend($(`legend-${s.key}`), [
@@ -1737,14 +1745,14 @@ export async function startExplorer() {
     // Panel 1: spending by function
     const p1 = townStack({
       key: "tspend", name: t.name, series: spend, cSeries: cSpend, cmp: c, noun: "functions", rowLabel: "Function",
-      caption: `General fund spending per ${perWord}`, totalLabel: `Total per ${perWord}`, end, width,
+      caption: `General fund spending per ${perWord}`, yShort: `Spending per ${perWord}`, totalLabel: `Total per ${perWord}`, end, width,
       sub: `${dollarsNote} per ${perWord}.${filed}`,
     }, dollarsNote);
 
     // Panel 2: revenue by source
     const p2 = townStack({
       key: "trev", name: t.name, series: rev, cSeries: cRev, cmp: c, noun: "sources", rowLabel: "Source",
-      caption: `General fund revenue per ${perWord}`, totalLabel: `Total per ${perWord}`, end, width,
+      caption: `General fund revenue per ${perWord}`, yShort: `Revenue per ${perWord}`, totalLabel: `Total per ${perWord}`, end, width,
       sub: `${dollarsNote} per ${perWord}.${filed}`,
     }, dollarsNote);
 
@@ -1763,7 +1771,7 @@ export async function startExplorer() {
         `(${percent((max - raised) / max)}) unused.` : "";
       const p7 = townStack({
         key: "tlevy", name: t.name, series: levy, cSeries: cLevy, cmp: cLevy ? c : null, noun: "parts", rowLabel: "Levy",
-        caption: `Property tax levy and its limit per ${perWord}`, totalLabel: `Levy limit per ${perWord}`, end: lEnd, width,
+        caption: `Property tax levy and its limit per ${perWord}`, yShort: `Levy per ${perWord}`, totalLabel: `Levy limit per ${perWord}`, end: lEnd, width,
         sub: `${dollarsNote} per ${perWord}. Proposition 2½ limits each town's levy; the stack's full height is the limit, ` +
           `with voter-approved debt exclusions. ${used}`,
       }, dollarsNote);
@@ -1773,7 +1781,8 @@ export async function startExplorer() {
         ...(c?.sf_bill ? [{ key: "cmp", label: c.name, color: COMPARE_COLOR, values: deflate(c.sf_bill) }] : []),
       ];
       const bMax = Math.max(...bills.flatMap((x) => x.values.map((v) => v ?? 0)));
-      const p8 = lines($("svg-tbill") as unknown as SVGSVGElement, { width, height: width < 520 ? 220 : 260, years }, bills,
+      const p8 = lines($("svg-tbill") as unknown as SVGSVGElement,
+        { width, height: width < 520 ? 220 : 260, years, yTitle: "Single-family tax bill", yTitleShort: "Tax bill" }, bills,
         niceTicks(bMax * 1.04, 4), fmtUsd, usd, setHover);
       legend($("legend-tbill"), bills.map((x) => ({ label: x.label, color: x.color, mark: "line" as const })));
       const rate = t.sf_rate?.[bIdx];
@@ -1809,13 +1818,13 @@ export async function startExplorer() {
     if (hasProp) {
       const p4 = townStack({
         key: "tval", name: t.name, series: val, cSeries: cVal, cmp: cVal ? c : null, noun: "property types",
-        rowLabel: "Property type", caption: `Assessed value per ${perWord}`, totalLabel: `Total per ${perWord}`, end: pEnd, width,
+        rowLabel: "Property type", caption: `Assessed value per ${perWord}`, yShort: `Value per ${perWord}`, totalLabel: `Total per ${perWord}`, end: pEnd, width,
         sub: `${dollarsNote} per ${perWord}: taxable property as assessed on January 1 before each fiscal year.`,
         missing: "Not reported to the state",
       }, dollarsNote);
       const p5 = townStack({
         key: "tpar", name: t.name, series: par, cSeries: null, cmp: null, noun: "property types", rowLabel: "Property type",
-        caption: t.kind === "town" ? "Parcels" : "Parcels per town", totalLabel: t.kind === "town" ? "Total parcels" : "Parcels per town",
+        caption: t.kind === "town" ? "Parcels" : "Parcels per town", yShort: "Parcels", totalLabel: t.kind === "town" ? "Total parcels" : "Parcels per town",
         end: pEnd, width, fmt: count, axis: (v) => compact(v), kind: "count",
         sub: (t.kind === "town" ? "Parcels of taxable real estate by use." : `Average per town, across its ${t.members} towns.`) +
           " Personal property accounts and exempt parcels are not counted.",
@@ -1829,7 +1838,8 @@ export async function startExplorer() {
         ...(c?.eqv ? [{ key: "cmp", label: c.name, color: COMPARE_COLOR, values: deflate(per(c.eqv, kC!)) }] : []),
       ];
       const eMax = Math.max(...eqvLines.flatMap((x) => x.values.map((v) => v ?? 0)));
-      const p6 = lines($("svg-teqv") as unknown as SVGSVGElement, { width, height: width < 520 ? 220 : 260, years }, eqvLines,
+      const p6 = lines($("svg-teqv") as unknown as SVGSVGElement,
+        { width, height: width < 520 ? 220 : 260, years, yTitle: `Equalized value per ${perWord}`, yTitleShort: `EQV per ${perWord}` }, eqvLines,
         niceTicks(eMax * 1.04, 4), fmtUsd, usd, setHover, true);
       legend($("legend-teqv"), eqvLines.map((x) => ({ label: x.label, color: x.color, mark: "line" as const })));
       const k = towns!.meta.c70_target;
@@ -1870,7 +1880,7 @@ export async function startExplorer() {
       : `All ${t.members} towns combined.`) +
       (state.per === "resident" ? ` Per-resident figures above divide each year's dollars by this population.` : "");
     const popMax = Math.max(...t.pop.map((v) => v ?? 0));
-    const p3 = lines($("svg-tpop") as unknown as SVGSVGElement, { width, height: width < 520 ? 200 : 230, years }, pop,
+    const p3 = lines($("svg-tpop") as unknown as SVGSVGElement, { width, height: width < 520 ? 200 : 230, years, yTitle: "Population" }, pop,
       niceTicks(popMax * 1.04, 4), (v) => compact(v), count, setHover);
     legend($("legend-tpop"), [{ label: popLabel, color: POP_COLOR, mark: "line" }]);
     fullTables.tpop = { caption: `Population, ${t.name}`, cols: [

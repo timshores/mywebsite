@@ -16,9 +16,16 @@ export interface Frame {
   width: number;
   height: number;
   years: number[];
+  /** What the vertical axis measures, and a shorter name for when that won't fit */
+  yTitle?: string;
+  yTitleShort?: string;
 }
 
-export const MARGIN = { top: 18, right: 64, bottom: 30, left: 60 };
+export const MARGIN = { top: 18, right: 64, bottom: 30, left: 80 };
+/** Room under the year labels for the axis title, added to the frame's height */
+const X_TITLE_ROOM = 20;
+// Axis titles: big and bold like the scatterplots' (.sc-title)
+const TITLE_PX = 15;
 const BAR_MAX = 24;
 const GAP = 2;
 const RADIUS = 4;
@@ -111,6 +118,19 @@ function drawGrid(svg: SVGSVGElement, ax: Axis, fmt: (v: number) => string) {
     const label = svgEl("text", { x: ax.x(i), y: MARGIN.top + ax.plotH + 18, "text-anchor": "middle", class: "tick" }, g);
     label.textContent = narrow ? `'${String(yr).slice(2)}` : String(yr);
   });
+
+  // Axis titles name what's plotted, the first place a reader looks
+  const xTitle = svgEl("text", { x: MARGIN.left + ax.plotW / 2, y: ax.frame.height + 14, "text-anchor": "middle", class: "sc-title" }, g);
+  xTitle.textContent = "Fiscal year";
+  const { yTitle, yTitleShort } = ax.frame;
+  if (yTitle) {
+    const room = ax.plotH + MARGIN.top;
+    const fits = (s: string) => s.length * TITLE_PX * 0.6 <= room;
+    const name = [yTitle, yTitleShort].find((s): s is string => !!s && fits(s)) ?? yTitleShort ?? yTitle;
+    const t = svgEl("text", { transform: `translate(16 ${MARGIN.top + ax.plotH / 2}) rotate(-90)`, "text-anchor": "middle", class: "sc-title" }, g);
+    t.textContent = name;
+    if (!fits(name)) t.style.fontSize = `${Math.max(11, Math.floor(room / (name.length * 0.6)))}px`;
+  }
 }
 
 function topRoundedRect(x: number, y: number, w: number, h: number, r: number) {
@@ -177,7 +197,7 @@ export function stackedColumns(
   trend: Series | null = null,
 ): Panel {
   svg.replaceChildren();
-  svg.setAttribute("viewBox", `0 0 ${frame.width} ${frame.height}`);
+  svg.setAttribute("viewBox", `0 0 ${frame.width} ${frame.height + X_TITLE_ROOM}`);
   const ax = new Axis(frame, ticks);
   const defs = svgEl("defs", {}, svg);
   const pattern = svgEl("pattern", { id: `${svg.id}-hatch`, width: 6, height: 6, patternUnits: "userSpaceOnUse", patternTransform: "rotate(45)" }, defs);
@@ -322,7 +342,7 @@ export function lines(
   sparse = false,
 ): Panel {
   svg.replaceChildren();
-  svg.setAttribute("viewBox", `0 0 ${frame.width} ${frame.height}`);
+  svg.setAttribute("viewBox", `0 0 ${frame.width} ${frame.height + X_TITLE_ROOM}`);
   const ax = new Axis(frame, ticks);
   drawGrid(svg, ax, fmt);
   const band = svgEl("rect", { class: "band", y: MARGIN.top, height: ax.plotH, width: ax.step, x: -999 }, svg);

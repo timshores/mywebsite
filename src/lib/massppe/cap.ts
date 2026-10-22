@@ -601,8 +601,8 @@ export function startCap(root: HTMLElement, data: CapData, opts: { town: string 
         "bills would have changed more slowly.";
       // Columns: above zero, the target would be higher without today's cap; below, lower
       const width = Math.max(300, yearsBox.clientWidth || 800);
-      const height = 220;
-      const m = { top: 12, right: 12, bottom: 38, left: 78 };
+      const height = 240;
+      const m = { top: 12, right: 12, bottom: 58, left: 78 };
       const pw = width - m.left - m.right;
       const ph = height - m.top - m.bottom;
       const vals = have.map((r) => r.diff!);
@@ -634,10 +634,14 @@ export function startCap(root: HTMLElement, data: CapData, opts: { town: string 
         }
         if (r.capped) svgEl("rect", { x, y: m.top + ph + 4, width: w, height: 4, fill: "#6250d6", rx: 1 }, yearsSvg);
         if (rows.length <= 12 || j % 2 === 0 || pw > 900) {
-          const lab = svgEl("text", { x: x + w / 2, y: height - 12, "text-anchor": "middle", class: "sc-tick" }, yearsSvg);
+          const lab = svgEl("text", { x: x + w / 2, y: m.top + ph + 26, "text-anchor": "middle", class: "sc-tick" }, yearsSvg);
           lab.textContent = pw > 900 ? `FY${String(r.fy).slice(2)}` : `'${String(r.fy).slice(2)}`;
         }
       });
+      const xTitle = svgEl("text", { x: m.left + pw / 2, y: height - 6, "text-anchor": "middle", class: "sc-title" }, yearsSvg);
+      xTitle.textContent = "Fiscal year";
+      const yTitle = svgEl("text", { transform: `translate(17 ${m.top + ph / 2}) rotate(-90)`, "text-anchor": "middle", class: "sc-title" }, yearsSvg);
+      yTitle.textContent = "Change in target";
       const key = el("ul", "cw-legend");
       for (const [color, label, shape] of [["#2a78d6", `Asked for more ${scenName}: today's cap saves ${t.name} this much`, "square"],
         ["#eb6834", `Asked for less ${scenName}: today's cap costs ${t.name} this much`, "square"],
