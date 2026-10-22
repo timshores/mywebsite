@@ -63,6 +63,7 @@ const VAR = new Map(VARS.map((v) => [v.key, v]));
 const AP = new Set(["amherst", "pelham", "shutesbury", "leverett", "amherst-pelham"]);
 const OTHER: Group = { label: "Other Massachusetts districts", color: "#a9c4e8", shape: "circle", z: 1 };
 const HIGHLIGHTS: Record<string, { label: string; groups: Record<string, Group>; of: (d: Row) => string; labels: Set<string> }> = {
+  none: { label: "None", groups: { other: { ...OTHER, label: "Massachusetts districts", color: "#6f8fc4" } }, of: () => "other", labels: new Set() },
   ap: {
     label: "Amherst-Pelham and the Valley",
     groups: {
@@ -85,8 +86,8 @@ const HIGHLIGHTS: Record<string, { label: string; groups: Record<string, Group>;
     of: (d) => (d.type === "vocational" ? "voc" : "other"),
     labels: new Set(),
   },
-  none: { label: "None", groups: { other: { ...OTHER, label: "Massachusetts districts", color: "#6f8fc4" } }, of: () => "other", labels: new Set() },
 };
+const DEFAULT_HL = "none";
 
 // Left out unless asked for, as in the original plot: a very large district, a very small
 // one with very high spending, and districts too small for their ratios to mean much
@@ -152,7 +153,7 @@ export function startCommonwealth(root: HTMLElement, data: CwData, opts: { openD
   /** The districts with both measures in a year, less the omitted ones unless all are asked for. */
   function pointsFor(v: Pick<View, "x" | "y" | "fy" | "log" | "all" | "hl" | "find">) {
     const i = at(v.fy);
-    const hl = HIGHLIGHTS[v.hl] ?? HIGHLIGHTS.ap;
+    const hl = HIGHLIGHTS[v.hl] ?? HIGHLIGHTS[DEFAULT_HL];
     const pts: Point[] = [];
     const rows: Row[] = [];
     for (const d of data.districts) {
@@ -196,11 +197,11 @@ export function startCommonwealth(root: HTMLElement, data: CwData, opts: { openD
     const thumb = document.createElementNS("http://www.w3.org/2000/svg", "svg");
     thumb.setAttribute("class", "cw-thumb");
     thumb.setAttribute("aria-hidden", "true");
-    const { pts, hl } = pointsFor({ x: p.x, y: p.y, fy: latest, log: p.log, all: false, hl: "ap", find: null });
+    const { pts, hl } = pointsFor({ x: p.x, y: p.y, fy: latest, log: p.log, all: false, hl: DEFAULT_HL, find: null });
     scatter(thumb, pts, { width: 320, height: 190, logX: p.log, xFmt: String, yFmt: String, groups: hl.groups, smooth: true, mini: true });
     card.append(thumb, el("span", "cw-card-title", p.title), el("span", "cw-card-blurb", p.blurb),
       el("span", "cw-card-axes", `${capital(VAR.get(p.y)!.short)} · ${VAR.get(p.x)!.short} · FY${latest}`));
-    card.addEventListener("click", () => open({ preset: p.id, y: p.y, x: p.x, fy: latest, log: p.log, all: false, hl: "ap", find: null }));
+    card.addEventListener("click", () => open({ preset: p.id, y: p.y, x: p.x, fy: latest, log: p.log, all: false, hl: DEFAULT_HL, find: null }));
     gallery.append(card);
   }
   root.append(gallery);
@@ -214,9 +215,19 @@ export function startCommonwealth(root: HTMLElement, data: CwData, opts: { openD
   const close = el("button", "cw-close", "×");
   close.type = "button";
   close.setAttribute("aria-label", "Close");
-  head.append(title, close);
+  const drawerToggle = el("button", "cw-drawer-toggle", "Correlations and data");
+  drawerToggle.type = "button";
+  drawerToggle.setAttribute("aria-expanded", "false");
+  drawerToggle.setAttribute("aria-controls", "cw-drawer");
+  const headTools = el("div", "cw-head-tools");
+  headTools.append(drawerToggle, close);
+  head.append(title, headTools);
 
+  // The chart's settings fold away, leaving the chart more room
+  const settings = el("details", "cw-settings");
+  settings.append(el("summary", undefined, "Chart settings"));
   const controls = el("div", "cw-controls");
+  settings.append(controls);
   const select = (label: string, options: [string, string, string?][]) => {
     const wrap = el("label", "cw-field");
     const s = el("select");
@@ -238,15 +249,27 @@ export function startCommonwealth(root: HTMLElement, data: CwData, opts: { openD
   const xSel = select("Horizontal", varOptions);
   const fySel = select("Year", [...years].reverse().map((y) => [String(y), `FY${y}`] as [string, string]));
   const hlSel = select("Highlight", Object.entries(HIGHLIGHTS).map(([k, h]) => [k, h.label] as [string, string]));
-  const check = (label: string) => {
+  const check = (label: string, help?: string) => {
     const wrap = el("label", "cw-check");
     const c = el("input");
     c.type = "checkbox";
     wrap.append(c, el("span", undefined, label));
+    if (help) {
+      // A plain-language note, shown on hover or focus
+      const h = el("span", "cw-help", "?");
+      h.tabIndex = 0;
+      h.setAttribute("role", "note");
+      h.setAttribute("aria-label", help);
+      h.dataset.tip = help;
+      h.addEventListener("click", (ev) => ev.preventDefault());
+      wrap.append(h);
+    }
     controls.append(wrap);
     return c;
   };
-  const logBox = check("Log scale across");
+  const logBox = check("Log scale across",
+    "Spreads out the crowded low end. Equal distances along the bottom multiply by the same amount " +
+    "(100 to 1,000 to 10,000) instead of adding the same amount, so small and large districts both get room.");
   const allBox = check(`Include Boston, Provincetown, and districts under ${MIN_FE} pupils`);
   const findWrap = el("label", "cw-field cw-find");
   const find = el("input");
@@ -268,16 +291,39 @@ export function startCommonwealth(root: HTMLElement, data: CwData, opts: { openD
   tip.hidden = true;
   const legend = el("ul", "cw-legend");
   const caption = el("figcaption", "cw-caption");
-  const tableBox = el("details", "cw-table");
-  tableBox.append(el("summary", undefined, "Data table"));
-  const tableHolder = el("div", "cw-table-scroll");
-  tableBox.append(tableHolder);
-  figure.append(legend, svg, tip, caption, tableBox);
-
-  const side = el("aside", "cw-side");
-  const sideHead = el("h3", undefined);
-  const bars = el("ol", "cw-bars");
   const finding = el("p", "cw-finding");
+  const more = el("button", "cw-more", "Compare every factor");
+  more.type = "button";
+  more.setAttribute("aria-controls", "cw-drawer");
+  const findingRow = el("div", "cw-finding-row");
+  findingRow.append(finding, more);
+  figure.append(legend, svg, tip, findingRow, caption);
+
+  // The drawer: the ranking with how to read it, and the data table
+  const side = el("aside", "cw-drawer");
+  side.id = "cw-drawer";
+  side.hidden = true;
+  const drawerHead = el("div", "cw-drawer-head");
+  const tabCorr = el("button", "cw-drawer-tab", "Correlations");
+  const tabData = el("button", "cw-drawer-tab", "Data table");
+  const drawerClose = el("button", "cw-close", "×");
+  for (const b of [tabCorr, tabData, drawerClose]) b.type = "button";
+  drawerClose.setAttribute("aria-label", "Close the drawer");
+  drawerHead.append(tabCorr, tabData, drawerClose);
+  const corrPanel = el("div", "cw-drawer-panel");
+  const dataPanel = el("div", "cw-drawer-panel");
+  const tableHolder = el("div", "cw-table");
+  dataPanel.append(tableHolder);
+  const sideHead = el("h3", undefined);
+  // What the bars' two colors mean, in the explorer's usual blue and orange
+  const barsKey = el("ul", "cw-bars-key");
+  for (const [cls, text] of [["pos", "Rise together: higher on one, higher on the other"],
+    ["neg", "Move opposite: higher on one, lower on the other"]]) {
+    const li = el("li");
+    li.append(el("span", `cw-bars-swatch ${cls}`), el("span", undefined, text));
+    barsKey.append(li);
+  }
+  const bars = el("ol", "cw-bars");
   const why = el("div", "cw-why");
   why.innerHTML =
     "<h4>Why the strongest correlation matters</h4>" +
@@ -291,9 +337,26 @@ export function startCommonwealth(root: HTMLElement, data: CwData, opts: { openD
     "other, negative when they tend to be lower, and near 0 when there is no consistent order. It compares ranks, so " +
     "it handles curved patterns like enrollment's and isn't swayed by a few extreme districts. As a rough guide, " +
     "below 0.3 is weak, 0.3 to 0.6 moderate, and above 0.6 strong.</p>";
-  side.append(sideHead, bars, finding, why);
+  corrPanel.append(sideHead, barsKey, bars, why);
+  side.append(drawerHead, corrPanel, dataPanel);
   body.append(figure, side);
-  dialog.append(head, controls, body);
+  dialog.append(head, settings, body);
+
+  function drawer(show: "corr" | "data" | null) {
+    side.hidden = !show;
+    drawerToggle.setAttribute("aria-expanded", String(!!show));
+    corrPanel.hidden = show !== "corr";
+    dataPanel.hidden = show !== "data";
+    tabCorr.classList.toggle("is-on", show === "corr");
+    tabData.classList.toggle("is-on", show === "data");
+    tabCorr.setAttribute("aria-pressed", String(show === "corr"));
+    tabData.setAttribute("aria-pressed", String(show === "data"));
+  }
+  drawerToggle.addEventListener("click", () => drawer(side.hidden ? "corr" : null));
+  more.addEventListener("click", () => drawer("corr"));
+  tabCorr.addEventListener("click", () => drawer("corr"));
+  tabData.addEventListener("click", () => drawer("data"));
+  drawerClose.addEventListener("click", () => drawer(null));
   // Inside the explorer, so it takes the page's colors
   (root.closest(".explorer") ?? document.body).append(dialog);
 
@@ -301,7 +364,12 @@ export function startCommonwealth(root: HTMLElement, data: CwData, opts: { openD
 
   function open(v: View) {
     view = v;
-    if (!dialog.open) dialog.showModal();
+    if (!dialog.open) {
+      // Settings start open where there's room for them beside the chart
+      settings.open = window.innerWidth > 700 && window.innerHeight > 640;
+      drawer(null);
+      dialog.showModal();
+    }
     draw();
   }
 
@@ -316,7 +384,7 @@ export function startCommonwealth(root: HTMLElement, data: CwData, opts: { openD
       if (view.fy !== latest) q.set("fy", String(view.fy));
       if (view.log) q.set("log", "1");
       if (view.all) q.set("all", "1");
-      if (view.hl !== "ap") q.set("hl", view.hl);
+      if (view.hl !== DEFAULT_HL) q.set("hl", view.hl);
       if (view.find) q.set("find", view.find);
     }
     history.replaceState(null, "", `${location.pathname}?${q}`);
@@ -338,10 +406,14 @@ export function startCommonwealth(root: HTMLElement, data: CwData, opts: { openD
     find.value = data.districts.find((d) => d.org === v.find)?.name ?? "";
 
     const { pts, rows, hl } = pointsFor(v);
-    const width = Math.max(320, Math.min(figure.clientWidth || 800, 1100));
-    const height = Math.round(Math.min(Math.max(width * 0.6, 300), window.innerHeight * 0.62));
+    describe(v, pts, hl);
+    // The chart takes the room the legend, finding and caption leave, so the view never scrolls
+    const width = Math.max(300, figure.clientWidth || 800);
+    const pad = parseFloat(getComputedStyle(body).paddingTop) + parseFloat(getComputedStyle(body).paddingBottom);
+    const room = body.clientHeight - pad - legend.offsetHeight - findingRow.offsetHeight - caption.offsetHeight - 24;
+    const height = Math.round(Math.max(220, Math.min(room, width * 0.75)));
     svg.setAttribute("aria-label", `Scatterplot of ${yv.label.toLowerCase()} against ${xv.label.toLowerCase()} for ` +
-      `${pts.length} districts, FY${v.fy}. The data table below lists every value.`);
+      `${pts.length} districts, FY${v.fy}. The data table in the drawer lists every value.`);
     scatter(svg, pts, {
       width, height, logX: v.log, xFmt: axisFmt(xv.unit), yFmt: axisFmt(yv.unit),
       // Narrow screens get the short names, which fit along the axes
@@ -376,6 +448,14 @@ export function startCommonwealth(root: HTMLElement, data: CwData, opts: { openD
       },
     });
 
+    setParams();
+  }
+
+  /** The legend, finding, caption, ranking and table: everything but the chart. */
+  function describe(v: View, pts: Point[], hl: (typeof HIGHLIGHTS)[string]) {
+    const yv = VAR.get(v.y)!;
+    const xv = VAR.get(v.x)!;
+    const n = pts.length;
     legend.replaceChildren(...Object.entries(hl.groups).sort((a, b) => b[1].z - a[1].z).map(([, g]) => {
       const li = el("li");
       const key = el("span", `cw-key ${g.shape}`);
@@ -390,7 +470,7 @@ export function startCommonwealth(root: HTMLElement, data: CwData, opts: { openD
 
     const omitted = v.all ? "" : ` Left out: Boston, Provincetown, and districts with fewer than ${MIN_FE} foundation pupils.`;
     const srcs = [...new Set([...yv.src, ...xv.src])].map((k) => SOURCES[k]);
-    caption.replaceChildren(`FY${v.fy} · ${pts.length} districts.${omitted} Sources: `);
+    caption.replaceChildren(`FY${v.fy} · ${n} districts.${omitted} Sources: `);
     srcs.forEach((s, k) => {
       const a = el("a", undefined, s.name);
       a.href = s.url;
@@ -426,7 +506,6 @@ export function startCommonwealth(root: HTMLElement, data: CwData, opts: { openD
       b.append(el("span", "cw-bar-label", capital(o.v.short)), track, el("span", "cw-bar-value", rho(o.r!)));
       b.addEventListener("click", () => {
         view = { ...v, preset: null, x: o.v.key, log: !!o.v.log };
-        setParams();
         draw();
       });
       li.append(b);
@@ -438,7 +517,6 @@ export function startCommonwealth(root: HTMLElement, data: CwData, opts: { openD
       `In FY${v.fy}, ${top.v.short} lines up most closely with ${yv.short} (ρ = ${rho(top.r!)}, ${top.n} districts)` +
       (!here || here === top ? "." : Math.abs(Math.abs(here.r!) - Math.abs(top.r!)) < 0.005
         ? `; ${xv.short}, across the bottom now, is as close.` : `; ${xv.short}, across the bottom now, has ρ = ${rho(here.r!)}.`);
-    setParams();
   }
 
   const change = (patch: Partial<View>) => {
@@ -465,14 +543,18 @@ export function startCommonwealth(root: HTMLElement, data: CwData, opts: { openD
     tip.hidden = true;
     setParams();
   });
+  // Redraw when the room changes: the window, or the settings folding open or shut
   let lastW = 0;
+  let lastH = 0;
   new ResizeObserver(() => {
-    const w = figure.clientWidth;
-    if (dialog.open && Math.abs(w - lastW) > 8) {
+    const w = body.clientWidth;
+    const h = body.clientHeight;
+    if (dialog.open && (Math.abs(w - lastW) > 8 || Math.abs(h - lastH) > 8)) {
       lastW = w;
+      lastH = h;
       draw();
     }
-  }).observe(figure);
+  }).observe(body);
 
   /** Open the plot a link names: ?view=commonwealth&plot=...&x=...&y=... */
   function openFromUrl() {
@@ -485,7 +567,7 @@ export function startCommonwealth(root: HTMLElement, data: CwData, opts: { openD
     open({
       preset: preset?.id ?? null, x, y, fy: years.includes(fy) ? fy : latest,
       log: q.has("log") ? q.get("log") === "1" : preset?.log ?? !!VAR.get(x)?.log,
-      all: q.get("all") === "1", hl: q.get("hl") && HIGHLIGHTS[q.get("hl")!] ? q.get("hl")! : "ap", find: q.get("find"),
+      all: q.get("all") === "1", hl: q.get("hl") && HIGHLIGHTS[q.get("hl")!] ? q.get("hl")! : DEFAULT_HL, find: q.get("find"),
     });
   }
 

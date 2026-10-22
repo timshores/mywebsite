@@ -1854,6 +1854,7 @@ import Layout from "../../layouts/Layout.astro";
   .explorer :global(.cw-dialog[open]) {
     display: flex;
     flex-direction: column;
+    overflow: hidden;
   }
 
   .explorer :global(.cw-dialog::backdrop) {
@@ -1888,8 +1889,7 @@ import Layout from "../../layouts/Layout.astro";
     flex-wrap: wrap;
     gap: 0.6rem 1rem;
     align-items: end;
-    padding: 0.4rem 1.2rem 0.8rem;
-    border-bottom: 1px solid var(--line);
+    padding: 0 1.2rem 0.8rem;
   }
 
   .explorer :global(.cw-field) {
@@ -1922,19 +1922,202 @@ import Layout from "../../layouts/Layout.astro";
   }
 
   .explorer :global(.cw-body) {
+    position: relative;
     flex: 1;
     min-height: 0;
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) 320px;
-    gap: 1.4rem;
-    padding: 0.8rem 1.2rem 1.2rem;
-    overflow: auto;
+    padding: 0.6rem 1.2rem 0.8rem;
+    overflow: hidden;
   }
 
   .explorer :global(.cw-figure) {
     position: relative;
     margin: 0;
     min-width: 0;
+  }
+
+  .explorer :global(.cw-head-tools) {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+
+  .explorer :global(.cw-drawer-toggle),
+  .explorer :global(.cw-more) {
+    font: inherit;
+    font-size: 0.85rem;
+    color: var(--ink);
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 0.3rem 0.8rem;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+
+  .explorer :global(.cw-drawer-toggle[aria-expanded="true"]) {
+    border-color: var(--accent);
+    background: #fbf1ec;
+  }
+
+  .explorer :global(.cw-settings) {
+    border-bottom: 1px solid var(--line);
+  }
+
+  .explorer :global(.cw-settings > summary) {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0 1.2rem 0.5rem;
+    font-size: 0.85rem;
+    color: var(--muted);
+    cursor: pointer;
+    list-style: none;
+  }
+
+  .explorer :global(.cw-settings > summary::-webkit-details-marker) {
+    display: none;
+  }
+
+  .explorer :global(.cw-settings > summary::before) {
+    content: "";
+    width: 6px;
+    height: 6px;
+    border: solid currentColor;
+    border-width: 0 1.5px 1.5px 0;
+    transform: rotate(-45deg);
+    transition: transform 0.12s ease;
+  }
+
+  .explorer :global(.cw-settings[open] > summary::before) {
+    transform: rotate(45deg);
+  }
+
+  .explorer :global(.cw-finding-row) {
+    display: flex;
+    align-items: baseline;
+    gap: 0.8rem;
+    margin-top: 0.3rem;
+  }
+
+  .explorer :global(.cw-finding) {
+    flex: 1;
+    margin: 0;
+    font-size: 0.9rem;
+    line-height: 1.45;
+  }
+
+  .explorer :global(.cw-drawer) {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 3;
+    width: min(380px, 100%);
+    display: flex;
+    flex-direction: column;
+    background: var(--paper);
+    border-left: 1px solid var(--line);
+    box-shadow: -10px 0 24px var(--shadow);
+  }
+
+  .explorer :global(.cw-drawer-head) {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.6rem 0.6rem 0.4rem 0.9rem;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .explorer :global(.cw-drawer-head .cw-close) {
+    margin-left: auto;
+  }
+
+  .explorer :global(.cw-drawer-tab) {
+    font: inherit;
+    font-size: 0.85rem;
+    color: var(--ink-soft);
+    background: none;
+    border: 0;
+    border-bottom: 2px solid transparent;
+    padding: 0.3rem 0.4rem;
+    cursor: pointer;
+  }
+
+  .explorer :global(.cw-drawer-tab.is-on) {
+    color: var(--ink);
+    font-weight: 600;
+    border-bottom-color: var(--accent);
+  }
+
+  .explorer :global(.cw-drawer-panel) {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 0.8rem 0.9rem 1rem;
+  }
+
+  .explorer :global(.cw-bars-key) {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 0.6rem;
+    display: grid;
+    gap: 0.2rem;
+    font-size: 0.78rem;
+    color: var(--ink-soft);
+  }
+
+  .explorer :global(.cw-bars-key li) {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+  }
+
+  .explorer :global(.cw-bars-swatch) {
+    width: 18px;
+    height: 8px;
+    border-radius: 4px;
+    background: #2a78d6;
+  }
+
+  .explorer :global(.cw-bars-swatch.neg) {
+    background: #eb6834;
+  }
+
+  .explorer :global(.cw-help) {
+    position: relative;
+    display: inline-grid;
+    place-items: center;
+    width: 1.05rem;
+    height: 1.05rem;
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: var(--ink-soft);
+    border: 1px solid var(--line);
+    border-radius: 50%;
+    background: #fff;
+    cursor: help;
+  }
+
+  .explorer :global(.cw-help:hover::after),
+  .explorer :global(.cw-help:focus::after) {
+    content: attr(data-tip);
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 5;
+    width: 16rem;
+    padding: 0.5rem 0.65rem;
+    font-size: 0.8rem;
+    font-weight: 400;
+    line-height: 1.4;
+    color: var(--ink);
+    text-align: left;
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    box-shadow: 0 6px 18px var(--shadow);
+    white-space: normal;
   }
 
   .explorer :global(.cw-chart) {
@@ -2012,19 +2195,7 @@ import Layout from "../../layouts/Layout.astro";
   }
 
   .explorer :global(.cw-table) {
-    margin-top: 0.6rem;
     font-size: 0.84rem;
-  }
-
-  .explorer :global(.cw-table summary) {
-    cursor: pointer;
-    color: var(--accent);
-  }
-
-  .explorer :global(.cw-table-scroll) {
-    max-height: 18rem;
-    overflow: auto;
-    margin-top: 0.4rem;
   }
 
   .explorer :global(.cw-table table) {
@@ -2044,17 +2215,17 @@ import Layout from "../../layouts/Layout.astro";
     font-variant-numeric: tabular-nums;
   }
 
-  .explorer :global(.cw-side h3) {
+  .explorer :global(.cw-drawer h3) {
     font-size: 1rem;
     margin: 0 0 0.6rem;
   }
 
-  .explorer :global(.cw-side h4) {
+  .explorer :global(.cw-drawer h4) {
     font-size: 0.9rem;
     margin: 1rem 0 0.3rem;
   }
 
-  .explorer :global(.cw-side p) {
+  .explorer :global(.cw-drawer p) {
     font-size: 0.84rem;
     line-height: 1.5;
     color: var(--ink-soft);
@@ -2133,14 +2304,19 @@ import Layout from "../../layouts/Layout.astro";
     font-variant-numeric: tabular-nums;
   }
 
-  .explorer :global(.cw-side .cw-finding) {
-    margin-top: 0.8rem;
-    color: var(--ink);
-  }
 
   @media (max-width: 900px) {
     .explorer :global(.cw-body) {
-      grid-template-columns: minmax(0, 1fr);
+      padding: 0.5rem 0.8rem 0.6rem;
+    }
+
+    .explorer :global(.cw-finding-row) {
+      flex-wrap: wrap;
+      gap: 0.3rem;
+    }
+
+    .explorer :global(.cw-drawer-toggle) {
+      display: none;
     }
 
     .explorer :global(.cw-controls) {
