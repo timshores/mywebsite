@@ -695,6 +695,82 @@ import Layout from "../../layouts/Layout.astro";
     background: rgba(255, 255, 255, 0.55);
   }
 
+  /* Districts and towns: once the controls scroll away, a one-line summary under the tabs that opens
+     them in place (explorer.ts, the dock). It takes no room in the page; its panel hangs over it. */
+  .explorer :global(.controls-dock) {
+    position: sticky;
+    top: var(--tabs-h, 3rem);
+    z-index: 29;
+    height: 0;
+  }
+
+  .explorer :global(.controls-dock-panel) {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-top: 0;
+    border-radius: 0 0 12px 12px;
+    box-shadow: 0 8px 18px var(--shadow);
+  }
+
+  .explorer :global(.controls-dock-bar) {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    padding: 0.45rem 0.9rem;
+  }
+
+  .explorer :global(.controls-dock-sum) {
+    flex: 1;
+    min-width: 0;
+    padding: 0;
+    font: inherit;
+    font-size: 0.85rem;
+    color: var(--ink-soft);
+    text-align: left;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    background: none;
+    border: 0;
+    cursor: pointer;
+  }
+
+  .explorer :global(.controls-dock-sum strong) {
+    color: var(--ink);
+  }
+
+  .explorer :global(.controls-dock-toggle) {
+    flex: none;
+    padding: 0.2rem 0.75rem;
+    font: inherit;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--accent);
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    cursor: pointer;
+  }
+
+  .explorer :global(.controls-dock-toggle:hover),
+  .explorer :global(.controls-dock-toggle:focus-visible) {
+    border-color: var(--accent);
+  }
+
+  .explorer :global(.controls-dock-body .controls) {
+    margin: 0 0.9rem 0.8rem;
+  }
+
+  /* Docked, the controls skip their longer notes and the list of related towns and districts */
+  .explorer :global(.controls-dock-body .controls-note),
+  .explorer :global(.controls-dock-body .relations) {
+    display: none;
+  }
+
   .control {
     position: relative;
     display: flex;
@@ -3105,7 +3181,12 @@ import Layout from "../../layouts/Layout.astro";
     line-height: 1.35;
   }
 
+  /* The cap to compare with: floats under the tabs as the page scrolls */
   .explorer :global(.cap-scen-row) {
+    position: sticky;
+    top: calc(var(--tabs-h, 3rem) + 0.4rem);
+    z-index: 25;
+    box-shadow: 0 6px 16px var(--shadow);
     display: flex;
     flex-wrap: wrap;
     align-items: center;
@@ -3222,8 +3303,12 @@ import Layout from "../../layouts/Layout.astro";
     min-width: 13rem;
   }
 
-  .explorer :global(.cap-scenario .cap-note) {
+  .explorer :global(.cap-scen-note) {
     margin-top: 0.9rem;
+  }
+
+  .explorer :global(.cap-scenario h3) {
+    margin-bottom: 0.6rem;
   }
 
   /* The cap tab's explanation folds like the introductions, with the summary as its heading */

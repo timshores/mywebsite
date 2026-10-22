@@ -216,8 +216,9 @@ export function startCap(root: HTMLElement, data: CapData, opts: { town: string 
   mark.setAttribute("aria-hidden", "true");
   sliderBox.append(slider, mark);
   scenRow.append(el("span", "cap-scen-lead", "Compare today's 82.5% cap with"), noneLabel, levelLabel, sliderBox, out);
-  const scenNote = el("p", "cap-note");
-  scen.append(scenHead, scenRow, scenNote);
+  const scenNote = el("p", "cap-note cap-scen-note");
+  // The row floats under the tabs as the page scrolls, so it sits in the tab's own column, not the section
+  scen.append(scenHead);
   const setScenario = () => {
     level = Number(slider.value) / 100;
     out.textContent = capPct(level);
@@ -235,7 +236,7 @@ export function startCap(root: HTMLElement, data: CapData, opts: { town: string 
   const yearsBox = el("section", "cap-section");
   const chartBox = el("section", "cap-section");
   const fifths = el("section", "cap-section");
-  root.replaceChildren(how, yearRow, tiles, scen, lookup, yearsBox, chartBox, fifths);
+  root.replaceChildren(how, yearRow, tiles, scen, scenRow, scenNote, lookup, yearsBox, chartBox, fifths);
 
   // Year by year: each year's factor for the chosen cap, kept while only the town changes
   let histMemo: { key: string; f: number[] } | null = null;

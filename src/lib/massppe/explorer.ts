@@ -747,6 +747,15 @@ export async function startExplorer() {
     tab.addEventListener("pointerenter", go, { once: true });
     tab.addEventListener("focus", go, { once: true });
   }
+  // And once the page has loaded and the browser is idle, both download in the background anyway, one
+  // after the other, so they open at once; the tab on screen never waits for them
+  const idle = (fn: () => void) => ("requestIdleCallback" in window ? requestIdleCallback(fn, { timeout: 4000 }) : setTimeout(fn, 1500));
+  const background = () => idle(() => {
+    warm.commonwealth();
+    idle(warm.cap);
+  });
+  if (document.readyState === "complete") background();
+  else window.addEventListener("load", background, { once: true });
 
   // The 82.5% cap tab, loaded the first time it opens; it starts on the town last viewed
   let cap: { render(): void } | null = null;
@@ -1144,6 +1153,7 @@ export async function startExplorer() {
       ev.preventDefault();
       backTo = a.closest<HTMLElement>("details.compare-view") ?? a.closest<HTMLElement>("figure");
       a.closest("dialog")?.close();
+      dockClose();
       const menu = $(state.view === "towns" ? "pick-town-compare" : "pick-compare");
       menu.after(goBack);
       // Restart the ring's pulse, even when it's already showing
@@ -1156,6 +1166,79 @@ export async function startExplorer() {
     });
     return a;
   }
+
+  // ---- The controls, docked: once they scroll away under the tabs, a one-line summary stays in view
+  // there, and opens the controls themselves in place of it; scrolling back up puts them home ----
+  const tabsBar = document.querySelector<HTMLElement>(".view-tabs")!;
+  const controlsForm = document.querySelector<HTMLFormElement>("form.controls")!;
+  // The tabs' height, for whatever floats under them
+  new ResizeObserver(() => root.style.setProperty("--tabs-h", `${tabsBar.offsetHeight}px`)).observe(tabsBar);
+  const dock = text("div", "", "controls-dock");
+  dock.hidden = true;
+  const dockPanel = text("div", "", "controls-dock-panel");
+  const dockBar = text("div", "", "controls-dock-bar");
+  const dockSum = text("button", "", "controls-dock-sum") as HTMLButtonElement;
+  dockSum.type = "button";
+  const dockToggle = text("button", "", "controls-dock-toggle") as HTMLButtonElement;
+  dockToggle.type = "button";
+  const dockBody = text("div", "", "controls-dock-body");
+  dockBar.append(dockSum, dockToggle);
+  dockPanel.append(dockBar, dockBody);
+  dock.append(dockPanel);
+  $("view-panel").prepend(dock);
+  // Holds the controls' place while they're docked; the sentinel marks where they end
+  const dockHolder = document.createElement("div");
+  const dockSentinel = document.createElement("div");
+  controlsForm.after(dockSentinel);
+  const docked = () => dock.classList.contains("is-open");
+  function dockLabel() {
+    dockToggle.textContent = docked() ? "Hide controls ▴" : "Show controls ▾";
+    dockToggle.setAttribute("aria-expanded", String(docked()));
+  }
+  function dockOpen() {
+    if (docked()) return;
+    dockHolder.style.height = `${controlsForm.offsetHeight}px`;
+    dockHolder.style.margin = getComputedStyle(controlsForm).margin;
+    controlsForm.before(dockHolder);
+    dockBody.append(controlsForm);
+    dock.classList.add("is-open");
+    dockLabel();
+  }
+  function dockClose() {
+    if (!docked()) return;
+    dockHolder.replaceWith(controlsForm);
+    dock.classList.remove("is-open");
+    dockLabel();
+  }
+  /** The summary: what's chosen, in one line */
+  function dockSummary() {
+    const onTowns = state.view === "towns";
+    const chosen = (sel: HTMLSelectElement) => sel.selectedOptions[0]?.text ?? "";
+    const name = onTowns ? townListed.get(state.t)?.name ?? "" : listed.get(state.d)?.name ?? "";
+    const cmpSel = onTowns ? townCompareSelect : compareSelect;
+    const cmp = cmpSel.value === "none" ? "No comparison"
+      : `Compared with ${cmpSel.value === "other" ? chosen(onTowns ? townVsSelect : vsSelect) : chosen(cmpSel).replace(/^Its /, "its ")}`;
+    const rest = [cmp, ...(onTowns ? [`Per ${PER_WORD[state.per]}`] : []), `FY${state.from}–FY${state.to}`,
+      state.usd === "nominal" ? "Nominal dollars" : `FY${state.usd} dollars`];
+    dockSum.replaceChildren(text("strong", name), ` · ${rest.join(" · ")}`);
+    dockSum.setAttribute("aria-label", `Show controls: ${name}, ${rest.join(", ")}`);
+  }
+  function dockCheck() {
+    const on = (state.view === "districts" || state.view === "towns") &&
+      dockSentinel.getBoundingClientRect().top < tabsBar.getBoundingClientRect().bottom;
+    if (!on) dockClose();
+    dock.hidden = !on;
+  }
+  dockToggle.addEventListener("click", () => (docked() ? dockClose() : dockOpen()));
+  dockSum.addEventListener("click", () => (docked() ? dockClose() : dockOpen()));
+  let dockFrame = 0;
+  const dockSoon = () => {
+    cancelAnimationFrame(dockFrame);
+    dockFrame = requestAnimationFrame(dockCheck);
+  };
+  window.addEventListener("scroll", dockSoon, { passive: true });
+  window.addEventListener("resize", dockSoon);
+  dockLabel();
 
   function compareTable(holder: HTMLElement, caption: string, rowLabel: string, rows: CmpRow[], kind: "usd" | "fte" | "count",
     cmp: Named | null, { end = last, noCmpNote, per = "pupil" }: CmpOpts = {}) {
@@ -1367,6 +1450,8 @@ export async function startExplorer() {
       $("tiles").replaceChildren();
     }
     for (const pk of [...districtPickers, ...townPickers]) pk.sync();
+    dockSummary();
+    dockCheck();
     restoreFocus();
     remember();
   }
