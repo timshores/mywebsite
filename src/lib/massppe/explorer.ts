@@ -406,9 +406,9 @@ export async function startExplorer() {
     storage.set(STORE, JSON.stringify({ state, isolated: sets(isolated), hidden: sets(hiddenLines) }));
     if (intro) storage.set(INTRO, intro.open ? "open" : "closed");
   }
-  // The introduction stays folded or open as it was left, with the other remembered choices
+  // The introduction stays folded or open as it was left, with the other remembered choices.
+  // The page's inline script sets it before the first paint; this remembers changes.
   const intro = document.querySelector<HTMLDetailsElement>(".intro");
-  if (intro && consent === "yes" && storage.get(INTRO) === "closed") intro.open = false;
   intro?.addEventListener("toggle", () => {
     askToRemember();
     remember();
