@@ -86,6 +86,25 @@ const X_OPTIONS: Record<XKey, { label: string; log: boolean; fmt: (v: number) =>
   cey_pct: { label: "Combined effort yield as a share of foundation budget", log: true, fmt: (v) => pct(v), axis: (v) => pct(v) },
 };
 
+/**
+ * The required contribution under today's rules for a given target (DESE's Townwide Contributions
+ * sheet, columns P-X): last year's grown by the growth factor; down to the target if that's above
+ * it; up 1% or 2% of last year's if it falls short by more than 2.5 or 7.5 points of foundation; at
+ * least the target for a town whose yield is 175% of foundation or more; at most 90% of foundation.
+ * With today's targets this reproduces every town's FY2027 required contribution.
+ */
+function requiredFor(t: CapTown, target: number, yieldPct: number): number | null {
+  if (t.preliminary == null || t.prior == null || !t.foundation) return null;
+  const P = t.preliminary;
+  const H = t.foundation;
+  const shortfall = Math.round((target * 100) / H * 100) / 100 - (P * 100) / H;
+  const step = shortfall > 7.5 ? 0.02 : shortfall > 2.5 ? 0.01 : 0;
+  const T = Math.round(step * t.prior);
+  const V = Math.max(P - target, 0);
+  const W = yieldPct > 1.75 ? Math.max(target - (P + T), 0) : 0;
+  return Math.min(H * 0.9, Math.round(P + T - V + W));
+}
+
 /** The same for arrays: one year's yields and foundation budgets, held to that year's total. */
 function solveArrays(ceys: number[], fbs: number[], total: number, cap: number | null): number {
   let lo = 0;
@@ -434,7 +453,14 @@ export function startCap(root: HTMLElement, data: CapData, opts: { town: string 
       reqLabel.append(`Required contribution, FY${y.fy}: the minimum `, helpButton("Why can the minimum differ from the target?"));
       row(reqLabel, `What ${t.name} must pay toward its schools this year`,
         [usd(t.required), t.required < t.target - 1 ? `${usd(t.target - t.required)} below the target` : "The full target"],
-        ["–", "Would move toward the new target"], "", "minimum");
+        (() => {
+          const req = requiredFor(t, alt.get(t.id)!, t.foundation ? (t.cey * f) / t.foundation : 0);
+          return req == null ? "–" : [usd(req), "If the cap changed this year"] as [string, string];
+        })(),
+        (() => {
+          const req = requiredFor(t, alt.get(t.id)!, t.foundation ? (t.cey * f) / t.foundation : 0);
+          return req == null ? "" : signed(req - t.required!);
+        })(), "minimum");
     }
     const scroll0 = Object.assign(el("div", "table-scroll"), { tabIndex: 0 });
     scroll0.append(table);
@@ -477,7 +503,11 @@ export function startCap(root: HTMLElement, data: CapData, opts: { town: string 
         `as much: ${big(sp.over)} above a ${big(sp.required)} minimum in all. That extra is the towns' own money, beyond ` +
         "their required contributions."]);
     }
-    explain.push(["This page compares targets. Under today's rules, if a town's target fell, its required contribution " +
+    explain.push([`The table's last row estimates what ${t.name} would be required to pay in FY${y.fy} if the cap ` +
+      "changed this year: the same rules, starting from last year's required contribution, with the new target. " +
+      "Today's rules also hold every required contribution to at most 90% of the foundation budget, and the estimate " +
+      "keeps that rule."]);
+    explain.push(["The rest of this page compares targets. Under today's rules, if a town's target fell, its required contribution " +
       "would come down to the new target the next year; if its target rose, its required contribution would climb toward " +
       "it a few percent a year."]);
     helpBody.replaceChildren(...explain.map((parts) => {
