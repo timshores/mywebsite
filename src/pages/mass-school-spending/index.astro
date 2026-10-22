@@ -287,10 +287,10 @@ import Layout from "../../layouts/Layout.astro";
 
     <div id="town-panels" class="panels" data-view-only="towns" hidden>
       <figure id="fig-tspend" class="panel">
-        <h3>General fund spending per resident by function</h3>
+        <h3>General fund spending per <span data-per>resident</span> by function</h3>
         <p class="panel-sub" id="tspend-sub"></p>
         <ul class="legend" id="legend-tspend" aria-label="Spending functions. Select one or more to show only those."></ul>
-        <svg id="svg-tspend" tabindex="0" role="img" aria-label="Stacked columns of general fund spending per resident by function for each fiscal year. Use the arrow keys to read each year; the data table below has every value."></svg>
+        <svg id="svg-tspend" tabindex="0" role="img" data-aria-per="Stacked columns of general fund spending per {per} by function for each fiscal year. Use the arrow keys to read each year; the data table below has every value." aria-label="Stacked columns of general fund spending per resident by function for each fiscal year. Use the arrow keys to read each year; the data table below has every value."></svg>
         <div class="tooltip" role="status" hidden></div>
         <details class="table-view compare-view">
           <summary>Comparison table</summary>
@@ -302,10 +302,10 @@ import Layout from "../../layouts/Layout.astro";
       </figure>
 
       <figure id="fig-trev" class="panel">
-        <h3>General fund revenue per resident by source</h3>
+        <h3>General fund revenue per <span data-per>resident</span> by source</h3>
         <p class="panel-sub" id="trev-sub"></p>
         <ul class="legend" id="legend-trev" aria-label="Revenue sources. Select one or more to show only those."></ul>
-        <svg id="svg-trev" tabindex="0" role="img" aria-label="Stacked columns of general fund revenue per resident by source for each fiscal year. Use the arrow keys to read each year; the data table below has every value."></svg>
+        <svg id="svg-trev" tabindex="0" role="img" data-aria-per="Stacked columns of general fund revenue per {per} by source for each fiscal year. Use the arrow keys to read each year; the data table below has every value." aria-label="Stacked columns of general fund revenue per resident by source for each fiscal year. Use the arrow keys to read each year; the data table below has every value."></svg>
         <div class="tooltip" role="status" hidden></div>
         <details class="table-view compare-view">
           <summary>Comparison table</summary>
@@ -317,10 +317,10 @@ import Layout from "../../layouts/Layout.astro";
       </figure>
 
       <figure id="fig-tlevy" class="panel">
-        <h3>Property tax levy and its limit</h3>
+        <h3>Property tax levy and its limit per <span data-per>resident</span></h3>
         <p class="panel-sub" id="tlevy-sub"></p>
         <ul class="legend" id="legend-tlevy" aria-label="Levy and unused capacity. Select one to show only it."></ul>
-        <svg id="svg-tlevy" tabindex="0" role="img" aria-label="Stacked columns of the property tax levy and unused levy capacity per resident for each fiscal year. Use the arrow keys to read each year; the data table below has every value."></svg>
+        <svg id="svg-tlevy" tabindex="0" role="img" data-aria-per="Stacked columns of the property tax levy and unused levy capacity per {per} for each fiscal year. Use the arrow keys to read each year; the data table below has every value." aria-label="Stacked columns of the property tax levy and unused levy capacity per resident for each fiscal year. Use the arrow keys to read each year; the data table below has every value."></svg>
         <div class="tooltip" role="status" hidden></div>
         <details class="table-view compare-view">
           <summary>Comparison table</summary>
@@ -343,10 +343,10 @@ import Layout from "../../layouts/Layout.astro";
       </figure>
 
       <figure id="fig-tval" class="panel">
-        <h3>Assessed value per resident by property type</h3>
+        <h3>Assessed value per <span data-per>resident</span> by property type</h3>
         <p class="panel-sub" id="tval-sub"></p>
         <ul class="legend" id="legend-tval" aria-label="Property types. Select one or more to show only those."></ul>
-        <svg id="svg-tval" tabindex="0" role="img" aria-label="Stacked columns of assessed property value per resident by property type for each fiscal year. Use the arrow keys to read each year; the data table below has every value."></svg>
+        <svg id="svg-tval" tabindex="0" role="img" data-aria-per="Stacked columns of assessed property value per {per} by property type for each fiscal year. Use the arrow keys to read each year; the data table below has every value." aria-label="Stacked columns of assessed property value per resident by property type for each fiscal year. Use the arrow keys to read each year; the data table below has every value."></svg>
         <div class="tooltip" role="status" hidden></div>
         <details class="table-view compare-view">
           <summary>Comparison table</summary>
@@ -373,10 +373,10 @@ import Layout from "../../layouts/Layout.astro";
       </figure>
 
       <figure id="fig-teqv" class="panel">
-        <h3>Equalized valuation per resident</h3>
+        <h3>Equalized valuation per <span data-per>resident</span></h3>
         <p class="panel-sub" id="teqv-sub"></p>
         <ul class="legend" id="legend-teqv"></ul>
-        <svg id="svg-teqv" tabindex="0" role="img" aria-label="Line of equalized valuation per resident, every other fiscal year. Use the arrow keys to read each year; the data table below has every value."></svg>
+        <svg id="svg-teqv" tabindex="0" role="img" data-aria-per="Line of equalized valuation per {per}, every other fiscal year. Use the arrow keys to read each year; the data table below has every value." aria-label="Line of equalized valuation per resident, every other fiscal year. Use the arrow keys to read each year; the data table below has every value."></svg>
         <div class="tooltip" role="status" hidden></div>
         <button type="button" class="table-open" data-table="teqv" aria-haspopup="dialog">
           <span class="table-open-icon" aria-hidden="true">⤢</span> Full data table

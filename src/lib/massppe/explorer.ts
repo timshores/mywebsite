@@ -1882,6 +1882,10 @@ export async function startExplorer() {
     // The data are per resident. Per household or taxable property, each year's values scale by
     // residents over households or parcels, the town's (or an average's towns' combined) own.
     const perWord = PER_WORD[state.per];
+    // Titles and chart descriptions name the unit the Per choice picks
+    document.querySelectorAll("[data-per]").forEach((n) => (n.textContent = perWord));
+    document.querySelectorAll("[data-aria-per]").forEach((n) =>
+      n.setAttribute("aria-label", n.getAttribute("data-aria-per")!.replace("{per}", perWord)));
     const parcelCount = (x: Town): Values =>
       years.map((_, i) => (x.parcels ? sumAt(PARCEL_SERIES.map((q) => x.parcels![q.key]), i) : null));
     const perK = (x: Town): Values => {
