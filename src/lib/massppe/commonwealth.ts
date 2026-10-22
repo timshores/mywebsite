@@ -67,7 +67,13 @@ const COUNTS: Record<string, string[]> = {
   aid_pfe: ["aid"], aid_share: ["aid"], rlc_pfe: ["rlc"], fe: ["fe"], fte: ["fte"], eqv_res: ["eqv"], av_res: ["av"],
   income_pc: ["income"], sf_bill: ["bill"], bill_income: ["bill"], res_share: ["av"],
 };
-const BUILT_FROM: Record<string, string[]> = { req: ["aid", "rlc"], eqv: ["av"] };
+// What each part is built from. Chapter 70 sets the required local contribution from equalized property
+// value (the state's estimate from assessed values) and income, and its aid fills the gap to the
+// foundation budget, so both count what the wealth measures count. Required spending, aid and the
+// contribution together, comes to about the foundation budget, which doesn't turn on wealth.
+const BUILT_FROM: Record<string, string[]> = {
+  req: ["aid", "rlc"], eqv: ["av"], rlc: ["eqv", "av", "income"], aid: ["rlc", "eqv", "av", "income"],
+};
 const PART_NAME: Record<string, string> = {
   nss: "net school spending", req: "required spending", aid: "Chapter 70 aid", rlc: "the required local contribution",
   eqv: "equalized property value", av: "assessed property value", bill: "the single-family tax bill", ppe: "in-district spending",
@@ -131,13 +137,10 @@ interface Preset { id: string; title: string; blurb: string; y: string; x: strin
 // The gallery shows only the strongest pairs with the least risk of misleading. Of every school measure
 // set against a measure of size or the towns' wealth in FY2025, these have ρ of 0.4 or more and no
 // caution but shared towns, which every wealth measure carries (most districts share towns with
-// another); near-duplicates are left to the picker. Pairs with no caution at all are weak (|ρ| ≤ 0.35).
+// another); near-duplicates are left to the picker. Pairs with no caution at all are weak (|ρ| ≤ 0.35),
+// and the formula's own (the required contribution or aid against property or income) count the same
+// thing.
 const PRESETS: Preset[] = [
-  {
-    id: "formula", title: "The formula at work", y: "rlc_pfe", x: "eqv_res", log: true,
-    blurb: "*Required local contribution per pupil* against *property value per resident* of each district's towns. " +
-      "Chapter 70 asks more of towns with more property, by design: the closest fit here.",
-  },
   {
     id: "income", title: "Spending and income", y: "nss_pct_req", x: "income_pc", log: true,
     blurb: "*Spending as a share of the requirement* against *income per capita* of each district's towns. Districts " +
