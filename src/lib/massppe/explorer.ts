@@ -61,6 +61,7 @@ interface Listed {
   scope?: string;
   regional?: boolean;
   fte?: number;
+  gateway?: boolean;
 }
 
 /** A town or a town average, from its region's file */
@@ -93,7 +94,10 @@ interface Town {
   districts?: (TownDistrict & { contribution: number | null; with: { name: string; id: string | null }[] })[];
 }
 
-interface ListedTown { id: string; name: string; chunk: string; region: string | null; county?: string | null; peer?: string | null; scope?: string }
+interface ListedTown {
+  id: string; name: string; chunk: string; region: string | null; county?: string | null; peer?: string | null;
+  scope?: string; gateway?: boolean;
+}
 
 /** A school district a town belongs to; id is null for districts outside the explorer */
 interface TownDistrict { name: string; id: string | null; kind: "town" | "regional" | "vocational" }
@@ -427,6 +431,8 @@ export async function startExplorer() {
     const traditional = data.districts.filter((d) => d.type === "traditional");
     regions.forEach(([rk, rl]) => addGroup(sel, `${rl} districts`, traditional.filter((d) => d.region === rk)));
     addGroup(sel, "Other districts", traditional.filter((d) => !d.region));
+    // Also listed under their regions: the menu shows a district wherever it belongs
+    addGroup(sel, "Gateway City districts", data.districts.filter((d) => d.gateway));
     addGroup(sel, "Vocational and technical districts", data.districts.filter((d) => d.type === "vocational"));
     addGroup(sel, "Charter schools", data.districts.filter((d) => d.type === "charter"));
     addGroup(sel, "Statewide averages", data.averages.filter((a) => !a.region));
@@ -465,6 +471,7 @@ export async function startExplorer() {
     sel.replaceChildren();
     const counties = [...new Set(towns!.towns.map((x) => x.county ?? "Other"))].sort();
     counties.forEach((c) => addGroup(sel, `${c} County`, towns!.towns.filter((x) => (x.county ?? "Other") === c)));
+    addGroup(sel, "Gateway Cities", towns!.towns.filter((x) => x.gateway));
     addGroup(sel, "Statewide averages", towns!.averages.filter((a) => !a.region));
     regions.forEach(([rk, rl]) => addGroup(sel, `${rl} averages`, towns!.averages.filter((a) => a.region === rk)));
   }

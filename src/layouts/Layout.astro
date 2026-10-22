@@ -234,6 +234,28 @@ const currentPath = Astro.url.pathname.replace(/\/$/, "") || "/";
 
 <script is:inline>
   document.addEventListener("DOMContentLoaded", () => {
+    // Links to other sites, and to files hosted here (PDFs, spreadsheets, documents),
+    // open in a new tab, including links that scripts add later. Downloads, mailto: and
+    // links that set a target stay as they are; data-same-tab opts a link out.
+    const hostedFile = /\.(pdf|csv|xlsx?|docx?|pptx?|zip|json|txt)$/i;
+    const openInNewTab = (a) => {
+      if (!(a instanceof HTMLAnchorElement) || a.hasAttribute("target") || a.hasAttribute("download")
+        || a.hasAttribute("data-same-tab")) return;
+      let url;
+      try { url = new URL(a.href); } catch { return; }
+      if (!/^https?:$/.test(url.protocol)) return;
+      if (url.origin === window.location.origin && !hostedFile.test(url.pathname)) return;
+      a.target = "_blank";
+      a.rel = [...new Set([...a.rel.split(/\s+/).filter(Boolean), "noopener", "noreferrer"])].join(" ");
+    };
+    document.querySelectorAll("a[href]").forEach(openInNewTab);
+    new MutationObserver((records) => {
+      for (const r of records) for (const n of r.addedNodes) {
+        if (n instanceof HTMLAnchorElement) openInNewTab(n);
+        else if (n instanceof Element) n.querySelectorAll("a[href]").forEach(openInNewTab);
+      }
+    }).observe(document.body, { childList: true, subtree: true });
+
     const swappableImages = document.querySelectorAll("[data-image-swap]");
     for (const image of swappableImages) {
       if (!(image instanceof HTMLImageElement)) continue;

@@ -68,3 +68,10 @@ When a later LinkedIn export arrives:
 ## Important Context
 
 The user explicitly noticed that the LinkedIn archive should not have been placed in `public/`. Keep raw source exports private/local. Only generated, curated, non-sensitive site data should be committed.
+
+## Links
+
+Links to other sites, and to files hosted here (PDFs, spreadsheets, documents), open in a new tab
+by default (Tim's rule). A script in `src/layouts/Layout.astro` sets this for every page, including
+links added later by scripts; downloads, `mailto:` and links with their own `target` are left alone,
+and `data-same-tab` opts a link out. New pages should use `Layout` so they follow it.

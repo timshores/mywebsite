@@ -109,6 +109,44 @@ export const portfolioItems = [
     resume: true,
   },
   {
+    title: "Western MA Per Pupil Expenditure Report, FY2025 Edition",
+    type: "School Committee",
+    period: "Fall 2026",
+    date: "2026-10-21",
+    summary:
+      "Updates the per-pupil expenditure report with DESE's FY2025 data, adds an inflation addendum that restates its growth rates in real dollars, and feeds an interactive explorer covering every Massachusetts school district and town.",
+    details: [
+      "Tables and charts run from FY2009 through FY2025, with FY2024 shown as revised beside FY2025. Some findings in the text still quote the first edition's 2009–2024 figures.",
+    ],
+    links: [
+      {
+        label: "Full report PDF",
+        url: "/artifacts/western-ma-ppe-report-fy2025.pdf",
+      },
+      {
+        label: "Executive summary PDF",
+        url: "/artifacts/western-ma-ppe-report-executive-summary-fy2025.pdf",
+      },
+      {
+        label: "Appendices PDF",
+        url: "/artifacts/western-ma-ppe-appendices-fy2025.pdf",
+      },
+      {
+        label: "Inflation addendum PDF",
+        url: "/artifacts/western-ma-ppe-inflation-addendum-fy2025.pdf",
+      },
+      {
+        label: "School spending explorer",
+        url: "/mass-school-spending/",
+      },
+      {
+        label: "GitHub source",
+        url: "https://github.com/timshores/schools/tree/main/ppe_report/output/fy2025",
+      },
+    ],
+    resume: false,
+  },
+  {
     title: "Western MA Per Pupil Expenditure Report",
     type: "School Committee",
     period: "Summer 2025 - Spring 2026",

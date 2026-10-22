@@ -4,6 +4,10 @@ import { portfolioItems } from "../data/portfolio";
 import { profile } from "../data/profile";
 
 const items = [...portfolioItems].sort((a, b) => b.date.localeCompare(a.date));
+// Other sites and hosted files open in a new tab (the site's rule, also set by Layout's
+// script); pages on this site open in place
+const linkTarget = (url: string) =>
+  /^https?:/.test(url) || /\.(pdf|csv|xlsx?|docx?|pptx?|zip)$/i.test(url) ? { target: "_blank", rel: "noopener noreferrer" } : {};
 ---
 
 <Layout title={`Portfolio - ${profile.name}`} description="Selected reports, research, civic planning, and technology artifacts">
@@ -32,7 +36,7 @@ const items = [...portfolioItems].sort((a, b) => b.date.localeCompare(a.date));
         {item.links && (
           <div class="artifact-links">
             {item.links.map((link) => (
-              <a href={link.url} target="_blank" rel="noreferrer">{link.label}</a>
+              <a href={link.url} {...linkTarget(link.url)}>{link.label}</a>
             ))}
           </div>
         )}

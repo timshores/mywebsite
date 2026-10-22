@@ -68,7 +68,9 @@ export function groupedPicker(select: HTMLSelectElement, labelId: string, noun: 
   function rebuild() {
     groups = [];
     groupsBox.replaceChildren();
-    let total = 0;
+    // Distinct choices: an option can sit in more than one group (a Gateway City district
+    // is also in its region's)
+    const distinct = new Set<string>();
     for (const og of select.querySelectorAll("optgroup")) {
       const box = document.createElement("section");
       box.className = "picker-group";
@@ -80,7 +82,7 @@ export function groupedPicker(select: HTMLSelectElement, labelId: string, noun: 
       list.id = `${select.id}-group-${groups.length}`;
       head.setAttribute("aria-controls", list.id);
       const options = [...og.querySelectorAll("option")];
-      total += options.length;
+      options.forEach((o) => distinct.add(o.value));
       const count = Object.assign(document.createElement("span"), { textContent: String(options.length), className: "picker-count" });
       head.append(Object.assign(document.createElement("span"), { textContent: og.label, className: "picker-group-label" }), count);
       const g: Group = { head, count, list, box, open: false, items: [] };
@@ -105,7 +107,7 @@ export function groupedPicker(select: HTMLSelectElement, labelId: string, noun: 
       groupsBox.append(box);
       groups.push(g);
     }
-    search.placeholder = `Search ${total.toLocaleString("en-US")} ${noun}`;
+    search.placeholder = `Search ${distinct.size.toLocaleString("en-US")} ${noun}`;
     search.setAttribute("aria-label", `Search ${noun}`);
     sync();
   }
