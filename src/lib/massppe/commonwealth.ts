@@ -524,14 +524,11 @@ export function startCommonwealth(root: HTMLElement, data: CwData, opts: { openD
     "techniques,” <i>Perspectives in Clinical Research</i>, 2016</a>): two measures that count the same thing, a " +
     "pattern that curves back on itself, a few extreme districts that pull the result, regions that sit apart, " +
     "uneven spread, too few districts, and districts that share towns, so their points aren't independent. Any the " +
-    "pair falls into are listed as cautions under the chart.</p>";
+    "pair falls into are listed as cautions under the chart.</p>" +
+    `<p>And as always, <a href="${CAUSATION}">correlation doesn't imply causation</a>.</p>`;
   sideHead.id = "cw-picker-head";
   const sideSub = el("p", "cw-picker-sub");
-  // Under the list: what a correlation can't show
-  const cause = el("p", "cw-picker-foot");
-  cause.append("A ", Object.assign(el("a", undefined, "correlation doesn't show cause"), { href: CAUSATION }),
-    ". These factors travel together, and a strong one can stand in for another that isn't on the list.");
-  corrPanel.append(sideHead, sideSub, barsKey, bars, cause);
+  corrPanel.append(sideHead, sideSub, barsKey, bars);
   side.append(corrPanel);
   body.append(figure, side);
   dialog.append(head, settings, body);

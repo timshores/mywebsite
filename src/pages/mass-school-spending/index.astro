@@ -2617,13 +2617,6 @@ import Layout from "../../layouts/Layout.astro";
     margin: 0 0 0.2rem;
   }
 
-  .explorer :global(.cw-picker-foot) {
-    font-size: 0.78rem;
-    line-height: 1.45;
-    color: var(--ink-soft);
-    margin: 0.75rem 0 0;
-  }
-
   .explorer :global(.cw-picker-sub) {
     font-size: 0.74rem;
     line-height: 1.4;
@@ -3218,23 +3211,6 @@ import Layout from "../../layouts/Layout.astro";
     color: var(--muted);
   }
 
-  /* The bar holds the year and the cap on one line where there's room */
-  .explorer :global(.cap-scen-row) .cap-slider,
-  .explorer :global(.cap-scen-row .cap-slider) {
-    width: min(200px, 100%);
-  }
-
-  .explorer :global(.cap-scen-row) {
-    column-gap: 0.85rem;
-  }
-
-  /* In the floating bar, the year leads, set off from the cap */
-  .explorer :global(.cap-scen-row .cap-year) {
-    margin: 0;
-    padding-right: 1rem;
-    border-right: 1px solid var(--line);
-  }
-
   .explorer :global(.cap-year-btn) {
     font: inherit;
     font-size: 0.85rem;
@@ -3336,6 +3312,44 @@ import Layout from "../../layouts/Layout.astro";
     color: var(--ink-soft);
     white-space: nowrap;
     pointer-events: none;
+  }
+
+  /* The floating bar: the year, set off at the left, then the cap, all on one line in small type */
+  .explorer :global(.cap-scen-row) {
+    gap: 0.4rem 0.7rem;
+    padding: 0.4rem 0.75rem;
+    font-size: 0.82rem;
+  }
+
+  .explorer :global(.cap-scen-row .cap-year) {
+    gap: 0.3rem;
+    margin: 0;
+    padding-right: 0.7rem;
+    font-size: 0.78rem;
+    border-right: 1px solid var(--line);
+  }
+
+  .explorer :global(.cap-scen-row .cap-year-btn) {
+    padding: 0.12rem 0.55rem;
+    font-size: 0.78rem;
+  }
+
+  .explorer :global(.cap-scen-row .cap-radio) {
+    gap: 0.25rem;
+  }
+
+  .explorer :global(.cap-scen-row .cap-slider) {
+    width: 150px;
+    padding-bottom: 0.8rem;
+  }
+
+  .explorer :global(.cap-scen-row .cap-slider-mark) {
+    top: 1.05rem;
+    font-size: 0.62rem;
+  }
+
+  .explorer :global(.cap-scen-row .cap-level) {
+    min-width: 2.8rem;
   }
 
   .explorer :global(.cap-help) {
