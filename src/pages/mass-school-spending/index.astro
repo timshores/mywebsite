@@ -96,7 +96,16 @@ import Layout from "../../layouts/Layout.astro";
           <label><input type="radio" name="dollars" value="real" /><span>FY<span data-latest>2025</span> dollars</span></label>
         </div>
       </fieldset>
+      <fieldset class="control toggle" data-view-only="towns" hidden>
+        <legend>Per</legend>
+        <div class="toggle-options">
+          <label><input type="radio" name="per" value="resident" checked /><span>Resident</span></label>
+          <label><input type="radio" name="per" value="household" /><span>Household</span></label>
+          <label><input type="radio" name="per" value="parcel" /><span>Taxable property</span></label>
+        </div>
+      </fieldset>
       <p class="controls-note" id="dollars-note"></p>
+      <p class="controls-note" id="per-note" data-view-only="towns" hidden></p>
       <div class="relations" id="relations" hidden></div>
     </form>
 
@@ -446,7 +455,10 @@ import Layout from "../../layouts/Layout.astro";
         (26 towns), 1,000–2,499 (42), 2,500–9,999 (98), 10,000–24,999 (103), 25,000–49,999 (55), and 50,000 or more
         (17). The ten cities whose school districts are very large, from Boston to Springfield, stand apart from the
         town averages, as their districts do from the district averages. Averages pool their towns per resident. Dollars are per
-        resident, using the Census Bureau's <a href="https://www.census.gov/programs-surveys/popest.html">population estimate</a> for July 1 at the start of each fiscal year. For FY2021
+        resident, using the Census Bureau's <a href="https://www.census.gov/programs-surveys/popest.html">population estimate</a> for July 1 at the start of each fiscal year. They can also be shown per household, using the Census Bureau's
+        <a href="https://www.census.gov/programs-surveys/acs">American Community Survey</a> five-year estimates
+        (<a href="/mass-school-spending/data/towns-households.csv" download>CSV</a>), or per taxable property, using the
+        parcels of taxable real estate on each town's LA-4. For FY2021
         the April 1, 2020 estimate stands in, because the July 2020 estimate drops by more than a quarter in Amherst
         and recovers a year later.
       </p>

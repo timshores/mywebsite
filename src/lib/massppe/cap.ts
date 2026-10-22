@@ -13,6 +13,8 @@ import { scatter, type Group, type Point } from "./scatter";
 interface CapTown {
   lea: number; name: string; id: string; county: string | null; region: string | null;
   pop: number | null; pop_income: number | null;
+  /** Households (ACS five-year estimates) and taxable real estate parcels (LA-4) */
+  hh: number | null; parcels: number | null;
   eqv: number; income: number; cey: number; foundation: number; max: number; target: number; nocap: number;
   required: number | null; prior: number | null; capped: boolean; floor: boolean;
   /** How the required contribution moved: the growth factor, any extra increment, and where it started */
@@ -21,7 +23,7 @@ interface CapTown {
 
 interface CapYear {
   fy: number; eqv_year: number; income_year: number; property_pct: number; income_pct: number; max_pct: number;
-  factor: number; source: string; whitepaper: string; pop_year: number;
+  factor: number; source: string; whitepaper: string; pop_year: number; parcel_fy: number;
   totals: { cey: number; target: number; foundation: number; required: number; capped: number;
     up: number; up_sum: number; down: number; down_sum: number };
   towns: CapTown[];
@@ -54,10 +56,12 @@ const GROUPS: Record<string, Group> = {
   town: { label: "Selected town", color: "#b65c3d", shape: "triangle", z: 3 },
 };
 
-type YKey = "per_res" | "share_income" | "dollars" | "share_cey";
+type YKey = "per_res" | "per_hh" | "per_parcel" | "share_income" | "dollars" | "share_cey";
 type XKey = "cey_pc" | "income_pc" | "eqv_pc" | "cey_pct";
 const Y_OPTIONS: Record<YKey, { label: string; fmt: (v: number) => string; axis: (v: number) => string }> = {
   per_res: { label: "Change in target, per resident", fmt: signed, axis: (v) => signed(v) },
+  per_hh: { label: "Change in target, per household", fmt: signed, axis: (v) => signed(v) },
+  per_parcel: { label: "Change in target, per taxable property", fmt: signed, axis: (v) => signed(v) },
   share_income: { label: "Change in target, as a share of income", fmt: (v) => `${v > 0 ? "+" : ""}${(v * 100).toFixed(2)}%`, axis: (v) => `${(v * 100).toFixed(1)}%` },
   dollars: { label: "Change in target", fmt: signed, axis: (v) => `${v < 0 ? "−" : ""}$${Math.abs(v) >= 1e6 ? `${Math.abs(v / 1e6).toFixed(0)}M` : `${Math.abs(v / 1e3).toFixed(0)}K`}` },
   // Naughton and Brown's measure: today's target as a share of the town's yield, its "calculated obligation"
@@ -413,6 +417,8 @@ export function startCap(root: HTMLElement, data: CapData, opts: { town: string 
       const c = change(x);
       switch (k) {
         case "per_res": return x.pop ? c / x.pop : null;
+        case "per_hh": return x.hh ? c / x.hh : null;
+        case "per_parcel": return x.parcels ? c / x.parcels : null;
         case "share_income": return x.income ? c / x.income : null;
         case "dollars": return c;
         case "share_cey": return x.cey ? x.target / x.cey : null;
@@ -426,7 +432,9 @@ export function startCap(root: HTMLElement, data: CapData, opts: { town: string 
       ? `Each point is a town: across, ${xo.label.toLowerCase()}; up and down, its FY${y.fy} target as a share of its ` +
         "combined effort yield. Below 100%, the cap holds the target under the yield."
       : `Each point is a town: across, ${xo.label.toLowerCase()}; up or down, how its FY${y.fy} target would change ` +
-        `${scenName}. Below zero, the town's target is higher with today's cap.`;
+        `${scenName}. Below zero, the town's target is higher with today's cap.` +
+        (yKey === "per_hh" ? " Households are the Census Bureau's latest five-year estimates (2020–2024)." :
+          yKey === "per_parcel" ? ` Taxable properties are each town's parcels of taxable real estate, FY${y.parcel_fy}.` : "");
     const pts: Point[] = [];
     for (const x of towns) {
       const xv = value(x, xKey);
