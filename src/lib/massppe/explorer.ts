@@ -8,6 +8,7 @@
 // compresses (it sends .json uncompressed).
 
 import { compact, lines, niceTicks, niceTicksRange, stackedColumns, type Panel, type Series, type Val } from "./charts";
+import type { CwData } from "./commonwealth";
 import { groupedPicker, type Picker } from "./picker";
 
 type Values = Val[];
@@ -149,7 +150,8 @@ interface Data {
 type Compare = "none" | "cohort" | "cohort-state" | "region" | "state" | "gateway" | "other";
 type TownCompare = "none" | "peer" | "peer-state" | "region" | "state" | "gateway" | "other";
 type Dollars = "nominal" | "real";
-type View = "districts" | "towns";
+type View = "districts" | "towns" | "commonwealth";
+const VIEWS: View[] = ["districts", "towns", "commonwealth"];
 type StackPanel = "ppe" | "nss" | "rev" | "tspend" | "trev" | "tval" | "tpar";
 /** The two lines a stacked chart can draw over its columns */
 type Line = "trend" | "cmp";
@@ -360,7 +362,7 @@ export async function startExplorer() {
     // The entity picked in the second menu when comparing with another district or average
     vs: listed.has(pickId(src.vs) ?? "") ? pickId(src.vs) : null as string | null,
     usd: (src.usd === "real" ? "real" : "nominal") as Dollars,
-    view: (src.view === "towns" ? "towns" : "districts") as View,
+    view: (VIEWS.includes(src.view as View) ? src.view : "districts") as View,
     // Town view: checked against the town list once towns.json loads
     t: pickId(src.t) ?? "leverett",
     tcmp: oneOf(src.tcmp, TOWN_COMPARES, "none"),
@@ -547,6 +549,8 @@ export async function startExplorer() {
       q.set("t", state.t);
       if (state.tcmp !== "none") q.set("tcmp", state.tcmp);
       if (state.tcmp === "other" && state.tvs) q.set("tvs", state.tvs);
+    } else if (state.view !== "districts") {
+      q.set("view", state.view);
     } else {
       q.set("d", state.d);
       if (state.cmp !== "none") q.set("cmp", state.cmp);
@@ -581,6 +585,8 @@ export async function startExplorer() {
       if (state.view === "districts") {
         await ensure([state.d, state.vs]);
         await ensure([comparisonId(byId.get(state.d))]);
+      } else if (state.view === "commonwealth") {
+        await loadCommonwealth();
       } else {
         if (!towns) {
           $("entity-name").textContent = "Loading towns…";
@@ -597,6 +603,18 @@ export async function startExplorer() {
       return;
     }
     if (mine === ticket) render();
+  }
+
+  // The Commonwealth tab's gallery and data, loaded the first time it opens
+  let cw: { openFromUrl(): void; close(): void } | null = null;
+  async function loadCommonwealth() {
+    if (cw) return;
+    const [mod, json] = await Promise.all([import("./commonwealth"), import("../../data/massppe/commonwealth.json")]);
+    cw = mod.startCommonwealth($("cw-root"), json.default as unknown as CwData, {
+      openDistrict: (id) => update({ view: "districts", d: id }),
+    });
+    // A link to one plot opens it
+    if (new URLSearchParams(location.search).has("y")) cw.openFromUrl();
   }
 
   /** A link that opens a district or town in the explorer, in place or in a new tab. */
@@ -1057,13 +1075,14 @@ export async function startExplorer() {
   function applyView() {
     const onTowns = state.view === "towns";
     markTabs();
-    $("view-panel").setAttribute("aria-labelledby", onTowns ? "tab-towns" : "tab-districts");
+    $("view-panel").setAttribute("aria-labelledby", `tab-${state.view}`);
+    // data-view-only lists the views an element belongs to
     document.querySelectorAll<HTMLElement>("[data-view-only]").forEach((n) => {
-      n.hidden = n.dataset.viewOnly !== state.view;
+      n.hidden = !n.dataset.viewOnly!.split(" ").includes(state.view);
     });
-    // Words that differ by tab: each .swap holds its words for every view
+    // Words that differ by tab: each .swap holds its words for each view, the school words by default
     document.querySelectorAll<HTMLElement>(".swap").forEach((n) => {
-      n.textContent = n.dataset[state.view] ?? n.textContent;
+      n.textContent = n.dataset[state.view] ?? n.dataset.districts ?? n.textContent;
     });
     $("vs-control").hidden = onTowns || state.cmp !== "other";
     $("town-vs-control").hidden = !onTowns || state.tcmp !== "other";
@@ -1073,6 +1092,7 @@ export async function startExplorer() {
   function render() {
     applyView();
     if (state.view === "districts") renderDistricts();
+    else if (state.view === "commonwealth") { /* the gallery draws itself */ }
     else if (towns) renderTowns();
     else {
       $("entity-name").textContent = "Town data unavailable";

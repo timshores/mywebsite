@@ -23,17 +23,18 @@ import Layout from "../../layouts/Layout.astro";
       behind my report on
       <a href="/artifacts/western-ma-ppe-report-fy2025.pdf">per-pupil expenditure in Western Massachusetts</a>, with
       revenue by source for the regional districts. The Towns tab shows the general fund budgets of all 351 cities
-      and towns.
+      and towns, and the Commonwealth tab sets every district side by side.
     </p>
     </details>
 
     <div class="view-tabs" role="tablist" aria-label="Explorer view">
       <button type="button" role="tab" id="tab-districts" data-view="districts" aria-controls="view-panel" aria-selected="true">School districts</button>
       <button type="button" role="tab" id="tab-towns" data-view="towns" aria-controls="view-panel" aria-selected="false" tabindex="-1">Towns</button>
+      <button type="button" role="tab" id="tab-commonwealth" data-view="commonwealth" aria-controls="view-panel" aria-selected="false" tabindex="-1">Commonwealth</button>
     </div>
 
     <div id="view-panel" role="tabpanel" aria-labelledby="tab-districts">
-    <form class="controls" onsubmit="return false">
+    <form class="controls" onsubmit="return false" data-view-only="districts towns">
       <div class="control" data-view-only="districts">
         <span id="pick-district-label">District</span>
         <select id="pick-district" aria-labelledby="pick-district-label"></select>
@@ -85,12 +86,21 @@ import Layout from "../../layouts/Layout.astro";
       <div class="relations" id="relations" hidden></div>
     </form>
 
-    <header class="entity">
+    <header class="entity" data-view-only="districts towns">
       <h2 id="entity-name">Loading…</h2>
       <p id="entity-meta"></p>
     </header>
 
-    <div id="tiles" class="tiles"></div>
+    <div id="tiles" class="tiles" data-view-only="districts towns"></div>
+
+    <section id="cw-view" class="cw-view" data-view-only="commonwealth" hidden>
+      <p class="cw-intro">
+        Every Massachusetts school district side by side, two measures at a time. Open a plot to choose the
+        measures, the year, and which districts stand out, and to see which factors line up most closely with
+        spending.
+      </p>
+      <div id="cw-root"></div>
+    </section>
 
     <div id="panels" class="panels" data-view-only="districts">
       <figure id="fig-ppe" class="panel">
@@ -422,6 +432,11 @@ import Layout from "../../layouts/Layout.astro";
 
   .explorer.is-loading .panels {
     opacity: 0.4;
+  }
+
+  /* hidden wins over the display each block sets for itself */
+  .explorer :global([hidden]) {
+    display: none !important;
   }
 
   /* Switching tabs: the words and the view that change with the tab fade out, then in */
@@ -1708,5 +1723,451 @@ import Layout from "../../layouts/Layout.astro";
       font-size: 1.3rem;
     }
 
+  }
+
+  /* Commonwealth tab: a gallery of plots, each opening full screen */
+  .cw-intro {
+    max-width: 68ch;
+    color: var(--ink-soft);
+    margin: 0.4rem 0 1.2rem;
+  }
+
+  .explorer :global(.cw-gallery) {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 1rem;
+  }
+
+  .explorer :global(.cw-card) {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    text-align: left;
+    font: inherit;
+    color: inherit;
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 0.8rem;
+    cursor: pointer;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+  }
+
+  .explorer :global(.cw-card:hover),
+  .explorer :global(.cw-card:focus-visible) {
+    border-color: var(--accent);
+    box-shadow: 0 6px 18px var(--shadow);
+    transform: translateY(-1px);
+  }
+
+  .explorer :global(.cw-thumb) {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 320 / 190;
+    background: #fbf8f1;
+    border-radius: 8px;
+  }
+
+  .explorer :global(.cw-card-title) {
+    font-weight: 700;
+    font-size: 1.02rem;
+  }
+
+  .explorer :global(.cw-card-blurb) {
+    font-size: 0.86rem;
+    color: var(--ink-soft);
+    line-height: 1.4;
+  }
+
+  .explorer :global(.cw-card-axes) {
+    font-size: 0.75rem;
+    color: var(--muted);
+    margin-top: auto;
+    padding-top: 0.2rem;
+  }
+
+  .explorer :global(.sc-grid line) {
+    stroke: var(--grid);
+  }
+
+  .explorer :global(.sc-tick) {
+    font-size: 11px;
+    fill: var(--muted);
+  }
+
+  .explorer :global(.sc-title) {
+    font-size: 12px;
+    fill: var(--ink-soft);
+  }
+
+  .explorer :global(.sc-pt) {
+    stroke: #fff;
+    stroke-width: 0.6;
+  }
+
+  .explorer :global(.sc-smooth) {
+    fill: none;
+    stroke: var(--ink);
+    stroke-width: 2;
+  }
+
+  .explorer :global(.sc-smooth.mini) {
+    stroke-width: 1.5;
+  }
+
+  .explorer :global(.sc-label) {
+    font-size: 11.5px;
+    font-weight: 700;
+    fill: #8a3f22;
+    paint-order: stroke;
+    stroke: #fff;
+    stroke-width: 3px;
+  }
+
+  .explorer :global(.sc-leader) {
+    stroke: #8a3f22;
+    stroke-width: 0.8;
+  }
+
+  .explorer :global(.sc-ring) {
+    fill: none;
+    stroke: var(--ink);
+    stroke-width: 1.5;
+    pointer-events: none;
+  }
+
+  .explorer :global(.cw-dialog) {
+    width: min(1400px, 96vw);
+    max-width: none;
+    height: 94vh;
+    max-height: none;
+    margin: auto;
+    padding: 0;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    background: var(--paper);
+    color: var(--ink);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
+  }
+
+  .explorer :global(.cw-dialog[open]) {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .explorer :global(.cw-dialog::backdrop) {
+    background: rgba(31, 31, 28, 0.45);
+  }
+
+  .explorer :global(.cw-head) {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.9rem 1.2rem 0.4rem;
+  }
+
+  .explorer :global(.cw-title) {
+    font-size: 1.35rem;
+    margin: 0;
+  }
+
+  .explorer :global(.cw-close) {
+    font-size: 1.6rem;
+    line-height: 1;
+    border: 0;
+    background: none;
+    cursor: pointer;
+    color: var(--ink-soft);
+    padding: 0.2rem 0.5rem;
+  }
+
+  .explorer :global(.cw-controls) {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem 1rem;
+    align-items: end;
+    padding: 0.4rem 1.2rem 0.8rem;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .explorer :global(.cw-field) {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    font-size: 0.78rem;
+    color: var(--muted);
+  }
+
+  .explorer :global(.cw-field select),
+  .explorer :global(.cw-field input) {
+    font: inherit;
+    font-size: 0.88rem;
+    color: var(--ink);
+    padding: 0.35rem 0.5rem;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: #fff;
+    max-width: min(30rem, 100%);
+  }
+
+  .explorer :global(.cw-check) {
+    display: flex;
+    gap: 0.4rem;
+    align-items: center;
+    font-size: 0.84rem;
+    color: var(--ink-soft);
+    padding-bottom: 0.4rem;
+  }
+
+  .explorer :global(.cw-body) {
+    flex: 1;
+    min-height: 0;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 320px;
+    gap: 1.4rem;
+    padding: 0.8rem 1.2rem 1.2rem;
+    overflow: auto;
+  }
+
+  .explorer :global(.cw-figure) {
+    position: relative;
+    margin: 0;
+    min-width: 0;
+  }
+
+  .explorer :global(.cw-chart) {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+
+  .explorer :global(.cw-legend) {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 0.4rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem 1rem;
+    font-size: 0.82rem;
+    color: var(--ink-soft);
+  }
+
+  .explorer :global(.cw-legend li) {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+
+  .explorer :global(.cw-key) {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    background: var(--c);
+  }
+
+  .explorer :global(.cw-key.circle) {
+    border-radius: 50%;
+  }
+
+  .explorer :global(.cw-key.triangle) {
+    width: 12px;
+    clip-path: polygon(50% 0, 100% 100%, 0 100%);
+  }
+
+  .explorer :global(.cw-key.smooth) {
+    width: 18px;
+    height: 2px;
+    background: var(--ink);
+  }
+
+  .explorer :global(.cw-caption) {
+    font-size: 0.8rem;
+    color: var(--muted);
+    margin-top: 0.4rem;
+    line-height: 1.45;
+  }
+
+  .explorer :global(.cw-tip) {
+    position: absolute;
+    z-index: 2;
+    pointer-events: none;
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 0.45rem 0.6rem;
+    font-size: 0.82rem;
+    line-height: 1.4;
+    box-shadow: 0 6px 18px var(--shadow);
+    max-width: 18rem;
+    overflow-wrap: anywhere;
+  }
+
+  .explorer :global(.cw-tip-towns),
+  .explorer :global(.cw-tip-hint) {
+    color: var(--muted);
+    font-size: 0.76rem;
+    margin-top: 0.2rem;
+  }
+
+  .explorer :global(.cw-table) {
+    margin-top: 0.6rem;
+    font-size: 0.84rem;
+  }
+
+  .explorer :global(.cw-table summary) {
+    cursor: pointer;
+    color: var(--accent);
+  }
+
+  .explorer :global(.cw-table-scroll) {
+    max-height: 18rem;
+    overflow: auto;
+    margin-top: 0.4rem;
+  }
+
+  .explorer :global(.cw-table table) {
+    border-collapse: collapse;
+    width: 100%;
+  }
+
+  .explorer :global(.cw-table th),
+  .explorer :global(.cw-table td) {
+    text-align: left;
+    padding: 0.2rem 0.5rem;
+    border-bottom: 1px solid var(--grid);
+  }
+
+  .explorer :global(.cw-table td) {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .explorer :global(.cw-side h3) {
+    font-size: 1rem;
+    margin: 0 0 0.6rem;
+  }
+
+  .explorer :global(.cw-side h4) {
+    font-size: 0.9rem;
+    margin: 1rem 0 0.3rem;
+  }
+
+  .explorer :global(.cw-side p) {
+    font-size: 0.84rem;
+    line-height: 1.5;
+    color: var(--ink-soft);
+    margin: 0 0 0.5rem;
+  }
+
+  .explorer :global(.cw-bars) {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    gap: 0.2rem;
+  }
+
+  .explorer :global(.cw-bar) {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 84px 3rem;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
+    font: inherit;
+    font-size: 0.82rem;
+    text-align: left;
+    color: var(--ink);
+    background: none;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    padding: 0.25rem 0.35rem;
+    cursor: pointer;
+  }
+
+  .explorer :global(.cw-bar:hover) {
+    background: #f3eee3;
+  }
+
+  .explorer :global(.cw-bar.is-current) {
+    border-color: var(--accent);
+    background: #fbf1ec;
+  }
+
+  .explorer :global(.cw-bar-track) {
+    position: relative;
+    height: 8px;
+    background: #efe9dd;
+    border-radius: 4px;
+  }
+
+  .explorer :global(.cw-bar-track::after) {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: -2px;
+    bottom: -2px;
+    width: 1px;
+    background: var(--axis);
+  }
+
+  .explorer :global(.cw-bar-fill) {
+    position: absolute;
+    left: 50%;
+    top: 0;
+    bottom: 0;
+    background: #2a78d6;
+    border-radius: 0 4px 4px 0;
+  }
+
+  .explorer :global(.cw-bar-fill.neg) {
+    left: auto;
+    right: 50%;
+    background: #eb6834;
+    border-radius: 4px 0 0 4px;
+  }
+
+  .explorer :global(.cw-bar-value) {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .explorer :global(.cw-side .cw-finding) {
+    margin-top: 0.8rem;
+    color: var(--ink);
+  }
+
+  @media (max-width: 900px) {
+    .explorer :global(.cw-body) {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .explorer :global(.cw-controls) {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      padding: 0.3rem 1rem 0.7rem;
+    }
+
+    .explorer :global(.cw-controls > :nth-child(-n + 2)),
+    .explorer :global(.cw-controls .cw-check),
+    .explorer :global(.cw-controls .cw-find) {
+      grid-column: 1 / -1;
+    }
+
+    .explorer :global(.cw-field select),
+    .explorer :global(.cw-field input) {
+      width: 100%;
+      max-width: 100%;
+    }
+
+    .explorer :global(.cw-check) {
+      padding-bottom: 0;
+    }
+
+    .explorer :global(.cw-dialog) {
+      width: 100vw;
+      height: 100dvh;
+      border-radius: 0;
+    }
   }
 </style>
