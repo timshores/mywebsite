@@ -164,6 +164,8 @@ type Dollars = string;
 /** What the town view's dollars are divided by */
 type Per = "resident" | "household" | "parcel";
 const PERS: Per[] = ["resident", "household", "parcel"];
+/** The Years slider keeps at least three years in view, enough for a trend */
+const MIN_SPAN = 2;
 const PER_WORD: Record<Per, string> = { resident: "resident", household: "household", parcel: "taxable property" };
 type View = "districts" | "towns" | "commonwealth" | "cap" | "data";
 const VIEWS: View[] = ["districts", "towns", "commonwealth", "cap", "data"];
@@ -348,9 +350,11 @@ export async function startExplorer() {
     return;
   }
   const { meta } = data;
-  const years = meta.years;
-  const last = years.length - 1;
-  const span = meta.latest - meta.start;
+  // The years shown: the whole series, or the window the Years slider picks (setWindow). Every
+  // yearly series is cut to it before it's drawn or measured, so trends, growth rates, tiles and
+  // tables all follow.
+  let years = meta.years;
+  let last = years.length - 1;
 
   // ---- Data, loaded a region at a time ----
   const listed = new Map<string, Listed>([...data.districts, ...data.averages].map((e) => [e.id, e]));
@@ -406,8 +410,12 @@ export async function startExplorer() {
     t: pickId(src.t) ?? "leverett",
     tcmp: oneOf(src.tcmp, TOWN_COMPARES, "none"),
     tvs: pickId(src.tvs),
+    // The first and last years shown, at least MIN_SPAN apart
+    from: meta.years.includes(Number(src.from)) ? Number(src.from) : meta.start,
+    to: meta.years.includes(Number(src.to)) ? Number(src.to) : meta.latest,
   };
   if (state.cmp === "other" && !state.vs) state.cmp = "none";
+  if (state.to - state.from < MIN_SPAN) [state.from, state.to] = [meta.start, meta.latest];
   // Legend selections; empty means every segment shows. Kept across districts so
   // one category can be followed from district to district.
   const isolated: Record<StackPanel, Set<string>> = {
@@ -546,6 +554,35 @@ export async function startExplorer() {
     dollarOut.textContent = label;
   };
   document.querySelectorAll("[data-latest]").forEach((n) => (n.textContent = String(meta.latest)));
+  document.querySelectorAll("[data-start]").forEach((n) => (n.textContent = String(meta.start)));
+
+  // The Years slider: two handles, the first and last years shown, kept MIN_SPAN apart
+  const fromSlider = $<HTMLInputElement>("year-from");
+  const toSlider = $<HTMLInputElement>("year-to");
+  const yearsOut = $("years-out");
+  const yearAt = (k: number) => meta.years.indexOf(k);
+  for (const sl of [fromSlider, toSlider]) sl.max = String(meta.years.length - 1);
+  const showYears = () => {
+    const [a, b] = [yearAt(state.from), yearAt(state.to)];
+    fromSlider.value = String(a);
+    toSlider.value = String(b);
+    fromSlider.setAttribute("aria-valuetext", `FY${state.from}`);
+    toSlider.setAttribute("aria-valuetext", `FY${state.to}`);
+    const track = fromSlider.parentElement!;
+    track.style.setProperty("--a", String(a / (meta.years.length - 1)));
+    track.style.setProperty("--b", String(b / (meta.years.length - 1)));
+    yearsOut.textContent = `FY${state.from}–FY${state.to}`;
+  };
+  fromSlider.addEventListener("input", () => {
+    const a = Math.min(Number(fromSlider.value), yearAt(state.to) - MIN_SPAN);
+    fromSlider.value = String(a);
+    if (meta.years[a] !== state.from) update({ from: meta.years[a] });
+  });
+  toSlider.addEventListener("input", () => {
+    const b = Math.max(Number(toSlider.value), yearAt(state.from) + MIN_SPAN);
+    toSlider.value = String(b);
+    if (meta.years[b] !== state.to) update({ to: meta.years[b] });
+  });
 
   select.value = state.d;
   compareSelect.value = state.cmp;
@@ -633,6 +670,10 @@ export async function startExplorer() {
       if (state.cmp === "other" && state.vs) q.set("vs", state.vs);
     }
     if (state.usd !== "nominal") q.set("usd", state.usd);
+    if (state.view === "districts" || state.view === "towns") {
+      if (state.from !== meta.start) q.set("from", String(state.from));
+      if (state.to !== meta.latest) q.set("to", String(state.to));
+    }
     history.replaceState(null, "", `${location.pathname}?${q}`);
     askToRemember();
     if (!switching && !root.classList.contains("is-switching")) {
@@ -749,7 +790,8 @@ export async function startExplorer() {
   }
   const comparisonFor = (e: Entity) => {
     const id = comparisonId(e);
-    return id ? byId.get(id) ?? null : null;
+    const c = id ? byId.get(id) : null;
+    return c ? win(c) : null;
   };
 
   /** "Shutesbury" or "the Tiny cohort average", for use mid-sentence. */
@@ -766,7 +808,8 @@ export async function startExplorer() {
   }
   const townComparison = (t: Town) => {
     const id = townComparisonId(t);
-    return id ? townById.get(id) ?? null : null;
+    const c = id ? townById.get(id) : null;
+    return c ? win(c) : null;
   };
 
   /** Why an entity has no revenue chart, in the chart's place. */
@@ -1120,7 +1163,8 @@ export async function startExplorer() {
     const fmt = kind === "usd" ? usd : kind === "count" ? (v: number) => Math.round(v).toLocaleString("en-US") : fte;
     const unit = kind === "usd" ? ` $/${per}` : "";
     const prior = end - 1;
-    const windows = [end, 10, 5];
+    // Growth over the years shown, then over the last 10 and 5 when the window holds more
+    const windows = [end, ...[10, 5].filter((n) => n < end)];
     const t = document.createElement("table");
     t.append(text("caption", caption));
     const head = t.createTHead().insertRow();
@@ -1279,9 +1323,39 @@ export async function startExplorer() {
   }
 
   /** Draw the view; refresh() has loaded what it needs. */
+  // ---- The window of years: each entity's yearly series, cut to it, made once per window ----
+  const allYears = meta.years.length;
+  const yearly = (v: unknown) => Array.isArray(v) && v.length === allYears && v.every((x) => x === null || typeof x === "number");
+  function cut<T>(o: T, a: number, b: number): T {
+    if (Array.isArray(o)) return (yearly(o) ? o.slice(a, b + 1) : o.map((x) => cut(x, a, b))) as T;
+    if (o && typeof o === "object") return Object.fromEntries(Object.entries(o).map(([k, v]) => [k, cut(v, a, b)])) as T;
+    return o;
+  }
+  const cuts = new WeakMap<object, { key: string; value: unknown }>();
+  function win<T extends object>(o: T): T {
+    const [a, b] = [yearAt(state.from), yearAt(state.to)];
+    if (a === 0 && b === allYears - 1) return o;
+    const key = `${a}-${b}`;
+    const hit = cuts.get(o);
+    if (hit?.key === key) return hit.value as T;
+    const value = cut(o, a, b);
+    cuts.set(o, { key, value });
+    return value;
+  }
+  function setWindow() {
+    const a = yearAt(state.from);
+    const b = yearAt(state.to);
+    if (years[0] === meta.years[a] && years.length === b - a + 1) return;
+    years = meta.years.slice(a, b + 1);
+    last = years.length - 1;
+    hovered = null;
+  }
+
   function render() {
+    setWindow();
     applyView();
     showDollars();
+    showYears();
     explainDollars();
     if (state.view === "districts") renderDistricts();
     else if (state.view === "commonwealth" || state.view === "cap" || state.view === "data") { /* these draw themselves */ }
@@ -1298,7 +1372,7 @@ export async function startExplorer() {
   }
 
   function renderDistricts() {
-    const e = byId.get(state.d)!;
+    const e = win(byId.get(state.d)!);
     const c = comparisonFor(e);
     const real = state.usd !== "nominal";
     const dollarsNote = real ? `FY${state.usd} dollars` : "Nominal dollars";
@@ -1345,7 +1419,7 @@ export async function startExplorer() {
     const cName = c ? c.name : "";
 
     // Tiles (always whole totals, whatever the legend isolates)
-    const g = cagr(ppeTotal[0], ppeTotal[last], span);
+    const g = cagr(ppeTotal[0], ppeTotal[last], last);
     const enrollChange =
       e.enroll.in_district[0] && e.enroll.in_district[last]
         ? e.enroll.in_district[last]! / e.enroll.in_district[0]! - 1
@@ -1354,20 +1428,20 @@ export async function startExplorer() {
     const above = nss[2].values[last];
     const aidShare = aid != null && nssTotal[last] ? aid / nssTotal[last]! : null;
     $("tiles").replaceChildren(
-      tile(`Spending per pupil, FY${meta.latest}`, ppeTotal[last] != null ? usd(ppeTotal[last]!) : "–", [
-        g != null ? `${pct(g)} a year since FY${meta.start}${real ? ", after inflation" : ""}` : "",
+      tile(`Spending per pupil, FY${years[last]}`, ppeTotal[last] != null ? usd(ppeTotal[last]!) : "–", [
+        g != null ? `${pct(g)} a year since FY${years[0]}${real ? ", after inflation" : ""}` : "",
         c && cPpeTotal?.[last] != null ? `${cName}: ${usd(cPpeTotal[last]!)}` : "",
       ]),
-      tile(`In-district enrollment, FY${meta.latest}`, e.enroll.in_district[last] != null ? `${fte(e.enroll.in_district[last]!)} FTE` : "–", [
-        enrollChange != null ? `${pct(enrollChange)} since FY${meta.start}` : "",
+      tile(`In-district enrollment, FY${years[last]}`, e.enroll.in_district[last] != null ? `${fte(e.enroll.in_district[last]!)} FTE` : "–", [
+        enrollChange != null ? `${pct(enrollChange)} since FY${years[0]}` : "",
         e.kind === "district" ? "" : "Average per district",
       ]),
-      tile(`Chapter 70 aid per foundation pupil, FY${meta.latest}`, aid != null ? usd(aid) : "–", [
+      tile(`Chapter 70 aid per foundation pupil, FY${years[last]}`, aid != null ? usd(aid) : "–", [
         aidShare != null ? `${Math.round(aidShare * 100)}% of actual net school spending` : "",
         cNss && cNss[0].values[last] != null ? `${cName}: ${usd(cNss[0].values[last]!)}` : "",
       ]),
-      tile(`Spending above required, FY${meta.latest}`, above != null ? usd(above) : "Not reported", [
-        above != null ? "Per foundation pupil" : `DESE has not reported FY${meta.latest} actual spending`,
+      tile(`Spending above required, FY${years[last]}`, above != null ? usd(above) : "Not reported", [
+        above != null ? "Per foundation pupil" : `DESE has not reported FY${years[last]} actual spending`,
         cNss && cNss[2].values[last] != null ? `${cName}: ${usd(cNss[2].values[last]!)}` : "",
       ]),
     );
@@ -1479,7 +1553,9 @@ export async function startExplorer() {
       $("rev-none").textContent = noRevenue(e);
       delete fullTables.rev;
     } else {
-      const end = years.indexOf(revYears.latest);
+      // The latest revenue year, or the window's last year if that comes first
+      const at = years.indexOf(revYears.latest);
+      const end = at < 0 ? last : at;
       const cRev = c ? revSeries(c) : null;
       const cRevName = c && cRev ? revName(c) : "";
       const revTotal = totals(rev);
@@ -1707,7 +1783,7 @@ export async function startExplorer() {
   }
 
   function renderTowns() {
-    const t = townById.get(state.t)!;
+    const t = win(townById.get(state.t)!);
     const c = townComparison(t);
     const real = state.usd !== "nominal";
     const dollarsNote = real ? `FY${state.usd} dollars` : "Nominal dollars";
@@ -1832,7 +1908,7 @@ export async function startExplorer() {
     ];
     $("tiles").replaceChildren(
       tile(`General fund spending per ${perWord}, FY${fy}`, spendTotal[end] != null ? usd(spendTotal[end]!) : "–", [
-        g != null ? `${pct(g)} a year since FY${meta.start}${real ? ", after inflation" : ""}` : "",
+        g != null ? `${pct(g)} a year since FY${years[0]}${real ? ", after inflation" : ""}` : "",
         t.kind === "town" && allDollars != null ? `${millions(allDollars)} in all` : "",
         c && cSpendTotal?.[end] != null ? `${c.name}: ${usd(cSpendTotal[end]!)}` : "",
       ]),
@@ -1844,8 +1920,8 @@ export async function startExplorer() {
         rev[0].values[end] != null ? `${usd(rev[0].values[end]!)} per ${perWord}` : "",
         c && cTaxShare != null ? `${c.name}: ${percent(cTaxShare)}` : "",
       ]),
-      tile(`${t.kind === "town" ? "Population" : "Combined population"}, July ${meta.latest - 1}`, popNow != null ? count(popNow) : "–", [
-        popChange != null ? `${pct(popChange)} since July ${meta.start - 1}` : "",
+      tile(`${t.kind === "town" ? "Population" : "Combined population"}, July ${years[last] - 1}`, popNow != null ? count(popNow) : "–", [
+        popChange != null ? `${pct(popChange)} since July ${years[0] - 1}` : "",
         t.kind === "average" ? "Census Bureau estimates" : peerLabel ? `Peer group: towns with ${peerLabel}` : "Not in a peer group",
       ]),
       ...propTiles,

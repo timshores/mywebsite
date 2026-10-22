@@ -61,6 +61,10 @@ function el<K extends keyof HTMLElementTagNameMap>(tag: K, cls?: string, text?: 
   return n;
 }
 const link = (text: string, href: string) => Object.assign(el("a", undefined, text), { href });
+/** Further reading on Chapter 70, for the explanations that end with it */
+const seeAlso = (): (string | Node)[] => ["See also Kiera McLaughlin's ", link("“Chapter 70: Some of What You Need to " +
+  "Know to Understand the School Budget Process”", "https://www.amherstindy.org/2026/02/05/chapter-70-some-of-what-you-need-to-know-to-understand-the-school-budget-process/"),
+  " in the Amherst Indy, February 5, 2026."];
 /** A measure's name, bold wherever text describes it */
 const vn = (s: string) => el("strong", "cw-var", s);
 
@@ -231,7 +235,7 @@ export function startCap(root: HTMLElement, data: CapData, opts: { town: string 
   const yearsBox = el("section", "cap-section");
   const chartBox = el("section", "cap-section");
   const fifths = el("section", "cap-section");
-  root.replaceChildren(yearRow, how, tiles, scen, lookup, yearsBox, chartBox, fifths);
+  root.replaceChildren(how, yearRow, tiles, scen, lookup, yearsBox, chartBox, fifths);
 
   // Year by year: each year's factor for the chosen cap, kept while only the town changes
   let histMemo: { key: string; f: number[] } | null = null;
@@ -443,7 +447,9 @@ export function startCap(root: HTMLElement, data: CapData, opts: { town: string 
       `everyone to reach that total. The result for FY${y.fy}: the cap gave a ${big(y.totals.up_sum)} education ` +
       `discount to ${y.totals.up} Massachusetts towns and added it to the required contribution of the other ` +
       `${y.totals.down} towns.`);
-    howText.replaceChildren(p1, pCap, p2);
+    const pSee = el("p", "cap-note");
+    pSee.append(...seeAlso());
+    howText.replaceChildren(p1, pCap, p2, pSee);
 
     tiles.replaceChildren(
       tile(`Towns at the cap, FY${y.fy}`, String(y.totals.capped),
@@ -530,7 +536,7 @@ export function startCap(root: HTMLElement, data: CapData, opts: { town: string 
     steps.replaceChildren(tableHead, scroll0, verdict);
 
     // The window's explanation, with this town's numbers
-    const explain: (string | HTMLElement)[][] = [
+    const explain: (string | Node)[][] = [
       ["Chapter 70 sets a minimum each town must pay toward its schools each year, its required local contribution. " +
         "The formula works toward a target for that minimum, the target local contribution: the town's combined effort " +
         "yield, a statewide percentage of its property value plus one of its residents' income, or " +
@@ -573,6 +579,7 @@ export function startCap(root: HTMLElement, data: CapData, opts: { town: string 
     explain.push(["The rest of this page compares targets. Under today's rules, if a town's target fell, its required contribution " +
       "would come down to the new target the next year; if its target rose, its required contribution would climb toward " +
       "it a few percent a year."]);
+    explain.push(seeAlso());
     helpBody.replaceChildren(...explain.map((parts) => {
       const para = el("p");
       para.append(...parts);
