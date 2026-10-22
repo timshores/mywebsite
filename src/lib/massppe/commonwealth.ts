@@ -343,8 +343,8 @@ export function startCommonwealth(root: HTMLElement, data: CwData, opts: { openD
       const sharing = pts.filter((p) => (rowOf.get(p.id)?.towns ?? []).some((t) => (count.get(t) ?? 0) > 1)).length;
       if (sharing / n >= 0.1) {
         out.push({ label: "Shared towns", text: [`${sharing} of these ${n} districts share towns with another district ` +
-          "here, such as an elementary district and its regional one. Their towns' wealth counts more than once, so the " +
-          "points aren't fully independent."] });
+          "here, such as an elementary district and its regional one. Their towns' wealth counts for each district they " +
+          "belong to, so the points aren't fully independent."] });
       }
     }
     return out;
