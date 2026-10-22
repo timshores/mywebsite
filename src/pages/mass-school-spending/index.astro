@@ -558,8 +558,12 @@ import Layout from "../../layouts/Layout.astro";
         file adds Census items up into the chart's sources, and every row links to its source. Built by Tim Shores with Claude Code. The code that prepares the data is at
         <a href="https://github.com/timshores/schools">github.com/timshores/schools</a>.
       </p>
-      <p id="remember-note" class="remember-note"></p>
     </section>
+
+    <!-- On every tab: whether this browser keeps the reader's choices -->
+    <footer class="explorer-footer">
+      <p id="remember-note" class="remember-note"></p>
+    </footer>
   </section>
 </Layout>
 
@@ -1871,10 +1875,21 @@ import Layout from "../../layouts/Layout.astro";
     cursor: pointer;
   }
 
+  /* The notes have the Data tab to themselves, so no rule above them */
   .notes {
+    margin-top: 1rem;
+  }
+
+  .explorer-footer {
     margin-top: 2.5rem;
     border-top: 1px solid var(--line);
-    padding-top: 0.5rem;
+    padding-top: 0.6rem;
+  }
+
+  .explorer-footer .remember-note {
+    font-size: 0.85rem;
+    color: var(--muted);
+    margin: 0;
   }
 
   .notes p {
