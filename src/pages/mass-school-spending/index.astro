@@ -88,14 +88,13 @@ import Layout from "../../layouts/Layout.astro";
         <span id="pick-town-vs-label">Comparison town or average</span>
         <select id="pick-town-vs" aria-labelledby="pick-town-vs-label"></select>
       </div>
-      <div class="control dollars-control">
-        <span id="dollars-label">Dollars</span>
-        <div class="dollars-slider">
-          <input type="range" id="dollars" min="0" max="17" step="1" value="0" aria-labelledby="dollars-label" />
-          <output id="dollars-out" for="dollars">Nominal</output>
+      <fieldset class="control toggle">
+        <legend>Dollars</legend>
+        <div class="toggle-options">
+          <label><input type="radio" name="dollars" value="nominal" checked /><span>Nominal</span></label>
+          <label><input type="radio" name="dollars" value="real" /><span>FY<span data-latest>2025</span> dollars</span></label>
         </div>
-        <div class="dollars-ends" aria-hidden="true"><span>Nominal</span><span>FY<span data-latest>2025</span></span></div>
-      </div>
+      </fieldset>
       <div class="control years-control">
         <span id="years-label">Years</span>
         <div class="years-slider" role="group" aria-labelledby="years-label">
@@ -558,7 +557,7 @@ import Layout from "../../layouts/Layout.astro";
         FY2024 revenue includes $27.3 million of miscellaneous revenue, more than half its total.
       </p>
       <p>
-        <strong>Constant dollars</strong>, in the dollars of any fiscal year the slider picks, adjust for inflation with the Bureau of Labor
+        <strong>FY<span data-latest>2025</span> dollars</strong> adjust for inflation with the Bureau of Labor
         Statistics' <a href="https://data.bls.gov/timeseries/CUUR0100SA0">consumer price index for the Northeast</a>
         (<a href="/mass-school-spending/data/cpi.csv" download>CSV</a>; CPI-U, series CUUR0100SA0), averaged over each July–June
         fiscal year. The report's
@@ -803,25 +802,21 @@ import Layout from "../../layouts/Layout.astro";
     font-size: 0.82rem;
   }
 
-  .explorer :global(.controls-dock-body) .dollars-control,
   .explorer :global(.controls-dock-body) .years-control {
     min-width: 0;
   }
 
-  .explorer :global(.controls-dock-body) .dollars-slider,
   .explorer :global(.controls-dock-body) .years-slider {
     min-height: 0;
     gap: 0.4rem;
   }
 
-  .explorer :global(.controls-dock-body) .dollars-slider input[type="range"],
   .explorer :global(.controls-dock-body) .years-track {
     flex: none;
     width: 7rem;
     min-width: 0;
   }
 
-  .explorer :global(.controls-dock-body) .dollars-slider output,
   .explorer :global(.controls-dock-body) .years-slider output {
     min-width: 0;
     font-size: 0.8rem;
@@ -833,14 +828,17 @@ import Layout from "../../layouts/Layout.astro";
     line-height: 1.9;
   }
 
-  .explorer :global(.controls-dock-body) .toggle-options span {
+  .explorer :global(.controls-dock-body) .toggle-options label > span {
     padding: 0.2rem 0.55rem;
     font-size: 0.8rem;
   }
 
+  .explorer :global(.controls-dock-body) .toggle-options span span {
+    font-size: inherit;
+  }
+
   /* Docked, the controls skip the slider ends, their longer notes and the list of related towns and
      districts */
-  .explorer :global(.controls-dock-body) .dollars-ends,
   .explorer :global(.controls-dock-body) .years-ends,
   .explorer :global(.controls-dock-body .controls-note),
   .explorer :global(.controls-dock-body .relations) {
@@ -1093,40 +1091,6 @@ import Layout from "../../layouts/Layout.astro";
     margin-bottom: 0.3rem;
   }
 
-
-  .dollars-control {
-    min-width: min(22rem, 100%);
-  }
-
-  .dollars-slider {
-    display: flex;
-    align-items: center;
-    gap: 0.6rem;
-    min-height: 2.2rem;
-  }
-
-  .dollars-slider input[type="range"] {
-    flex: 1;
-    min-width: 8rem;
-    accent-color: var(--accent);
-  }
-
-  .dollars-slider output {
-    min-width: 7.5rem;
-    font-size: 0.95rem;
-    font-weight: 600;
-    color: var(--ink);
-    white-space: nowrap;
-  }
-
-  .dollars-ends {
-    display: flex;
-    justify-content: space-between;
-    margin-right: 8.1rem;
-    font-size: 0.7rem;
-    font-weight: 400;
-    color: var(--muted);
-  }
 
   /* Years: two handles on one track, the first and last years shown (explorer.ts showYears) */
   .years-control {

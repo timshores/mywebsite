@@ -402,8 +402,8 @@ export async function startExplorer() {
     // The entity picked in the second menu when comparing with another district or average
     vs: listed.has(pickId(src.vs) ?? "") ? pickId(src.vs) : null as string | null,
     // Any year in the series; "real", from older links, is the latest year
-    usd: (src.usd === "real" ? String(meta.latest)
-      : meta.years.includes(Number(src.usd)) ? String(Number(src.usd)) : "nominal") as Dollars,
+    // Nominal, or the latest year's dollars; links that name another year, or "real", get the latest
+    usd: (src.usd === "real" || meta.years.includes(Number(src.usd)) ? String(meta.latest) : "nominal") as Dollars,
     per: oneOf(src.per, PERS, "resident"),
     view: (VIEWS.includes(src.view as View) ? src.view : "districts") as View,
     // Town view: checked against the town list once towns.json loads
@@ -542,17 +542,9 @@ export async function startExplorer() {
   fillEntities(select);
   fillEntities(vsSelect);
   const compareSelect = $<HTMLSelectElement>("pick-compare");
-  // The dollars slider: Nominal at the left, then each fiscal year's dollars
-  const dollarSlider = $<HTMLInputElement>("dollars");
-  const dollarOut = $("dollars-out");
-  dollarSlider.max = String(meta.years.length);
-  const dollarsAt = (v: number): Dollars => (v === 0 ? "nominal" : String(meta.years[v - 1]));
-  const showDollars = () => {
-    const label = state.usd === "nominal" ? "Nominal" : `FY${state.usd} dollars`;
-    dollarSlider.value = String(state.usd === "nominal" ? 0 : meta.years.indexOf(Number(state.usd)) + 1);
-    dollarSlider.setAttribute("aria-valuetext", label === "Nominal" ? "Nominal dollars" : label);
-    dollarOut.textContent = label;
-  };
+  // Dollars: nominal, or the latest year's
+  const dollarInputs = document.querySelectorAll<HTMLInputElement>('input[name="dollars"]');
+  const showDollars = () => dollarInputs.forEach((r) => (r.checked = (r.value === "real") === (state.usd !== "nominal")));
   document.querySelectorAll("[data-latest]").forEach((n) => (n.textContent = String(meta.latest)));
   document.querySelectorAll("[data-start]").forEach((n) => (n.textContent = String(meta.start)));
 
@@ -599,7 +591,7 @@ export async function startExplorer() {
     update({ cmp, vs });
   });
   vsSelect.addEventListener("change", () => update({ vs: vsSelect.value }));
-  dollarSlider.addEventListener("input", () => update({ usd: dollarsAt(Number(dollarSlider.value)) }));
+  dollarInputs.forEach((r) => r.addEventListener("change", () => r.checked && update({ usd: r.value === "real" ? String(meta.latest) : "nominal" })));
   const perInputs = document.querySelectorAll<HTMLInputElement>('input[name="per"]');
   perInputs.forEach((r) => (r.checked = r.value === state.per));
   perInputs.forEach((r) => r.addEventListener("change", () => r.checked && update({ per: r.value as Per })));
@@ -2192,16 +2184,15 @@ export async function startExplorer() {
 
   // Plain-language note on the dollar modes, with a worked example from the index for the year chosen
   function explainDollars() {
-    const y = state.usd === "nominal" ? meta.latest : Number(state.usd);
-    const from = y === meta.start ? meta.latest : meta.start;
-    const factor = meta.cpi[String(y)] / meta.cpi[String(from)];
+    const y = meta.latest;
+    const factor = meta.cpi[String(y)] / meta.cpi[String(meta.start)];
     $("dollars-note").replaceChildren(
       text("strong", "Nominal dollars"),
       ` are the amounts reported each year, with no adjustment for inflation. `,
       text("strong", `FY${y} dollars`),
       ` restate every year in what a dollar bought in FY${y}, using the Northeast consumer price index: ` +
-        `$1,000 spent in FY${from} is about ${usd(1000 * factor)} in FY${y} dollars. ` +
-        "Slide to any year; use these to see whether spending grew faster than prices.",
+        `$1,000 spent in FY${meta.start} is about ${usd(1000 * factor)} in FY${y} dollars. ` +
+        "Use these to see whether spending grew faster than prices.",
     );
   }
 
