@@ -3218,6 +3218,23 @@ import Layout from "../../layouts/Layout.astro";
     color: var(--muted);
   }
 
+  /* The bar holds the year and the cap on one line where there's room */
+  .explorer :global(.cap-scen-row) .cap-slider,
+  .explorer :global(.cap-scen-row .cap-slider) {
+    width: min(200px, 100%);
+  }
+
+  .explorer :global(.cap-scen-row) {
+    column-gap: 0.85rem;
+  }
+
+  /* In the floating bar, the year leads, set off from the cap */
+  .explorer :global(.cap-scen-row .cap-year) {
+    margin: 0;
+    padding-right: 1rem;
+    border-right: 1px solid var(--line);
+  }
+
   .explorer :global(.cap-year-btn) {
     font: inherit;
     font-size: 0.85rem;
@@ -3270,6 +3287,7 @@ import Layout from "../../layouts/Layout.astro";
     top: calc(var(--tabs-h, 3rem) + 0.4rem);
     z-index: 25;
     box-shadow: 0 6px 16px var(--shadow);
+    margin: 1rem 0;
     display: flex;
     flex-wrap: wrap;
     align-items: center;
