@@ -122,7 +122,7 @@ import Layout from "../../layouts/Layout.astro";
         measures, the year, and which districts stand out, and to see which factors line up most closely with
         spending.
       </p>
-      <div id="cw-root"></div>
+      <div id="cw-root"><p class="tab-loading">Loading the plots…</p></div>
     </section>
 
     <section id="cap-view" class="cap-view" data-view-only="cap" hidden>
@@ -162,7 +162,7 @@ import Layout from "../../layouts/Layout.astro";
           if (!closed) d.open = true;
         })();
       </script>
-      <div id="cap-root"></div>
+      <div id="cap-root"><p class="tab-loading">Loading the Chapter 70 figures…</p></div>
       <section class="cap-section cap-questions">
         <h3>Questions I'm still working through</h3>
         <ul>
@@ -578,6 +578,12 @@ import Layout from "../../layouts/Layout.astro";
 
   :global(html.modal-open) {
     overflow: hidden;
+  }
+
+  .tab-loading {
+    color: var(--muted);
+    font-style: italic;
+    margin: 1rem 0;
   }
 
   /* hidden wins over the display each block sets for itself */

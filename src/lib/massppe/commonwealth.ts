@@ -204,7 +204,7 @@ export function startCommonwealth(root: HTMLElement, data: CwData, opts: { openD
     card.addEventListener("click", () => open({ preset: p.id, y: p.y, x: p.x, fy: latest, log: p.log, all: false, hl: DEFAULT_HL, find: null }));
     gallery.append(card);
   }
-  root.append(gallery);
+  root.replaceChildren(gallery);
 
   // ---- The full-screen view ----
   const dialog = el("dialog", "cw-dialog");

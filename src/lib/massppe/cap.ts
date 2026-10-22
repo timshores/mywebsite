@@ -224,7 +224,7 @@ export function startCap(root: HTMLElement, data: CapData, opts: { town: string 
   const yearsBox = el("section", "cap-section");
   const chartBox = el("section", "cap-section");
   const fifths = el("section", "cap-section");
-  root.append(yearRow, how, tiles, scen, lookup, yearsBox, chartBox, fifths);
+  root.replaceChildren(yearRow, how, tiles, scen, lookup, yearsBox, chartBox, fifths);
 
   // Year by year: each year's factor for the chosen cap, kept while only the town changes
   let histMemo: { key: string; f: number[] } | null = null;

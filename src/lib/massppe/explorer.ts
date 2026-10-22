@@ -674,6 +674,18 @@ export async function startExplorer() {
     if (new URLSearchParams(location.search).has("y")) cw.openFromUrl();
   }
 
+  // Pointing at either of these tabs starts its download, so it's usually ready by the click
+  const warm: Record<string, () => void> = {
+    commonwealth: () => void Promise.all([import("./commonwealth"), import("../../data/massppe/commonwealth.json")]).catch(() => {}),
+    cap: () => void Promise.all([import("./cap"), import("../../data/massppe/cap.json")]).catch(() => {}),
+  };
+  for (const tab of tabs) {
+    const go = warm[tab.dataset.view ?? ""];
+    if (!go) continue;
+    tab.addEventListener("pointerenter", go, { once: true });
+    tab.addEventListener("focus", go, { once: true });
+  }
+
   // The 82.5% cap tab, loaded the first time it opens; it starts on the town last viewed
   let cap: { render(): void } | null = null;
   async function loadCap() {
