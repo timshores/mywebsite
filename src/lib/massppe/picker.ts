@@ -74,6 +74,8 @@ export function groupedPicker(select: HTMLSelectElement, labelId: string, noun: 
     for (const og of select.querySelectorAll("optgroup")) {
       const box = document.createElement("section");
       box.className = "picker-group";
+      // A group that starts a new kind of choice (Gateway Cities, averages) gets a line above it
+      if (og.dataset.section !== undefined) box.classList.add("picker-section");
       const head = document.createElement("button");
       head.type = "button";
       head.className = "picker-group-head";

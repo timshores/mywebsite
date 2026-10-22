@@ -417,11 +417,12 @@ export async function startExplorer() {
   }
 
   // ---- Controls ----
-  /** An option group, skipped when empty */
-  function addGroup(sel: HTMLSelectElement, label: string, items: { id: string; name: string }[]) {
+  /** An option group, skipped when empty; `section` draws a line above it in the menu */
+  function addGroup(sel: HTMLSelectElement, label: string, items: { id: string; name: string }[], section = false) {
     if (!items.length) return;
     const group = document.createElement("optgroup");
     group.label = label;
+    if (section) group.dataset.section = "";
     items.forEach((e) => group.append(new Option(e.name, e.id)));
     sel.append(group);
   }
@@ -432,10 +433,10 @@ export async function startExplorer() {
     regions.forEach(([rk, rl]) => addGroup(sel, `${rl} districts`, traditional.filter((d) => d.region === rk)));
     addGroup(sel, "Other districts", traditional.filter((d) => !d.region));
     // Also listed under their regions: the menu shows a district wherever it belongs
-    addGroup(sel, "Gateway City districts", data.districts.filter((d) => d.gateway));
-    addGroup(sel, "Vocational and technical districts", data.districts.filter((d) => d.type === "vocational"));
+    addGroup(sel, "Gateway City districts", data.districts.filter((d) => d.gateway), true);
+    addGroup(sel, "Vocational and technical districts", data.districts.filter((d) => d.type === "vocational"), true);
     addGroup(sel, "Charter schools", data.districts.filter((d) => d.type === "charter"));
-    addGroup(sel, "Statewide averages", data.averages.filter((a) => !a.region));
+    addGroup(sel, "Statewide averages", data.averages.filter((a) => !a.region), true);
     regions.forEach(([rk, rl]) => addGroup(sel, `${rl} averages`, data.averages.filter((a) => a.region === rk)));
   }
   const select = $<HTMLSelectElement>("pick-district");
@@ -471,8 +472,8 @@ export async function startExplorer() {
     sel.replaceChildren();
     const counties = [...new Set(towns!.towns.map((x) => x.county ?? "Other"))].sort();
     counties.forEach((c) => addGroup(sel, `${c} County`, towns!.towns.filter((x) => (x.county ?? "Other") === c)));
-    addGroup(sel, "Gateway Cities", towns!.towns.filter((x) => x.gateway));
-    addGroup(sel, "Statewide averages", towns!.averages.filter((a) => !a.region));
+    addGroup(sel, "Gateway Cities", towns!.towns.filter((x) => x.gateway), true);
+    addGroup(sel, "Statewide averages", towns!.averages.filter((a) => !a.region), true);
     regions.forEach(([rk, rl]) => addGroup(sel, `${rl} averages`, towns!.averages.filter((a) => a.region === rk)));
   }
   townSelect.addEventListener("change", () => update({ t: townSelect.value }));
