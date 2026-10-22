@@ -273,30 +273,35 @@ export function startCap(root: HTMLElement, data: CapData, opts: { town: string 
   const steps = el("div", "cap-steps");
   lookup.append(pickWrap, steps);
 
-  // Targets and required contributions, explained in a window of their own
-  const help = el("dialog", "cw-sub");
-  help.setAttribute("aria-labelledby", "cap-help-title");
-  const helpHead = el("div", "cw-head");
-  const helpTitle = el("h2", "cw-title", "How Chapter 70 sets the minimum");
-  helpTitle.id = "cap-help-title";
-  const helpClose = el("button", "cw-close", "×");
-  helpClose.type = "button";
-  helpClose.setAttribute("aria-label", "Close");
-  helpClose.addEventListener("click", () => help.close());
-  helpHead.append(helpTitle, helpClose);
-  const helpBody = el("div", "cw-sub-body");
-  help.append(helpHead, helpBody);
-  help.addEventListener("click", (ev) => {
-    if (ev.target === help) help.close();
-  });
-  (root.closest(".explorer") ?? document.body).append(help);
-  const helpButton = (label: string) => {
+  // Explanations in windows of their own: targets and required contributions, and fiscal effort
+  const subDialog = (id: string, title: string) => {
+    const dialog = el("dialog", "cw-sub");
+    dialog.setAttribute("aria-labelledby", id);
+    const head = el("div", "cw-head");
+    const heading = el("h2", "cw-title", title);
+    heading.id = id;
+    const close = el("button", "cw-close", "×");
+    close.type = "button";
+    close.setAttribute("aria-label", "Close");
+    close.addEventListener("click", () => dialog.close());
+    head.append(heading, close);
+    const body = el("div", "cw-sub-body");
+    dialog.append(head, body);
+    dialog.addEventListener("click", (ev) => {
+      if (ev.target === dialog) dialog.close();
+    });
+    (root.closest(".explorer") ?? document.body).append(dialog);
+    return { dialog, body };
+  };
+  const { dialog: help, body: helpBody } = subDialog("cap-help-title", "How Chapter 70 sets the minimum");
+  const { dialog: effort, body: effortBody } = subDialog("cap-effort-title", "Same fiscal effort, two towns");
+  const helpButton = (label: string, dialog = help) => {
     const b = el("button", "cap-help", "?");
     b.type = "button";
     b.setAttribute("aria-haspopup", "dialog");
     b.setAttribute("aria-label", label);
     b.title = label;
-    b.addEventListener("click", () => help.showModal());
+    b.addEventListener("click", () => dialog.showModal());
     return b;
   };
   const picker = groupedPicker(select, "cap-town-label", "towns");
@@ -372,13 +377,60 @@ export function startCap(root: HTMLElement, data: CapData, opts: { town: string 
       "us what's fair for each town. The formula starts out with two percentages set for the year for every town in the " +
       `Commonwealth: in FY${y.fy}, ` +
       `${rate(y.property_pct)} of its property value and ${rate(y.income_pct)} of its residents' income. The sum is the ` +
-      "town's combined effort yield. It's what the town would pay if it made the same effort as every other town to " +
-      "educate its schoolchildren: the same share of its property value and its residents' income.");
+      "town's combined effort yield. It's what the town would pay if it made the same fiscal effort",
+      helpButton("What is fiscal effort? An example with two towns", effort),
+      " as every other town to educate its schoolchildren: the same share of its property value and its residents' income.");
     const pCap = el("p");
     pCap.append(`Meanwhile … no town is asked for more than ${pct(y.max_pct, 1)} of its foundation budget, the state's ` +
       `estimate of what its schools need. ${y.totals.capped} towns, the ones with the most property and income for the ` +
-      "size of their schools, hit that 82.5% cap. They're asked for less than that same effort would yield, and the " +
-      `state pays at least the other ${pct(1 - y.max_pct, 1)}.`);
+      "size of their schools, hit that 82.5% cap. They're asked for less effort than other towns, and the state pays " +
+      `at least the other ${pct(1 - y.max_pct, 1)}.`);
+
+    // Fiscal effort, worked through for two towns with one house each and a school they share
+    const house = 400_000, incomes = [100_000, 1_000_000], school = 10_000;
+    const pEx = school / 2 / (2 * house), iEx = school / 2 / (incomes[0] + incomes[1]);
+    const ceyEx = incomes.map((inc) => house * pEx + inc * iEx);
+    const ex = el("table", "cap-steps-table");
+    ex.createTHead().insertRow().append(el("th"), el("th", "num", "Town A"), el("th", "num", "Town B"));
+    const exBody = ex.createTBody();
+    const exRow = (label: string, cells: string[], cls = "") => {
+      const r = exBody.insertRow();
+      if (cls) r.className = cls;
+      const th = el("th", undefined, label);
+      th.scope = "row";
+      r.append(th, ...cells.map((c) => el("td", "num", c)));
+    };
+    exRow("House, assessed", [usd(house), usd(house)]);
+    exRow("Family income", incomes.map(usd));
+    exRow(`From property, ${rate(pEx)}`, [usd(house * pEx), usd(house * pEx)]);
+    exRow(`From income, ${rate(iEx)}`, incomes.map((inc) => usd(inc * iEx)));
+    exRow("Combined effort yield", ceyEx.map(usd), "total");
+    exRow("Share of family income", ceyEx.map((c, k) => pct(c / incomes[k], 1)));
+    exRow("Property tax rate to raise it", ceyEx.map((c) => `$${((c / house) * 1000).toFixed(2)} per $1,000`));
+    const exPara = (text: string) => el("p", undefined, text);
+    effortBody.replaceChildren(
+      exPara(`Picture two towns, each with one house assessed at ${usd(house)}. In Town A, the family earns ` +
+        `${usd(incomes[0])} a year. In Town B, the family earns ${usd(incomes[1])}. The two towns share a school ` +
+        `that costs ${usd(school)} a year. What should each town pay?`),
+      exPara("Chapter 70 sets its two percentages so that property and income each yield half the total. Here that's " +
+        `${usd(school / 2)} from ${usd(2 * house)} of property, or ${rate(pEx)}, and ${usd(school / 2)} from ` +
+        `${usd(incomes[0] + incomes[1])} of income, or ${rate(iEx)}. Both towns pay those same two percentages: ` +
+        "the same fiscal effort."),
+      ex,
+      exPara(`Town B pays more because its family earns ten times as much. But the same fiscal effort isn't the ` +
+        "same share of each family's income. The property half falls on both houses equally, so Town A's family pays " +
+        `${pct(ceyEx[0] / incomes[0], 1)} of its income and Town B's pays ${pct(ceyEx[1] / incomes[1], 1)}.`),
+      exPara("Chapter 70 doesn't say how a town raises its share, but Massachusetts towns can't tax income. Raising it " +
+        "with the property tax, Town B would tax an identical house at more than twice Town A's rate. The formula " +
+        "expects the town with more income to tax the same house harder."),
+      exPara(`If the formula counted property alone, both houses would owe ${usd(school / 2)}: ` +
+        `${pct(school / 2 / incomes[0], 1)} of Town A's family income and ${pct(school / 2 / incomes[1], 1)} of ` +
+        `Town B's. Counting income moves ${usd(school / 2 - ceyEx[0])} of the bill from Town A to Town B.`),
+      exPara("The real formula does this for all 351 towns, using equalized property values. In " +
+        `FY${y.fy}, it's ${rate(y.property_pct)} of property value and ${rate(y.income_pct)} of income, and ` +
+        `statewide each half yields ${big(y.totals.cey / 2)}. Unlike this example, the towns together are asked for ` +
+        "59% of all foundation budgets, with state aid paying the rest, and the 82.5% cap holds down what the towns " +
+        "with the most wealth are asked for."));
     const p2 = el("p");
     p2.append("Someone has to cover the difference, and that someone is other towns. The state sets the two " +
       `percentages so that the towns together are asked for 59% of all foundation budgets, ${big(y.totals.target)} in ` +
