@@ -8,6 +8,7 @@
 // compresses (it sends .json uncompressed).
 
 import { compact, lines, niceTicks, niceTicksRange, stackedColumns, type Panel, type Series, type Val } from "./charts";
+import { groupedPicker, type Picker } from "./picker";
 
 type Values = Val[];
 
@@ -382,6 +383,7 @@ export async function startExplorer() {
   const townFiles = import.meta.glob<{ default: { towns: Town[] } }>("../../data/massppe/towns/*.json");
   const townLoaded = new Set<string>();
   let townsFailed = false;
+  let townPickers: Picker[] = [];
   async function loadTowns() {
     if (towns || townsFailed) return;
     try {
@@ -398,6 +400,8 @@ export async function startExplorer() {
     townSelect.value = state.t;
     townCompareSelect.value = state.tcmp;
     if (state.tvs) townVsSelect.value = state.tvs;
+    townPickers = [groupedPicker(townSelect, "pick-town-label", "towns and averages"),
+      groupedPicker(townVsSelect, "pick-town-vs-label", "towns and averages")];
   }
   async function ensureTowns(ids: (string | null | undefined)[]) {
     const chunks = new Set(ids.flatMap((id) => (id && townListed.has(id) ? [townListed.get(id)!.chunk] : [])));
@@ -439,6 +443,9 @@ export async function startExplorer() {
   select.value = state.d;
   compareSelect.value = state.cmp;
   if (state.vs) vsSelect.value = state.vs;
+  // The long menus: searchable, with groups that start collapsed
+  const districtPickers = [groupedPicker(select, "pick-district-label", "districts and averages"),
+    groupedPicker(vsSelect, "pick-vs-label", "districts and averages")];
   dollarInputs.forEach((r) => (r.checked = r.value === state.usd));
   select.addEventListener("change", () => update({ d: select.value }));
   compareSelect.addEventListener("change", () => {
@@ -1001,6 +1008,7 @@ export async function startExplorer() {
       relations(null);
       $("tiles").replaceChildren();
     }
+    for (const pk of [...districtPickers, ...townPickers]) pk.sync();
     restoreFocus();
     remember();
   }
@@ -1013,6 +1021,7 @@ export async function startExplorer() {
     const perDistrict = e.kind === "district" ? "" : ", average per district";
 
     // Comparison menu: shown only for "Another district or average" (applyView)
+    select.value = e.id;
     if (state.vs) vsSelect.value = state.vs;
     for (const o of vsSelect.options) o.disabled = o.value === e.id;
 

@@ -24,10 +24,10 @@ import Layout from "../../layouts/Layout.astro";
 
     <div id="view-panel" role="tabpanel" aria-labelledby="tab-districts">
     <form class="controls" onsubmit="return false">
-      <label class="control" data-view-only="districts">
-        <span>District</span>
-        <select id="pick-district"></select>
-      </label>
+      <div class="control" data-view-only="districts">
+        <span id="pick-district-label">District</span>
+        <select id="pick-district" aria-labelledby="pick-district-label"></select>
+      </div>
       <label class="control" data-view-only="districts">
         <span>Compare with</span>
         <select id="pick-compare">
@@ -40,14 +40,14 @@ import Layout from "../../layouts/Layout.astro";
           <option value="other">Another district or average</option>
         </select>
       </label>
-      <label class="control" id="vs-control" hidden>
-        <span>Comparison district</span>
-        <select id="pick-vs"></select>
-      </label>
-      <label class="control" data-view-only="towns" hidden>
-        <span>Town</span>
-        <select id="pick-town"></select>
-      </label>
+      <div class="control" id="vs-control" hidden>
+        <span id="pick-vs-label">Comparison district</span>
+        <select id="pick-vs" aria-labelledby="pick-vs-label"></select>
+      </div>
+      <div class="control" data-view-only="towns" hidden>
+        <span id="pick-town-label">Town</span>
+        <select id="pick-town" aria-labelledby="pick-town-label"></select>
+      </div>
       <label class="control" data-view-only="towns" hidden>
         <span>Compare with</span>
         <select id="pick-town-compare">
@@ -60,10 +60,10 @@ import Layout from "../../layouts/Layout.astro";
           <option value="other">Another town or average</option>
         </select>
       </label>
-      <label class="control" id="town-vs-control" hidden>
-        <span>Comparison town or average</span>
-        <select id="pick-town-vs"></select>
-      </label>
+      <div class="control" id="town-vs-control" hidden>
+        <span id="pick-town-vs-label">Comparison town or average</span>
+        <select id="pick-town-vs" aria-labelledby="pick-town-vs-label"></select>
+      </div>
       <fieldset class="control toggle">
         <legend>Dollars</legend>
         <div class="toggle-options">
@@ -404,12 +404,197 @@ import Layout from "../../layouts/Layout.astro";
     max-width: 100%;
   }
 
-  /* Some district names run long; the menu stays a sensible width and shows them in full when open */
-  #pick-district,
-  #pick-vs {
-    min-width: 15rem;
+  /* The long menus (lib/massppe/picker.ts): a button showing the choice, and a panel with a
+     search box and collapsible groups. Some names run long; the button keeps a sensible
+     width and the panel shows them in full. */
+  .control :global(.picker) {
+    position: relative;
+  }
+
+  .control :global(.picker-button) {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.6rem;
     width: 22rem;
     max-width: 100%;
+    font: inherit;
+    font-size: 0.95rem;
+    font-weight: 400;
+    color: var(--ink);
+    text-align: left;
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 0.45rem 0.6rem;
+    cursor: pointer;
+  }
+
+  .control :global(.picker-button:focus-visible),
+  .control :global(.picker-search:focus-visible),
+  .control :global(.picker-group-head:focus-visible),
+  .control :global(.picker-option:focus-visible) {
+    outline: 2px dashed var(--accent);
+    outline-offset: 1px;
+  }
+
+  .control :global(.picker-value) {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .control :global(.picker-caret) {
+    flex: none;
+    width: 7px;
+    height: 7px;
+    margin: -3px 2px 0 0;
+    border: solid var(--ink-soft);
+    border-width: 0 1.5px 1.5px 0;
+    transform: rotate(45deg);
+  }
+
+  .control :global(.picker-panel) {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    z-index: 30;
+    display: flex;
+    flex-direction: column;
+    width: min(26rem, calc(100vw - 32px));
+    max-height: min(30rem, 70vh);
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    box-shadow: 0 16px 40px rgba(31, 31, 28, 0.2);
+  }
+
+  .control :global(.picker-panel[hidden]) {
+    display: none;
+  }
+
+  .control :global(.picker-search) {
+    margin: 0.6rem 0.6rem 0.4rem;
+    padding: 0.45rem 0.6rem;
+    font: inherit;
+    font-size: 0.95rem;
+    font-weight: 400;
+    color: var(--ink);
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+  }
+
+  .control :global(.picker-groups) {
+    overflow-y: auto;
+    padding: 0 0.4rem 0.5rem;
+  }
+
+  .control :global(.picker-group[hidden]) {
+    display: none;
+  }
+
+  .control :global(.picker-group-head) {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
+    font: inherit;
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: var(--ink);
+    text-align: left;
+    background: none;
+    border: 0;
+    border-radius: 6px;
+    padding: 0.4rem 0.5rem;
+    cursor: pointer;
+  }
+
+  /* A chevron that turns down when the group opens */
+  .control :global(.picker-group-head::before) {
+    content: "";
+    flex: none;
+    width: 6px;
+    height: 6px;
+    border: solid var(--ink-soft);
+    border-width: 0 1.5px 1.5px 0;
+    transform: rotate(-45deg);
+    transition: transform 0.12s ease;
+  }
+
+  .control :global(.picker-group-head[aria-expanded="true"]::before) {
+    transform: rotate(45deg);
+  }
+
+  .control :global(.picker-group-label) {
+    flex: 1;
+  }
+
+  /* A dot on the group that holds the current choice */
+  .control :global(.picker-group-head.has-current .picker-group-label::after) {
+    content: "";
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    margin-left: 0.45rem;
+    vertical-align: middle;
+    border-radius: 50%;
+    background: var(--accent);
+  }
+
+  .control :global(.picker-count) {
+    font-size: 0.8rem;
+    font-weight: 400;
+    color: var(--muted);
+  }
+
+  .control :global(.picker-options) {
+    list-style: none;
+    margin: 0 0 0.2rem;
+    padding: 0 0 0 1.25rem;
+  }
+
+  .control :global(.picker-options[hidden]),
+  .control :global(.picker-options li[hidden]) {
+    display: none;
+  }
+
+  .control :global(.picker-option) {
+    display: block;
+    width: 100%;
+    font: inherit;
+    font-size: 0.9rem;
+    font-weight: 400;
+    color: var(--ink);
+    text-align: left;
+    background: none;
+    border: 0;
+    border-radius: 6px;
+    padding: 0.3rem 0.5rem;
+    cursor: pointer;
+  }
+
+  .control :global(.picker-group-head:hover),
+  .control :global(.picker-option:hover) {
+    background: rgba(31, 31, 28, 0.05);
+  }
+
+  .control :global(.picker-option.is-current) {
+    font-weight: 600;
+    color: var(--accent);
+  }
+
+  .control :global(.picker-option:disabled) {
+    color: var(--muted);
+    opacity: 0.6;
+    cursor: default;
+  }
+
+  .control :global(.picker-empty) {
+    margin: 0.2rem 1rem 0.8rem;
+    font-size: 0.88rem;
+    color: var(--muted);
   }
 
   .toggle legend {
@@ -1361,10 +1546,13 @@ import Layout from "../../layouts/Layout.astro";
 
     .control,
     .control select,
-    #pick-district,
-    #pick-vs {
+    .control :global(.picker-button) {
       width: 100%;
       min-width: 0;
+    }
+
+    .control :global(.picker-panel) {
+      width: 100%;
     }
 
     .tiles :global(.tile-value) {
