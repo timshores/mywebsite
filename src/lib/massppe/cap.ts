@@ -9,7 +9,7 @@
 
 import { svgEl } from "./charts";
 import { groupedPicker } from "./picker";
-import { scatter, ticksFor, type Group, type Point } from "./scatter";
+import { scatter, spearman, ticksFor, type Group, type Point } from "./scatter";
 
 interface CapTown {
   lea: number; name: string; id: string; county: string | null; region: string | null;
@@ -67,23 +67,28 @@ const GROUPS: Record<string, Group> = {
   town: { label: "Selected town", color: "#b65c3d", shape: "triangle", z: 3 },
 };
 
-type YKey = "per_res" | "per_hh" | "per_parcel" | "share_income" | "dollars" | "share_cey";
-type XKey = "cey_pc" | "income_pc" | "eqv_pc" | "cey_pct";
-const Y_OPTIONS: Record<YKey, { label: string; fmt: (v: number) => string; axis: (v: number) => string }> = {
-  per_res: { label: "Change in target, per resident", fmt: signed, axis: (v) => signed(v) },
-  per_hh: { label: "Change in target, per household", fmt: signed, axis: (v) => signed(v) },
-  per_parcel: { label: "Change in target, per taxable property", fmt: signed, axis: (v) => signed(v) },
-  share_income: { label: "Change in target, as a share of income", fmt: (v) => `${v > 0 ? "+" : ""}${(v * 100).toFixed(2)}%`, axis: (v) => `${(v * 100).toFixed(1)}%` },
-  dollars: { label: "Change in target", fmt: signed, axis: (v) => `${v < 0 ? "−" : ""}$${Math.abs(v) >= 1e6 ? `${Math.abs(v / 1e6).toFixed(0)}M` : `${Math.abs(v / 1e3).toFixed(0)}K`}` },
-  // Naughton and Brown's measure: today's target as a share of the town's yield, its "calculated obligation"
-  share_cey: { label: "Today's target as a share of the combined effort yield", fmt: (v) => pct(v, 1), axis: (v) => pct(v) },
-};
-const X_OPTIONS: Record<XKey, { label: string; log: boolean; fmt: (v: number) => string; axis: (v: number) => string }> = {
+/** Up and down the chart, always: how much more or less the town would be asked for, per household */
+const Y_TITLE = "Change in target, per household";
+type XKey = "cey_pct" | "eqv_pc" | "income_pc" | "cey_pc";
+/** Across the chart: ways to measure a town's wealth, each with what it shows in the text beside it */
+const X_OPTIONS: Record<XKey, { label: string; title: string; short: string; fmt: (v: number) => string; axis: (v: number) => string }> = {
+  cey_pct: { label: "Wealth for the size of its schools", title: "Combined effort yield ÷ foundation budget", short: "Yield ÷ foundation",
+    fmt: (v) => pct(v), axis: (v) => pct(v) },
+  eqv_pc: { label: "Property value per resident", title: "Equalized property value per resident", short: "Property value per resident",
+    fmt: usd, axis: (v) => (v >= 1e6 ? `$${(v / 1e6).toFixed(1)}M` : `$${Math.round(v / 1000)}K`) },
+  income_pc: { label: "Income per resident", title: "Income per resident", short: "Income per resident",
+    fmt: usd, axis: (v) => `$${Math.round(v / 1000)}K` },
   // Wealth as the formula measures it, Naughton and Brown's horizontal axis
-  cey_pc: { label: "Combined effort yield per resident", log: true, fmt: usd, axis: (v) => `$${v >= 1e4 ? `${Math.round(v / 1000)}K` : Math.round(v).toLocaleString("en-US")}` },
-  income_pc: { label: "Income per resident", log: true, fmt: usd, axis: (v) => `$${Math.round(v / 1000)}K` },
-  eqv_pc: { label: "Equalized property value per resident", log: true, fmt: usd, axis: (v) => (v >= 1e6 ? `$${(v / 1e6).toFixed(1)}M` : `$${Math.round(v / 1000)}K`) },
-  cey_pct: { label: "Combined effort yield as a share of foundation budget", log: true, fmt: (v) => pct(v), axis: (v) => pct(v) },
+  cey_pc: { label: "Property and income per resident", title: "Combined effort yield per resident", short: "Yield per resident",
+    fmt: usd, axis: (v) => `$${v >= 1e4 ? `${Math.round(v / 1000)}K` : Math.round(v).toLocaleString("en-US")}` },
+};
+const xOf = (x: CapTown, k: XKey): number | null => {
+  switch (k) {
+    case "cey_pct": return x.foundation ? x.cey / x.foundation : null;
+    case "eqv_pc": return x.pop ? x.eqv / x.pop : null;
+    case "income_pc": return x.pop_income ? x.income / x.pop_income : null;
+    case "cey_pc": return x.pop ? x.cey / x.pop : null;
+  }
 };
 
 /**
@@ -137,8 +142,7 @@ export function startCap(root: HTMLElement, data: CapData, opts: { town: string 
   const yearKeys = Object.keys(data.years).sort().reverse();
   let fy = String(data.meta.latest);
   let townId = data.years[fy].towns.some((t) => t.id === opts.town) ? opts.town : "leverett";
-  let yKey: YKey = "per_res";
-  let xKey: XKey = "cey_pc";
+  let xKey: XKey = "cey_pct";
   /** The cap to compare with today's: null for none */
   let scenario: number | null = null;
   let level = 1;
@@ -312,25 +316,19 @@ export function startCap(root: HTMLElement, data: CapData, opts: { town: string 
 
   // Chart controls
   const chartHead = el("h3", undefined, "Who pays more because of the cap?");
-  const chartIntro = el("p", "cap-note");
+  const chartIntro = el("p");
   const chartControls = el("div", "cap-controls");
-  const mkSelect = <K extends string>(label: string, options: Record<K, { label: string }>, value: K, on: (v: K) => void) => {
-    const wrap = el("label", "cap-field");
-    const s = el("select");
-    for (const [k, o] of Object.entries(options) as [K, { label: string }][]) s.append(new Option(o.label, k));
-    s.value = value;
-    s.addEventListener("change", () => on(s.value as K));
-    wrap.append(el("span", undefined, label), s);
-    chartControls.append(wrap);
-  };
-  mkSelect("Vertical", Y_OPTIONS, yKey, (v) => {
-    yKey = v;
+  const xWrap = el("label", "cap-field");
+  const xSelect = el("select");
+  for (const [k, o] of Object.entries(X_OPTIONS)) xSelect.append(new Option(o.label, k));
+  xSelect.value = xKey;
+  xSelect.addEventListener("change", () => {
+    xKey = xSelect.value as XKey;
     render();
   });
-  mkSelect("Horizontal", X_OPTIONS, xKey, (v) => {
-    xKey = v;
-    render();
-  });
+  xWrap.append(el("span", undefined, "Compare towns by"), xSelect);
+  chartControls.append(xWrap);
+  const chartContext = el("p");
   const legend = el("ul", "cw-legend");
   const figure = el("figure", "cap-figure");
   const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
@@ -339,7 +337,7 @@ export function startCap(root: HTMLElement, data: CapData, opts: { town: string 
   const tip = el("div", "cw-tip");
   tip.hidden = true;
   figure.append(legend, svg, tip);
-  chartBox.append(chartHead, chartIntro, chartControls, figure);
+  chartBox.append(chartHead, chartIntro, chartControls, chartContext, figure);
 
   function render() {
     const y = data.years[fy];
@@ -657,47 +655,66 @@ export function startCap(root: HTMLElement, data: CapData, opts: { town: string 
       yearsBox.replaceChildren();
     }
 
-    // The chart: every town, the selected one marked
-    const yo = Y_OPTIONS[yKey];
+    // The chart: every town, the selected one marked, by how much more or less each household would be asked for
     const xo = X_OPTIONS[xKey];
-    const value = (x: CapTown, k: XKey | YKey): number | null => {
-      const c = change(x);
-      switch (k) {
-        case "per_res": return x.pop ? c / x.pop : null;
-        case "per_hh": return x.hh ? c / x.hh : null;
-        case "per_parcel": return x.parcels ? c / x.parcels : null;
-        case "share_income": return x.income ? c / x.income : null;
-        case "dollars": return c;
-        case "share_cey": return x.cey ? x.target / x.cey : null;
-        case "cey_pc": return x.pop ? x.cey / x.pop : null;
-        case "income_pc": return x.pop_income ? x.income / x.pop_income : null;
-        case "eqv_pc": return x.pop ? x.eqv / x.pop : null;
-        case "cey_pct": return x.foundation ? x.cey / x.foundation : null;
-      }
+    const perHh = (x: CapTown) => (x.hh ? change(x) / x.hh : null);
+    chartIntro.textContent = `Each point is a town. Up and down: how much more or less the town would be asked for in ` +
+      `FY${y.fy} ${scenName}, divided by its households. Above the zero line, today's ${pct(y.max_pct, 1)} cap saves ` +
+      "the town money; below it, the cap costs the town money. Households are the Census Bureau's latest five-year " +
+      "estimates (2020–2024).";
+
+    // What the chosen measure shows: where the towns the cap saves money fall, and how closely it tracks the change
+    const fifthsBy = (k: XKey) => {
+      const w = towns.filter((x) => x.foundation && xOf(x, k) != null).sort((a, b) => xOf(a, k)! - xOf(b, k)!);
+      return new Map(w.map((x, i) => [x.id, Math.min(4, Math.floor((i * 5) / w.length))]));
     };
-    chartIntro.textContent = yKey === "share_cey"
-      ? `Each point is a town. Across: ${xo.label.toLowerCase()}. Up and down: what the town is asked for in FY${y.fy} ` +
-        "as a share of what the same effort would yield. Below 100%, the cap spares the town part of its share."
-      : `Each point is a town. Across: ${xo.label.toLowerCase()}. Up and down: how much more or less the town would be ` +
-        `asked for in FY${y.fy} ${scenName}. Below the line, today's cap costs the town money; above it, the cap saves ` +
-        "the town money." +
-        (yKey === "per_hh" ? " Households are the Census Bureau's latest five-year estimates (2020–2024)." :
-          yKey === "per_parcel" ? ` Taxable properties are each town's parcels of taxable real estate, FY${y.parcel_fy}.` : "");
+    const rho = (k: XKey) => {
+      const w = towns.filter((x) => x.foundation && (xOf(x, k) ?? 0) > 0 && perHh(x) != null);
+      return spearman(w.map((x) => xOf(x, k)!), w.map((x) => perHh(x)!)) ?? 0;
+    };
+    const rhos = (Object.keys(X_OPTIONS) as XKey[]).map((k) => ({ k, r: rho(k) })).sort((a, b) => b.r - a.r);
+    const place = rhos.findIndex((q) => q.k === xKey);
+    const rank = ["the strongest", "the second strongest", "the third strongest", "the weakest"][place];
+    const f5 = fifthsBy(xKey);
+    const where = up.length
+      ? ` Of the ${up.length} towns that today's cap saves money, ${up.filter((x) => f5.get(x.id) === 4).length} are in ` +
+        `the top fifth by ${xo.label.toLowerCase()}, and ${up.filter((x) => (f5.get(x.id) ?? 4) <= 2).length} are in ` +
+        "the bottom three fifths."
+      : "";
+    const capped = towns.filter((x) => x.capped && x.foundation);
+    const cappedUp = capped.filter((x) => change(x) > 0).length;
+    const cappedDown = capped.filter((x) => change(x) < 0).length;
+    const lead: Record<XKey, string> = {
+      cey_pct: "Across: each town's combined effort yield divided by its foundation budget, its fair share by the " +
+        "formula set against what its schools need. This is the measure the cap reads: every town right of the dashed " +
+        `line at ${pct(y.max_pct, 1)} is at today's cap.` + (cappedUp + cappedDown
+          ? ` ${capitalize(scenName)}, ${cappedUp} of those ${capped.length} towns would be asked for more and ` +
+            `${cappedDown} for less.`
+          : ""),
+      eqv_pc: "Across: equalized property value per resident, the property half of the formula's measure of wealth." + where,
+      income_pc: `Across: income per resident, from state tax returns for ${y.income_year}, the income half ` +
+        "of the formula's measure of wealth." + where,
+      cey_pc: "Across: combined effort yield per resident, property and income together as the formula weighs them, " +
+        "but counted per resident instead of against what the town's schools need." + where,
+    };
+    chartContext.textContent = lead[xKey] + ` This measure's rank correlation with the change per household is ` +
+      `ρ = ${rhos[place].r.toFixed(2)}, ${rank} of the four measures here.`;
+
     const pts: Point[] = [];
     for (const x of towns) {
-      const xv = value(x, xKey);
-      const yv = value(x, yKey);
+      const xv = xOf(x, xKey);
+      const yv = perHh(x);
       if (xv == null || yv == null || !isFinite(xv) || !isFinite(yv) || xv <= 0 || !x.foundation) continue;
       pts.push({ x: xv, y: yv, id: x.id, name: x.name, group: x.id === t.id ? "town" : x.capped ? "capped" : "below", label: x.id === t.id });
     }
     const width = Math.max(300, figure.clientWidth || 800);
     const height = Math.round(Math.min(460, Math.max(280, width * 0.5)));
-    svg.setAttribute("aria-label", `Scatterplot of ${yo.label.toLowerCase()} against ${xo.label.toLowerCase()} for ${pts.length} towns, FY${y.fy}.`);
+    svg.setAttribute("aria-label", `Scatterplot of the change in target per household against ${xo.title.toLowerCase()} for ${pts.length} towns, FY${y.fy}.`);
     scatter(svg, pts, {
-      width, height, logX: xo.log, xFmt: xo.axis, yFmt: yo.axis,
-      xTitle: xo.label, xTitleShort: xo.label.replace(" as a share of foundation budget", " (% of foundation)"),
-      yTitle: yo.label, yTitleShort: yKey === "share_cey" ? "Target ÷ yield" : yo.label.replace("Change in target, ", "Change, "),
-      groups: GROUPS, smooth: false, refY: yKey === "share_cey" ? 1 : 0,
+      width, height, logX: true, xFmt: xo.axis, yFmt: signed,
+      xTitle: xo.title, xTitleShort: xo.short,
+      yTitle: Y_TITLE, yTitleShort: "Change, per household",
+      groups: GROUPS, smooth: false, refY: 0, refX: xKey === "cey_pct" ? y.max_pct : undefined,
       onHover: (p, pos) => {
         if (!p || !pos) {
           tip.hidden = true;
@@ -707,7 +724,8 @@ export function startCap(root: HTMLElement, data: CapData, opts: { town: string 
         tip.replaceChildren(el("strong", undefined, x.name),
           el("div", undefined, `Target today: ${usd(x.target)}${x.capped ? " (at the cap)" : ""}`),
           el("div", undefined, `${capitalize(scenName)}: ${usd(alt.get(x.id)!)} (${signed(change(x))})`),
-          el("div", undefined, `${xo.label}: ${xo.fmt(p.x)}`),
+          el("div", undefined, `Per household: ${signed(p.y)}`),
+          el("div", undefined, `${xo.title}: ${xo.fmt(p.x)}`),
           el("div", "cw-tip-hint", "Select to walk through it above"));
         tip.hidden = false;
         const box = svg.getBoundingClientRect();

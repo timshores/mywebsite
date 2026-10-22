@@ -38,6 +38,8 @@ export interface ScatterOpts {
   mini?: boolean;
   /** A reference line across the chart at this y, such as zero */
   refY?: number;
+  /** A reference line up the chart at this x, such as a threshold */
+  refX?: number;
   onHover?: (p: Point | null, at: { left: number; top: number } | null) => void;
   onPick?: (p: Point) => void;
 }
@@ -207,6 +209,10 @@ export function scatter(svg: SVGSVGElement, points: Point[], o: ScatterOpts) {
 
   if (o.refY != null && o.refY >= y0 && o.refY <= y1) {
     svgEl("line", { x1: m.left, x2: m.left + pw, y1: sy(o.refY), y2: sy(o.refY), class: "sc-ref" }, svg);
+  }
+
+  if (o.refX != null && (!o.logX || o.refX > 0) && fx(o.refX) >= x0 && fx(o.refX) <= x1) {
+    svgEl("line", { x1: sx(o.refX), x2: sx(o.refX), y1: m.top, y2: m.top + ph, class: "sc-ref" }, svg);
   }
 
   const plot = svgEl("g", { class: "sc-points" }, svg);
