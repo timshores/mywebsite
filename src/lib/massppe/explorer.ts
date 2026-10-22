@@ -92,6 +92,16 @@ interface Town {
   rev_total: Values;
   /** Its school districts, each with the town's required contribution and the district's other member towns */
   districts?: (TownDistrict & { contribution: number | null; with: { name: string; id: string | null }[] })[];
+  /** Property (DLS): assessed value per resident and parcels by type (an average's are its towns'
+   * combined), taxable value in all, EQV per resident and in all at the fiscal year sharing its
+   * January 1 valuation date (every other year), and the average single-family tax bill */
+  prop?: Record<string, Values>;
+  parcels?: Record<string, Values>;
+  value_total?: Values;
+  eqv?: Values;
+  eqv_total?: Values;
+  sf_bill?: Values;
+  sf_bill_income?: Values;
 }
 
 interface ListedTown {
@@ -106,6 +116,10 @@ interface TownData {
   meta: {
     years: number[]; latest: number; members_fy: number; regions: Record<string, string>;
     apart: string[]; peer_year: number; peers: { id: string; label: string }[];
+    property?: boolean;
+    /** FY2025 Chapter 70 target local contribution: percentages of EQV and income, the cap */
+    c70_target?: { fy: number; eqv_year: number; income_year: number; property_pct: number; income_pct: number;
+      target_share: number; cap: number; capped_towns: number };
   };
   averages: ListedTown[];
   towns: ListedTown[];
@@ -136,7 +150,7 @@ type Compare = "none" | "cohort" | "cohort-state" | "region" | "state" | "gatewa
 type TownCompare = "none" | "peer" | "peer-state" | "region" | "state" | "gateway" | "other";
 type Dollars = "nominal" | "real";
 type View = "districts" | "towns";
-type StackPanel = "ppe" | "nss" | "rev" | "tspend" | "trev";
+type StackPanel = "ppe" | "nss" | "rev" | "tspend" | "trev" | "tval" | "tpar";
 /** The two lines a stacked chart can draw over its columns */
 type Line = "trend" | "cmp";
 
@@ -200,6 +214,22 @@ const TOWN_REV_SERIES = [
   { key: "other", label: "Other revenue", color: "#e87ba4" },
   { key: "transfers", label: "Transfers and other financing", color: "#8f8a7f" },
 ] as const;
+// Property types, bottom to top as the export orders them (PROPERTY_TYPES): homes first,
+// in the blues and pinks; business property in the warm colors; land in the greens
+const PROPERTY_SERIES = [
+  { key: "single", label: "Single-family homes", color: "#2a78d6" },
+  { key: "condo", label: "Condominiums", color: "#6250d6" },
+  { key: "multi", label: "Multifamily (two or more units)", color: "#e87ba4" },
+  { key: "other_res", label: "Other residential, including vacant lots", color: "#c4bba9" },
+  { key: "mixed", label: "Mixed use", color: "#eda100" },
+  { key: "commercial", label: "Commercial", color: "#eb6834" },
+  { key: "industrial", label: "Industrial", color: "#e34948" },
+  { key: "farm", label: "Farmland (Chapter 61A)", color: "#1baf7a" },
+  { key: "forest", label: "Forest, recreation, and open space", color: "#008300" },
+  { key: "personal", label: "Personal property", color: "#8f8a7f" },
+] as const;
+const PARCEL_SERIES = PROPERTY_SERIES.filter((s) => s.key !== "personal");
+const RESIDENTIAL = new Set(["single", "condo", "multi", "other_res"]);
 const POP_COLOR = "#2a78d6";
 const ENROLL_SERIES = [
   { key: "in_district", label: "In-district FTE", color: "#2a78d6" },
@@ -228,6 +258,8 @@ const usd = (v: number) => `${v < 0 ? "−" : ""}$${Math.abs(Math.round(v)).toLo
 const fte = (v: number) => (v >= 100 ? Math.round(v).toLocaleString("en-US") : v.toFixed(1));
 const pct = (v: number) => `${v >= 0 ? "+" : "−"}${Math.abs(v * 100).toFixed(1)}%`;
 const millions = (v: number) => `$${(v / 1e6).toFixed(v >= 1e8 ? 0 : 1)} million`;
+/** "$423 million", "$4.2 billion" */
+const amount = (v: number) => (v >= 1e9 ? `$${(v / 1e9).toFixed(1)} billion` : millions(v));
 /** "A", "A and B", "A, B, and C" */
 const list = (items: string[]) =>
   items.length < 3 ? items.join(" and ") : `${items.slice(0, -1).join(", ")}, and ${items[items.length - 1]}`;
@@ -340,11 +372,13 @@ export async function startExplorer() {
   const isolated: Record<StackPanel, Set<string>> = {
     ppe: new Set(saved?.isolated?.ppe), nss: new Set(saved?.isolated?.nss), rev: new Set(saved?.isolated?.rev),
     tspend: new Set(saved?.isolated?.tspend), trev: new Set(saved?.isolated?.trev),
+    tval: new Set(saved?.isolated?.tval), tpar: new Set(saved?.isolated?.tpar),
   };
   // Lines hidden from each chart's legend; both show until clicked off
   const hidden = (k: string) => new Set((saved?.hidden?.[k] ?? []).filter((l): l is Line => l === "trend" || l === "cmp"));
   const hiddenLines: Record<StackPanel, Set<Line>> = {
     ppe: hidden("ppe"), nss: hidden("nss"), rev: hidden("rev"), tspend: hidden("tspend"), trev: hidden("trev"),
+    tval: hidden("tval"), tpar: hidden("tpar"),
   };
 
   function remember() {
@@ -740,8 +774,8 @@ export async function startExplorer() {
     ...(hasLine(trend) ? [{ label: trend.label, color: TREND_COLOR, mark: "dash" as const, line: "trend" as const }] : []),
     ...(overlay ? [{ label: overlay.label, color: COMPARE_COLOR, mark: "line" as const, line: "cmp" as const }] : []),
   ];
-  const trendRow = (trend: Series | null, i: number): TipRow[] =>
-    trend && trend.values[i] != null ? [{ value: usd(trend.values[i]!), label: trend.label, color: TREND_COLOR, mark: "dash" }] : [];
+  const trendRow = (trend: Series | null, i: number, fmt: (v: number) => string = usd): TipRow[] =>
+    trend && trend.values[i] != null ? [{ value: fmt(trend.values[i]!), label: trend.label, color: TREND_COLOR, mark: "dash" }] : [];
   let refocus: { panel: StackPanel; key: string } | null = null;
 
   function legend(list: HTMLElement, items: LegendItem[], panel?: StackPanel) {
@@ -876,10 +910,10 @@ export async function startExplorer() {
     return rows;
   }
 
-  function compareTable(holder: HTMLElement, caption: string, rowLabel: string, rows: CmpRow[], kind: "usd" | "fte", cmp: Named | null,
-    { end = last, noCmpNote = "Choose a comparison above to shade this table against it.", per = "pupil" }: CmpOpts = {}) {
+  function compareTable(holder: HTMLElement, caption: string, rowLabel: string, rows: CmpRow[], kind: "usd" | "fte" | "count",
+    cmp: Named | null, { end = last, noCmpNote = "Choose a comparison above to shade this table against it.", per = "pupil" }: CmpOpts = {}) {
     const cName = cmp ? cmp.name : null;
-    const fmt = kind === "usd" ? usd : fte;
+    const fmt = kind === "usd" ? usd : kind === "count" ? (v: number) => Math.round(v).toLocaleString("en-US") : fte;
     const unit = kind === "usd" ? ` $/${per}` : "";
     const prior = end - 1;
     const windows = [end, 10, 5];
@@ -957,7 +991,7 @@ export async function startExplorer() {
       chips.className = "chips";
       chips.append(chip(ABOVE_SHADES[2], `Above ${cName}`), chip(BELOW_SHADES[2], `Below ${cName}`));
       note.append(chips, text("p",
-        `Shaded where a value differs from ${refName(cmp!)} by 5% or more (${kind === "usd" ? "dollars" : "enrollment"}) ` +
+        `Shaded where a value differs from ${refName(cmp!)} by 5% or more (${{ usd: "dollars", fte: "enrollment", count: "counts" }[kind]}) ` +
         "or a growth rate by 0.5 percentage points or more; darker shading marks a larger gap. " +
         "Hover a cell for the comparison value. CAGR is the compound annual growth rate, (end\u00a0÷\u00a0start)^(1\u00a0÷\u00a0years)\u00a0−\u00a01."));
     } else {
@@ -986,11 +1020,11 @@ export async function startExplorer() {
     i > 0 && vals[i] != null && vals[i - 1] ? `${pct(vals[i]! / vals[i - 1]! - 1)} from FY${years[i - 1]}` : undefined;
   /** Tooltip for a stacked panel: the total (or the isolated selection), its segments, the comparison. */
   const stackTip = (i: number, shown: Series[], sel: string | null, shownTotal: Values, total: Values,
-    overlay: Series | null, trend: Series | null, totalLabel: string, noun: string): TipContent => {
-    const money = (v: number | null) => (v == null ? "–" : usd(v));
+    overlay: Series | null, trend: Series | null, totalLabel: string, noun: string, fmt: (v: number) => string = usd): TipContent => {
+    const money = (v: number | null) => (v == null ? "–" : fmt(v));
     const rows: TipRow[] = [];
     const segments = [...shown].reverse().filter((s) => s.values[i] != null && s.values[i]! > 0)
-      .map((s) => ({ value: usd(s.values[i]!), label: s.label, color: s.color, mark: "line" as const }));
+      .map((s) => ({ value: fmt(s.values[i]!), label: s.label, color: s.color, mark: "line" as const }));
     if (!sel) {
       rows.push({ value: money(total[i]), label: totalLabel, strong: true }, ...segments);
     } else {
@@ -998,9 +1032,9 @@ export async function startExplorer() {
       if (shown.length > 1) rows.push(...segments);
       rows.push({ value: money(total[i]), label: `${totalLabel}, all ${noun}` });
     }
-    rows.push(...trendRow(trend, i));
+    rows.push(...trendRow(trend, i, fmt));
     if (overlay && overlay.values[i] != null) {
-      rows.push({ value: usd(overlay.values[i]!), label: overlay.label, color: COMPARE_COLOR, mark: "line" });
+      rows.push({ value: fmt(overlay.values[i]!), label: overlay.label, color: COMPARE_COLOR, mark: "line" });
     }
     return { title: `FY${years[i]}`, rows, note: yoy(sel ? shownTotal : total, i) };
   };
@@ -1389,7 +1423,7 @@ export async function startExplorer() {
   };
 
   interface TownStack {
-    key: "tspend" | "trev";
+    key: "tspend" | "trev" | "tval" | "tpar";
     name: string;
     series: Series[];
     cSeries: Series[] | null;
@@ -1401,9 +1435,16 @@ export async function startExplorer() {
     totalLabel: string;
     end: number;
     width: number;
+    /** Values and axis labels, and the comparison table's kind: dollars unless given */
+    fmt?: (v: number) => string;
+    axis?: (v: number) => string;
+    kind?: "usd" | "count";
+    noCmpNote?: string;
+    /** The tooltip for a year the town didn't report */
+    missing?: string;
   }
 
-  /** A stacked town panel (spending or revenue): chart, legend, tables; returns it with its tooltip. */
+  /** A stacked town panel (spending, revenue, property): chart, legend, tables; returns it with its tooltip. */
   function townStack(s: TownStack, dollarsNote: string) {
     const total = totals(s.series);
     const cTotal = s.cSeries ? totals(s.cSeries) : null;
@@ -1420,24 +1461,27 @@ export async function startExplorer() {
     $(`${s.key}-sub`).textContent = s.sub + (sel ? " Scale fitted to the selection." : "");
     let max = 0;
     years.forEach((_, i) => (max = Math.max(max, stackTop(s.series, i), cTotal?.[i] ?? 0)));
+    const fmt = s.fmt ?? usd;
     const panel = stackedColumns($(`svg-${s.key}`) as unknown as SVGSVGElement,
       { width: s.width, height: s.width < 520 ? 260 : 320, years }, shown, overlay,
-      sel ? fitTicks(shown, overlay?.values ?? null) : niceTicks(max * 1.04), fmtUsd, setHover,
-      { value: shownTotal[s.end], text: usd, index: s.end }, [], trend);
+      sel ? fitTicks(shown, overlay?.values ?? null) : niceTicks(max * 1.04), s.axis ?? fmtUsd, setHover,
+      { value: shownTotal[s.end], text: fmt, index: s.end }, [], trend);
     legend($(`legend-${s.key}`), [
       ...s.series.map((x) => ({ key: x.key, label: x.label, color: x.color, mark: "rect" as const })),
       ...lineLegend(trendAll, overlayAll),
     ], s.key);
-    compareTable($(`cmp-${s.key}`), `${s.caption}${sel ? `, ${sel}` : ""}, ${s.name} (${dollarsNote.toLowerCase()})`, s.rowLabel,
-      cmpRows(shown, s.cSeries, sel, total, cTotal, shownTotal, cShownTotal, "Total"), "usd", s.cmp, { end: s.end, per: "resident" });
-    fullTables[s.key] = { caption: `${s.caption} by year, ${s.name} (${dollarsNote.toLowerCase()})`, cols: [
-      ...s.series.map((x) => ({ label: x.label, values: x.values, fmt: usd })),
-      { label: "Total", values: total, fmt: usd },
-      ...(s.cmp && cTotal ? [{ label: `${s.cmp.name}, total`, values: cTotal, fmt: usd }] : []),
+    const units = s.kind === "count" ? "" : ` (${dollarsNote.toLowerCase()})`;
+    compareTable($(`cmp-${s.key}`), `${s.caption}${sel ? `, ${sel}` : ""}, ${s.name}${units}`, s.rowLabel,
+      cmpRows(shown, s.cSeries, sel, total, cTotal, shownTotal, cShownTotal, "Total"), s.kind ?? "usd", s.cmp,
+      { end: s.end, per: "resident", noCmpNote: s.noCmpNote });
+    fullTables[s.key] = { caption: `${s.caption} by year, ${s.name}${units}`, cols: [
+      ...s.series.map((x) => ({ label: x.label, values: x.values, fmt })),
+      { label: "Total", values: total, fmt },
+      ...(s.cmp && cTotal ? [{ label: `${s.cmp.name}, total`, values: cTotal, fmt }] : []),
     ] };
     const tip = (i: number): TipContent => total[i] == null
-      ? { title: `FY${years[i]}`, rows: [{ value: "–", label: "Not filed with the state" }] }
-      : stackTip(i, shown, sel, shownTotal, total, overlay, trend, s.totalLabel, s.noun);
+      ? { title: `FY${years[i]}`, rows: [{ value: "–", label: s.missing ?? "Not filed with the state" }] }
+      : stackTip(i, shown, sel, shownTotal, total, overlay, trend, s.totalLabel, s.noun, fmt);
     return { panel, tip, total, cTotal };
   }
 
@@ -1499,6 +1543,46 @@ export async function startExplorer() {
     const cTaxShare = cRev ? share(cRev[0].values[end], cRevTotal![end]) : null;
     const popChange = t.pop[0] && popNow ? popNow / t.pop[0] - 1 : null;
     const allDollars = deflate(t.spend_total)[end];
+
+    // Property (DLS): assessed value per resident and parcels by type, EQV, single-family tax bills.
+    // An average's parcels are its towns' combined, shown per town.
+    const hasProp = !!(towns!.meta.property && t.prop && t.parcels);
+    const propSeries = (x: Town): Series[] => PROPERTY_SERIES.map((p) => ({ ...p, values: deflate(x.prop![p.key]) }));
+    const parcelSeries = (x: Town): Series[] => {
+      const k = x.kind === "average" && x.members ? 1 / x.members : 1;
+      return PARCEL_SERIES.map((p) => ({ ...p, values: x.parcels![p.key].map((v) => (v == null ? null : v * k)) }));
+    };
+    const cHasProp = !!(c?.prop && c.parcels);
+    const val = hasProp ? propSeries(t) : [];
+    const cVal = hasProp && cHasProp ? propSeries(c!) : null;
+    const valTotal = totals(val);
+    const pEnd = hasProp ? lastWith(valTotal) : end;
+    const par = hasProp ? parcelSeries(t) : [];
+    const parTotal = totals(par);
+    const homes = (series: Series[], i: number) =>
+      share(sumAt(series.filter((x) => RESIDENTIAL.has(x.key)).map((x) => x.values), i), sumAt(series.map((x) => x.values), i));
+    const singles = (series: Series[], i: number) => share(series[0].values[i], sumAt(series.map((x) => x.values), i));
+    const eIdx = hasProp ? lastWith(t.eqv!) : end;
+    const bIdx = hasProp ? lastWith(t.sf_bill!) : end;
+    const propTiles = !hasProp ? [] : [
+      tile(`Assessed value per resident, FY${years[pEnd]}`, valTotal[pEnd] != null ? usd(valTotal[pEnd]!) : "–", [
+        t.kind === "town" && t.value_total?.[pEnd] != null ? `${amount(t.value_total[pEnd]!)} in all` : "",
+        homes(val, pEnd) != null ? `Residential: ${percent(homes(val, pEnd)!)} of it` : "",
+        cVal && totals(cVal)[pEnd] != null ? `${c!.name}: ${usd(totals(cVal)[pEnd]!)}` : "",
+      ]),
+      tile(`${t.kind === "town" ? "Parcels" : "Parcels per town"}, FY${years[pEnd]}`, parTotal[pEnd] != null ? count(parTotal[pEnd]!) : "–", [
+        singles(par, pEnd) != null ? `${percent(singles(par, pEnd)!)} single-family homes` : "",
+        cHasProp && singles(parcelSeries(c!), pEnd) != null ? `${c!.name}: ${percent(singles(parcelSeries(c!), pEnd)!)}` : "",
+      ]),
+      tile(`Equalized valuation per resident, January ${years[eIdx] - 1}`, t.eqv![eIdx] != null ? usd(deflate(t.eqv!)[eIdx]!) : "–", [
+        t.eqv_total?.[eIdx] != null ? `${amount(t.eqv_total[eIdx]!)} ${t.kind === "town" ? "in all" : "combined"}` : "",
+        c?.eqv?.[eIdx] != null ? `${c.name}: ${usd(deflate(c.eqv)[eIdx]!)}` : "",
+      ]),
+      tile(`Average single-family tax bill, FY${years[bIdx]}`, t.sf_bill![bIdx] != null ? usd(deflate(t.sf_bill!)[bIdx]!) : "–", [
+        t.sf_bill_income?.[bIdx] != null ? `${percent(t.sf_bill_income[bIdx]!)} of income per capita` : "",
+        c?.sf_bill?.[bIdx] != null ? `${c.name}: ${usd(deflate(c.sf_bill)[bIdx]!)}` : "",
+      ]),
+    ];
     $("tiles").replaceChildren(
       tile(`General fund spending per resident, FY${fy}`, spendTotal[end] != null ? usd(spendTotal[end]!) : "–", [
         g != null ? `${pct(g)} a year since FY${meta.start}${real ? ", after inflation" : ""}` : "",
@@ -1517,6 +1601,7 @@ export async function startExplorer() {
         popChange != null ? `${pct(popChange)} since July ${meta.start - 1}` : "",
         t.kind === "average" ? "Census Bureau estimates" : peerLabel ? `Peer group: towns with ${peerLabel}` : "Not in a peer group",
       ]),
+      ...propTiles,
     );
 
     const width = panelBox().clientWidth;
@@ -1537,7 +1622,66 @@ export async function startExplorer() {
       sub: `${dollarsNote} per resident.${filed}`,
     }, dollarsNote);
 
-    // Panel 3: population, the denominator of the two dollar panels
+    // Panels 3-5: property
+    for (const id of ["fig-tval", "fig-tpar", "fig-teqv"]) $(id).hidden = !hasProp;
+    const propPanels: typeof panels = [];
+    if (hasProp) {
+      const p4 = townStack({
+        key: "tval", name: t.name, series: val, cSeries: cVal, cmp: cVal ? c : null, noun: "property types",
+        rowLabel: "Property type", caption: "Assessed value per resident", totalLabel: "Total per resident", end: pEnd, width,
+        sub: `${dollarsNote} per resident: taxable property as assessed on January 1 before each fiscal year.`,
+        missing: "Not reported to the state",
+      }, dollarsNote);
+      const p5 = townStack({
+        key: "tpar", name: t.name, series: par, cSeries: null, cmp: null, noun: "property types", rowLabel: "Property type",
+        caption: t.kind === "town" ? "Parcels" : "Parcels per town", totalLabel: t.kind === "town" ? "Total parcels" : "Parcels per town",
+        end: pEnd, width, fmt: count, axis: (v) => compact(v), kind: "count",
+        sub: (t.kind === "town" ? "Parcels of taxable real estate by use." : `Average per town, across its ${t.members} towns.`) +
+          " Personal property accounts and exempt parcels are not counted.",
+        noCmpNote: "Parcel counts aren't compared, because towns differ so much in size; the assessed value chart compares " +
+          "property per resident.",
+        missing: "Not reported to the state",
+      }, dollarsNote);
+      // EQV every other year, joined across the years between
+      const eqvLines: Series[] = [
+        { key: "eqv", label: t.name, color: POP_COLOR, values: deflate(t.eqv!) },
+        ...(c?.eqv ? [{ key: "cmp", label: c.name, color: COMPARE_COLOR, values: deflate(c.eqv) }] : []),
+      ];
+      const eMax = Math.max(...eqvLines.flatMap((x) => x.values.map((v) => v ?? 0)));
+      const p6 = lines($("svg-teqv") as unknown as SVGSVGElement, { width, height: width < 520 ? 220 : 260, years }, eqvLines,
+        niceTicks(eMax * 1.04, 4), fmtUsd, usd, setHover, true);
+      legend($("legend-teqv"), eqvLines.map((x) => ({ label: x.label, color: x.color, mark: "line" as const })));
+      const k = towns!.meta.c70_target;
+      const at = k ? years.indexOf(k.eqv_year + 1) : -1;
+      const base = k && t.kind === "town" && at >= 0 ? t.eqv_total?.[at] ?? null : null;
+      $("teqv-sub").textContent = `${dollarsNote} per resident. Every two years the state sets each town's equalized ` +
+        "valuation, its estimate of what all the town's taxable property would sell for on January 1; each is shown at the " +
+        "fiscal year whose assessments share that date." +
+        (k && base != null ? ` For FY${k.fy}, Chapter 70 set ${t.name}'s target local contribution at ${k.property_pct}% of ` +
+          `its January ${k.eqv_year} EQV (${usd(base * k.property_pct / 100)}) plus ${k.income_pct}% of its residents' ` +
+          `${k.income_year} income, up to ${k.cap}% of its foundation budget.` : "");
+      fullTables.teqv = { caption: `Equalized valuation, ${t.name} (${dollarsNote.toLowerCase()})`, cols: [
+        { label: "Per resident", values: deflate(t.eqv!), fmt: usd },
+        { label: t.kind === "town" ? "In all (nominal)" : "Towns combined (nominal)", values: t.eqv_total ?? [], fmt: (v) => amount(v) },
+        ...(c?.eqv ? [{ label: `${c.name}, per resident`, values: deflate(c.eqv), fmt: usd }] : []),
+      ] };
+      propPanels.push(
+        { panel: p4.panel, figure: $("fig-tval"), tip: p4.tip },
+        { panel: p5.panel, figure: $("fig-tpar"), tip: p5.tip },
+        {
+          panel: p6, figure: $("fig-teqv"),
+          tip: (i) => {
+            const rows: TipRow[] = eqvLines.filter((x) => x.values[i] != null)
+              .map((x) => ({ value: usd(x.values[i]!), label: x.label, color: x.color, mark: "line" as const }));
+            return rows.length
+              ? { title: `FY${years[i]}`, rows, note: `EQV as of January 1, ${years[i] - 1}` }
+              : { title: `FY${years[i]}`, rows: [{ value: "–", label: "No EQV for this January" }], note: "The state sets EQV every two years" };
+          },
+        },
+      );
+    }
+
+    // Population, the denominator of the dollar panels
     const popLabel = t.kind === "town" ? "Residents" : "Combined residents";
     const pop: Series[] = [{ key: "pop", label: popLabel, color: POP_COLOR, values: t.pop }];
     $("tpop-sub").textContent = t.kind === "town"
@@ -1555,6 +1699,7 @@ export async function startExplorer() {
     panels = [
       { panel: p1.panel, figure: $("fig-tspend"), tip: p1.tip },
       { panel: p2.panel, figure: $("fig-trev"), tip: p2.tip },
+      ...propPanels,
       {
         panel: p3, figure: $("fig-tpop"),
         // FY2021 uses the April 2020 estimates base (update_census_data.py)
@@ -1580,7 +1725,7 @@ export async function startExplorer() {
   );
 
   await refresh();
-  ["svg-ppe", "svg-enroll", "svg-nss", "svg-rev", "svg-tspend", "svg-trev", "svg-tpop"]
+  ["svg-ppe", "svg-enroll", "svg-nss", "svg-rev", "svg-tspend", "svg-trev", "svg-tval", "svg-tpar", "svg-teqv", "svg-tpop"]
     .forEach((id) => keyboard($(id) as unknown as SVGSVGElement));
   root.classList.remove("is-loading");
 

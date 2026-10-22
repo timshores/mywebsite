@@ -123,12 +123,13 @@ function bottomRoundedRect(x: number, y: number, w: number, h: number, r: number
   return `M${x},${y}V${y + h - rr}Q${x},${y + h} ${x + rr},${y + h}H${x + w - rr}Q${x + w},${y + h} ${x + w},${y + h - rr}V${y}Z`;
 }
 
-function linePath(ax: Axis, values: Val[]) {
+/** A line through the values; a gap lifts the pen unless `bridge` joins across it. */
+function linePath(ax: Axis, values: Val[], bridge = false) {
   let d = "";
   let pen = false;
   values.forEach((v, i) => {
     if (v == null) {
-      pen = false;
+      if (!bridge) pen = false;
       return;
     }
     d += `${pen ? "L" : "M"}${ax.x(i).toFixed(1)},${ax.y(v).toFixed(1)}`;
@@ -308,7 +309,8 @@ export function stackedColumns(
   };
 }
 
-/** Lines with end dots, a crosshair on hover, and end labels where they don't collide. */
+/** Lines with end dots, a crosshair on hover, and end labels where they don't collide.
+ * `sparse` is for values measured only some years: the line joins them, with a dot at each. */
 export function lines(
   svg: SVGSVGElement,
   frame: Frame,
@@ -317,6 +319,7 @@ export function lines(
   fmt: (v: number) => string,
   endFmt: (v: number) => string,
   onHover: (i: number | null, source: SVGSVGElement) => void,
+  sparse = false,
 ): Panel {
   svg.replaceChildren();
   svg.setAttribute("viewBox", `0 0 ${frame.width} ${frame.height}`);
@@ -328,7 +331,12 @@ export function lines(
   const ends: { y: number; text: string }[] = [];
   for (const s of series) {
     if (!s.values.some((v) => v != null)) continue;
-    svgEl("path", { d: linePath(ax, s.values), stroke: s.color, class: "series-line" }, g);
+    svgEl("path", { d: linePath(ax, s.values, sparse), stroke: s.color, class: "series-line" }, g);
+    if (sparse) {
+      s.values.forEach((v, i) => {
+        if (v != null) svgEl("circle", { cx: ax.x(i), cy: ax.y(v), r: 3, fill: s.color, class: "dot" }, g);
+      });
+    }
     const last = s.values.map((v, i) => [v, i] as const).filter(([v]) => v != null).pop();
     if (last) {
       const [v, i] = last;

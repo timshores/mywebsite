@@ -188,6 +188,47 @@ import Layout from "../../layouts/Layout.astro";
         </button>
       </figure>
 
+      <figure id="fig-tval" class="panel">
+        <h3>Assessed value per resident by property type</h3>
+        <p class="panel-sub" id="tval-sub"></p>
+        <ul class="legend" id="legend-tval" aria-label="Property types. Select one or more to show only those."></ul>
+        <svg id="svg-tval" tabindex="0" role="img" aria-label="Stacked columns of assessed property value per resident by property type for each fiscal year. Use the arrow keys to read each year; the data table below has every value."></svg>
+        <div class="tooltip" role="status" hidden></div>
+        <details class="table-view compare-view">
+          <summary>Comparison table</summary>
+          <div class="table-scroll" id="cmp-tval"></div>
+        </details>
+        <button type="button" class="table-open" data-table="tval" aria-haspopup="dialog">
+          <span class="table-open-icon" aria-hidden="true">⤢</span> Full data table
+        </button>
+      </figure>
+
+      <figure id="fig-tpar" class="panel">
+        <h3>Parcels by property type</h3>
+        <p class="panel-sub" id="tpar-sub"></p>
+        <ul class="legend" id="legend-tpar" aria-label="Property types. Select one or more to show only those."></ul>
+        <svg id="svg-tpar" tabindex="0" role="img" aria-label="Stacked columns of parcels by property type for each fiscal year. Use the arrow keys to read each year; the data table below has every value."></svg>
+        <div class="tooltip" role="status" hidden></div>
+        <details class="table-view compare-view">
+          <summary>Comparison table</summary>
+          <div class="table-scroll" id="cmp-tpar"></div>
+        </details>
+        <button type="button" class="table-open" data-table="tpar" aria-haspopup="dialog">
+          <span class="table-open-icon" aria-hidden="true">⤢</span> Full data table
+        </button>
+      </figure>
+
+      <figure id="fig-teqv" class="panel">
+        <h3>Equalized valuation per resident</h3>
+        <p class="panel-sub" id="teqv-sub"></p>
+        <ul class="legend" id="legend-teqv"></ul>
+        <svg id="svg-teqv" tabindex="0" role="img" aria-label="Line of equalized valuation per resident, every other fiscal year. Use the arrow keys to read each year; the data table below has every value."></svg>
+        <div class="tooltip" role="status" hidden></div>
+        <button type="button" class="table-open" data-table="teqv" aria-haspopup="dialog">
+          <span class="table-open-icon" aria-hidden="true">⤢</span> Full data table
+        </button>
+      </figure>
+
       <figure id="fig-tpop" class="panel">
         <h3>Population</h3>
         <p class="panel-sub" id="tpop-sub"></p>
@@ -295,6 +336,40 @@ import Layout from "../../layouts/Layout.astro";
         resident, using the Census Bureau's <a href="https://www.census.gov/programs-surveys/popest.html">population estimate</a> for July 1 at the start of each fiscal year. For FY2021
         the April 1, 2020 estimate stands in, because the July 2020 estimate drops by more than a quarter in Amherst
         and recovers a year later.
+      </p>
+      <p>
+        <strong>Property</strong> comes from the state Division of Local Services. Parcels and assessed values are
+        each board of assessors' yearly <a href="https://dls-gw.dor.state.ma.us/reports/rdPage.aspx?rdReport=PropertyTaxInformation.LA4.Parcel_counts_vals">LA-4 report</a>
+        (<a href="/mass-school-spending/data/towns-property.csv" download>CSV</a>), as of January 1 before each fiscal
+        year, grouped by the state's property use codes. Multifamily is two- and three-family homes and apartment
+        buildings (codes 104, 105, 111–125). Other residential is mobile homes, lots with more than one house, and
+        vacant or accessory residential land (103, 109, 130–132, 106). Mixed use is property with more than one use,
+        such as a store with apartments above it (012–043). Farmland is land taxed under the Chapter 61A agricultural
+        program; forest, recreation, and open space is land under Chapters 61 and 61B and class 2 open space. Personal
+        property, such as business equipment and utility lines, is assessed but has no parcel. Exempt property, such
+        as schools, churches, and public land, is left out. The
+        <a href="https://dls-gw.dor.state.ma.us/reports/rdPage.aspx?rdReport=AverageSingleTaxBill.SingleFamTaxBill_wRange">average single-family tax bill</a>
+        is the state's: single-family assessed value divided by single-family parcels, times the residential tax rate,
+        set beside the Department of Revenue's income per capita. Amherst's FY2025 bill is 41% of its income per
+        capita, the highest share in the state; income per capita counts every resident, students included.
+      </p>
+      <p>
+        <strong>Equalized valuation (EQV)</strong> is the state's estimate of the full and fair cash value of all
+        taxable property in each city and town on January 1, set every two years by the Commissioner of Revenue
+        (<a href="https://dls-gw.dor.state.ma.us/reports/rdPage.aspx?rdReport=PropertyTaxInformation.EQV.EQV">EQVs since 1970</a>;
+        <a href="/mass-school-spending/data/towns-eqv.csv" download>CSV</a>). Assessors value property at different
+        distances from market prices, so the state's Bureau of Local Assessment compares each town's assessments
+        with its recent sales, class by class, and divides each class's assessed value by that ratio: homes assessed
+        at 95% of their sale prices have their value divided by 0.95. It then adds an estimate of new construction
+        (<a href="https://www.mass.gov/info-details/equalized-valuations-eqv">DLS</a>;
+        <a href="https://www.mass.gov/doc/eqv-leveling-the-playing-field/download">“EQV: Leveling the Playing Field”</a>).
+        Chapter 70 uses EQV to measure what each town can afford to pay. In
+        <a href="https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-whitepaper.docx">FY2025</a>, a
+        town's target local contribution was 0.3906% of its January 2022 EQV plus 1.4312% of its residents' 2021
+        income. The state chose the two percentages so that, statewide, property and income would each supply half
+        of a total equal to 59% of all foundation budgets. No town's target could exceed 82.5% of its foundation
+        budget, and 182 towns were at that cap. Each year a town's required contribution moves from the year before
+        toward its target, and Chapter 70 aid pays at least the rest of the foundation budget.
       </p>
       <p>
         <strong>Town and school budgets overlap without lining up.</strong> Education includes the town's own school
