@@ -214,7 +214,7 @@ export function startCommonwealth(root: HTMLElement, data: CwData, opts: { openD
     const shared = sharedParts(v.x, v.y);
     if (shared.length) {
       out.push({ label: "Counts the same thing", text: `${capital(yv.short)} and ${xv.short} both count ` +
-        `${shared.join(" and ")}, so they line up partly by definition: one is built from the other, or both from ` +
+        `${shared.join(" and ")}, so they line up partly by construction: one is built from the other, or both from ` +
         "the same number. Part of their ρ comes from that shared arithmetic, not from anything districts do." });
     }
     if (n < 30) {
@@ -491,7 +491,7 @@ export function startCommonwealth(root: HTMLElement, data: CwData, opts: { openD
   {
     // The ◇ on a pair that counts the same thing as the vertical measure
     const li = el("li");
-    li.append(el("span", "cw-built", "◇"), el("span", undefined, "Counts the same thing as the vertical measure, so the two line up partly by definition"));
+    li.append(el("span", "cw-built", "◇"), el("span", undefined, "Variable overlaps with the vertical measure, so the two line up partly by construction"));
     barsKey.append(li);
   }
   const bars = el("ol", "cw-bars");
@@ -799,7 +799,7 @@ export function startCommonwealth(root: HTMLElement, data: CwData, opts: { openD
       }
       b.append(label, track, el("span", "cw-bar-value", o.r == null ? "–" : rho(o.r)));
       b.title = (o.r == null ? `${capital(o.v.label)}: no FY${v.fy} data` : `${capital(o.v.label)}: ρ = ${rho(o.r)} across ${o.n} districts`) +
-        (same.length ? `. ◇ Both count ${same.join(" and ")}, so this pair lines up partly by definition.` : "");
+        (same.length ? `. ◇ Both count ${same.join(" and ")}, so this pair lines up partly by construction.` : "");
       b.disabled = o.r == null;
       b.addEventListener("click", () => {
         view = { ...v, preset: null, x: o.v.key, log: !!o.v.log };
