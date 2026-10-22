@@ -215,7 +215,7 @@ export function startCommonwealth(root: HTMLElement, data: CwData, opts: { openD
     if (shared.length) {
       out.push({ label: "Counts the same thing", text: `${capital(yv.short)} and ${xv.short} both count ` +
         `${shared.join(" and ")}, so they line up partly by construction: one is built from the other, or both from ` +
-        "the same number. Their ρ says less about schools than it seems to." });
+        "the same number. Part of their ρ comes from that shared arithmetic, not from anything districts do." });
     }
     if (n < 30) {
       out.push({ label: "Few districts", text: `Only ${n} districts have both measures in FY${v.fy}. With so few, a ` +
