@@ -372,10 +372,12 @@ export function startCap(root: HTMLElement, data: CapData, opts: { town: string 
       "us what's fair for each town. The formula starts out with two percentages set for the year for every town in the " +
       `Commonwealth: in FY${y.fy}, ` +
       `${rate(y.property_pct)} of its property value and ${rate(y.income_pct)} of its residents' income. The sum is the ` +
-      "town's combined effort yield, what the formula says the town can afford. Meanwhile … no town is asked for more than " +
-      `${pct(y.max_pct, 1)} of its foundation budget, the state's estimate of what its schools need. ${y.totals.capped} ` +
-      "towns, the ones with the most property and income for the size of their schools, hit that 82.5% cap. They're asked " +
-      `for less than the formula says they can afford, and the state pays at least the other ${pct(1 - y.max_pct, 1)}.`);
+      "town's combined effort yield, what the formula says the town can afford.");
+    const pCap = el("p");
+    pCap.append(`Meanwhile … no town is asked for more than ${pct(y.max_pct, 1)} of its foundation budget, the state's ` +
+      `estimate of what its schools need. ${y.totals.capped} towns, the ones with the most property and income for the ` +
+      "size of their schools, hit that 82.5% cap. They're asked for less than the formula says they can afford, and the " +
+      `state pays at least the other ${pct(1 - y.max_pct, 1)}.`);
     const p2 = el("p");
     p2.append("Someone has to cover the difference, and that someone is other towns. The state sets the two " +
       `percentages so that the towns together are asked for 59% of all foundation budgets, ${big(y.totals.target)} in ` +
@@ -383,7 +385,7 @@ export function startCap(root: HTMLElement, data: CapData, opts: { town: string 
       `everyone to reach that total. The result for FY${y.fy}: the cap gave a ${big(y.totals.up_sum)} education ` +
       `discount to ${y.totals.up} Massachusetts towns and added it to the required contribution of the other ` +
       `${y.totals.down} towns.`);
-    howText.replaceChildren(p1, p2);
+    howText.replaceChildren(p1, pCap, p2);
 
     tiles.replaceChildren(
       tile(`Towns at the cap, FY${y.fy}`, String(y.totals.capped),
