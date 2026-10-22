@@ -215,12 +215,18 @@ export function startCommonwealth(root: HTMLElement, data: CwData, opts: { openD
   const close = el("button", "cw-close", "×");
   close.type = "button";
   close.setAttribute("aria-label", "Close");
-  const drawerToggle = el("button", "cw-drawer-toggle", "Correlations and data");
+  const drawerToggle = el("button", "cw-drawer-toggle", "Correlations");
   drawerToggle.type = "button";
   drawerToggle.setAttribute("aria-expanded", "false");
   drawerToggle.setAttribute("aria-controls", "cw-drawer");
+  const aboutBtn = el("button", "cw-drawer-toggle", "About ρ");
+  const tableBtn = el("button", "cw-drawer-toggle", "Data table");
+  for (const b of [aboutBtn, tableBtn]) {
+    b.type = "button";
+    b.setAttribute("aria-haspopup", "dialog");
+  }
   const headTools = el("div", "cw-head-tools");
-  headTools.append(drawerToggle, close);
+  headTools.append(drawerToggle, aboutBtn, tableBtn, close);
   head.append(title, headTools);
 
   // The chart's settings fold away, leaving the chart more room
@@ -299,21 +305,17 @@ export function startCommonwealth(root: HTMLElement, data: CwData, opts: { openD
   findingRow.append(finding, more);
   figure.append(legend, svg, tip, findingRow, caption);
 
-  // The drawer: the ranking with how to read it, and the data table
+  // The drawer: the ranking. How to read it and the data table each open in a window of their own.
   const side = el("aside", "cw-drawer");
   side.id = "cw-drawer";
   side.hidden = true;
   const drawerHead = el("div", "cw-drawer-head");
-  const tabCorr = el("button", "cw-drawer-tab", "Correlations");
-  const tabData = el("button", "cw-drawer-tab", "Data table");
   const drawerClose = el("button", "cw-close", "×");
-  for (const b of [tabCorr, tabData, drawerClose]) b.type = "button";
+  drawerClose.type = "button";
   drawerClose.setAttribute("aria-label", "Close the drawer");
-  drawerHead.append(tabCorr, tabData, drawerClose);
+  drawerHead.append(el("strong", "cw-drawer-title", "Correlations"), drawerClose);
   const corrPanel = el("div", "cw-drawer-panel");
-  const dataPanel = el("div", "cw-drawer-panel");
   const tableHolder = el("div", "cw-table");
-  dataPanel.append(tableHolder);
   const sideHead = el("h3", undefined);
   // What the bars' two colors mean, in the explorer's usual blue and orange
   const barsKey = el("ul", "cw-bars-key");
@@ -337,26 +339,47 @@ export function startCommonwealth(root: HTMLElement, data: CwData, opts: { openD
     "other, negative when they tend to be lower, and near 0 when there is no consistent order. It compares ranks, so " +
     "it handles curved patterns like enrollment's and isn't swayed by a few extreme districts. As a rough guide, " +
     "below 0.3 is weak, 0.3 to 0.6 moderate, and above 0.6 strong.</p>";
-  corrPanel.append(sideHead, barsKey, bars, why);
-  side.append(drawerHead, corrPanel, dataPanel);
+  corrPanel.append(sideHead, barsKey, bars);
+  side.append(drawerHead, corrPanel);
   body.append(figure, side);
   dialog.append(head, settings, body);
 
-  function drawer(show: "corr" | "data" | null) {
-    side.hidden = !show;
-    drawerToggle.setAttribute("aria-expanded", String(!!show));
-    corrPanel.hidden = show !== "corr";
-    dataPanel.hidden = show !== "data";
-    tabCorr.classList.toggle("is-on", show === "corr");
-    tabData.classList.toggle("is-on", show === "data");
-    tabCorr.setAttribute("aria-pressed", String(show === "corr"));
-    tabData.setAttribute("aria-pressed", String(show === "data"));
+  /** A window over the plot view: how to read the ranking, or the data table. */
+  function subDialog(heading: string, content: HTMLElement) {
+    const d = el("dialog", "cw-sub");
+    const h = el("div", "cw-head");
+    const t = el("h2", "cw-title", heading);
+    t.id = `cw-sub-${heading.replace(/\W+/g, "-").toLowerCase()}`;
+    d.setAttribute("aria-labelledby", t.id);
+    const x = el("button", "cw-close", "×");
+    x.type = "button";
+    x.setAttribute("aria-label", "Close");
+    x.addEventListener("click", () => d.close());
+    h.append(t, x);
+    const b = el("div", "cw-sub-body");
+    b.append(content);
+    d.append(h, b);
+    d.addEventListener("click", (ev) => {
+      if (ev.target === d) d.close();
+    });
+    dialog.append(d);
+    return d;
   }
-  drawerToggle.addEventListener("click", () => drawer(side.hidden ? "corr" : null));
-  more.addEventListener("click", () => drawer("corr"));
-  tabCorr.addEventListener("click", () => drawer("corr"));
-  tabData.addEventListener("click", () => drawer("data"));
-  drawerClose.addEventListener("click", () => drawer(null));
+  const aboutDialog = subDialog("Reading the correlations", why);
+  const tableTitle = el("p", "cw-sub-note");
+  const tableWrap = el("div");
+  tableWrap.append(tableTitle, tableHolder);
+  const tableDialog = subDialog("Data table", tableWrap);
+  aboutBtn.addEventListener("click", () => aboutDialog.showModal());
+  tableBtn.addEventListener("click", () => tableDialog.showModal());
+
+  function drawer(show: boolean) {
+    side.hidden = !show;
+    drawerToggle.setAttribute("aria-expanded", String(show));
+  }
+  drawerToggle.addEventListener("click", () => drawer(side.hidden));
+  more.addEventListener("click", () => drawer(true));
+  drawerClose.addEventListener("click", () => drawer(false));
   // Inside the explorer, so it takes the page's colors
   (root.closest(".explorer") ?? document.body).append(dialog);
 
@@ -367,7 +390,7 @@ export function startCommonwealth(root: HTMLElement, data: CwData, opts: { openD
     if (!dialog.open) {
       // Settings start open where there's room for them beside the chart
       settings.open = window.innerWidth > 700 && window.innerHeight > 640;
-      drawer(null);
+      drawer(false);
       dialog.showModal();
     }
     draw();
@@ -413,7 +436,7 @@ export function startCommonwealth(root: HTMLElement, data: CwData, opts: { openD
     const room = body.clientHeight - pad - legend.offsetHeight - findingRow.offsetHeight - caption.offsetHeight - 24;
     const height = Math.round(Math.max(220, Math.min(room, width * 0.75)));
     svg.setAttribute("aria-label", `Scatterplot of ${yv.label.toLowerCase()} against ${xv.label.toLowerCase()} for ` +
-      `${pts.length} districts, FY${v.fy}. The data table in the drawer lists every value.`);
+      `${pts.length} districts, FY${v.fy}. The data table lists every value.`);
     scatter(svg, pts, {
       width, height, logX: v.log, xFmt: axisFmt(xv.unit), yFmt: axisFmt(yv.unit),
       // Narrow screens get the short names, which fit along the axes
@@ -490,6 +513,7 @@ export function startCommonwealth(root: HTMLElement, data: CwData, opts: { openD
       r.append(th, el("td", undefined, fmt(yv.unit, p.y)), el("td", undefined, fmt(xv.unit, p.x)));
     }
     tableHolder.replaceChildren(t);
+    tableTitle.textContent = `${capital(yv.label)} and ${xv.label.toLowerCase()}, FY${v.fy}: ${n} districts, highest first.`;
 
     // The ranking
     const rank = ranking(v);

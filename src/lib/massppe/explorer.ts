@@ -104,6 +104,12 @@ interface Town {
   eqv_total?: Values;
   sf_bill?: Values;
   sf_bill_income?: Values;
+  /** The tax rate on single-family homes, per $1,000 of value */
+  sf_rate?: Values;
+  /** Prop 2 1/2: the levy raised and the capacity left under the limit, per resident; and in all */
+  levy?: { raised: Values; unused: Values };
+  levy_total?: Values;
+  levy_max?: Values;
 }
 
 interface ListedTown {
@@ -153,7 +159,7 @@ type TownCompare = "none" | "peer" | "peer-state" | "region" | "state" | "gatewa
 type Dollars = "nominal" | "real";
 type View = "districts" | "towns" | "commonwealth" | "cap";
 const VIEWS: View[] = ["districts", "towns", "commonwealth", "cap"];
-type StackPanel = "ppe" | "nss" | "rev" | "tspend" | "trev" | "tval" | "tpar";
+type StackPanel = "ppe" | "nss" | "rev" | "tspend" | "trev" | "tval" | "tpar" | "tlevy";
 /** The two lines a stacked chart can draw over its columns */
 type Line = "trend" | "cmp";
 
@@ -233,6 +239,11 @@ const PROPERTY_SERIES = [
   { key: "personal", label: "Personal property", color: "#8f8a7f" },
 ] as const;
 const PARCEL_SERIES = PROPERTY_SERIES.filter((s) => s.key !== "personal");
+// The levy in the taxes color, the capacity left unused above it in a pale version of it
+const LEVY_SERIES = [
+  { key: "raised", label: "Property tax levy", color: "#eda100" },
+  { key: "unused", label: "Unused levy capacity", color: "#f3d9a4" },
+] as const;
 const RESIDENTIAL = new Set(["single", "condo", "multi", "other_res"]);
 const POP_COLOR = "#2a78d6";
 const ENROLL_SERIES = [
@@ -336,6 +347,10 @@ export async function startExplorer() {
     }));
   }
 
+  // While any window is open (a data table, a plot), the page behind it doesn't scroll
+  const lockScroll = () => document.documentElement.classList.toggle("modal-open", !!document.querySelector("dialog[open]"));
+  new MutationObserver(lockScroll).observe(document.body, { subtree: true, attributes: true, attributeFilter: ["open"] });
+
   // ---- Remembered choices: in this browser only, and only with permission ----
   const storage = {
     get: (k: string) => { try { return localStorage.getItem(k); } catch { return null; } },
@@ -376,13 +391,13 @@ export async function startExplorer() {
   const isolated: Record<StackPanel, Set<string>> = {
     ppe: new Set(saved?.isolated?.ppe), nss: new Set(saved?.isolated?.nss), rev: new Set(saved?.isolated?.rev),
     tspend: new Set(saved?.isolated?.tspend), trev: new Set(saved?.isolated?.trev),
-    tval: new Set(saved?.isolated?.tval), tpar: new Set(saved?.isolated?.tpar),
+    tval: new Set(saved?.isolated?.tval), tpar: new Set(saved?.isolated?.tpar), tlevy: new Set(saved?.isolated?.tlevy),
   };
   // Lines hidden from each chart's legend; both show until clicked off
   const hidden = (k: string) => new Set((saved?.hidden?.[k] ?? []).filter((l): l is Line => l === "trend" || l === "cmp"));
   const hiddenLines: Record<StackPanel, Set<Line>> = {
     ppe: hidden("ppe"), nss: hidden("nss"), rev: hidden("rev"), tspend: hidden("tspend"), trev: hidden("trev"),
-    tval: hidden("tval"), tpar: hidden("tpar"),
+    tval: hidden("tval"), tpar: hidden("tpar"), tlevy: hidden("tlevy"),
   };
 
   function remember() {
@@ -1467,7 +1482,7 @@ export async function startExplorer() {
   };
 
   interface TownStack {
-    key: "tspend" | "trev" | "tval" | "tpar";
+    key: "tspend" | "trev" | "tval" | "tpar" | "tlevy";
     name: string;
     series: Series[];
     cSeries: Series[] | null;
@@ -1666,7 +1681,62 @@ export async function startExplorer() {
       sub: `${dollarsNote} per resident.${filed}`,
     }, dollarsNote);
 
-    // Panels 3-5: property
+    // The property tax: the levy against its Prop 2 1/2 limit, and the single-family bill
+    const hasLevy = hasProp && !!t.levy;
+    for (const id of ["fig-tlevy", "fig-tbill"]) $(id).hidden = !hasLevy;
+    const taxPanels: typeof panels = [];
+    if (hasLevy) {
+      const levy: Series[] = LEVY_SERIES.map((x) => ({ ...x, values: deflate(t.levy![x.key]) }));
+      const cLevy: Series[] | null = c?.levy ? LEVY_SERIES.map((x) => ({ ...x, values: deflate(c.levy![x.key]) })) : null;
+      const lEnd = lastWith(totals(levy));
+      const raised = t.levy_total?.[lEnd];
+      const max = t.levy_max?.[lEnd];
+      const used = raised != null && max ? `In FY${years[lEnd]}, ${t.kind === "town" ? t.name : "these towns"} raised ` +
+        `${amount(raised)} of a ${amount(max)} limit, leaving ${max - raised >= 1e6 ? amount(max - raised) : usd(max - raised)} ` +
+        `(${percent((max - raised) / max)}) unused.` : "";
+      const p7 = townStack({
+        key: "tlevy", name: t.name, series: levy, cSeries: cLevy, cmp: cLevy ? c : null, noun: "parts", rowLabel: "Levy",
+        caption: "Property tax levy and its limit per resident", totalLabel: "Levy limit per resident", end: lEnd, width,
+        sub: `${dollarsNote} per resident. Proposition 2½ limits each town's levy; the stack's full height is the limit, ` +
+          `with voter-approved debt exclusions. ${used}`,
+      }, dollarsNote);
+      // The single-family bill, with its rate and its share of income in the tooltip
+      const bills: Series[] = [
+        { key: "bill", label: t.name, color: POP_COLOR, values: deflate(t.sf_bill!) },
+        ...(c?.sf_bill ? [{ key: "cmp", label: c.name, color: COMPARE_COLOR, values: deflate(c.sf_bill) }] : []),
+      ];
+      const bMax = Math.max(...bills.flatMap((x) => x.values.map((v) => v ?? 0)));
+      const p8 = lines($("svg-tbill") as unknown as SVGSVGElement, { width, height: width < 520 ? 220 : 260, years }, bills,
+        niceTicks(bMax * 1.04, 4), fmtUsd, usd, setHover);
+      legend($("legend-tbill"), bills.map((x) => ({ label: x.label, color: x.color, mark: "line" as const })));
+      const rate = t.sf_rate?.[bIdx];
+      $("tbill-sub").textContent = `${dollarsNote}. The state's average single-family tax bill: single-family assessed ` +
+        "value over single-family homes, times the tax rate." +
+        (rate != null && t.sf_bill?.[bIdx] != null ? ` In FY${years[bIdx]}, ${t.kind === "town" ? `${t.name}'s` : "the"} bill ` +
+          `was ${usd(t.sf_bill[bIdx]!)} at $${rate.toFixed(2)} per $1,000 of value` +
+          (t.sf_bill_income?.[bIdx] != null ? `, ${percent(t.sf_bill_income[bIdx]!)} of income per capita.` : ".") : "");
+      fullTables.tbill = { caption: `Average single-family tax bill, ${t.name} (${dollarsNote.toLowerCase()})`, cols: [
+        { label: "Bill", values: deflate(t.sf_bill!), fmt: usd },
+        { label: "Rate per $1,000", values: t.sf_rate ?? [], fmt: (v) => `$${v.toFixed(2)}` },
+        { label: "Share of income per capita", values: t.sf_bill_income ?? [], fmt: (v) => `${(v * 100).toFixed(1)}%` },
+        ...(c?.sf_bill ? [{ label: `${c.name}, bill`, values: deflate(c.sf_bill), fmt: usd }] : []),
+      ] };
+      taxPanels.push(
+        { panel: p7.panel, figure: $("fig-tlevy"), tip: p7.tip },
+        {
+          panel: p8, figure: $("fig-tbill"),
+          tip: (i) => ({
+            title: `FY${years[i]}`,
+            rows: bills.filter((x) => x.values[i] != null)
+              .map((x) => ({ value: usd(x.values[i]!), label: x.label, color: x.color, mark: "line" as const })),
+            note: t.sf_rate?.[i] != null ? `${t.name}: $${t.sf_rate[i]!.toFixed(2)} per $1,000` +
+              (t.sf_bill_income?.[i] != null ? `, ${(t.sf_bill_income[i]! * 100).toFixed(1)}% of income per capita` : "") : undefined,
+          }),
+        },
+      );
+    }
+
+    // Panels: property
     for (const id of ["fig-tval", "fig-tpar", "fig-teqv"]) $(id).hidden = !hasProp;
     const propPanels: typeof panels = [];
     if (hasProp) {
@@ -1743,6 +1813,7 @@ export async function startExplorer() {
     panels = [
       { panel: p1.panel, figure: $("fig-tspend"), tip: p1.tip },
       { panel: p2.panel, figure: $("fig-trev"), tip: p2.tip },
+      ...taxPanels,
       ...propPanels,
       {
         panel: p3, figure: $("fig-tpop"),
@@ -1769,7 +1840,8 @@ export async function startExplorer() {
   );
 
   await refresh();
-  ["svg-ppe", "svg-enroll", "svg-nss", "svg-rev", "svg-tspend", "svg-trev", "svg-tval", "svg-tpar", "svg-teqv", "svg-tpop"]
+  ["svg-ppe", "svg-enroll", "svg-nss", "svg-rev", "svg-tspend", "svg-trev", "svg-tlevy", "svg-tbill", "svg-tval", "svg-tpar",
+    "svg-teqv", "svg-tpop"]
     .forEach((id) => keyboard($(id) as unknown as SVGSVGElement));
   root.classList.remove("is-loading");
 

@@ -263,6 +263,32 @@ import Layout from "../../layouts/Layout.astro";
         </button>
       </figure>
 
+      <figure id="fig-tlevy" class="panel">
+        <h3>Property tax levy and its limit</h3>
+        <p class="panel-sub" id="tlevy-sub"></p>
+        <ul class="legend" id="legend-tlevy" aria-label="Levy and unused capacity. Select one to show only it."></ul>
+        <svg id="svg-tlevy" tabindex="0" role="img" aria-label="Stacked columns of the property tax levy and unused levy capacity per resident for each fiscal year. Use the arrow keys to read each year; the data table below has every value."></svg>
+        <div class="tooltip" role="status" hidden></div>
+        <details class="table-view compare-view">
+          <summary>Comparison table</summary>
+          <div class="table-scroll" id="cmp-tlevy"></div>
+        </details>
+        <button type="button" class="table-open" data-table="tlevy" aria-haspopup="dialog">
+          <span class="table-open-icon" aria-hidden="true">⤢</span> Full data table
+        </button>
+      </figure>
+
+      <figure id="fig-tbill" class="panel">
+        <h3>Average single-family tax bill</h3>
+        <p class="panel-sub" id="tbill-sub"></p>
+        <ul class="legend" id="legend-tbill"></ul>
+        <svg id="svg-tbill" tabindex="0" role="img" aria-label="Line of the average single-family tax bill for each fiscal year. Use the arrow keys to read each year; the data table below has every value."></svg>
+        <div class="tooltip" role="status" hidden></div>
+        <button type="button" class="table-open" data-table="tbill" aria-haspopup="dialog">
+          <span class="table-open-icon" aria-hidden="true">⤢</span> Full data table
+        </button>
+      </figure>
+
       <figure id="fig-tval" class="panel">
         <h3>Assessed value per resident by property type</h3>
         <p class="panel-sub" id="tval-sub"></p>
@@ -429,6 +455,17 @@ import Layout from "../../layouts/Layout.astro";
         capita, the highest share in the state; income per capita counts every resident, students included.
       </p>
       <p>
+        <strong>The property tax levy</strong> is what a town raises from property taxes, and
+        <a href="https://dls-gw.dor.state.ma.us/reports/rdPage.aspx?rdReport=Prop2.5.ExcessLevyCapandOverride_10_pres">Proposition 2½</a>
+        (<a href="/mass-school-spending/data/towns-levy.csv" download>CSV</a>) limits it. Each year a town's levy limit
+        grows by 2.5% plus the tax on new construction, and voters can raise it with an override or exclude a debt
+        from it; the charts' limit includes those exclusions. The limit itself can't pass the levy ceiling, 2.5% of the
+        town's assessed value, though excluded debt can. Unused levy capacity is the gap between the limit and the levy a town sets: money it could
+        raise without asking voters, and chooses not to. It can be read as tax relief, as careful budgeting, or as
+        austerity. The tax rate here is the single-family bill over the home's value, which is the residential rate
+        except where a town gives a residential exemption.
+      </p>
+      <p>
         <strong>Equalized valuation (EQV)</strong> is the state's estimate of the full and fair cash value of all
         taxable property in each city and town on January 1, set every two years by the Commissioner of Revenue
         (<a href="https://dls-gw.dor.state.ma.us/reports/rdPage.aspx?rdReport=PropertyTaxInformation.EQV.EQV">EQVs since 1970</a>;
@@ -497,6 +534,10 @@ import Layout from "../../layouts/Layout.astro";
 
   .explorer.is-loading .panels {
     opacity: 0.4;
+  }
+
+  :global(html.modal-open) {
+    overflow: hidden;
   }
 
   /* hidden wins over the display each block sets for itself */
@@ -2095,6 +2136,61 @@ import Layout from "../../layouts/Layout.astro";
 
   .explorer :global(.cw-drawer-head .cw-close) {
     margin-left: auto;
+  }
+
+  .explorer :global(.cw-drawer-title) {
+    font-size: 0.95rem;
+  }
+
+  .explorer :global(.cw-sub) {
+    width: min(760px, 94vw);
+    max-width: none;
+    max-height: 86vh;
+    margin: auto;
+    padding: 0;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    background: var(--paper);
+    color: var(--ink);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  }
+
+  .explorer :global(.cw-sub[open]) {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .explorer :global(.cw-sub::backdrop) {
+    background: rgba(31, 31, 28, 0.35);
+  }
+
+  .explorer :global(.cw-sub-body) {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 0 1.2rem 1.2rem;
+  }
+
+  .explorer :global(.cw-sub-body h4) {
+    font-size: 0.95rem;
+    margin: 1rem 0 0.3rem;
+  }
+
+  .explorer :global(.cw-sub-body h4:first-child) {
+    margin-top: 0.2rem;
+  }
+
+  .explorer :global(.cw-sub-body p) {
+    font-size: 0.9rem;
+    line-height: 1.55;
+    color: var(--ink-soft);
+    margin: 0 0 0.6rem;
+  }
+
+  .explorer :global(.cw-sub-note) {
+    font-size: 0.85rem;
+    color: var(--muted);
+    margin: 0 0 0.6rem;
   }
 
   .explorer :global(.cw-drawer-tab) {
