@@ -9,6 +9,8 @@ import Layout from "../../layouts/Layout.astro";
   <section id="explorer" class="explorer is-loading">
     <p class="eyebrow">Massachusetts · FY2009–FY<span data-latest>2025</span></p>
     <h1>School spending explorer</h1>
+    <details class="intro" open>
+    <summary>About this explorer</summary>
     <p class="lede view-copy" data-view-only="districts">
       Why do our schools cost so much? Or are we not spending enough tax dollars on our schools? These are difficult
       questions to answer because it depends on your basis of comparison. Use this Explorer to discover the cost of
@@ -26,6 +28,7 @@ import Layout from "../../layouts/Layout.astro";
       revenue by source for the regional districts. The Towns tab shows the general fund budgets of all 351 cities
       and towns.
     </p>
+    </details>
 
     <div class="view-tabs" role="tablist" aria-label="Explorer view">
       <button type="button" role="tab" id="tab-districts" data-view="districts" aria-controls="view-panel" aria-selected="true">School districts</button>
@@ -378,6 +381,44 @@ import Layout from "../../layouts/Layout.astro";
   .lede {
     font-size: 1.05rem;
     max-width: 68ch;
+  }
+
+  /* The introduction folds away; it starts open */
+  .intro summary {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    font-size: 0.85rem;
+    color: var(--muted);
+    cursor: pointer;
+    list-style: none;
+    margin-bottom: 0.5rem;
+  }
+
+  .intro summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .intro summary::before {
+    content: "";
+    width: 6px;
+    height: 6px;
+    border: solid currentColor;
+    border-width: 0 1.5px 1.5px 0;
+    transform: rotate(-45deg);
+    transition: transform 0.12s ease;
+  }
+
+  .intro[open] summary::before {
+    transform: rotate(45deg);
+  }
+
+  .intro summary:hover {
+    color: var(--ink);
+  }
+
+  .intro:not([open]) summary {
+    margin-bottom: 1rem;
   }
 
   /* Controls: one row above everything they scope */
