@@ -7,8 +7,9 @@
 // target min(yield x f, cap x foundation budget). f is 1 at 82.5%; at 100% and with no cap
 // this reproduces Michael Naughton and Tupper Brown's FY2026 targets to the dollar.
 
+import { svgEl } from "./charts";
 import { groupedPicker } from "./picker";
-import { scatter, type Group, type Point } from "./scatter";
+import { scatter, ticksFor, type Group, type Point } from "./scatter";
 
 interface CapTown {
   lea: number; name: string; id: string; county: string | null; region: string | null;
@@ -33,7 +34,13 @@ interface CapYear {
 interface Spending { fy: number; districts: number; above: number; median: number; half_again: number; double: number;
   required: number; over: number }
 
-export interface CapData { meta: { latest: number; spending?: Spending }; years: Record<string, CapYear> }
+/** Every town's yield, foundation budget, target and required contribution by year, FY2007 on */
+interface History {
+  years: number[]; source: string;
+  towns: Record<string, { cey: (number | null)[]; foundation: (number | null)[]; target: (number | null)[]; required: (number | null)[] }>;
+}
+
+export interface CapData { meta: { latest: number; spending?: Spending }; years: Record<string, CapYear>; history?: History | null }
 
 const usd = (v: number) => `${v < 0 ? "−" : ""}$${Math.abs(Math.round(v)).toLocaleString("en-US")}`;
 const signed = (v: number) => `${v > 0 ? "+" : v < 0 ? "−" : ""}$${Math.abs(Math.round(v)).toLocaleString("en-US")}`;
@@ -78,6 +85,20 @@ const X_OPTIONS: Record<XKey, { label: string; log: boolean; fmt: (v: number) =>
   eqv_pc: { label: "Equalized property value per resident", log: true, fmt: usd, axis: (v) => (v >= 1e6 ? `$${(v / 1e6).toFixed(1)}M` : `$${Math.round(v / 1000)}K`) },
   cey_pct: { label: "Combined effort yield as a share of foundation budget", log: true, fmt: (v) => pct(v), axis: (v) => pct(v) },
 };
+
+/** The same for arrays: one year's yields and foundation budgets, held to that year's total. */
+function solveArrays(ceys: number[], fbs: number[], total: number, cap: number | null): number {
+  let lo = 0;
+  let hi = 4;
+  for (let k = 0; k < 80; k++) {
+    const f = (lo + hi) / 2;
+    let sum = 0;
+    for (let i = 0; i < ceys.length; i++) sum += cap == null ? ceys[i] * f : Math.min(ceys[i] * f, cap * fbs[i]);
+    if (sum < total) lo = f;
+    else hi = f;
+  }
+  return (lo + hi) / 2;
+}
 
 /** The factor on DESE's percentages that keeps capped targets at the year's total. */
 function solve(towns: CapTown[], total: number, cap: number | null): number {
@@ -181,9 +202,35 @@ export function startCap(root: HTMLElement, data: CapData, opts: { town: string 
   });
 
   const lookup = el("section", "cap-section");
+  const yearsBox = el("section", "cap-section");
   const chartBox = el("section", "cap-section");
   const fifths = el("section", "cap-section");
-  root.append(yearRow, how, tiles, scen, lookup, chartBox, fifths);
+  root.append(yearRow, how, tiles, scen, lookup, yearsBox, chartBox, fifths);
+
+  // Year by year: each year's factor for the chosen cap, kept while only the town changes
+  let histMemo: { key: string; f: number[] } | null = null;
+  const histFactors = (H: History) => {
+    const key = String(scenario);
+    if (histMemo?.key === key) return histMemo.f;
+    const rows = Object.values(H.towns);
+    const f = H.years.map((_, j) => {
+      const ceys: number[] = [];
+      const fbs: number[] = [];
+      let total = 0;
+      for (const r of rows) {
+        if (r.cey[j] == null || r.foundation[j] == null || r.target[j] == null) continue;
+        ceys.push(r.cey[j]!);
+        fbs.push(r.foundation[j]!);
+        total += r.target[j]!;
+      }
+      return solveArrays(ceys, fbs, total, scenario);
+    });
+    histMemo = { key, f };
+    return f;
+  };
+  const yearsSvg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  yearsSvg.setAttribute("class", "cap-years-chart");
+  yearsSvg.setAttribute("role", "img");
 
   // The town picker: the explorer's searchable menu, towns by county
   const pickWrap = el("div", "control cap-pick");
@@ -438,6 +485,89 @@ export function startCap(root: HTMLElement, data: CapData, opts: { town: string 
       para.append(...parts);
       return para;
     }));
+
+    // Year by year for this town, the same cap choice in every year since FY2007
+    const H = data.history;
+    const hist = H?.towns[t.id];
+    if (H && hist) {
+      const f = histFactors(H);
+      const rows = H.years.map((fy, j) => {
+        const cey = hist.cey[j];
+        const fb = hist.foundation[j];
+        const target = hist.target[j];
+        if (cey == null || fb == null || target == null) return { fy, diff: null as number | null, target, capped: false };
+        const other = scenario == null ? cey * f[j] : Math.min(cey * f[j], scenario * fb);
+        return { fy, diff: Math.round(other - target), target, capped: target < cey - 1 };
+      });
+      const have = rows.filter((r) => r.diff != null);
+      const sum = have.reduce((a, r) => a + r.diff!, 0);
+      const first = have[0]?.fy;
+      const lastFy = have[have.length - 1]?.fy;
+      const cappedYears = rows.filter((r) => r.capped).length;
+      const headline = el("p", "cap-note");
+      headline.textContent = `${capitalize(scenName)}, ${t.name}'s targets from FY${first} to FY${lastFy} would have been ` +
+        (sum < 0 ? `${usd(-sum)} lower` : sum > 0 ? `${usd(sum)} higher` : "the same") + ` in all, ` +
+        `${usd(Math.abs(sum) / Math.max(1, have.length))} a year on average. ${t.name} was at the cap in ` +
+        `${cappedYears === 0 ? "none" : cappedYears === have.length ? "all" : cappedYears} of those ${have.length} years.`;
+      const caveat = el("p", "cap-note");
+      caveat.textContent = "Each year keeps that year's statewide total of targets, as the formula does. These are " +
+        "targets: what a town actually paid followed its required contribution, which moves toward its target a " +
+        "few percent a year.";
+      // Columns: above zero, the target would be higher without today's cap; below, lower
+      const width = Math.max(300, yearsBox.clientWidth || 800);
+      const height = 220;
+      const m = { top: 12, right: 12, bottom: 38, left: 78 };
+      const pw = width - m.left - m.right;
+      const ph = height - m.top - m.bottom;
+      const vals = have.map((r) => r.diff!);
+      const ticks = ticksFor(Math.min(0, ...vals), Math.max(0, ...vals), 4);
+      const y0 = ticks[0];
+      const y1 = ticks[ticks.length - 1];
+      const sy = (v: number) => m.top + ph - ((v - y0) / (y1 - y0 || 1)) * ph;
+      const step = pw / rows.length;
+      yearsSvg.replaceChildren();
+      yearsSvg.setAttribute("viewBox", `0 0 ${width} ${height}`);
+      yearsSvg.setAttribute("aria-label", `Columns of how ${t.name}'s target would change ${scenName}, each year FY${first} to FY${lastFy}.`);
+      const money = (v: number) => (Math.abs(v) >= 1e6 ? `${v < 0 ? "−" : ""}$${(Math.abs(v) / 1e6).toFixed(1)}M`
+        : `${v < 0 ? "−" : ""}$${Math.round(Math.abs(v) / 1000)}K`);
+      for (const tk of ticks) {
+        svgEl("line", { x1: m.left, x2: m.left + pw, y1: sy(tk), y2: sy(tk), class: tk === 0 ? "sc-ref" : "cap-years-grid" }, yearsSvg);
+        const lab = svgEl("text", { x: m.left - 8, y: sy(tk), dy: "0.32em", "text-anchor": "end", class: "sc-tick" }, yearsSvg);
+        lab.textContent = tk === 0 ? "$0" : money(tk);
+      }
+      rows.forEach((r, j) => {
+        const x = m.left + step * j + step * 0.18;
+        const w = step * 0.64;
+        if (r.diff != null && r.diff !== 0) {
+          const top = sy(Math.max(0, r.diff));
+          const bar = svgEl("rect", { x, y: top, width: w, height: Math.max(1, Math.abs(sy(r.diff) - sy(0))),
+            fill: r.diff > 0 ? "#2a78d6" : "#eb6834", rx: 2 }, yearsSvg);
+          const tip = svgEl("title", {}, bar);
+          tip.textContent = `FY${r.fy}: target ${usd(r.target!)}${r.capped ? " (at the cap)" : ""}; ${scenName}, ` +
+            `${signed(r.diff)}`;
+        }
+        if (r.capped) svgEl("rect", { x, y: m.top + ph + 4, width: w, height: 4, fill: "#6250d6", rx: 1 }, yearsSvg);
+        if (rows.length <= 12 || j % 2 === 0 || pw > 900) {
+          const lab = svgEl("text", { x: x + w / 2, y: height - 12, "text-anchor": "middle", class: "sc-tick" }, yearsSvg);
+          lab.textContent = pw > 900 ? `FY${String(r.fy).slice(2)}` : `'${String(r.fy).slice(2)}`;
+        }
+      });
+      const key = el("ul", "cw-legend");
+      for (const [color, label, shape] of [["#2a78d6", "Higher without today's cap", "square"],
+        ["#eb6834", "Lower without today's cap: the cap raises this town's target", "square"],
+        ["#6250d6", `${t.name} at the cap that year`, "square"]] as const) {
+        const li = el("li");
+        const k = el("span", `cw-key ${shape}`);
+        k.style.setProperty("--c", color);
+        li.append(k, el("span", undefined, label));
+        key.append(li);
+      }
+      const src = el("p", "cap-note");
+      src.append("Source: DESE's ", link("Chapter 70 trends workbook", H.source), ` (FY${first}–FY${lastFy - 1}) and FY${lastFy} formula spreadsheet.`);
+      yearsBox.replaceChildren(el("h3", undefined, `${t.name}, year by year`), headline, key, yearsSvg, caveat, src);
+    } else {
+      yearsBox.replaceChildren();
+    }
 
     // The chart: every town, the selected one marked
     const yo = Y_OPTIONS[yKey];

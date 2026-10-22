@@ -2864,6 +2864,20 @@ import Layout from "../../layouts/Layout.astro";
     transform: rotate(45deg);
   }
 
+  .explorer :global(.cap-years-chart) {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+
+  .explorer :global(.cap-years-grid) {
+    stroke: var(--grid);
+  }
+
+  .explorer :global(.cap-years-chart rect[fill]:hover) {
+    opacity: 0.8;
+  }
+
   .explorer :global(.cap-table-head) {
     font-weight: 600;
     margin: 0 0 0.4rem;
