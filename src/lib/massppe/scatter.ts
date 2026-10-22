@@ -33,6 +33,8 @@ export interface ScatterOpts {
   smooth?: boolean;
   /** A thumbnail: no axis text, labels, or pointer */
   mini?: boolean;
+  /** A reference line across the chart at this y, such as zero */
+  refY?: number;
   onHover?: (p: Point | null, at: { left: number; top: number } | null) => void;
   onPick?: (p: Point) => void;
 }
@@ -169,6 +171,10 @@ export function scatter(svg: SVGSVGElement, points: Point[], o: ScatterOpts) {
       const t = svgEl("text", { x: 0, y: 0, transform: `translate(14 ${m.top + ph / 2}) rotate(-90)`, "text-anchor": "middle", class: "sc-title" }, svg);
       t.textContent = o.yTitle;
     }
+  }
+
+  if (o.refY != null && o.refY >= y0 && o.refY <= y1) {
+    svgEl("line", { x1: m.left, x2: m.left + pw, y1: sy(o.refY), y2: sy(o.refY), class: "sc-ref" }, svg);
   }
 
   const plot = svgEl("g", { class: "sc-points" }, svg);

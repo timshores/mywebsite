@@ -8,6 +8,7 @@
 // compresses (it sends .json uncompressed).
 
 import { compact, lines, niceTicks, niceTicksRange, stackedColumns, type Panel, type Series, type Val } from "./charts";
+import type { CapData } from "./cap";
 import type { CwData } from "./commonwealth";
 import { groupedPicker, type Picker } from "./picker";
 
@@ -150,8 +151,8 @@ interface Data {
 type Compare = "none" | "cohort" | "cohort-state" | "region" | "state" | "gateway" | "other";
 type TownCompare = "none" | "peer" | "peer-state" | "region" | "state" | "gateway" | "other";
 type Dollars = "nominal" | "real";
-type View = "districts" | "towns" | "commonwealth";
-const VIEWS: View[] = ["districts", "towns", "commonwealth"];
+type View = "districts" | "towns" | "commonwealth" | "cap";
+const VIEWS: View[] = ["districts", "towns", "commonwealth", "cap"];
 type StackPanel = "ppe" | "nss" | "rev" | "tspend" | "trev" | "tval" | "tpar";
 /** The two lines a stacked chart can draw over its columns */
 type Line = "trend" | "cmp";
@@ -172,6 +173,7 @@ const CHOICE_ALIASES: Record<string, string> = { western: "region" };
 // Where remembered choices live (localStorage, with permission): this browser only
 const STORE = "mass-school-spending:choices";
 const CONSENT = "mass-school-spending:remember";
+const INTRO = "mass-school-spending:intro";
 
 const PPE_COLORS = ["#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#e87ba4", "#008300", "#6250d6", "#e34948", "#8f8a7f"];
 const NSS_SERIES = [
@@ -387,7 +389,15 @@ export async function startExplorer() {
     if (consent !== "yes") return;
     const sets = (r: Record<string, Set<string>>) => Object.fromEntries(Object.entries(r).map(([k, s]) => [k, [...s]]));
     storage.set(STORE, JSON.stringify({ state, isolated: sets(isolated), hidden: sets(hiddenLines) }));
+    if (intro) storage.set(INTRO, intro.open ? "open" : "closed");
   }
+  // The introduction stays folded or open as it was left, with the other remembered choices
+  const intro = document.querySelector<HTMLDetailsElement>(".intro");
+  if (intro && consent === "yes" && storage.get(INTRO) === "closed") intro.open = false;
+  intro?.addEventListener("toggle", () => {
+    askToRemember();
+    remember();
+  });
   // The question comes once, after someone first changes something, so there is
   // something to remember
   let asked = false;
@@ -400,7 +410,10 @@ export async function startExplorer() {
     consent = answer;
     storage.set(CONSENT, answer);
     if (answer === "yes") remember();
-    else storage.drop(STORE);
+    else {
+      storage.drop(STORE);
+      storage.drop(INTRO);
+    }
     $("remember-prompt").hidden = true;
     rememberNote();
   }
@@ -536,7 +549,7 @@ export async function startExplorer() {
 
   // A tab switch fades what changes with the tab (the page's .swap words and #view-panel)
   // out, draws the new view, and fades it back in
-  const FADE_MS = 280;
+  const FADE_MS = 560;
   const calm = matchMedia("(prefers-reduced-motion: reduce)");
   let fading: number | undefined;
 
@@ -587,6 +600,8 @@ export async function startExplorer() {
         await ensure([comparisonId(byId.get(state.d))]);
       } else if (state.view === "commonwealth") {
         await loadCommonwealth();
+      } else if (state.view === "cap") {
+        await loadCap();
       } else {
         if (!towns) {
           $("entity-name").textContent = "Loading towns…";
@@ -615,6 +630,15 @@ export async function startExplorer() {
     });
     // A link to one plot opens it
     if (new URLSearchParams(location.search).has("y")) cw.openFromUrl();
+  }
+
+  // The 82.5% cap tab, loaded the first time it opens; it starts on the town last viewed
+  let cap: { render(): void } | null = null;
+  async function loadCap() {
+    if (cap) return;
+    const [mod, json] = await Promise.all([import("./cap"), import("../../data/massppe/cap.json")]);
+    cap = mod.startCap($("cap-root"), json.default as unknown as CapData, { town: state.t });
+    cap.render();
   }
 
   /** A link that opens a district or town in the explorer, in place or in a new tab. */
@@ -1092,7 +1116,7 @@ export async function startExplorer() {
   function render() {
     applyView();
     if (state.view === "districts") renderDistricts();
-    else if (state.view === "commonwealth") { /* the gallery draws itself */ }
+    else if (state.view === "commonwealth" || state.view === "cap") { /* these tabs draw themselves */ }
     else if (towns) renderTowns();
     else {
       $("entity-name").textContent = "Town data unavailable";

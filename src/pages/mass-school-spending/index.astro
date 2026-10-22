@@ -32,6 +32,7 @@ import Layout from "../../layouts/Layout.astro";
       <button type="button" role="tab" id="tab-districts" data-view="districts" aria-controls="view-panel" aria-selected="true">School districts</button>
       <button type="button" role="tab" id="tab-towns" data-view="towns" aria-controls="view-panel" aria-selected="false" tabindex="-1">Towns</button>
       <button type="button" role="tab" id="tab-commonwealth" data-view="commonwealth" aria-controls="view-panel" aria-selected="false" tabindex="-1">Commonwealth</button>
+      <button type="button" role="tab" id="tab-cap" data-view="cap" aria-controls="view-panel" aria-selected="false" tabindex="-1">The 82.5% cap</button>
     </div>
 
     <div id="view-panel" role="tabpanel" aria-labelledby="tab-districts">
@@ -101,6 +102,69 @@ import Layout from "../../layouts/Layout.astro";
         spending.
       </p>
       <div id="cw-root"></div>
+    </section>
+
+    <section id="cap-view" class="cap-view" data-view-only="cap" hidden>
+      <h2 class="cap-title">The 82.5% cap</h2>
+      <p class="cap-lede">
+        Every Massachusetts school district gets at least 17.5% of its foundation budget from the state, however
+        wealthy its towns. That guarantee comes from a cap in the Chapter 70 formula: no town's target local
+        contribution can be more than 82.5% of its foundation budget.
+        <a href="https://masspromise2invest.org/">MASS Promise to Invest</a>, a statewide campaign for school funding,
+        argues that the cap costs everyone else. The formula asks every town for the same share of its wealth and sets
+        that share so the targets add up to a fixed total, so holding down the wealthiest towns' targets raises the
+        share for all the rest. In the campaign's words, “To fund the reduced rate as a result of the cap for the
+        wealthy districts, the lowest income districts essentially pay an increased amount.” Montague resident Michael
+        Naughton worked out every town's FY2026 target with and without the cap from DESE's formula spreadsheet, and
+        the campaign posted
+        <a href="https://masspromise2invest.org/wp-content/uploads/2025/10/fy26-chapter-70-cap-comparisons.xlsx">his workbook</a>
+        on <a href="https://masspromise2invest.org/information-2/">its information page</a>.
+      </p>
+      <p class="cap-lede">
+        I like this work, and I'm curious about it. The arithmetic holds up in DESE's own spreadsheets, and the size of
+        it surprised me. This tab is where I'm building tools to understand what it means town by town: try another
+        cap, look up a town, and see who pays more and who pays less.
+      </p>
+      <div id="cap-root"></div>
+      <section class="cap-section cap-questions">
+        <h3>Questions I'm still working through</h3>
+        <ul>
+          <li>
+            <strong>Targets aren't bills.</strong> When a town's required contribution is above its target, it drops to
+            the target. When it's below, it grows by the town's municipal revenue growth factor, plus 1 or 2 percent
+            more if it's far behind. Would lifting the cap cut many towns' requirements at once and raise the wealthiest
+            towns' over years? What happens in between?
+          </li>
+          <li>
+            <strong>Where would the money go?</strong> Chapter 70 aid starts each year from the year before. A district
+            whose aid and required contribution fall short of its foundation budget gets foundation aid to close the
+            gap; the rest get a minimum increase, $160 per pupil in FY2027. How much would a higher target lower a
+            wealthy town's aid, and what would lower targets elsewhere cost the state?
+          </li>
+          <li>
+            <strong>Who counts as lower income?</strong> The formula counts the income on residents' state tax returns.
+            Amherst, where students count as residents, has one of the lowest incomes per resident in the state, yet it
+            is at the cap in both years: with the cap's percentages, its property and income yield more than 82.5% of
+            its foundation budget. How many towns would a different measure of income move?
+          </li>
+          <li>
+            <strong>Regional districts.</strong> A town's contribution is divided among its school districts by each
+            one's share of the foundation budget for the town's pupils, so the cap reaches regional districts through
+            their member towns. How does it add up district by district?
+          </li>
+        </ul>
+      </section>
+      <p class="cap-method">
+        <strong>Sources and method.</strong> Each town's figures come from DESE's complete formula spreadsheets for
+        <a href="https://www.doe.mass.edu/finance/chapter70/fy2026/chapter-2026.xlsm">FY2026</a> and
+        <a href="https://www.doe.mass.edu/finance/chapter70/fy2027/chapter-2027.xlsm">FY2027</a>, the Townwide
+        Contributions sheet (<a href="/mass-school-spending/data/towns-chapter70-targets.csv" download>CSV</a>). For
+        another cap, or none, I keep the formula's rule that targets add up to 59% of all foundation budgets and scale
+        both percentages by the one factor that makes them add up; each town's target is then the smaller of its scaled
+        yield and the new cap. For FY2026 this matches Naughton's targets with a 100% cap to the dollar, and with no cap
+        to within a hundredth of a percent. Per-resident figures use the Census Bureau's July 2024 population
+        estimates; income per resident divides the formula's income by the estimate for July of that year.
+      </p>
     </section>
 
     <div id="panels" class="panels" data-view-only="districts">
@@ -441,9 +505,10 @@ import Layout from "../../layouts/Layout.astro";
   }
 
   /* Switching tabs: the words and the view that change with the tab fade out, then in */
+  /* The same transition both ways: out, then in, 0.56s each (explorer.ts FADE_MS) */
   .swap,
   #view-panel {
-    transition: opacity 0.28s ease;
+    transition: opacity 0.56s ease;
   }
 
   .explorer.is-switching .swap,
@@ -566,11 +631,11 @@ import Layout from "../../layouts/Layout.astro";
   /* The long menus (lib/massppe/picker.ts): a button showing the choice, and a panel with a
      search box and collapsible groups. Some names run long; the button keeps a sensible
      width and the panel shows them in full. */
-  .control :global(.picker) {
+  .explorer :global(.control .picker) {
     position: relative;
   }
 
-  .control :global(.picker-button) {
+  .explorer :global(.control .picker-button) {
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -589,21 +654,21 @@ import Layout from "../../layouts/Layout.astro";
     cursor: pointer;
   }
 
-  .control :global(.picker-button:focus-visible),
-  .control :global(.picker-search:focus-visible),
-  .control :global(.picker-group-head:focus-visible),
-  .control :global(.picker-option:focus-visible) {
+  .explorer :global(.control .picker-button:focus-visible),
+  .explorer :global(.control .picker-search:focus-visible),
+  .explorer :global(.control .picker-group-head:focus-visible),
+  .explorer :global(.control .picker-option:focus-visible) {
     outline: 2px dashed var(--accent);
     outline-offset: 1px;
   }
 
-  .control :global(.picker-value) {
+  .explorer :global(.control .picker-value) {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
 
-  .control :global(.picker-caret) {
+  .explorer :global(.control .picker-caret) {
     flex: none;
     width: 7px;
     height: 7px;
@@ -613,7 +678,7 @@ import Layout from "../../layouts/Layout.astro";
     transform: rotate(45deg);
   }
 
-  .control :global(.picker-panel) {
+  .explorer :global(.control .picker-panel) {
     position: absolute;
     top: calc(100% + 4px);
     left: 0;
@@ -628,11 +693,11 @@ import Layout from "../../layouts/Layout.astro";
     box-shadow: 0 16px 40px rgba(31, 31, 28, 0.2);
   }
 
-  .control :global(.picker-panel[hidden]) {
+  .explorer :global(.control .picker-panel[hidden]) {
     display: none;
   }
 
-  .control :global(.picker-search) {
+  .explorer :global(.control .picker-search) {
     margin: 0.6rem 0.6rem 0.4rem;
     padding: 0.45rem 0.6rem;
     font: inherit;
@@ -644,22 +709,22 @@ import Layout from "../../layouts/Layout.astro";
     border-radius: 8px;
   }
 
-  .control :global(.picker-groups) {
+  .explorer :global(.control .picker-groups) {
     overflow-y: auto;
     padding: 0 0.4rem 0.5rem;
   }
 
-  .control :global(.picker-group[hidden]) {
+  .explorer :global(.control .picker-group[hidden]) {
     display: none;
   }
 
-  .control :global(.picker-section) {
+  .explorer :global(.control .picker-section) {
     border-top: 1px solid var(--line);
     margin-top: 0.3rem;
     padding-top: 0.3rem;
   }
 
-  .control :global(.picker-group-head) {
+  .explorer :global(.control .picker-group-head) {
     display: flex;
     align-items: center;
     gap: 0.5rem;
@@ -677,7 +742,7 @@ import Layout from "../../layouts/Layout.astro";
   }
 
   /* A chevron that turns down when the group opens */
-  .control :global(.picker-group-head::before) {
+  .explorer :global(.control .picker-group-head::before) {
     content: "";
     flex: none;
     width: 6px;
@@ -688,16 +753,16 @@ import Layout from "../../layouts/Layout.astro";
     transition: transform 0.12s ease;
   }
 
-  .control :global(.picker-group-head[aria-expanded="true"]::before) {
+  .explorer :global(.control .picker-group-head[aria-expanded="true"]::before) {
     transform: rotate(45deg);
   }
 
-  .control :global(.picker-group-label) {
+  .explorer :global(.control .picker-group-label) {
     flex: 1;
   }
 
   /* A dot on the group that holds the current choice */
-  .control :global(.picker-group-head.has-current .picker-group-label::after) {
+  .explorer :global(.control .picker-group-head.has-current .picker-group-label::after) {
     content: "";
     display: inline-block;
     width: 6px;
@@ -708,24 +773,24 @@ import Layout from "../../layouts/Layout.astro";
     background: var(--accent);
   }
 
-  .control :global(.picker-count) {
+  .explorer :global(.control .picker-count) {
     font-size: 0.8rem;
     font-weight: 400;
     color: var(--muted);
   }
 
-  .control :global(.picker-options) {
+  .explorer :global(.control .picker-options) {
     list-style: none;
     margin: 0 0 0.2rem;
     padding: 0 0 0 1.25rem;
   }
 
-  .control :global(.picker-options[hidden]),
-  .control :global(.picker-options li[hidden]) {
+  .explorer :global(.control .picker-options[hidden]),
+  .explorer :global(.control .picker-options li[hidden]) {
     display: none;
   }
 
-  .control :global(.picker-option) {
+  .explorer :global(.control .picker-option) {
     display: block;
     width: 100%;
     font: inherit;
@@ -740,23 +805,23 @@ import Layout from "../../layouts/Layout.astro";
     cursor: pointer;
   }
 
-  .control :global(.picker-group-head:hover),
-  .control :global(.picker-option:hover) {
+  .explorer :global(.control .picker-group-head:hover),
+  .explorer :global(.control .picker-option:hover) {
     background: rgba(31, 31, 28, 0.05);
   }
 
-  .control :global(.picker-option.is-current) {
+  .explorer :global(.control .picker-option.is-current) {
     font-weight: 600;
     color: var(--accent);
   }
 
-  .control :global(.picker-option:disabled) {
+  .explorer :global(.control .picker-option:disabled) {
     color: var(--muted);
     opacity: 0.6;
     cursor: default;
   }
 
-  .control :global(.picker-empty) {
+  .explorer :global(.control .picker-empty) {
     margin: 0.2rem 1rem 0.8rem;
     font-size: 0.88rem;
     color: var(--muted);
@@ -1711,12 +1776,12 @@ import Layout from "../../layouts/Layout.astro";
 
     .control,
     .control select,
-    .control :global(.picker-button) {
+    .explorer :global(.control .picker-button) {
       width: 100%;
       min-width: 0;
     }
 
-    .control :global(.picker-panel) {
+    .explorer :global(.control .picker-panel) {
       width: 100%;
     }
 
@@ -2345,6 +2410,257 @@ import Layout from "../../layouts/Layout.astro";
       width: 100vw;
       height: 100dvh;
       border-radius: 0;
+    }
+  }
+
+  /* The 82.5% cap tab */
+  .cap-title {
+    font-size: 1.6rem;
+    margin: 0.4rem 0 0.6rem;
+  }
+
+  .cap-lede,
+  .cap-method {
+    max-width: 72ch;
+    line-height: 1.6;
+  }
+
+  .cap-method {
+    font-size: 0.9rem;
+    color: var(--ink-soft);
+  }
+
+  .cap-questions ul {
+    max-width: 72ch;
+    padding-left: 1.2rem;
+    line-height: 1.55;
+  }
+
+  .cap-questions li + li {
+    margin-top: 0.6rem;
+  }
+
+  .explorer :global(.cap-section) {
+    margin: 1.6rem 0;
+  }
+
+  .explorer :global(.cap-section h3) {
+    font-size: 1.15rem;
+    margin: 0 0 0.6rem;
+  }
+
+  .explorer :global(.cap-section p) {
+    max-width: 72ch;
+    line-height: 1.6;
+  }
+
+  .explorer :global(.cap-note) {
+    font-size: 0.9rem;
+    color: var(--ink-soft);
+  }
+
+  .explorer :global(.cap-year) {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin: 1rem 0 0.4rem;
+    font-size: 0.85rem;
+    color: var(--muted);
+  }
+
+  .explorer :global(.cap-year-btn) {
+    font: inherit;
+    font-size: 0.85rem;
+    color: var(--ink);
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 0.25rem 0.75rem;
+    cursor: pointer;
+  }
+
+  .explorer :global(.cap-year-btn.is-on) {
+    color: var(--paper);
+    background: var(--ink);
+    border-color: var(--ink);
+  }
+
+  .explorer :global(.cap-tiles) {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.75rem;
+  }
+
+  .explorer :global(.cap-tiles .tile) {
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 0.8rem 0.9rem;
+  }
+
+  .explorer :global(.cap-tiles .tile-label) {
+    font-size: 0.8rem;
+    color: var(--ink-soft);
+  }
+
+  .explorer :global(.cap-tiles .tile-value) {
+    font-size: 1.45rem;
+    font-weight: 700;
+    margin: 0.2rem 0 0.15rem;
+  }
+
+  .explorer :global(.cap-tiles .tile-detail) {
+    font-size: 0.8rem;
+    color: var(--muted);
+    line-height: 1.35;
+  }
+
+  .explorer :global(.cap-scen-row) {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem 1rem;
+    padding: 0.7rem 0.9rem;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: #fff;
+  }
+
+  .explorer :global(.cap-scen-lead) {
+    font-weight: 600;
+  }
+
+  .explorer :global(.cap-radio) {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    cursor: pointer;
+  }
+
+  .explorer :global(.cap-scen-row input[type="range"]) {
+    width: min(260px, 100%);
+    accent-color: var(--accent);
+  }
+
+  .explorer :global(.cap-level) {
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    min-width: 3.5rem;
+  }
+
+  .explorer :global(.cap-pick) {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    max-width: 24rem;
+    margin-bottom: 0.8rem;
+    font-size: 0.82rem;
+    font-weight: 500;
+    color: var(--ink-soft);
+  }
+
+  .explorer :global(.cap-steps-table) {
+    border-collapse: collapse;
+    width: 100%;
+    max-width: 52rem;
+    font-size: 0.9rem;
+  }
+
+  .explorer :global(.cap-steps-table th),
+  .explorer :global(.cap-steps-table td) {
+    text-align: left;
+    padding: 0.4rem 0.6rem;
+    border-bottom: 1px solid var(--grid);
+    vertical-align: top;
+  }
+
+  .explorer :global(.cap-steps-table th) {
+    font-weight: 500;
+  }
+
+  .explorer :global(.cap-steps-table .num),
+  .explorer :global(.cap-fifths-table .num) {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  .explorer :global(.cap-steps-table .note) {
+    color: var(--muted);
+    font-size: 0.84rem;
+  }
+
+  .explorer :global(.cap-verdict) {
+    font-weight: 600;
+    margin-top: 0.7rem;
+  }
+
+  .explorer :global(.cap-controls) {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem 1rem;
+    margin-bottom: 0.6rem;
+  }
+
+  .explorer :global(.cap-field) {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    font-size: 0.78rem;
+    color: var(--muted);
+    max-width: 100%;
+  }
+
+  .explorer :global(.cap-field select) {
+    font: inherit;
+    font-size: 0.88rem;
+    color: var(--ink);
+    padding: 0.35rem 0.5rem;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: #fff;
+    max-width: 100%;
+  }
+
+  .explorer :global(.cap-figure) {
+    position: relative;
+    margin: 0;
+  }
+
+  .explorer :global(.cap-chart) {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+
+  .explorer :global(.sc-ref) {
+    stroke: var(--ink-soft);
+    stroke-width: 1;
+    stroke-dasharray: 4 3;
+  }
+
+  .explorer :global(.cap-fifths-table) {
+    border-collapse: collapse;
+    font-size: 0.88rem;
+    min-width: 100%;
+  }
+
+  .explorer :global(.cap-fifths-table th),
+  .explorer :global(.cap-fifths-table td) {
+    padding: 0.4rem 0.6rem;
+    border-bottom: 1px solid var(--grid);
+    text-align: left;
+  }
+
+  .explorer :global(.cap-fifths-table thead th) {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--ink-soft);
+    vertical-align: bottom;
+  }
+
+  @media (max-width: 760px) {
+    .explorer :global(.cap-tiles) {
+      grid-template-columns: minmax(0, 1fr);
     }
   }
 </style>
