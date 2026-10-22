@@ -372,11 +372,12 @@ export function startCap(root: HTMLElement, data: CapData, opts: { town: string 
       "us what's fair for each town. The formula starts out with two percentages set for the year for every town in the " +
       `Commonwealth: in FY${y.fy}, ` +
       `${rate(y.property_pct)} of its property value and ${rate(y.income_pct)} of its residents' income. The sum is the ` +
-      "town's combined effort yield, what the formula says the town can afford.");
+      "town's combined effort yield. It's what the town would pay if it made the same effort as every other town to " +
+      "educate its schoolchildren: the same share of its property value and its residents' income.");
     const pCap = el("p");
     pCap.append(`Meanwhile … no town is asked for more than ${pct(y.max_pct, 1)} of its foundation budget, the state's ` +
       `estimate of what its schools need. ${y.totals.capped} towns, the ones with the most property and income for the ` +
-      "size of their schools, hit that 82.5% cap. They're asked for less than the formula says they can afford, and the " +
+      "size of their schools, hit that 82.5% cap. They're asked for less than that same effort would yield, and the " +
       `state pays at least the other ${pct(1 - y.max_pct, 1)}.`);
     const p2 = el("p");
     p2.append("Someone has to cover the difference, and that someone is other towns. The state sets the two " +
@@ -389,7 +390,7 @@ export function startCap(root: HTMLElement, data: CapData, opts: { town: string 
 
     tiles.replaceChildren(
       tile(`Towns at the cap, FY${y.fy}`, String(y.totals.capped),
-        [`Of 351. Each is asked for ${pct(y.max_pct, 1)} of its foundation budget, less than the formula says it can afford`]),
+        [`Of 351. Each is asked for ${pct(y.max_pct, 1)} of its foundation budget, less than the same effort would yield`]),
       tile("Statewide percentages", `${rate(y.property_pct)} · ${rate(y.income_pct)}`,
         ["Of property value and of income, with the cap", `With no cap: ${rate(y.property_pct * y.factor)} · ${rate(y.income_pct * y.factor)}`]),
       tile("Wealth redistributed by the cap", big(y.totals.up_sum), [
@@ -624,7 +625,7 @@ export function startCap(root: HTMLElement, data: CapData, opts: { town: string 
     };
     chartIntro.textContent = yKey === "share_cey"
       ? `Each point is a town. Across: ${xo.label.toLowerCase()}. Up and down: what the town is asked for in FY${y.fy} ` +
-        "as a share of what the formula says it can afford. Below 100%, the cap spares the town part of its share."
+        "as a share of what the same effort would yield. Below 100%, the cap spares the town part of its share."
       : `Each point is a town. Across: ${xo.label.toLowerCase()}. Up and down: how much more or less the town would be ` +
         `asked for in FY${y.fy} ${scenName}. Below the line, today's cap costs the town money; above it, the cap saves ` +
         "the town money." +
