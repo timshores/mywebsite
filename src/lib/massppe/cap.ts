@@ -368,7 +368,9 @@ export function startCap(root: HTMLElement, data: CapData, opts: { town: string 
 
     // How the cap works, in this year's numbers
     const p1 = el("p");
-    p1.append(`Chapter 70 asks each town to pay a share of its wealth toward its schools: in FY${y.fy}, ` +
+    p1.append("Chapter 70 asks each town to pay its fair share toward its schools. Each year, a complicated formula tells " +
+      "us what's fair for each town. The formula starts out with two percentages set for the year for every town in the " +
+      `Commonwealth: in FY${y.fy}, ` +
       `${rate(y.property_pct)} of its property value and ${rate(y.income_pct)} of its residents' income. The sum is the ` +
       "town's combined effort yield, what the formula says the town can afford. Meanwhile … no town is asked for more than " +
       `${pct(y.max_pct, 1)} of its foundation budget, the state's estimate of what its schools need. ${y.totals.capped} ` +
