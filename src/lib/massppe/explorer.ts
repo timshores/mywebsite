@@ -952,7 +952,8 @@ export async function startExplorer() {
   /** Legend entries for the lines the chart can draw, hidden ones included so they can come back. */
   const lineLegend = (trend: Series | null, overlay: Series | null, fmt: (v: number) => string = usd): LegendItem[] => [
     ...(hasLine(trend) ? [{ label: trend.label, color: TREND_COLOR, mark: "dash" as const, line: "trend" as const,
-      detail: ((r) => (r ? `${signed(r.perYear, fmt)}${r.rate != null ? ` (${signedPct(r.rate)})` : ""} a year` : undefined))(
+      detail: ((r) => (r ? `${signed(r.perYear, fmt)}${r.rate != null ? ` (${signedPct(r.rate)})` : ""} a year` +
+        (fmt === usd ? (state.usd === "nominal" ? ", before inflation" : ", after inflation") : "") : undefined))(
         trendRate(trend.values)) }] : []),
     ...(overlay ? [{ label: overlay.label, color: COMPARE_COLOR, mark: "line" as const, line: "cmp" as const }] : []),
   ];
@@ -1523,7 +1524,7 @@ export async function startExplorer() {
     const aidShare = aid != null && nssTotal[last] ? aid / nssTotal[last]! : null;
     $("tiles").replaceChildren(
       tile(`Spending per pupil, FY${years[last]}`, ppeTotal[last] != null ? usd(ppeTotal[last]!) : "–", [
-        g != null ? `${pct(g)} a year since FY${years[0]}${real ? ", after inflation" : ""}` : "",
+        g != null ? `${pct(g)} a year since FY${years[0]}${real ? ", after inflation" : ", before inflation"}` : "",
         c && cPpeTotal?.[last] != null ? `${cName}: ${usd(cPpeTotal[last]!)}` : "",
       ]),
       tile(`In-district enrollment, FY${years[last]}`, e.enroll.in_district[last] != null ? `${fte(e.enroll.in_district[last]!)} FTE` : "–", [
@@ -2006,7 +2007,7 @@ export async function startExplorer() {
     ];
     $("tiles").replaceChildren(
       tile(`General fund spending per ${perWord}, FY${fy}`, spendTotal[end] != null ? usd(spendTotal[end]!) : "–", [
-        g != null ? `${pct(g)} a year since FY${years[0]}${real ? ", after inflation" : ""}` : "",
+        g != null ? `${pct(g)} a year since FY${years[0]}${real ? ", after inflation" : ", before inflation"}` : "",
         t.kind === "town" && allDollars != null ? `${millions(allDollars)} in all` : "",
         c && cSpendTotal?.[end] != null ? `${c.name}: ${usd(cSpendTotal[end]!)}` : "",
       ]),

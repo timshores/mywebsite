@@ -8,7 +8,9 @@ import { enlargeButton } from "./enlarge";
 
 /** [value, year] for a level; [value, first year, last year] for a change */
 type Val = number[];
-interface MapTown { id: string; name: string; d: string; elem: string | null; high: string | null; v: Record<string, Val> }
+/** elem and high: the districts serving its elementary and its secondary grades; all: the two combined,
+ * each weighted by the town's own pupils, where they differ */
+interface MapTown { id: string; name: string; d: string; elem: string | null; high: string | null; v: Record<string, Val>; all?: Record<string, Val> }
 export interface MapData {
   meta: { start: number; latest: number; cap_fy: number; width: number; height: number; outlines: string };
   towns: MapTown[];
@@ -16,7 +18,7 @@ export interface MapData {
 }
 
 type Layer = "towns" | "districts";
-type Grades = "elem" | "high";
+type Grades = "elem" | "high" | "all";
 interface Measure {
   key: string;
   label: string;
@@ -146,10 +148,10 @@ const SVG = "http://www.w3.org/2000/svg";
 
 export function startMap(root: HTMLElement, data: MapData, opts: { openTown: (id: string) => void; openDistrict: (id: string) => void }) {
   const { meta } = data;
-  let layer: Layer = "towns";
-  let grades: Grades = "elem";
+  let layer: Layer = "districts";
+  let grades: Grades = "all";
   let townKey = TOWN_MEASURES[0].key;
-  let districtKey = DISTRICT_MEASURES[0].key;
+  let districtKey = "above";
 
   // ---- Layout: heading, controls, what the measure is, the map with its legend, a table ----
   const section = el("section", "map-section");
@@ -173,7 +175,7 @@ export function startMap(root: HTMLElement, data: MapData, opts: { openTown: (id
     layer = v as Layer;
     draw();
   });
-  const gradeSeg = seg("Grades", [["elem", "Elementary"], ["high", "High school"]], (v) => {
+  const gradeSeg = seg("Grades", [["elem", "Elementary"], ["high", "Secondary"], ["all", "All grades"]], (v) => {
     grades = v as Grades;
     draw();
   });
@@ -223,9 +225,13 @@ export function startMap(root: HTMLElement, data: MapData, opts: { openTown: (id
     paths.set(t.id, p);
   }
   const townById = new Map(data.towns.map((t) => [t.id, t]));
+  /** "Leverett and Amherst-Pelham": the districts serving a town's grades */
+  const schoolsOf = (t: MapTown) => [...new Set([t.elem, t.high].filter((d): d is string => !!d))]
+    .map((d) => data.districts[d]?.name ?? d).join(" and ") || "no district of its own";
 
   // What a town shows: its own value, or its district's
-  let current: { measure: Measure; districtOf: (t: MapTown) => string | null; value: (t: MapTown) => Val | null; c: number[] } | null = null;
+  let current: { measure: Measure; districtOf: (t: MapTown) => string | null; value: (t: MapTown) => Val | null; c: number[];
+    combinedAt: (t: MapTown) => boolean } | null = null;
 
   function draw() {
     const onTowns = layer === "towns";
@@ -236,20 +242,24 @@ export function startMap(root: HTMLElement, data: MapData, opts: { openTown: (id
     measureSel.replaceChildren(...list.map((m) => new Option(m.label, m.key)));
     measureSel.value = onTowns ? townKey : districtKey;
     const measure = list.find((m) => m.key === measureSel.value)!;
-    const districtOf = (t: MapTown) => (onTowns ? null : grades === "elem" ? t.elem : t.high);
+    // All grades: a town with one district takes it; a town split between two takes the two combined
+    const combinedAt = (t: MapTown) => !onTowns && grades === "all" && !!t.elem && t.elem !== t.high;
+    const districtOf = (t: MapTown) => (onTowns || combinedAt(t) ? null : grades === "high" ? t.high : t.elem);
     const value = (t: MapTown): Val | null => {
       if (onTowns) return t.v[measure.key] ?? null;
+      if (combinedAt(t)) return t.all?.[measure.key] ?? null;
       const d = districtOf(t);
       return d ? data.districts[d]?.v[measure.key] ?? null : null;
     };
-    // Each district counts once, however many towns it covers
-    const units = onTowns ? data.towns.map((t) => t.v[measure.key]).filter(Boolean) as Val[]
+    // Each district counts once, however many towns it covers; with all grades, each town counts
+    const byTown = onTowns || grades === "all";
+    const units = byTown ? data.towns.map(value).filter(Boolean) as Val[]
       : [...new Set(data.towns.map(districtOf).filter((d): d is string => !!d))].map((d) => data.districts[d]?.v[measure.key])
         .filter(Boolean) as Val[];
     const values = units.map((u) => u[0]);
     const c = cuts(measure.kind, values);
     const colors = measure.kind === "change" ? DIVERGING : SEQUENTIAL;
-    current = { measure, districtOf, value, c };
+    current = { measure, districtOf, value, c, combinedAt };
     let none = 0;
     for (const t of data.towns) {
       const v = value(t);
@@ -258,18 +268,21 @@ export function startMap(root: HTMLElement, data: MapData, opts: { openTown: (id
     }
 
     // What it shows, and how the towns or districts split
-    const what = onTowns ? "towns" : "districts";
+    const what = byTown ? "towns" : "districts";
     about.replaceChildren(el("strong", "cw-var", measure.label), `. ${measure.about(meta)}`);
     if (measure.kind === "change" && measure.up) {
       const up = values.filter((v) => v > 0).length;
       about.append(` Of ${values.length} ${what}, ${up} ${measure.up}; ${values.length - up} ${measure.down}.`);
     } else {
-      about.append(` The middle ${what.slice(0, -1)}: ${measure.fmt(quantile(values, 0.5))}.`);
+      about.append(` Half the ${what} are above ${measure.fmt(quantile(values, 0.5))}.`);
     }
     if (!onTowns) {
-      about.append(grades === "elem"
-        ? " Each town takes the color of the district for its youngest pupils: its own, or its regional district if it has none."
-        : " Each town takes the color of its regional district, where its high schoolers go; a town with none takes its own.");
+      about.append({
+        elem: " Each town takes the color of the district for its youngest pupils: its own, or its regional district if it has none.",
+        high: " Each town takes the color of its regional district, where its older pupils go; a town with none takes its own.",
+        all: " A town with one district for every grade takes that district's color. Where a town's pupils split between an " +
+          "elementary and a secondary district, the two are combined, each counting the town's own pupils in it (FY2025).",
+      }[grades]);
     }
 
     // Legend: each class's range, then the gray for none
@@ -287,19 +300,21 @@ export function startMap(root: HTMLElement, data: MapData, opts: { openTown: (id
       return li;
     })()] : []));
     svg.setAttribute("aria-label", `Map of Massachusetts's 351 cities and towns, colored by ${measure.label.toLowerCase()}` +
-      (onTowns ? "." : ` of the district serving their ${grades === "elem" ? "elementary" : "high school"} grades.`) +
-      " The table below has every value.");
+      (onTowns ? "." : ` of the ${{ elem: "district serving their elementary grades", high: "district serving their secondary grades",
+        all: "districts serving all their grades" }[grades]}.`) + " The table below has every value.");
 
     // The table: highest first
-    const rows = onTowns
-      ? data.towns.filter((t) => t.v[measure.key]).map((t) => ({ name: t.name, v: t.v[measure.key] }))
+    const rows = byTown
+      ? data.towns.filter((t) => value(t)).map((t) => ({ name: onTowns || schoolsOf(t) === t.name ? t.name : `${t.name} (${schoolsOf(t)})`,
+        v: value(t)! }))
       : [...new Set(data.towns.map(districtOf).filter((d): d is string => !!d))]
         .filter((d) => data.districts[d]?.v[measure.key]).map((d) => ({ name: data.districts[d].name, v: data.districts[d].v[measure.key] }));
     rows.sort((a, b) => b.v[0] - a.v[0]);
     tableSum.textContent = `Every ${what.slice(0, -1)}, highest first`;
     const t = el("table");
     const hr = t.createTHead().insertRow();
-    hr.append(el("th", undefined, onTowns ? "Town" : "District"), el("th", "num", measure.label), el("th", undefined, "Years"));
+    hr.append(el("th", undefined, onTowns ? "Town" : byTown ? "Town (its districts)" : "District"), el("th", "num", measure.label),
+      el("th", undefined, "Years"));
     const tb = t.createTBody();
     for (const r of rows) {
       const tr = tb.insertRow();
@@ -336,9 +351,12 @@ export function startMap(root: HTMLElement, data: MapData, opts: { openTown: (id
     }
     const v = current.value(t);
     tip.replaceChildren(el("strong", undefined, t.name));
-    if (layer === "districts") tip.append(el("div", undefined, d ? `${data.districts[d].name} district` : "No district of its own"));
+    if (layer === "districts") {
+      tip.append(el("div", undefined, current.combinedAt(t) ? `${schoolsOf(t)}, combined` : d ? `${data.districts[d].name} district`
+        : "No district of its own"));
+    }
     tip.append(el("div", undefined, v ? `${current.measure.fmt(v[0])}, ${v.length > 2 ? `FY${v[1]}–FY${v[2]}` : `FY${v[1]}`}` : "No data"),
-      el("div", "cw-tip-hint", layer === "districts" && d ? "Select to open the district" : "Select to open the town"));
+      el("div", "cw-tip-hint", layer === "districts" && (d || t.elem) ? "Select to open the district" : "Select to open the town"));
     tip.hidden = false;
     const box = figure.getBoundingClientRect();
     const x = ev.clientX - box.left;
@@ -354,7 +372,8 @@ export function startMap(root: HTMLElement, data: MapData, opts: { openTown: (id
     const target = (ev.target as Element).closest?.("path.map-town") as SVGPathElement | null;
     if (!target || !current) return;
     const t = townById.get(target.dataset.id!)!;
-    const d = current.districtOf(t);
+    // A combined town opens its own, elementary, district; that page names the other
+    const d = current.districtOf(t) ?? (layer === "districts" ? t.elem : null);
     if (layer === "districts" && d) opts.openDistrict(d);
     else opts.openTown(t.id);
   });
