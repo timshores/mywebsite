@@ -168,11 +168,11 @@ export function startCommonwealth(root: HTMLElement, data: CwData, opts: { openD
     return { pts, rows, hl };
   }
 
-  /** Spearman's rho between the vertical measure and each measure of the other kind. */
+  /** Spearman's rho between the vertical measure and every other measure, closest first;
+   * measures without data for the year come last. */
   function ranking(v: View) {
-    const yv = VAR.get(v.y)!;
     const i = at(v.fy);
-    const others = VARS.filter((o) => o.role !== yv.role);
+    const others = VARS.filter((o) => o.key !== v.y);
     return others.map((o) => {
       const xs: number[] = [];
       const ys: number[] = [];
@@ -185,7 +185,7 @@ export function startCommonwealth(root: HTMLElement, data: CwData, opts: { openD
         ys.push(y);
       }
       return { v: o, r: spearman(xs, ys), n: xs.length };
-    }).filter((o) => o.r != null).sort((a, b) => Math.abs(b.r!) - Math.abs(a.r!));
+    }).sort((a, b) => (b.r == null ? -1 : Math.abs(b.r)) - (a.r == null ? -1 : Math.abs(a.r)));
   }
 
   // ---- Gallery ----
@@ -215,10 +215,6 @@ export function startCommonwealth(root: HTMLElement, data: CwData, opts: { openD
   const close = el("button", "cw-close", "×");
   close.type = "button";
   close.setAttribute("aria-label", "Close");
-  const drawerToggle = el("button", "cw-drawer-toggle", "Correlations");
-  drawerToggle.type = "button";
-  drawerToggle.setAttribute("aria-expanded", "false");
-  drawerToggle.setAttribute("aria-controls", "cw-drawer");
   const aboutBtn = el("button", "cw-drawer-toggle", "About ρ");
   const tableBtn = el("button", "cw-drawer-toggle", "Data table");
   for (const b of [aboutBtn, tableBtn]) {
@@ -226,7 +222,7 @@ export function startCommonwealth(root: HTMLElement, data: CwData, opts: { openD
     b.setAttribute("aria-haspopup", "dialog");
   }
   const headTools = el("div", "cw-head-tools");
-  headTools.append(drawerToggle, aboutBtn, tableBtn, close);
+  headTools.append(aboutBtn, tableBtn, close);
   head.append(title, headTools);
 
   // The chart's settings fold away, leaving the chart more room
@@ -252,7 +248,6 @@ export function startCommonwealth(root: HTMLElement, data: CwData, opts: { openD
   };
   const varOptions = VARS.map((v) => [v.key, capital(v.label), v.role === "outcome" ? "School spending and aid" : "Size and the towns' wealth"] as [string, string, string]);
   const ySel = select("Vertical", varOptions);
-  const xSel = select("Horizontal", varOptions);
   const fySel = select("Year", [...years].reverse().map((y) => [String(y), `FY${y}`] as [string, string]));
   const hlSel = select("Highlight", Object.entries(HIGHLIGHTS).map(([k, h]) => [k, h.label] as [string, string]));
   const check = (label: string, help?: string) => {
@@ -298,31 +293,26 @@ export function startCommonwealth(root: HTMLElement, data: CwData, opts: { openD
   const legend = el("ul", "cw-legend");
   const caption = el("figcaption", "cw-caption");
   const finding = el("p", "cw-finding");
-  const more = el("button", "cw-more", "Compare every factor");
-  more.type = "button";
-  more.setAttribute("aria-controls", "cw-drawer");
   const findingRow = el("div", "cw-finding-row");
-  findingRow.append(finding, more);
+  findingRow.append(finding);
   figure.append(legend, svg, tip, findingRow, caption);
 
-  // The drawer: the ranking. How to read it and the data table each open in a window of their own.
-  const side = el("aside", "cw-drawer");
-  side.id = "cw-drawer";
-  side.hidden = true;
-  const drawerHead = el("div", "cw-drawer-head");
-  const drawerClose = el("button", "cw-close", "×");
-  drawerClose.type = "button";
-  drawerClose.setAttribute("aria-label", "Close the drawer");
-  drawerHead.append(el("strong", "cw-drawer-title", "Correlations"), drawerClose);
-  const corrPanel = el("div", "cw-drawer-panel");
+  // The horizontal picker: every other measure, ranked by how closely it lines up with the
+  // vertical one. It is part of the chart's settings and folds away with them. How to read
+  // it and the data table each open in a window of their own.
+  const side = el("aside", "cw-picker");
+  side.setAttribute("aria-labelledby", "cw-picker-head");
+  const corrPanel = el("div", "cw-picker-panel");
   const tableHolder = el("div", "cw-table");
   const sideHead = el("h3", undefined);
   // What the bars' two colors mean, in the explorer's usual blue and orange
   const barsKey = el("ul", "cw-bars-key");
-  for (const [cls, text] of [["pos", "Rise together: higher on one, higher on the other"],
-    ["neg", "Move opposite: higher on one, lower on the other"]]) {
+  for (const [cls, name, text] of [["pos", "Positive", "rise together: higher on one, higher on the other"],
+    ["neg", "Negative", "move opposite: higher on one, lower on the other"]]) {
     const li = el("li");
-    li.append(el("span", `cw-bars-swatch ${cls}`), el("span", undefined, text));
+    const words = el("span");
+    words.append(el("strong", undefined, name), ` · ${text}`);
+    li.append(el("span", `cw-bars-swatch ${cls}`), words);
     barsKey.append(li);
   }
   const bars = el("ol", "cw-bars");
@@ -339,8 +329,10 @@ export function startCommonwealth(root: HTMLElement, data: CwData, opts: { openD
     "other, negative when they tend to be lower, and near 0 when there is no consistent order. It compares ranks, so " +
     "it handles curved patterns like enrollment's and isn't swayed by a few extreme districts. As a rough guide, " +
     "below 0.3 is weak, 0.3 to 0.6 moderate, and above 0.6 strong.</p>";
-  corrPanel.append(sideHead, barsKey, bars);
-  side.append(drawerHead, corrPanel);
+  sideHead.id = "cw-picker-head";
+  const sideSub = el("p", "cw-picker-sub");
+  corrPanel.append(sideHead, sideSub, barsKey, bars);
+  side.append(corrPanel);
   body.append(figure, side);
   dialog.append(head, settings, body);
 
@@ -373,13 +365,15 @@ export function startCommonwealth(root: HTMLElement, data: CwData, opts: { openD
   aboutBtn.addEventListener("click", () => aboutDialog.showModal());
   tableBtn.addEventListener("click", () => tableDialog.showModal());
 
-  function drawer(show: boolean) {
-    side.hidden = !show;
-    drawerToggle.setAttribute("aria-expanded", String(show));
-  }
-  drawerToggle.addEventListener("click", () => drawer(side.hidden));
-  more.addEventListener("click", () => drawer(true));
-  drawerClose.addEventListener("click", () => drawer(false));
+  // The picker shows and hides with the settings, and the chart takes the room either way
+  const showPicker = () => {
+    side.hidden = !settings.open;
+    body.classList.toggle("has-picker", settings.open);
+  };
+  settings.addEventListener("toggle", () => {
+    showPicker();
+    requestAnimationFrame(() => draw());
+  });
   // Inside the explorer, so it takes the page's colors
   (root.closest(".explorer") ?? document.body).append(dialog);
 
@@ -390,7 +384,7 @@ export function startCommonwealth(root: HTMLElement, data: CwData, opts: { openD
     if (!dialog.open) {
       // Settings start open where there's room for them beside the chart
       settings.open = window.innerWidth > 700 && window.innerHeight > 640;
-      drawer(false);
+      showPicker();
       dialog.showModal();
     }
     draw();
@@ -421,7 +415,6 @@ export function startCommonwealth(root: HTMLElement, data: CwData, opts: { openD
     const preset = PRESETS.find((p) => p.id === v.preset && p.x === v.x && p.y === v.y);
     title.textContent = preset ? preset.title : `${capital(yv.short)} by ${xv.short}`;
     ySel.value = v.y;
-    xSel.value = v.x;
     fySel.value = String(v.fy);
     hlSel.value = v.hl;
     logBox.checked = v.log;
@@ -515,19 +508,25 @@ export function startCommonwealth(root: HTMLElement, data: CwData, opts: { openD
     tableHolder.replaceChildren(t);
     tableTitle.textContent = `${capital(yv.label)} and ${xv.label.toLowerCase()}, FY${v.fy}: ${n} districts, highest first.`;
 
-    // The ranking
+    // The picker: every other measure, closest first
     const rank = ranking(v);
-    sideHead.textContent = `What lines up most closely with ${yv.short}?`;
+    sideHead.textContent = "Horizontal";
+    sideSub.textContent = `Every other measure, ranked by how closely it lines up with ${yv.short} in FY${v.fy}. ` +
+      "Select one to put it across the bottom.";
     bars.replaceChildren(...rank.map((o) => {
       const li = el("li");
       const b = el("button", `cw-bar${o.v.key === v.x ? " is-current" : ""}`);
       b.type = "button";
-      b.title = `Put ${o.v.short} across the bottom`;
+      b.setAttribute("aria-pressed", String(o.v.key === v.x));
       const track = el("span", "cw-bar-track");
-      const fill = el("span", `cw-bar-fill${o.r! < 0 ? " neg" : ""}`);
-      fill.style.width = `${Math.abs(o.r!) * 50}%`;
-      track.append(fill);
-      b.append(el("span", "cw-bar-label", capital(o.v.short)), track, el("span", "cw-bar-value", rho(o.r!)));
+      if (o.r != null) {
+        const fill = el("span", `cw-bar-fill${o.r < 0 ? " neg" : ""}`);
+        fill.style.width = `${Math.abs(o.r) * 50}%`;
+        track.append(fill);
+      }
+      b.append(el("span", "cw-bar-label", capital(o.v.short)), track, el("span", "cw-bar-value", o.r == null ? "–" : rho(o.r)));
+      b.title = o.r == null ? `${capital(o.v.label)}: no FY${v.fy} data` : `${capital(o.v.label)}: ρ = ${rho(o.r)} across ${o.n} districts`;
+      b.disabled = o.r == null;
       b.addEventListener("click", () => {
         view = { ...v, preset: null, x: o.v.key, log: !!o.v.log };
         draw();
@@ -535,10 +534,13 @@ export function startCommonwealth(root: HTMLElement, data: CwData, opts: { openD
       li.append(b);
       return li;
     }));
-    const top = rank[0];
-    const here = rank.find((o) => o.v.key === v.x);
+    // The finding sets school measures against size and wealth, not against one another
+    const kind = rank.filter((o) => o.r != null && o.v.role !== yv.role);
+    const top = kind[0];
+    const here = rank.find((o) => o.v.key === v.x && o.r != null);
+    const among = yv.role === "outcome" ? "Of the measures of size and the towns' wealth" : "Of the school measures";
     finding.textContent = !top ? "" :
-      `In FY${v.fy}, ${top.v.short} lines up most closely with ${yv.short} (ρ = ${rho(top.r!)}, ${top.n} districts)` +
+      `${among}, ${top.v.short} lines up most closely with ${yv.short} in FY${v.fy} (ρ = ${rho(top.r!)}, ${top.n} districts)` +
       (!here || here === top ? "." : Math.abs(Math.abs(here.r!) - Math.abs(top.r!)) < 0.005
         ? `; ${xv.short}, across the bottom now, is as close.` : `; ${xv.short}, across the bottom now, has ρ = ${rho(here.r!)}.`);
   }
@@ -548,8 +550,17 @@ export function startCommonwealth(root: HTMLElement, data: CwData, opts: { openD
     view = { ...view, preset: null, ...patch };
     draw();
   };
-  ySel.addEventListener("change", () => change({ y: ySel.value }));
-  xSel.addEventListener("change", () => change({ x: xSel.value, log: !!VAR.get(xSel.value)?.log }));
+  // A new vertical measure keeps the horizontal one, unless they'd be the same: then the
+  // closest measure of the other kind goes across
+  ySel.addEventListener("change", () => {
+    if (!view) return;
+    let x = view.x;
+    if (x === ySel.value) {
+      const best = ranking({ ...view, y: ySel.value }).find((o) => o.r != null && o.v.role !== VAR.get(ySel.value)!.role);
+      x = best?.v.key ?? x;
+    }
+    change({ y: ySel.value, x, log: x === view.x ? view.log : !!VAR.get(x)?.log });
+  });
   fySel.addEventListener("change", () => change({ fy: Number(fySel.value) }));
   hlSel.addEventListener("change", () => change({ hl: hlSel.value }));
   logBox.addEventListener("change", () => change({ log: logBox.checked }));

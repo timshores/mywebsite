@@ -2112,35 +2112,39 @@ import Layout from "../../layouts/Layout.astro";
     line-height: 1.45;
   }
 
-  .explorer :global(.cw-drawer) {
-    position: absolute;
-    top: 0;
-    right: 0;
-    bottom: 0;
-    z-index: 3;
-    width: min(380px, 100%);
-    display: flex;
-    flex-direction: column;
-    background: var(--paper);
+  /* The horizontal picker beside the chart, while the settings are open */
+  .explorer :global(.cw-body.has-picker) {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 330px;
+    gap: 1.2rem;
+  }
+
+  .explorer :global(.cw-picker) {
+    min-height: 0;
+    overflow-y: auto;
     border-left: 1px solid var(--line);
-    box-shadow: -10px 0 24px var(--shadow);
+    padding-left: 1rem;
   }
 
-  .explorer :global(.cw-drawer-head) {
-    display: flex;
-    align-items: center;
-    gap: 0.3rem;
-    padding: 0.6rem 0.6rem 0.4rem 0.9rem;
-    border-bottom: 1px solid var(--line);
+  .explorer :global(.cw-picker h3) {
+    font-size: 1rem;
+    margin: 0 0 0.2rem;
   }
 
-  .explorer :global(.cw-drawer-head .cw-close) {
-    margin-left: auto;
+  .explorer :global(.cw-picker-sub) {
+    font-size: 0.74rem;
+    line-height: 1.4;
+    color: var(--muted);
+    margin: 0 0 0.5rem;
   }
 
-  .explorer :global(.cw-drawer-title) {
-    font-size: 0.95rem;
+  .explorer :global(.cw-bar:disabled) {
+    cursor: default;
+    color: var(--muted);
   }
+
+
+
 
   .explorer :global(.cw-sub) {
     width: min(760px, 94vw);
@@ -2193,37 +2197,17 @@ import Layout from "../../layouts/Layout.astro";
     margin: 0 0 0.6rem;
   }
 
-  .explorer :global(.cw-drawer-tab) {
-    font: inherit;
-    font-size: 0.85rem;
-    color: var(--ink-soft);
-    background: none;
-    border: 0;
-    border-bottom: 2px solid transparent;
-    padding: 0.3rem 0.4rem;
-    cursor: pointer;
-  }
 
-  .explorer :global(.cw-drawer-tab.is-on) {
-    color: var(--ink);
-    font-weight: 600;
-    border-bottom-color: var(--accent);
-  }
 
-  .explorer :global(.cw-drawer-panel) {
-    flex: 1;
-    min-height: 0;
-    overflow-y: auto;
-    padding: 0.8rem 0.9rem 1rem;
-  }
 
   .explorer :global(.cw-bars-key) {
     list-style: none;
     padding: 0;
-    margin: 0 0 0.6rem;
+    margin: 0 0 0.5rem;
     display: grid;
-    gap: 0.2rem;
-    font-size: 0.78rem;
+    gap: 0.15rem;
+    font-size: 0.72rem;
+    line-height: 1.3;
     color: var(--ink-soft);
   }
 
@@ -2234,9 +2218,10 @@ import Layout from "../../layouts/Layout.astro";
   }
 
   .explorer :global(.cw-bars-swatch) {
-    width: 18px;
-    height: 8px;
-    border-radius: 4px;
+    flex: none;
+    width: 12px;
+    height: 6px;
+    border-radius: 3px;
     background: #2a78d6;
   }
 
@@ -2376,46 +2361,39 @@ import Layout from "../../layouts/Layout.astro";
     font-variant-numeric: tabular-nums;
   }
 
-  .explorer :global(.cw-drawer h3) {
-    font-size: 1rem;
-    margin: 0 0 0.6rem;
-  }
 
-  .explorer :global(.cw-drawer h4) {
-    font-size: 0.9rem;
-    margin: 1rem 0 0.3rem;
-  }
 
-  .explorer :global(.cw-drawer p) {
-    font-size: 0.84rem;
-    line-height: 1.5;
-    color: var(--ink-soft);
-    margin: 0 0 0.5rem;
-  }
 
   .explorer :global(.cw-bars) {
     list-style: none;
     padding: 0;
     margin: 0;
     display: grid;
-    gap: 0.2rem;
+    gap: 0.05rem;
   }
 
   .explorer :global(.cw-bar) {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 84px 3rem;
+    grid-template-columns: minmax(0, 1fr) 64px 2.6rem;
     align-items: center;
-    gap: 0.5rem;
+    gap: 0.45rem;
     width: 100%;
     font: inherit;
-    font-size: 0.82rem;
+    font-size: 0.76rem;
+    line-height: 1.25;
     text-align: left;
     color: var(--ink);
     background: none;
     border: 1px solid transparent;
-    border-radius: 6px;
-    padding: 0.25rem 0.35rem;
+    border-radius: 5px;
+    padding: 0.14rem 0.3rem;
     cursor: pointer;
+  }
+
+  .explorer :global(.cw-bar-label) {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .explorer :global(.cw-bar:hover) {
@@ -2429,7 +2407,7 @@ import Layout from "../../layouts/Layout.astro";
 
   .explorer :global(.cw-bar-track) {
     position: relative;
-    height: 8px;
+    height: 6px;
     background: #efe9dd;
     border-radius: 4px;
   }
@@ -2476,8 +2454,16 @@ import Layout from "../../layouts/Layout.astro";
       gap: 0.3rem;
     }
 
-    .explorer :global(.cw-drawer-toggle) {
-      display: none;
+    .explorer :global(.cw-body.has-picker) {
+      grid-template-columns: minmax(0, 1fr);
+      overflow-y: auto;
+    }
+
+    .explorer :global(.cw-picker) {
+      overflow: visible;
+      border-left: 0;
+      border-top: 1px solid var(--line);
+      padding: 0.8rem 0 0;
     }
 
     .explorer :global(.cw-controls) {
