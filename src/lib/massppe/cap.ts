@@ -315,6 +315,35 @@ export function startCap(root: HTMLElement, data: CapData, opts: { town: string 
     b.addEventListener("click", () => dialog.showModal());
     return b;
   };
+  // A "?" with a short note beside it, on hover, focus or a tap. The note sits outside the table,
+  // so the table's scroll box can't clip it.
+  const note = el("div", "cap-tip");
+  note.id = "cap-tip";
+  note.setAttribute("role", "tooltip");
+  note.hidden = true;
+  (root.closest(".explorer") ?? document.body).append(note);
+  const hideNote = () => (note.hidden = true);
+  window.addEventListener("scroll", hideNote, { passive: true });
+  const tipButton = (label: string, text: string) => {
+    const b = el("button", "cap-help", "?");
+    b.type = "button";
+    b.setAttribute("aria-label", label);
+    b.setAttribute("aria-describedby", "cap-tip");
+    const show = () => {
+      note.textContent = text;
+      note.hidden = false;
+      const r = b.getBoundingClientRect();
+      const below = r.bottom + 6 + note.offsetHeight <= window.innerHeight;
+      note.style.left = `${Math.max(8, Math.min(window.innerWidth - note.offsetWidth - 8, r.left))}px`;
+      note.style.top = `${below ? r.bottom + 6 : r.top - note.offsetHeight - 6}px`;
+    };
+    b.addEventListener("mouseenter", show);
+    b.addEventListener("focus", show);
+    b.addEventListener("click", show);
+    b.addEventListener("mouseleave", hideNote);
+    b.addEventListener("blur", hideNote);
+    return b;
+  };
   const picker = groupedPicker(select, "cap-town-label", "towns");
   select.addEventListener("change", () => {
     townId = select.value;
@@ -509,12 +538,19 @@ export function startCap(root: HTMLElement, data: CapData, opts: { town: string 
     row("Cap on the target", `As a share of the ${usd(t.foundation)} foundation budget`,
       [usd(t.max), `${pct(y.max_pct, 1)} of foundation`], capAlt == null ? ["None", ""] : [usd(capAlt), `${capPct(scenario!)} of foundation`], "");
     const tgtLabel = el("span");
-    tgtLabel.append(`Target local contribution, FY${y.fy} `, helpButton("What is a target local contribution?"));
+    tgtLabel.append(`Target local contribution, FY${y.fy} `, tipButton("What is a target local contribution?",
+      `What the formula asks ${t.name} to pay toward its schools in FY${y.fy}: its combined effort yield, ` +
+      `${usd(t.cey)}, or ${pct(y.max_pct, 1)} of its foundation budget, ${usd(t.max)}, whichever is less. For ` +
+      `${t.name}, that's ${usd(t.target)}${t.capped ? ", the cap" : ", its yield"}.`));
     row(tgtLabel, "The yield or the cap, whichever is less", usd(t.target), usd(alt.get(t.id)!),
       t.pop ? [signed(ch), `${signed(ch / t.pop)} per resident`] : signed(ch), "total");
     if (t.required != null) {
       const reqLabel = el("span");
-      reqLabel.append(`Required contribution, FY${y.fy}: the minimum `, helpButton("Why can the minimum differ from the target?"));
+      reqLabel.append(`Required contribution, FY${y.fy}: the minimum `, tipButton("What is a required contribution?",
+        `The least ${t.name} must pay toward its schools in FY${y.fy}. It moves toward the target gradually: the ` +
+        "formula grows last year's amount by the town's revenue growth factor, lowers it to the target if it comes out " +
+        "above, and adds 1% or 2% of last year's amount if it comes out well below. For " +
+        `${t.name}: ${usd(t.required)}, against a ${usd(t.target)} target.`));
       row(reqLabel, `What ${t.name} must pay toward its schools this year`,
         [usd(t.required), t.required < t.target - 1 ? `${usd(t.target - t.required)} below the target` : "The full target"],
         (() => {

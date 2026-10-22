@@ -3175,6 +3175,23 @@ import Layout from "../../layouts/Layout.astro";
     vertical-align: middle;
   }
 
+  /* A "?" note in the cap tab's table (cap.ts tipButton) */
+  .explorer :global(.cap-tip) {
+    position: fixed;
+    z-index: 60;
+    max-width: min(24rem, calc(100vw - 16px));
+    padding: 0.55rem 0.7rem;
+    font-size: 0.82rem;
+    font-weight: 400;
+    line-height: 1.45;
+    color: var(--ink);
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    box-shadow: 0 6px 18px var(--shadow);
+    pointer-events: none;
+  }
+
   .explorer :global(.cap-help:hover),
   .explorer :global(.cap-help:focus-visible) {
     color: var(--accent);
