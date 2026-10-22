@@ -1978,9 +1978,11 @@ import Layout from "../../layouts/Layout.astro";
     fill: var(--muted);
   }
 
+  /* Axis titles name the measures: the first place a reader looks (scatter.ts TITLE_PX) */
   .explorer :global(.sc-title) {
-    font-size: 12px;
-    fill: var(--ink-soft);
+    font-size: 15px;
+    font-weight: 700;
+    fill: var(--ink);
   }
 
   .explorer :global(.sc-pt) {

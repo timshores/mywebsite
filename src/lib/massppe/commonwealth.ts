@@ -433,7 +433,7 @@ export function startCommonwealth(root: HTMLElement, data: CwData, opts: { openD
     scatter(svg, pts, {
       width, height, logX: v.log, xFmt: axisFmt(xv.unit), yFmt: axisFmt(yv.unit),
       // Narrow screens get the short names, which fit along the axes
-      xTitle: width < 640 ? capital(xv.short) : xv.label, yTitle: width < 640 ? capital(yv.short) : yv.label,
+      xTitle: xv.label, xTitleShort: capital(xv.short), yTitle: yv.label, yTitleShort: capital(yv.short),
       groups: hl.groups, smooth: true,
       onHover: (p, pos) => {
         if (!p || !pos) {

@@ -29,6 +29,9 @@ export interface ScatterOpts {
   yFmt: (v: number) => string;
   xTitle?: string;
   yTitle?: string;
+  /** Shorter names, used when the full ones won't fit along the axis */
+  xTitleShort?: string;
+  yTitleShort?: string;
   groups: Record<string, Group>;
   smooth?: boolean;
   /** A thumbnail: no axis text, labels, or pointer */
@@ -39,7 +42,11 @@ export interface ScatterOpts {
   onPick?: (p: Point) => void;
 }
 
-const FULL = { top: 14, right: 22, bottom: 46, left: 70 };
+const FULL = { top: 14, right: 22, bottom: 52, left: 78 };
+// Axis titles: big and bold, the first place to look for what's plotted (.sc-title)
+const TITLE_PX = 15;
+/** A rough width for bold title text, enough to choose between the full and short names. */
+const titleWidth = (s: string) => s.length * TITLE_PX * 0.6;
 const MINI = { top: 8, right: 8, bottom: 8, left: 8 };
 
 /** Ticks spanning min..max without forcing zero in. */
@@ -163,13 +170,21 @@ export function scatter(svg: SVGSVGElement, points: Point[], o: ScatterOpts) {
       const label = svgEl("text", { x: sx(t), y: m.top + ph + 16, "text-anchor": "middle", class: "sc-tick" }, svg);
       label.textContent = o.xFmt(t);
     }
+    // The first name that fits: full, short, short without "(log scale)"; past that, smaller type
+    const place = (t: SVGTextElement, names: (string | undefined)[], room: number) => {
+      const tries = names.filter((n): n is string => !!n);
+      const name = tries.find((n) => titleWidth(n) <= room) ?? tries[tries.length - 1];
+      t.textContent = name;
+      if (titleWidth(name) > room) t.style.fontSize = `${Math.max(10, Math.floor((TITLE_PX * room) / titleWidth(name)))}px`;
+    };
     if (o.xTitle) {
-      const t = svgEl("text", { x: m.left + pw / 2, y: o.height - 6, "text-anchor": "middle", class: "sc-title" }, svg);
-      t.textContent = o.xTitle + (o.logX ? " (log scale)" : "");
+      const log = o.logX ? " (log scale)" : "";
+      const t = svgEl("text", { x: m.left + pw / 2, y: o.height - 8, "text-anchor": "middle", class: "sc-title" }, svg);
+      place(t, [o.xTitle + log, o.xTitleShort && o.xTitleShort + log, o.xTitleShort], pw + m.left - 8);
     }
     if (o.yTitle) {
-      const t = svgEl("text", { x: 0, y: 0, transform: `translate(14 ${m.top + ph / 2}) rotate(-90)`, "text-anchor": "middle", class: "sc-title" }, svg);
-      t.textContent = o.yTitle;
+      const t = svgEl("text", { x: 0, y: 0, transform: `translate(17 ${m.top + ph / 2}) rotate(-90)`, "text-anchor": "middle", class: "sc-title" }, svg);
+      place(t, [o.yTitle, o.yTitleShort], ph);
     }
   }
 

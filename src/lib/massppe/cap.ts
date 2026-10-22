@@ -463,8 +463,8 @@ export function startCap(root: HTMLElement, data: CapData, opts: { town: string 
     svg.setAttribute("aria-label", `Scatterplot of ${yo.label.toLowerCase()} against ${xo.label.toLowerCase()} for ${pts.length} towns, FY${y.fy}.`);
     scatter(svg, pts, {
       width, height, logX: xo.log, xFmt: xo.axis, yFmt: yo.axis,
-      xTitle: width < 640 ? xo.label.replace(" as a share of foundation budget", " (% of foundation)") : xo.label,
-      yTitle: width < 640 ? (yKey === "share_cey" ? "Target ÷ yield" : "Change in target") : yo.label,
+      xTitle: xo.label, xTitleShort: xo.label.replace(" as a share of foundation budget", " (% of foundation)"),
+      yTitle: yo.label, yTitleShort: yKey === "share_cey" ? "Target ÷ yield" : yo.label.replace("Change in target, ", "Change, "),
       groups: GROUPS, smooth: false, refY: yKey === "share_cey" ? 1 : 0,
       onHover: (p, pos) => {
         if (!p || !pos) {
