@@ -415,10 +415,10 @@ export function startCap(root: HTMLElement, data: CapData, opts: { town: string 
       r.append(th, cell(today), cell(other), cell(diff));
     };
     const share = (v: number) => (t.foundation ? `${pct(v / t.foundation)} of foundation` : "");
-    row("From property", `${usd(t.eqv)} of equalized value, January ${y.eqv_year}`,
+    row("From property", `${usd(t.eqv)} (equalized value, January ${y.eqv_year})`,
       [usd(t.eqv * y.property_pct), `× ${rate(y.property_pct)}`], [usd(t.eqv * pAlt), `× ${rate(pAlt)}`],
       signed(t.eqv * pAlt - t.eqv * y.property_pct));
-    row("From income", `${usd(t.income)} of residents' ${y.income_year} income`,
+    row("From income", `${usd(t.income)} (residents' ${y.income_year} income)`,
       [usd(t.income * y.income_pct), `× ${rate(y.income_pct)}`], [usd(t.income * iAlt), `× ${rate(iAlt)}`],
       signed(t.income * iAlt - t.income * y.income_pct));
     row("Combined effort yield", "The two together", [usd(t.cey), share(t.cey)], [usd(t.cey * f), share(t.cey * f)],
