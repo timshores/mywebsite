@@ -376,11 +376,11 @@ export function startCap(root: HTMLElement, data: CapData, opts: { town: string 
   const tip = el("div", "cw-tip");
   tip.hidden = true;
   figure.append(legend, svg, tip);
-  chartBox.append(enlargeButton(chartBox, () => render()), chartHead, chartIntro, chartControls, chartContext, figure);
+  chartBox.append(enlargeButton(chartBox, () => render(), () => scenRow), chartHead, chartIntro, chartControls, chartContext, figure);
   // The width each chart is drawn at; enlarged, it keeps that drawing and scales it up
   let chartW = 0;
   let yearsW = 0;
-  const yearsEnlarge = enlargeButton(yearsBox, () => render());
+  const yearsEnlarge = enlargeButton(yearsBox, () => render(), () => scenRow);
 
   function render() {
     const y = data.years[fy];

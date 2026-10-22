@@ -1,12 +1,13 @@
 // A chart, enlarged in a window of its own. The chart's own element moves into the window, so its
-// legend, hover, tables and controls keep working, and moves back when the window closes. The
-// window sizes it to fit the screen without scrolling: as wide as there's room for, unless the
+// legend, hover, tables and controls keep working, and moves back when the window closes. So do the
+// tab's own controls, in a strip across the top, to change while the chart is enlarged. The window
+// sizes the chart to fit the screen without scrolling: as wide as there's room for, unless the
 // chart would then run too tall.
 
 const ICON = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2 6V2h4M10 2h4v4M14 10v4h-4M6 14H2v-4" ' +
   'fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 
-let win: { dialog: HTMLDialogElement; body: HTMLElement } | null = null;
+let win: { dialog: HTMLDialogElement; strip: HTMLElement; body: HTMLElement } | null = null;
 
 function windowFor(near: Element) {
   if (win) return win;
@@ -18,15 +19,18 @@ function windowFor(near: Element) {
   close.setAttribute("aria-label", "Close");
   close.textContent = "×";
   close.addEventListener("click", () => dialog.close());
+  // The strip takes the docked controls' compact look (.controls-dock-body)
+  const strip = document.createElement("div");
+  strip.className = "enlarge-controls controls-dock-body";
   const body = document.createElement("div");
   body.className = "enlarge-body";
-  dialog.append(close, body);
+  dialog.append(close, strip, body);
   // A click on the dimmed backdrop lands on the dialog element itself
   dialog.addEventListener("click", (ev) => {
     if (ev.target === dialog) dialog.close();
   });
   (near.closest(".explorer") ?? document.body).append(dialog);
-  win = { dialog, body };
+  win = { dialog, strip, body };
   return win;
 }
 
@@ -45,12 +49,13 @@ function chartOf(box: HTMLElement) {
 }
 
 /** Narrow the element until it fits the window's height, a few passes since its text rewraps. */
-function fit(box: HTMLElement, dialog: HTMLDialogElement, body: HTMLElement) {
+function fit(box: HTMLElement, dialog: HTMLDialogElement, strip: HTMLElement, body: HTMLElement) {
   const svg = chartOf(box);
   if (!svg) return;
   const vb = svg.viewBox.baseVal;
   const cs = getComputedStyle(body);
-  const roomH = window.innerHeight * 0.94 - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom) - (dialog.offsetHeight - dialog.clientHeight);
+  const roomH = window.innerHeight * 0.94 - (strip.hidden ? 0 : strip.offsetHeight) - parseFloat(cs.paddingTop) -
+    parseFloat(cs.paddingBottom) - (dialog.offsetHeight - dialog.clientHeight);
   const roomW = body.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
   box.style.width = "";
   for (let k = 0; k < 3; k++) {
@@ -62,26 +67,35 @@ function fit(box: HTMLElement, dialog: HTMLDialogElement, body: HTMLElement) {
 
 /**
  * A button that opens `box` enlarged. `onClose` runs after it's back in place, for a chart that
- * should redraw at its usual size.
+ * should redraw at its usual size. `controls`, if given, returns the tab's controls to bring along.
  */
-export function enlargeButton(box: HTMLElement, onClose?: () => void): HTMLButtonElement {
+export function enlargeButton(box: HTMLElement, onClose?: () => void, controls?: () => HTMLElement | null): HTMLButtonElement {
   const b = document.createElement("button");
   b.type = "button";
   b.className = "enlarge-open";
   b.setAttribute("aria-haspopup", "dialog");
   b.innerHTML = `${ICON}<span>Enlarge</span>`;
   b.addEventListener("click", () => {
-    const { dialog, body } = windowFor(box);
+    const { dialog, strip, body } = windowFor(box);
     const title = box.querySelector("h2, h3")?.textContent ?? "Chart";
     dialog.setAttribute("aria-label", title);
-    // Hold the element's place, so the page behind doesn't shift
-    const holder = document.createElement("div");
-    holder.style.height = `${box.offsetHeight}px`;
-    box.before(holder);
+    // Hold each element's place, so the page behind doesn't shift
+    const hold = (el: HTMLElement) => {
+      const h = document.createElement("div");
+      h.style.height = `${el.offsetHeight}px`;
+      h.style.margin = getComputedStyle(el).margin;
+      el.before(h);
+      return h;
+    };
+    const ctl = controls?.() ?? null;
+    const ctlHolder = ctl ? hold(ctl) : null;
+    strip.replaceChildren(...(ctl ? [ctl] : []));
+    strip.hidden = !ctl;
+    const holder = hold(box);
     box.classList.add("is-enlarged");
     body.replaceChildren(box);
     dialog.showModal();
-    const refit = () => fit(box, dialog, body);
+    const refit = () => fit(box, dialog, strip, body);
     refit();
     // Fit again when the window resizes or the chart redraws
     let frame = 0;
@@ -92,13 +106,20 @@ export function enlargeButton(box: HTMLElement, onClose?: () => void): HTMLButto
     window.addEventListener("resize", soon);
     const redraws = new MutationObserver(soon);
     redraws.observe(box, { subtree: true, attributes: true, attributeFilter: ["viewBox"] });
+    const stripSize = new ResizeObserver(soon);
+    stripSize.observe(strip);
     dialog.addEventListener("close", () => {
       window.removeEventListener("resize", soon);
       redraws.disconnect();
+      stripSize.disconnect();
       box.classList.remove("is-enlarged");
       box.style.width = "";
       if (holder.isConnected) holder.replaceWith(box);
       else box.remove();
+      if (ctl && ctlHolder) {
+        if (ctlHolder.isConnected) ctlHolder.replaceWith(ctl);
+        else ctl.remove();
+      }
       onClose?.();
       b.focus();
     }, { once: true });

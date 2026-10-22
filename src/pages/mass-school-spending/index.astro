@@ -2890,11 +2890,37 @@ import Layout from "../../layouts/Layout.astro";
     background: rgba(31, 31, 28, 0.35);
   }
 
+  .explorer :global(.enlarge-dialog[open]) {
+    display: flex;
+    flex-direction: column;
+  }
+
   .explorer :global(.enlarge-body) {
     box-sizing: border-box;
-    max-height: 94vh;
+    flex: 1 1 auto;
+    min-height: 0;
     padding: 1.3rem 1.8rem 1.4rem;
     overflow: auto;
+  }
+
+  /* The tab's controls, brought along across the top of the window, in their docked form */
+  .explorer :global(.enlarge-controls) {
+    flex: none;
+    padding: 0.45rem 3.2rem 0.45rem 1.8rem;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .explorer :global(.enlarge-controls) .controls {
+    padding: 0;
+  }
+
+  .explorer :global(.enlarge-controls .cap-scen-row) {
+    position: static;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    box-shadow: none;
+    background: none;
   }
 
   .explorer :global(.enlarge-body > .is-enlarged) {

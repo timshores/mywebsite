@@ -1152,19 +1152,29 @@ export async function startExplorer() {
     a.addEventListener("click", (ev) => {
       ev.preventDefault();
       backTo = a.closest<HTMLElement>("details.compare-view") ?? a.closest<HTMLElement>("figure");
-      a.closest("dialog")?.close();
-      dockClose();
-      const menu = $(state.view === "towns" ? "pick-town-compare" : "pick-compare");
-      menu.after(goBack);
-      // Restart the ring's pulse, even when it's already showing
-      menu.classList.remove("beckon");
-      void menu.offsetWidth;
-      menu.classList.add("beckon");
-      arm(menu);
-      menu.scrollIntoView({ behavior: "smooth", block: "center" });
-      menu.focus({ preventScroll: true });
+      // From an enlarged chart, close the window first; its controls go home when it has closed
+      const open = a.closest("dialog");
+      if (open) {
+        open.addEventListener("close", () => beckon(), { once: true });
+        open.close();
+        return;
+      }
+      beckon();
     });
     return a;
+  }
+  /** Ring the view's comparison menu and bring it into view, with Go back under it */
+  function beckon() {
+    dockClose();
+    const menu = $(state.view === "towns" ? "pick-town-compare" : "pick-compare");
+    menu.after(goBack);
+    // Restart the ring's pulse, even when it's already showing
+    menu.classList.remove("beckon");
+    void menu.offsetWidth;
+    menu.classList.add("beckon");
+    arm(menu);
+    menu.scrollIntoView({ behavior: "smooth", block: "center" });
+    menu.focus({ preventScroll: true });
   }
 
   // ---- The controls, docked: once they scroll away under the tabs, a one-line summary stays in view
@@ -2197,7 +2207,11 @@ export async function startExplorer() {
 
   await refresh();
   // Each chart can open enlarged, in a window of its own
-  document.querySelectorAll<HTMLElement>("figure.panel").forEach((f) => f.prepend(enlargeButton(f)));
+  // and brings the controls along, out of the dock if they're docked
+  document.querySelectorAll<HTMLElement>("figure.panel").forEach((f) => f.prepend(enlargeButton(f, undefined, () => {
+    dockClose();
+    return controlsForm;
+  })));
   ["svg-ppe", "svg-enroll", "svg-nss", "svg-rev", "svg-tspend", "svg-trev", "svg-tlevy", "svg-tbill", "svg-tval", "svg-tpar",
     "svg-teqv", "svg-tpop"]
     .forEach((id) => keyboard($(id) as unknown as SVGSVGElement));
