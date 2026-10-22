@@ -126,35 +126,42 @@ const DEFAULT_HL = "none";
 const OMIT_NAMES = new Set(["Boston", "Provincetown"]);
 const MIN_FE = 20;
 
+/** A blurb marks the measures it names with *stars*, shown bold */
 interface Preset { id: string; title: string; blurb: string; y: string; x: string; log: boolean }
 const PRESETS: Preset[] = [
   {
     id: "enrollment", title: "How much is enough?", y: "nss_pct_fb", x: "fe", log: false,
-    blurb: "Actual net school spending as a share of each district's foundation budget, against its enrollment. " +
+    blurb: "*Actual net school spending as a share of each district's foundation budget*, against its *enrollment*. " +
       "The smaller the district, the further above its foundation budget it tends to spend.",
   },
   {
     id: "required", title: "Spending above the requirement", y: "nss_pct_req", x: "fe", log: false,
-    blurb: "The same view against required net school spending, the least the state lets each district spend.",
+    blurb: "The same view against *required net school spending*, the least the state lets each district spend.",
   },
   {
     id: "wealth", title: "Spending and property wealth", y: "nss_pct_fb", x: "eqv_res", log: true,
-    blurb: "Spending above the foundation budget against the property value per resident of each district's towns. " +
+    blurb: "*Spending above the foundation budget* against the *property value per resident* of each district's towns. " +
       "In FY2025 it lines up more closely with property wealth than with enrollment.",
   },
   {
     id: "tax-bill", title: "Spending and the tax bill", y: "nss_pct_fb", x: "bill_income", log: false,
-    blurb: "Against the average single-family tax bill as a share of income per capita. Districts that spend more " +
+    blurb: "Against the *average single-family tax bill as a share of income per capita*. Districts that spend more " +
       "tend to be in towns where the bill takes a smaller share of income.",
   },
   {
     id: "aid", title: "The formula at work", y: "aid_share", x: "eqv_res", log: true,
-    blurb: "Chapter 70 aid as a share of the foundation budget, against property wealth: the closest fit of any pair " +
+    blurb: "*Chapter 70 aid as a share of the foundation budget*, against *property wealth*: the closest fit of any pair " +
       "here, because the formula is built on it.",
   },
 ];
 
 const pct = (v: number) => `${Math.round(v * 100)}%`;
+/** A measure's name, bold wherever text describes it */
+const vn = (s: string) => el("strong", "cw-var", s);
+/** Text with its *starred* measure names in bold */
+const starred = (s: string) => s.split("*").map((part, i) => (i % 2 ? vn(part) : part));
+type Rich = (string | Node)[];
+const plain = (r: Rich) => r.map((x) => (typeof x === "string" ? x : x.textContent)).join("");
 const fmt = (u: Unit, v: number) =>
   u === "pct" ? pct(v) : u === "usd" ? `$${Math.round(v).toLocaleString("en-US")}` : Math.round(v).toLocaleString("en-US");
 const short = (n: number, d: number) => String(Number((n).toFixed(d)));
@@ -173,6 +180,11 @@ function el<K extends keyof HTMLElementTagNameMap>(tag: K, cls?: string, text?: 
   if (cls) n.className = cls;
   if (text != null) n.textContent = text;
   return n;
+}
+/** The element, holding text and the nodes among it */
+function withParts<T extends HTMLElement>(node: T, parts: Rich): T {
+  node.append(...parts);
+  return node;
 }
 
 interface View { preset: string | null; y: string; x: string; fy: number; log: boolean; all: boolean; hl: string; find: string | null }
@@ -200,7 +212,7 @@ export function startCommonwealth(root: HTMLElement, data: CwData, opts: { openD
     return { pts, rows, hl };
   }
 
-  interface Caution { label: string; text: string }
+  interface Caution { label: string; text: Rich }
 
   /**
    * The correlation pitfalls this pair falls into (Aggarwal and Ranganathan 2016), checked on the
@@ -213,13 +225,13 @@ export function startCommonwealth(root: HTMLElement, data: CwData, opts: { openD
     const n = pts.length;
     const shared = sharedParts(v.x, v.y);
     if (shared.length) {
-      out.push({ label: "Counts the same thing", text: `${capital(yv.short)} and ${xv.short} both count ` +
+      out.push({ label: "Counts the same thing", text: [vn(capital(yv.short)), " and ", vn(xv.short), " both count " +
         `${shared.join(" and ")}, so they line up partly by construction: one is built from the other, or both from ` +
-        "the same number. Part of their ρ comes from that shared arithmetic, not from anything districts do." });
+        "the same number. Part of their ρ comes from that shared arithmetic, not from anything districts do."] });
     }
     if (n < 30) {
-      out.push({ label: "Few districts", text: `Only ${n} districts have both measures in FY${v.fy}. With so few, a ` +
-        "pattern can appear by chance." });
+      out.push({ label: "Few districts", text: [`Only ${n} districts have both measures in FY${v.fy}. With so few, a ` +
+        "pattern can appear by chance."] });
     }
     if (n < 8) return out;
     const xs = pts.map((p) => (v.log ? Math.log10(p.x) : p.x));
@@ -235,9 +247,9 @@ export function startCommonwealth(root: HTMLElement, data: CwData, opts: { openD
       const mx = mean(xs), my = mean(ys), sx = sd(xs, mx), sy = sd(ys, my);
       const far = pts.map((p, i) => ({ p, d: ((xs[i] - mx) / sx) ** 2 + ((ys[i] - my) / sy) ** 2 }))
         .sort((a, b) => b.d - a.d).slice(0, 3).map((o) => o.p.name);
-      out.push({ label: "Pulled by a few districts", text: `A few districts far from the rest, such as ` +
+      out.push({ label: "Pulled by a few districts", text: [`A few districts far from the rest, such as ` +
         `${far.join(", ")}, pull the ordinary correlation (Pearson's r = ${rho(rp)}) away from the rank-based ` +
-        `ρ = ${rho(rs)} shown here. ρ resists them, but the picture can look stronger or weaker than it is.` });
+        `ρ = ${rho(rs)} shown here. ρ resists them, but the picture can look stronger or weaker than it is.`] });
     }
     // One district: leave each out in turn
     let worst = 0;
@@ -248,8 +260,8 @@ export function startCommonwealth(root: HTMLElement, data: CwData, opts: { openD
       if (Math.abs(r - rs) > worst) [worst, who, without] = [Math.abs(r - rs), i, r];
     }
     if (worst >= 0.05 && who >= 0) {
-      out.push({ label: "One district moves it", text: `Leaving out ${pts[who].name} alone moves ρ from ${rho(rs)} to ` +
-        `${rho(without)}.` });
+      out.push({ label: "One district moves it", text: [`Leaving out ${pts[who].name} alone moves ρ from ${rho(rs)} to ` +
+        `${rho(without)}.`] });
     }
     // Curves: a smooth fit that turns back explains more than a one-way ρ can
     const order = xs.map((_, i) => i).sort((a, b) => xs[a] - xs[b]);
@@ -274,10 +286,10 @@ export function startCommonwealth(root: HTMLElement, data: CwData, opts: { openD
         iLo > 0 && iLo < cy.length - 1 ? cy[cy.length - 1] - lo : 0);
       if (hi > lo && back / (hi - lo) >= 0.25 && r2 - rs * rs >= 0.08) {
         const upFirst = iHi > 0 && iHi < cy.length - 1 && (iLo === 0 || iHi < iLo);
-        out.push({ label: "Curves back", text: `The trend ${upFirst ? "rises and then falls" : "falls and then rises"} ` +
+        out.push({ label: "Curves back", text: [`The trend ${upFirst ? "rises and then falls" : "falls and then rises"} ` +
           `instead of going one way, and ρ only measures one-way patterns. The smoothed curve accounts for ` +
           `${pct(Math.max(0, r2))} of the variation, against ${pct(rs * rs)} for ρ², so ρ understates how closely these ` +
-          "line up." });
+          "line up."] });
       }
       // Uneven spread: the scatter around the curve at the two ends
       const resid = order.map((i) => ys[i] - fit[i]);
@@ -292,9 +304,9 @@ export function startCommonwealth(root: HTMLElement, data: CwData, opts: { openD
         const high = iqr(resid.slice(-fifth));
         const ratio = Math.max(low, high) / (Math.min(low, high) || 1e-9);
         if (ratio >= 2) {
-          out.push({ label: "Uneven spread", text: `Districts at the ${low > high ? "low" : "high"} end of ${xv.short} ` +
-            `scatter about ${ratio.toFixed(1)} times as widely around the trend as those at the other end, so the ` +
-            "trend describes one end much better than the other." });
+          out.push({ label: "Uneven spread", text: [`Districts at the ${low > high ? "low" : "high"} end of `, vn(xv.short),
+            ` scatter about ${ratio.toFixed(1)} times as widely around the trend as those at the other end, so the ` +
+            "trend describes one end much better than the other."] });
         }
       }
     }
@@ -312,16 +324,16 @@ export function startCommonwealth(root: HTMLElement, data: CwData, opts: { openD
       const medSigned = [...within].sort((a, b) => a - b)[Math.floor(within.length / 2)];
       const against = within.filter((r) => Math.abs(r) >= 0.1 && Math.sign(r) !== Math.sign(rs)).length;
       if (med - Math.abs(rs) >= 0.2) {
-        out.push({ label: "Regions sit apart", text: `Within each region the pattern is stronger (median ρ about ` +
+        out.push({ label: "Regions sit apart", text: [`Within each region the pattern is stronger (median ρ about ` +
           `${rho(medSigned)}) than across the state (ρ = ${rho(rs)}). The regions sit at different levels, which blurs ` +
-          "the pattern statewide." });
+          "the pattern statewide."] });
       } else if (Math.abs(rs) >= 0.3 && med <= 0.5 * Math.abs(rs)) {
-        out.push({ label: "Regions sit apart", text: `Within regions the pattern mostly fades (median ρ about ` +
+        out.push({ label: "Regions sit apart", text: [`Within regions the pattern mostly fades (median ρ about ` +
           `${rho(medSigned)}, against ${rho(rs)} statewide). Much of it comes from differences between regions, not ` +
-          "between districts in the same part of the state." });
+          "between districts in the same part of the state."] });
       } else if (Math.abs(rs) >= 0.2 && against > within.length / 2) {
-        out.push({ label: "Regions sit apart", text: "In most regions the pattern runs the other way from the statewide " +
-          "one, which comes from differences between regions." });
+        out.push({ label: "Regions sit apart", text: ["In most regions the pattern runs the other way from the statewide " +
+          "one, which comes from differences between regions."] });
       }
     }
     // Independence: districts that share towns share their towns' wealth
@@ -330,9 +342,9 @@ export function startCommonwealth(root: HTMLElement, data: CwData, opts: { openD
       for (const p of pts) for (const t of rowOf.get(p.id)?.towns ?? []) count.set(t, (count.get(t) ?? 0) + 1);
       const sharing = pts.filter((p) => (rowOf.get(p.id)?.towns ?? []).some((t) => (count.get(t) ?? 0) > 1)).length;
       if (sharing / n >= 0.1) {
-        out.push({ label: "Shared towns", text: `${sharing} of these ${n} districts share towns with another district ` +
+        out.push({ label: "Shared towns", text: [`${sharing} of these ${n} districts share towns with another district ` +
           "here, such as an elementary district and its regional one. Their towns' wealth counts more than once, so the " +
-          "points aren't fully independent." });
+          "points aren't fully independent."] });
       }
     }
     return out;
@@ -369,7 +381,7 @@ export function startCommonwealth(root: HTMLElement, data: CwData, opts: { openD
     thumb.setAttribute("aria-hidden", "true");
     const { pts, hl } = pointsFor({ x: p.x, y: p.y, fy: latest, log: p.log, all: false, hl: DEFAULT_HL, find: null });
     scatter(thumb, pts, { width: 320, height: 190, logX: p.log, xFmt: String, yFmt: String, groups: hl.groups, smooth: true, mini: true });
-    card.append(thumb, el("span", "cw-card-title", p.title), el("span", "cw-card-blurb", p.blurb),
+    card.append(thumb, el("span", "cw-card-title", p.title), withParts(el("span", "cw-card-blurb"), starred(p.blurb)),
       el("span", "cw-card-axes", `${capital(VAR.get(p.y)!.short)} · ${VAR.get(p.x)!.short} · FY${latest}`));
     card.addEventListener("click", () => open({ preset: p.id, y: p.y, x: p.x, fy: latest, log: p.log, all: false, hl: DEFAULT_HL, find: null }));
     gallery.append(card);
@@ -719,7 +731,7 @@ export function startCommonwealth(root: HTMLElement, data: CwData, opts: { openD
       for (const c of found) {
         const b = el("button", "cw-caution", c.label);
         b.type = "button";
-        b.title = c.text;
+        b.title = plain(c.text);
         b.addEventListener("click", () => cautionDialog.showModal());
         cautionRow.append(b);
       }
@@ -730,14 +742,14 @@ export function startCommonwealth(root: HTMLElement, data: CwData, opts: { openD
       cautionRow.append(el("span", "cw-cautions-lead", "No common correlation pitfalls found for this pair."), how);
     }
     const intro = el("p", "cw-sub-note");
-    intro.textContent = `${capital(yv.short)} against ${xv.short}, FY${v.fy}, ${n} districts. ` +
-      (found.length ? "This pair falls into these common pitfalls:" : "This pair falls into none of the common pitfalls checked here.");
+    intro.append(vn(capital(yv.short)), " against ", vn(xv.short), `, FY${v.fy}, ${n} districts. ` +
+      (found.length ? "This pair falls into these common pitfalls:" : "This pair falls into none of the common pitfalls checked here."));
     const src = el("p", "cw-sub-note");
     src.append("The pitfalls follow Aggarwal and Ranganathan, ", Object.assign(el("a", undefined,
       "“Common pitfalls in statistical analysis: The use of correlation techniques”"), { href: PAPER }),
     ", Perspectives in Clinical Research, 2016. And whatever ρ shows, ", Object.assign(el("a", undefined,
       "correlation doesn't imply causation"), { href: CAUSATION }), ".");
-    cautionList.replaceChildren(intro, ...found.flatMap((c) => [el("h4", undefined, c.label), el("p", undefined, c.text)]), src);
+    cautionList.replaceChildren(intro, ...found.flatMap((c) => [el("h4", undefined, c.label), withParts(el("p"), c.text)]), src);
     legend.replaceChildren(...Object.entries(hl.groups).sort((a, b) => b[1].z - a[1].z).map(([, g]) => {
       const li = el("li");
       const key = el("span", `cw-key ${g.shape}`);
@@ -772,13 +784,13 @@ export function startCommonwealth(root: HTMLElement, data: CwData, opts: { openD
       r.append(th, el("td", undefined, fmt(yv.unit, p.y)), el("td", undefined, fmt(xv.unit, p.x)));
     }
     tableHolder.replaceChildren(t);
-    tableTitle.textContent = `${capital(yv.label)} and ${xv.label.toLowerCase()}, FY${v.fy}: ${n} districts, highest first.`;
+    tableTitle.replaceChildren(vn(capital(yv.label)), " and ", vn(xv.label.toLowerCase()), `, FY${v.fy}: ${n} districts, highest first.`);
 
     // The picker: every other measure, closest first
     const rank = ranking(v);
     sideHead.textContent = "Horizontal";
-    sideSub.textContent = `Every other measure, ranked by how closely it lines up with ${yv.short} in FY${v.fy}. ` +
-      "Select one to put it across the bottom.";
+    sideSub.replaceChildren("Every other measure, ranked by how closely it lines up with ", vn(yv.short), ` in FY${v.fy}. ` +
+      "Select one to put it across the bottom.");
     bars.replaceChildren(...rank.map((o) => {
       const li = el("li");
       const b = el("button", `cw-bar${o.v.key === v.x ? " is-current" : ""}`);
@@ -813,10 +825,10 @@ export function startCommonwealth(root: HTMLElement, data: CwData, opts: { openD
     const top = kind[0];
     const here = rank.find((o) => o.v.key === v.x && o.r != null);
     const among = yv.role === "outcome" ? "Of the measures of size and the towns' wealth" : "Of the school measures";
-    finding.textContent = !top ? "" :
-      `${among}, ${top.v.short} lines up most closely with ${yv.short} in FY${v.fy} (ρ = ${rho(top.r!)}, ${top.n} districts)` +
-      (!here || here === top ? "." : Math.abs(Math.abs(here.r!) - Math.abs(top.r!)) < 0.005
-        ? `; ${xv.short}, across the bottom now, is as close.` : `; ${xv.short}, across the bottom now, has ρ = ${rho(here.r!)}.`);
+    finding.replaceChildren(...(!top ? [] : [`${among}, `, vn(top.v.short), " lines up most closely with ", vn(yv.short),
+      ` in FY${v.fy} (ρ = ${rho(top.r!)}, ${top.n} districts)`,
+      ...(!here || here === top ? ["."] : ["; ", vn(xv.short), Math.abs(Math.abs(here.r!) - Math.abs(top.r!)) < 0.005
+        ? ", across the bottom now, is as close." : `, across the bottom now, has ρ = ${rho(here.r!)}.`])]));
   }
 
   const change = (patch: Partial<View>) => {

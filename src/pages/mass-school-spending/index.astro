@@ -684,6 +684,7 @@ import Layout from "../../layouts/Layout.astro";
   }
 
   .control {
+    position: relative;
     display: flex;
     flex-direction: column;
     gap: 0.3rem;
@@ -1880,9 +1881,13 @@ import Layout from "../../layouts/Layout.astro";
     margin-top: 1rem;
   }
 
-  /* Under the comparison menu, back to the table that sent the reader up */
+  /* Under the comparison menu, back to the table that sent the reader up; out of the flow, so the
+     menu stays put */
   .control :global(.go-back) {
-    align-self: flex-start;
+    position: absolute;
+    top: calc(100% + 0.25rem);
+    left: 0;
+    white-space: nowrap;
     font: inherit;
     font-size: 0.82rem;
     padding: 0;
@@ -2495,6 +2500,12 @@ import Layout from "../../layouts/Layout.astro";
     border-radius: 8px;
     box-shadow: 0 6px 18px var(--shadow);
     white-space: normal;
+  }
+
+  /* Measure names stand out wherever text describes them */
+  .explorer :global(.cw-var) {
+    font-weight: 700;
+    color: var(--ink);
   }
 
   /* A longer note: wider, anchored at the "?", paragraphs kept */

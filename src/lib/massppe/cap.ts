@@ -61,6 +61,8 @@ function el<K extends keyof HTMLElementTagNameMap>(tag: K, cls?: string, text?: 
   return n;
 }
 const link = (text: string, href: string) => Object.assign(el("a", undefined, text), { href });
+/** A measure's name, bold wherever text describes it */
+const vn = (s: string) => el("strong", "cw-var", s);
 
 const GROUPS: Record<string, Group> = {
   capped: { label: "At today's cap", color: "#6250d6", shape: "square", z: 2 },
@@ -668,10 +670,10 @@ export function startCap(root: HTMLElement, data: CapData, opts: { town: string 
     // The chart: every town, the selected one marked, by how much more or less each household would be asked for
     const xo = X_OPTIONS[xKey];
     const perHh = (x: CapTown) => (x.hh ? change(x) / x.hh : null);
-    chartIntro.textContent = `Each point is a town. Up and down: how much more or less the town would be asked for in ` +
-      `FY${y.fy} ${scenName}, divided by its households. Above the zero line, today's ${pct(y.max_pct, 1)} cap saves ` +
-      "the town money; below it, the cap costs the town money. Households are the Census Bureau's latest five-year " +
-      "estimates (2020–2024).";
+    chartIntro.replaceChildren("Each point is a town. Up and down, ", vn("change in target per household"), ": how much " +
+      `more or less the town would be asked for in FY${y.fy} ${scenName}, divided by its households. Above the zero ` +
+      `line, today's ${pct(y.max_pct, 1)} cap saves the town money; below it, the cap costs the town money. Households ` +
+      "are the Census Bureau's latest five-year estimates (2020–2024).");
 
     // What the chosen measure shows: where the towns the cap saves money fall, and how closely it tracks the change
     const fifthsBy = (k: XKey) => {
@@ -687,28 +689,28 @@ export function startCap(root: HTMLElement, data: CapData, opts: { town: string 
     const rank = ["the strongest", "the second strongest", "the third strongest", "the weakest"][place];
     const f5 = fifthsBy(xKey);
     const where = up.length
-      ? ` Of the ${up.length} towns that today's cap saves money, ${up.filter((x) => f5.get(x.id) === 4).length} are in ` +
-        `the top fifth by ${xo.label.toLowerCase()}, and ${up.filter((x) => (f5.get(x.id) ?? 4) <= 2).length} are in ` +
-        "the bottom three fifths."
-      : "";
+      ? [` Of the ${up.length} towns that today's cap saves money, ${up.filter((x) => f5.get(x.id) === 4).length} are in ` +
+        "the top fifth by ", vn(xo.label.toLowerCase()), `, and ${up.filter((x) => (f5.get(x.id) ?? 4) <= 2).length} are ` +
+        "in the bottom three fifths."]
+      : [];
     const capped = towns.filter((x) => x.capped && x.foundation);
     const cappedUp = capped.filter((x) => change(x) > 0).length;
     const cappedDown = capped.filter((x) => change(x) < 0).length;
-    const lead: Record<XKey, string> = {
-      cey_pct: "Across: each town's combined effort yield divided by its foundation budget, its fair share by the " +
-        "formula set against what its schools need. This is the measure the cap reads: every town right of the dashed " +
-        `line at ${pct(y.max_pct, 1)} is at today's cap.` + (cappedUp + cappedDown
+    // Each measure's text: what it is, then what it shows
+    const lead: Record<XKey, (string | Node)[]> = {
+      cey_pct: [": each town's fair share by the formula set against what its schools need. This is the measure the " +
+        `cap reads: every town right of the dashed line at ${pct(y.max_pct, 1)} is at today's cap.` + (cappedUp + cappedDown
           ? ` ${capitalize(scenName)}, ${cappedUp} of those ${capped.length} towns would be asked for more and ` +
             `${cappedDown} for less.`
-          : ""),
-      eqv_pc: "Across: equalized property value per resident, the property half of the formula's measure of wealth." + where,
-      income_pc: `Across: income per resident, from state tax returns for ${y.income_year}, the income half ` +
-        "of the formula's measure of wealth." + where,
-      cey_pc: "Across: combined effort yield per resident, property and income together as the formula weighs them, " +
-        "but counted per resident instead of against what the town's schools need." + where,
+          : "")],
+      eqv_pc: [": the property half of the formula's measure of wealth.", ...where],
+      income_pc: [`: from state tax returns for ${y.income_year}, the income half of the formula's measure of wealth.`, ...where],
+      cey_pc: [": property and income together as the formula weighs them, but counted per resident instead of against " +
+        "what the town's schools need.", ...where],
     };
-    chartContext.textContent = lead[xKey] + ` This measure's rank correlation with the change per household is ` +
-      `ρ = ${rhos[place].r.toFixed(2)}, ${rank} of the four measures here.`;
+    chartContext.replaceChildren("Across, ", vn(xo.title.charAt(0).toLowerCase() + xo.title.slice(1)), ...lead[xKey],
+      " This measure's rank correlation with the ", vn("change per household"),
+      ` is ρ = ${rhos[place].r.toFixed(2)}, ${rank} of the four measures here.`);
 
     const pts: Point[] = [];
     for (const x of towns) {
