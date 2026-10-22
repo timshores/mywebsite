@@ -365,15 +365,64 @@ export function startCommonwealth(root: HTMLElement, data: CwData, opts: { openD
   aboutBtn.addEventListener("click", () => aboutDialog.showModal());
   tableBtn.addEventListener("click", () => tableDialog.showModal());
 
-  // The picker shows and hides with the settings, and the chart takes the room either way
+  // The picker slides: drag its edge wider to read full names, or shut; select the edge to
+  // shut it or bring it back. It starts midway.
+  const PICKER_MID = 330;
+  const PICKER_MIN = 160;
+  let pickerW = PICKER_MID;
+  const handle = el("button", "cw-picker-handle");
+  handle.type = "button";
+  handle.setAttribute("aria-controls", "cw-picker");
+  side.id = "cw-picker";
+  body.insertBefore(handle, side);
+  const pickerMax = () => Math.max(PICKER_MIN, Math.min(680, body.clientWidth - 420));
   const showPicker = () => {
-    side.hidden = !settings.open;
-    body.classList.toggle("has-picker", settings.open);
+    const closed = pickerW === 0;
+    side.hidden = closed;
+    body.style.setProperty("--picker-w", `${pickerW}px`);
+    body.classList.toggle("picker-closed", closed);
+    handle.setAttribute("aria-expanded", String(!closed));
+    handle.setAttribute("aria-label", closed ? "Open the Horizontal list" : "Drag to widen or close the Horizontal list");
+    handle.title = closed ? "Open the Horizontal list" : "Drag to widen or narrow; select to close";
   };
-  settings.addEventListener("toggle", () => {
-    showPicker();
-    requestAnimationFrame(() => draw());
+  let frame = 0;
+  const redraw = () => {
+    cancelAnimationFrame(frame);
+    frame = requestAnimationFrame(() => draw());
+  };
+  let drag: { x: number; w: number; moved: boolean } | null = null;
+  handle.addEventListener("pointerdown", (ev) => {
+    drag = { x: ev.clientX, w: pickerW, moved: false };
+    handle.setPointerCapture(ev.pointerId);
   });
+  handle.addEventListener("pointermove", (ev) => {
+    if (!drag) return;
+    const dx = drag.x - ev.clientX;
+    if (Math.abs(dx) > 3) drag.moved = true;
+    if (!drag.moved) return;
+    const w = Math.min(pickerMax(), Math.max(0, (drag.w || PICKER_MIN) + dx));
+    pickerW = w < PICKER_MIN - 40 ? 0 : Math.max(PICKER_MIN, w);
+    showPicker();
+    redraw();
+  });
+  handle.addEventListener("pointerup", () => {
+    if (drag && !drag.moved) {
+      pickerW = pickerW === 0 ? PICKER_MID : 0;
+      showPicker();
+      redraw();
+    }
+    drag = null;
+  });
+  handle.addEventListener("keydown", (ev) => {
+    const step = { ArrowLeft: 40, ArrowRight: -40 }[ev.key];
+    if (step == null) return;
+    ev.preventDefault();
+    const w = (pickerW || PICKER_MIN - 40) + step;
+    pickerW = w < PICKER_MIN ? 0 : Math.min(pickerMax(), w);
+    showPicker();
+    redraw();
+  });
+  settings.addEventListener("toggle", () => redraw());
   // Inside the explorer, so it takes the page's colors
   (root.closest(".explorer") ?? document.body).append(dialog);
 
@@ -384,8 +433,10 @@ export function startCommonwealth(root: HTMLElement, data: CwData, opts: { openD
     if (!dialog.open) {
       // Settings start open where there's room for them beside the chart
       settings.open = window.innerWidth > 700 && window.innerHeight > 640;
-      showPicker();
       dialog.showModal();
+      // Midway, measured once the window is open
+      pickerW = Math.min(PICKER_MID, pickerMax());
+      showPicker();
     }
     draw();
   }

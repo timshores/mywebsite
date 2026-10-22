@@ -46,6 +46,7 @@ import Layout from "../../layouts/Layout.astro";
       <button type="button" role="tab" id="tab-towns" data-view="towns" aria-controls="view-panel" aria-selected="false" tabindex="-1">Towns</button>
       <button type="button" role="tab" id="tab-commonwealth" data-view="commonwealth" aria-controls="view-panel" aria-selected="false" tabindex="-1">Commonwealth</button>
       <button type="button" role="tab" id="tab-cap" data-view="cap" aria-controls="view-panel" aria-selected="false" tabindex="-1">The 82.5% cap</button>
+      <button type="button" role="tab" id="tab-data" data-view="data" aria-controls="view-panel" aria-selected="false" tabindex="-1">Data</button>
     </div>
 
     <div id="view-panel" role="tabpanel" aria-labelledby="tab-districts">
@@ -402,7 +403,7 @@ import Layout from "../../layouts/Layout.astro";
       <div class="dialog-body table-scroll" id="table-dialog-body"></div>
     </dialog>
 
-    <section class="notes">
+    <section class="notes" data-view-only="data" hidden>
       <h2>About the data</h2>
       <p>
         <strong>Spending per pupil</strong> is the Massachusetts Department of Elementary and Secondary Education's
@@ -2022,7 +2023,7 @@ import Layout from "../../layouts/Layout.astro";
   }
 
   .explorer :global(.cw-dialog) {
-    width: min(1400px, 96vw);
+    width: 90vw;
     max-width: none;
     height: 94vh;
     max-height: none;
@@ -2191,14 +2192,63 @@ import Layout from "../../layouts/Layout.astro";
   }
 
   /* The horizontal picker beside the chart, while the settings are open */
-  .explorer :global(.cw-body.has-picker) {
+  /* The chart, the picker's edge (a handle to drag), and the picker at its chosen width */
+  .explorer :global(.cw-body) {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 330px;
-    gap: 1.2rem;
+    grid-template-columns: minmax(0, 1fr) 14px var(--picker-w, 330px);
+    column-gap: 0.6rem;
+  }
+
+  .explorer :global(.cw-body.picker-closed) {
+    grid-template-columns: minmax(0, 1fr) 14px 0;
+  }
+
+  .explorer :global(.cw-picker-handle) {
+    position: relative;
+    align-self: stretch;
+    width: 14px;
+    padding: 0;
+    border: 0;
+    border-radius: 7px;
+    background: transparent;
+    cursor: col-resize;
+    touch-action: none;
+  }
+
+  /* A grip: two short bars, and a chevron when the list is shut */
+  .explorer :global(.cw-picker-handle::before) {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 4px;
+    height: 36px;
+    transform: translate(-50%, -50%);
+    border-left: 1.5px solid var(--axis);
+    border-right: 1.5px solid var(--axis);
+  }
+
+  .explorer :global(.cw-body.picker-closed .cw-picker-handle) {
+    cursor: pointer;
+    background: #f3eee3;
+  }
+
+  .explorer :global(.cw-body.picker-closed .cw-picker-handle::before) {
+    width: 7px;
+    height: 7px;
+    border: solid var(--ink-soft);
+    border-width: 0 0 1.5px 1.5px;
+    transform: translate(-30%, -50%) rotate(45deg);
+  }
+
+  .explorer :global(.cw-picker-handle:hover),
+  .explorer :global(.cw-picker-handle:focus-visible) {
+    background: #efe7d8;
   }
 
   .explorer :global(.cw-picker) {
     min-height: 0;
+    min-width: 0;
     overflow-y: auto;
     border-left: 1px solid var(--line);
     padding-left: 1rem;
@@ -2532,9 +2582,14 @@ import Layout from "../../layouts/Layout.astro";
       gap: 0.3rem;
     }
 
-    .explorer :global(.cw-body.has-picker) {
+    .explorer :global(.cw-body),
+    .explorer :global(.cw-body.picker-closed) {
       grid-template-columns: minmax(0, 1fr);
       overflow-y: auto;
+    }
+
+    .explorer :global(.cw-picker-handle) {
+      display: none;
     }
 
     .explorer :global(.cw-picker) {
@@ -2772,6 +2827,41 @@ import Layout from "../../layouts/Layout.astro";
 
   .explorer :global(.cap-steps-table th[scope="row"]) {
     min-width: 13rem;
+  }
+
+  .explorer :global(.cap-scenario .cap-note) {
+    margin-top: 0.9rem;
+  }
+
+  /* The cap tab's explanation folds like the introductions, with the summary as its heading */
+  .explorer :global(.cap-fold > summary) {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--ink);
+    margin-bottom: 0.6rem;
+    cursor: pointer;
+    list-style: none;
+  }
+
+  .explorer :global(.cap-fold > summary::-webkit-details-marker) {
+    display: none;
+  }
+
+  .explorer :global(.cap-fold > summary::before) {
+    content: "";
+    width: 7px;
+    height: 7px;
+    border: solid var(--ink-soft);
+    border-width: 0 1.5px 1.5px 0;
+    transform: rotate(-45deg);
+    transition: transform 0.12s ease;
+  }
+
+  .explorer :global(.cap-fold[open] > summary::before) {
+    transform: rotate(45deg);
   }
 
   .explorer :global(.cap-table-head) {

@@ -116,7 +116,20 @@ export function startCap(root: HTMLElement, data: CapData, opts: { town: string 
     yearRow.append(b);
     return b;
   });
+  // How the cap works: a remembered fold, open unless this browser remembers it closed
   const how = el("section", "cap-section");
+  const howFold = el("details", "intro cap-fold");
+  howFold.dataset.remember = "cap-how";
+  howFold.append(el("summary", undefined, "How the cap works"));
+  const howText = el("div");
+  howFold.append(howText);
+  how.append(howFold);
+  try {
+    howFold.open = !(localStorage.getItem("mass-school-spending:remember") === "yes" &&
+      localStorage.getItem("mass-school-spending:cap-how") === "closed");
+  } catch {
+    howFold.open = true;
+  }
   const tiles = el("div", "cap-tiles");
 
   // The scenario: no cap, or a cap of the reader's choosing
@@ -278,7 +291,7 @@ export function startCap(root: HTMLElement, data: CapData, opts: { town: string 
 
     // How the cap works, in this year's numbers
     const lift = 1 / y.factor - 1;
-    how.replaceChildren(el("h3", undefined, "How the cap works"));
+
     const p1 = el("p");
     p1.append(`Chapter 70 asks every town for the same share of its wealth. For FY${y.fy}, the formula takes ` +
       `${rate(y.property_pct)} of each town's January ${y.eqv_year} equalized property value and ${rate(y.income_pct)} of ` +
@@ -294,7 +307,7 @@ export function startCap(root: HTMLElement, data: CapData, opts: { town: string 
       `of property value and ${rate(y.income_pct * y.factor)} of income: the cap makes the percentages ${pct(lift)} higher ` +
       "than they would otherwise be (", link(`DESE's FY${y.fy} summary`, y.whitepaper), ", ",
       link("formula spreadsheet", y.source), ").");
-    how.append(p1, p2);
+    howText.replaceChildren(p1, p2);
 
     // Income fifths: who is in each, for the tiles and the table
     const withIncome = towns.filter((x) => x.pop_income && x.foundation).map((x) => ({ x, inc: x.income / x.pop_income! }))

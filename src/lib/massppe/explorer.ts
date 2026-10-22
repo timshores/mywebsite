@@ -164,8 +164,8 @@ type Dollars = string;
 type Per = "resident" | "household" | "parcel";
 const PERS: Per[] = ["resident", "household", "parcel"];
 const PER_WORD: Record<Per, string> = { resident: "resident", household: "household", parcel: "taxable property" };
-type View = "districts" | "towns" | "commonwealth" | "cap";
-const VIEWS: View[] = ["districts", "towns", "commonwealth", "cap"];
+type View = "districts" | "towns" | "commonwealth" | "cap" | "data";
+const VIEWS: View[] = ["districts", "towns", "commonwealth", "cap", "data"];
 type StackPanel = "ppe" | "nss" | "rev" | "tspend" | "trev" | "tval" | "tpar" | "tlevy";
 /** The two lines a stacked chart can draw over its columns */
 type Line = "trend" | "cmp";
@@ -413,17 +413,19 @@ export async function startExplorer() {
     if (consent !== "yes") return;
     const sets = (r: Record<string, Set<string>>) => Object.fromEntries(Object.entries(r).map(([k, s]) => [k, [...s]]));
     storage.set(STORE, JSON.stringify({ state, isolated: sets(isolated), hidden: sets(hiddenLines) }));
-    folds.forEach((d) => storage.set(foldKey(d), d.open ? "open" : "closed"));
+    folds().forEach((d) => storage.set(foldKey(d), d.open ? "open" : "closed"));
   }
-  // Folding sections (the introductions) stay folded or open as they were left, with the other
-  // remembered choices. The page's inline scripts set them before the first paint; this
-  // remembers changes.
-  const folds = [...document.querySelectorAll<HTMLDetailsElement>("details[data-remember]")];
+  // Folding sections (the introductions, the cap tab's explanation) stay folded or open as they
+  // were left, with the other remembered choices. The page's inline scripts, or the code that
+  // builds a section, set them; this remembers changes, for sections added later too.
+  const folds = () => [...document.querySelectorAll<HTMLDetailsElement>("details[data-remember]")];
   const foldKey = (d: HTMLDetailsElement) => `mass-school-spending:${d.dataset.remember}`;
-  folds.forEach((d) => d.addEventListener("toggle", () => {
+  // toggle doesn't bubble, so listen as it passes down
+  document.addEventListener("toggle", (ev) => {
+    if (!(ev.target instanceof HTMLDetailsElement) || !ev.target.dataset.remember || !ev.isTrusted) return;
     askToRemember();
     remember();
-  }));
+  }, true);
   // The question comes once, after someone first changes something, so there is
   // something to remember
   let asked = false;
@@ -438,7 +440,7 @@ export async function startExplorer() {
     if (answer === "yes") remember();
     else {
       storage.drop(STORE);
-      folds.forEach((d) => storage.drop(foldKey(d)));
+      folds().forEach((d) => storage.drop(foldKey(d)));
     }
     $("remember-prompt").hidden = true;
     rememberNote();
@@ -1158,7 +1160,7 @@ export async function startExplorer() {
     showDollars();
     explainDollars();
     if (state.view === "districts") renderDistricts();
-    else if (state.view === "commonwealth" || state.view === "cap") { /* these tabs draw themselves */ }
+    else if (state.view === "commonwealth" || state.view === "cap" || state.view === "data") { /* these draw themselves */ }
     else if (towns) renderTowns();
     else {
       $("entity-name").textContent = "Town data unavailable";
