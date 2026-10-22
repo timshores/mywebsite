@@ -3,18 +3,18 @@ import Layout from "../../layouts/Layout.astro";
 ---
 
 <Layout
-  title="Western MA school spending explorer - Tim Shores"
-  description="Per-pupil spending, enrollment, Chapter 70 aid, and revenue by source for Western Massachusetts school districts, and the general fund budgets of their towns, FY2009 to FY2025"
+  title="Massachusetts school spending explorer - Tim Shores"
+  description="Per-pupil spending, enrollment, Chapter 70 aid, and revenue for every Massachusetts school district, and the general fund budgets of all 351 cities and towns, FY2009 to FY2025"
 >
   <section id="explorer" class="explorer is-loading">
-    <p class="eyebrow">Western Massachusetts · FY2009–FY<span data-latest>2025</span></p>
+    <p class="eyebrow">Massachusetts · FY2009–FY<span data-latest>2025</span></p>
     <h1>School spending explorer</h1>
     <p class="lede">
-      Per-pupil spending, enrollment, and state aid for 65 Western Massachusetts school districts, from the
-      data behind my report on
-      <a href="/artifacts/western-ma-ppe-report.pdf">per-pupil expenditure in Western Massachusetts</a>,
-      and revenue by source for the 19 regional districts. The Towns tab shows the general fund budgets of the 97
-      towns those districts serve.
+      Per-pupil spending, enrollment, and state aid for every Massachusetts school district, built on the data
+      behind my report on
+      <a href="/artifacts/western-ma-ppe-report.pdf">per-pupil expenditure in Western Massachusetts</a>, with
+      revenue by source for the regional districts. The Towns tab shows the general fund budgets of all 351 cities
+      and towns.
     </p>
 
     <div class="view-tabs" role="tablist" aria-label="Explorer view">
@@ -31,10 +31,12 @@ import Layout from "../../layouts/Layout.astro";
       <label class="control" data-view-only="districts">
         <span>Compare with</span>
         <select id="pick-compare">
-          <option value="cohort">Its cohort average</option>
-          <option value="western">Western MA average</option>
-          <option value="other">Another district or average</option>
           <option value="none">No comparison</option>
+          <option value="cohort">Its cohort in its region</option>
+          <option value="cohort-state">Its cohort statewide</option>
+          <option value="region">Its region</option>
+          <option value="state">Statewide</option>
+          <option value="other">Another district or average</option>
         </select>
       </label>
       <label class="control" id="vs-control" hidden>
@@ -48,10 +50,12 @@ import Layout from "../../layouts/Layout.astro";
       <label class="control" data-view-only="towns" hidden>
         <span>Compare with</span>
         <select id="pick-town-compare">
-          <option value="peer">Its peer group average</option>
-          <option value="western">Western MA towns average</option>
-          <option value="other">Another town or average</option>
           <option value="none">No comparison</option>
+          <option value="peer">Its peer group in its region</option>
+          <option value="peer-state">Its peer group statewide</option>
+          <option value="region">Its region</option>
+          <option value="state">Statewide</option>
+          <option value="other">Another town or average</option>
         </select>
       </label>
       <label class="control" id="town-vs-control" hidden>
@@ -185,6 +189,18 @@ import Layout from "../../layouts/Layout.astro";
     </div>
     </div>
 
+    <div id="remember-prompt" class="remember-prompt" role="dialog" aria-labelledby="remember-title" hidden>
+      <p id="remember-title"><strong>Remember your choices?</strong></p>
+      <p>
+        This page can reopen to the districts, towns, and settings you choose. They stay in this browser and are
+        never sent anywhere.
+      </p>
+      <div class="remember-actions">
+        <button type="button" id="remember-yes">Remember</button>
+        <button type="button" id="remember-no">No thanks</button>
+      </div>
+    </div>
+
     <dialog id="table-dialog" class="table-dialog" aria-labelledby="table-dialog-title">
       <div class="dialog-head">
         <h3 id="table-dialog-title"></h3>
@@ -223,17 +239,22 @@ import Layout from "../../layouts/Layout.astro";
         of apples in the morning compared with a picture of apples in the evening. Both dollar charts share one scale.
       </p>
       <p>
-        <strong>Cohorts</strong> group districts by FY<span data-latest>2025</span> in-district FTE, using the
-        boundaries <a href="/artifacts/western-ma-ppe-report.pdf">the report</a> set from FY2024 enrollment: Tiny up to 200 FTE, Small 201–800, Medium 801–1,600, and
-        Large 1,601–10,000. Springfield stands apart. Cohort and Western MA spending averages are weighted by
-        in-district FTE, Chapter 70 averages by foundation enrollment, and enrollment averages are per district. The
-        Western MA average covers the 64 districts other than Springfield.
+        <strong>Cohorts</strong> group traditional districts by FY<span data-latest>2025</span> in-district FTE, using
+        the boundaries <a href="/artifacts/western-ma-ppe-report.pdf">the report</a> set from FY2024 Western MA
+        enrollment: Tiny up to 200 FTE, Small 201–800, Medium 801–1,600, Large 1,601–10,000, and Very large above
+        that. Vocational districts and charter schools are groups of their own. Regions are the state's six EOHHS
+        regions. As the report left Springfield out of its Western MA average, region and statewide averages leave out
+        the ten very large districts, which have an average of their own. A region with fewer than three districts in a
+        cohort has no regional average for it, so "its cohort in its region" uses the statewide cohort there. Spending
+        averages are weighted by in-district FTE, Chapter 70 averages by foundation enrollment, and enrollment
+        averages are per district. Two virtual schools, the state's institutional schools, and the Massachusetts
+        Academy of Math and Science are not included.
       </p>
       <p>
         <strong>Revenue by source</strong> comes from the Census Bureau's
         <a href="https://www.census.gov/programs-surveys/school-finances.html">Annual Survey of School System Finances</a>
         (<a href="/mass-school-spending/data/districts-revenue.csv" download>CSV</a>, in dollars, each column naming the Census items it adds up),
-        divided by in-district FTE like spending. It covers the 19 regional districts only: for many town-run
+        divided by in-district FTE like spending. It covers regional districts only: for many town-run
         districts, Census's local revenue is only part of what the town spends on its schools (for Amherst in FY2024,
         $18.4 million of revenue against $37.6 million of spending). Payments from towns include a regional
         district's member-town assessments; payments from other school districts include tuition for pupils they
@@ -248,13 +269,14 @@ import Layout from "../../layouts/Layout.astro";
         <strong>Town budgets</strong> come from each town's <a href="https://dls-gw.dor.state.ma.us/reports/rdPage.aspx?rdReport=ScheduleA.GenFund_MAIN">Schedule A</a>
         (CSVs: <a href="/mass-school-spending/data/towns-spending.csv" download>spending</a>, <a href="/mass-school-spending/data/towns-revenue.csv" download>revenue</a>, each with population), the year-end report of general fund revenue and
         spending that town accountants file with the state Division of Local Services. Enterprise, capital, and other
-        funds are not included. The towns are the 97 that the explorer's districts serve, by DESE's
-        <a href="https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025.html">FY2025 membership lists</a>
-        (<a href="/mass-school-spending/data/towns-school-districts.csv" download>CSV</a>, with each town's required contributions), and the Western MA towns average pools them per resident, without Springfield. Peer groups put each
-        town with others its size, by the July 2024 population estimate: under 1,000 residents (20 towns),
-        1,000–2,499 (35), 2,500–9,999 (21), and 10,000 or more (20, without Springfield). Half the towns have fewer
-        than 1,900 residents, so the groups are narrow at the small end. Peer averages pool their towns per resident,
-        like the Western MA average. Dollars are per
+        funds are not included. Each town's school districts and FY2025 required local contributions come from DESE's
+        <a href="https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025.html">Chapter 70 tables</a>
+        (<a href="/mass-school-spending/data/towns-school-districts.csv" download>CSV</a>), and each town takes the
+        region of its own school district, or of its regional district.
+        Peer groups put each town with others its size, by the July 2024 population estimate: under 1,000 residents
+        (26 towns), 1,000–2,499 (42), 2,500–9,999 (98), 10,000–24,999 (103), 25,000–49,999 (55), and 50,000 or more
+        (17). The ten cities whose school districts are very large, from Boston to Springfield, stand apart from the
+        town averages, as their districts do from the district averages. Averages pool their towns per resident. Dollars are per
         resident, using the Census Bureau's <a href="https://www.census.gov/programs-surveys/popest.html">population estimate</a> for July 1 at the start of each fiscal year. For FY2021
         the April 1, 2020 estimate stands in, because the July 2020 estimate drops by more than a quarter in Amherst
         and recovers a year later.
@@ -287,6 +309,7 @@ import Layout from "../../layouts/Layout.astro";
         file adds Census items up into the chart's sources, and every row links to its source. Built by Tim Shores with Claude Code. The code that prepares the data is at
         <a href="https://github.com/timshores/schools">github.com/timshores/schools</a>.
       </p>
+      <p id="remember-note" class="remember-note"></p>
     </section>
   </section>
 </Layout>
@@ -376,9 +399,12 @@ import Layout from "../../layouts/Layout.astro";
     max-width: 100%;
   }
 
+  /* Some district names run long; the menu stays a sensible width and shows them in full when open */
   #pick-district,
   #pick-vs {
     min-width: 15rem;
+    width: 22rem;
+    max-width: 100%;
   }
 
   .toggle legend {
@@ -936,8 +962,8 @@ import Layout from "../../layouts/Layout.astro";
 
   .tooltip :global(.tip-row) {
     display: grid;
-    grid-template-columns: 16px auto 1fr;
-    align-items: center;
+    grid-template-columns: 16px auto minmax(0, 1fr);
+    align-items: baseline;
     gap: 0.5rem;
     line-height: 1.5;
   }
@@ -950,9 +976,21 @@ import Layout from "../../layouts/Layout.astro";
     min-width: 4.6rem;
   }
 
-  .tooltip :global(.tip-label) {
+  .tooltip :global(.tip-label),
+  .tooltip :global(.tip-title),
+  .tooltip :global(.tip-note) {
     color: var(--ink-soft);
-    white-space: nowrap;
+    overflow-wrap: anywhere;
+  }
+
+  .tooltip :global(.tip-title) {
+    color: var(--ink);
+  }
+
+  /* Keys sit beside the first line of a wrapped label */
+  .tooltip :global(.tip-row .key) {
+    align-self: start;
+    margin-top: 0.55em;
   }
 
   .tooltip :global(.tip-row.strong) {
@@ -1224,6 +1262,69 @@ import Layout from "../../layouts/Layout.astro";
     font-weight: 500;
   }
 
+  /* Asks once, after the first change, whether to remember choices; never blocks the page */
+  .remember-prompt {
+    position: fixed;
+    right: 16px;
+    bottom: 16px;
+    z-index: 20;
+    max-width: min(24rem, calc(100vw - 32px));
+    padding: 1rem 1.1rem;
+    font-size: 0.9rem;
+    color: var(--ink);
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    box-shadow: 0 16px 40px rgba(31, 31, 28, 0.22);
+  }
+
+  .remember-prompt[hidden] {
+    display: none;
+  }
+
+  .remember-prompt p {
+    margin: 0 0 0.4rem;
+  }
+
+  .remember-actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.7rem;
+  }
+
+  .remember-actions button {
+    font: inherit;
+    padding: 0.45rem 0.95rem;
+    color: var(--ink);
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    cursor: pointer;
+  }
+
+  .remember-actions #remember-yes {
+    color: var(--paper);
+    background: var(--ink);
+    border-color: var(--ink);
+  }
+
+  .remember-actions button:focus-visible,
+  .remember-note :global(.link-button:focus-visible) {
+    outline: 2px dashed var(--accent);
+    outline-offset: 2px;
+  }
+
+  .remember-note :global(.link-button) {
+    font: inherit;
+    padding: 0;
+    color: var(--accent);
+    background: none;
+    border: 0;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    cursor: pointer;
+  }
+
   .notes {
     margin-top: 2.5rem;
     border-top: 1px solid var(--line);
@@ -1265,8 +1366,5 @@ import Layout from "../../layouts/Layout.astro";
       font-size: 1.3rem;
     }
 
-    .tooltip :global(.tip-label) {
-      white-space: normal;
-    }
   }
 </style>

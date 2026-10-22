@@ -1,153 +1,684 @@
 town,county,school_district,district_kind,in_explorer,fy2025_required_local_contribution,source_url
+Abington,Plymouth,Abington,town district,yes,17754107,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Abington,Plymouth,South Shore Regional Vocational Technical,vocational,yes,1310268,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Acton,Middlesex,Acton-Boxborough,regional,yes,43461158,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Acton,Middlesex,Minuteman Regional Vocational Technical,vocational,yes,1630390,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Acushnet,Bristol,Acushnet,town district,yes,8852864,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Acushnet,Bristol,Old Colony Regional Vocational Technical,vocational,yes,2123499,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Acushnet,Bristol,Bristol County Agricultural,vocational,yes,224457,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
 Adams,Berkshire,Hoosac Valley Regional,regional,yes,4059948,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
-Adams,Berkshire,Northern Berkshire,vocational,no,938581,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Adams,Berkshire,Northern Berkshire Regional Vocational Technical,vocational,yes,938581,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
 Agawam,Hampden,Agawam,town district,yes,26903037,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
 Alford,Berkshire,Southern Berkshire,regional,yes,230207,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Amesbury,Essex,Amesbury,town district,yes,19160041,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Amesbury,Essex,Whittier Regional Vocational Technical,vocational,yes,1898614,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
 Amherst,Hampshire,Amherst,town district,yes,11117824,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
 Amherst,Hampshire,Amherst-Pelham,regional,yes,11495958,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Andover,Essex,Andover,town district,yes,59890937,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Andover,Essex,Greater Lawrence Regional Vocational Technical,vocational,yes,1050957,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Aquinnah,Dukes,Martha's Vineyard,regional,yes,218877,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Aquinnah,Dukes,Up-Island Regional,regional,yes,477048,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Arlington,Middlesex,Arlington,town district,yes,58893679,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Arlington,Middlesex,Minuteman Regional Vocational Technical,vocational,yes,3430220,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Ashburnham,Worcester,Ashburnham-Westminster,regional,yes,5969244,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Ashburnham,Worcester,Montachusett Regional Vocational Technical,vocational,yes,594906,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Ashby,Middlesex,North Middlesex,regional,yes,2832572,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Ashby,Middlesex,Montachusett Regional Vocational Technical,vocational,yes,326341,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
 Ashfield,Franklin,Mohawk Trail,regional,yes,1562527,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Ashland,Middlesex,Ashland,town district,yes,26791174,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Ashland,Middlesex,South Middlesex Regional Vocational Technical,vocational,yes,1036710,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
 Athol,Worcester,Athol-Royalston,regional,yes,4034378,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
-Athol,Worcester,Montachusett,vocational,no,317195,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Athol,Worcester,Montachusett Regional Vocational Technical,vocational,yes,317195,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Attleboro,Bristol,Attleboro,town district,yes,46028760,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Attleboro,Bristol,Bristol County Agricultural,vocational,yes,197554,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Auburn,Worcester,Auburn,town district,yes,17758731,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Auburn,Worcester,Southern Worcester County Regional Vocational School District,vocational,yes,1480157,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Avon,Norfolk,Avon,town district,yes,5674808,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Avon,Norfolk,Blue Hills Regional Vocational Technical,vocational,yes,623498,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Avon,Norfolk,Norfolk County Agricultural,vocational,yes,13136,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Ayer,Middlesex,Ayer Shirley School District,regional,yes,9736178,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Ayer,Middlesex,Nashoba Valley Regional Vocational Technical,vocational,yes,925929,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Barnstable,Barnstable,Barnstable,town district,yes,63910403,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Barnstable,Barnstable,Cape Cod Regional Vocational Technical,vocational,yes,2840639,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Barre,Worcester,Quabbin,regional,yes,3988915,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Barre,Worcester,Montachusett Regional Vocational Technical,vocational,yes,349102,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
 Becket,Berkshire,Central Berkshire,regional,yes,2148988,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Bedford,Middlesex,Bedford,town district,yes,28733269,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Bedford,Middlesex,Shawsheen Valley Regional Vocational Technical,vocational,yes,635752,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
 Belchertown,Hampshire,Belchertown,town district,yes,14251380,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
-Belchertown,Hampshire,Pathfinder,vocational,no,1291182,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Belchertown,Hampshire,Pathfinder Regional Vocational Technical,vocational,yes,1291182,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Bellingham,Norfolk,Bellingham,town district,yes,20822076,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Bellingham,Norfolk,Blackstone Valley Regional Vocational Technical,vocational,yes,1018807,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Bellingham,Norfolk,Norfolk County Agricultural,vocational,yes,213377,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Belmont,Middlesex,Belmont,town district,yes,47889465,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Berkley,Bristol,Berkley,town district,yes,5017565,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Berkley,Bristol,Somerset Berkley Regional School District,regional,yes,1938391,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Berkley,Bristol,Bristol-Plymouth Regional Vocational Technical,vocational,yes,1272249,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Berkley,Bristol,Bristol County Agricultural,vocational,yes,164633,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Berlin,Worcester,Berlin-Boylston,regional,yes,3750867,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Berlin,Worcester,Assabet Valley Regional Vocational Technical,vocational,yes,597909,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
 Bernardston,Franklin,Pioneer Valley,regional,yes,1656501,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
-Bernardston,Franklin,Franklin County,vocational,no,353029,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Bernardston,Franklin,Franklin County Regional Vocational Technical,vocational,yes,353029,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Beverly,Essex,Beverly,town district,yes,49168020,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Beverly,Essex,Essex North Shore Agricultural and Technical School District,vocational,yes,3132367,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Billerica,Middlesex,Billerica,town district,yes,52490595,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Billerica,Middlesex,Shawsheen Valley Regional Vocational Technical,vocational,yes,7472836,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Blackstone,Worcester,Blackstone-Millville,regional,yes,8514234,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Blackstone,Worcester,Blackstone Valley Regional Vocational Technical,vocational,yes,557680,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
 Blandford,Hampden,Gateway,regional,yes,1008285,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Bolton,Worcester,Nashoba,regional,yes,10432433,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Bolton,Worcester,Minuteman Regional Vocational Technical,vocational,yes,607112,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Boston,Suffolk,Boston,town district,yes,945408382,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Bourne,Barnstable,Bourne,town district,yes,19319804,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Bourne,Barnstable,Upper Cape Cod Regional Vocational Technical,vocational,yes,3389488,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Boxborough,Middlesex,Acton-Boxborough,regional,yes,8852771,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Boxford,Essex,Boxford,town district,yes,7139841,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Boxford,Essex,Masconomet,regional,yes,6271147,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Boxford,Essex,Essex North Shore Agricultural and Technical School District,vocational,yes,399080,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Boylston,Worcester,Berlin-Boylston,regional,yes,6725220,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Braintree,Norfolk,Braintree,town district,yes,55176708,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Braintree,Norfolk,Blue Hills Regional Vocational Technical,vocational,yes,2670407,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Braintree,Norfolk,Norfolk County Agricultural,vocational,yes,297471,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Brewster,Barnstable,Brewster,town district,yes,4937108,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Brewster,Barnstable,Nauset,regional,yes,6550099,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Brewster,Barnstable,Cape Cod Regional Vocational Technical,vocational,yes,918313,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Bridgewater,Plymouth,Bridgewater-Raynham,regional,yes,27358613,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Bridgewater,Plymouth,Bristol-Plymouth Regional Vocational Technical,vocational,yes,1778649,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Brimfield,Hampden,Brimfield,town district,yes,1922423,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Brimfield,Hampden,Tantasqua,regional,yes,2116420,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Brockton,Plymouth,Brockton,town district,yes,58428285,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Brockton,Plymouth,Southeastern Regional Vocational Technical,vocational,yes,4216427,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Brookfield,Worcester,Brookfield,town district,yes,1406803,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Brookfield,Worcester,Tantasqua,regional,yes,1418556,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Brookline,Norfolk,Brookline,town district,yes,75894845,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Brookline,Norfolk,Norfolk County Agricultural,vocational,yes,0,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
 Buckland,Franklin,Mohawk Trail,regional,yes,1366792,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
-Buckland,Franklin,Franklin County,vocational,no,208880,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Buckland,Franklin,Franklin County Regional Vocational Technical,vocational,yes,208880,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Burlington,Middlesex,Burlington,town district,yes,39058316,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Burlington,Middlesex,Shawsheen Valley Regional Vocational Technical,vocational,yes,1857259,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Cambridge,Middlesex,Cambridge,town district,yes,98144857,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Canton,Norfolk,Canton,town district,yes,36588682,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Canton,Norfolk,Blue Hills Regional Vocational Technical,vocational,yes,1356376,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Canton,Norfolk,Norfolk County Agricultural,vocational,yes,125352,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Carlisle,Middlesex,Carlisle,town district,yes,5654120,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Carlisle,Middlesex,Concord-Carlisle,regional,yes,3454134,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Carver,Plymouth,Carver,town district,yes,11414545,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Carver,Plymouth,Old Colony Regional Vocational Technical,vocational,yes,837845,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
 Charlemont,Franklin,Hawlemont,regional,yes,574305,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
 Charlemont,Franklin,Mohawk Trail,regional,yes,336740,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Charlton,Worcester,Dudley-Charlton Reg,regional,yes,13954607,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Charlton,Worcester,Southern Worcester County Regional Vocational School District,vocational,yes,2270609,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Chatham,Barnstable,Monomoy Regional School District,regional,yes,4476861,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Chatham,Barnstable,Cape Cod Regional Vocational Technical,vocational,yes,360123,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Chelmsford,Middlesex,Chelmsford,town district,yes,52463272,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Chelmsford,Middlesex,Nashoba Valley Regional Vocational Technical,vocational,yes,3523815,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Chelsea,Suffolk,Chelsea,town district,yes,23727035,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Chelsea,Suffolk,Northeast Metropolitan Regional Vocational Technical,vocational,yes,966514,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
 Cheshire,Berkshire,Hoosac Valley Regional,regional,yes,2350342,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
-Cheshire,Berkshire,Northern Berkshire,vocational,no,506532,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Cheshire,Berkshire,Northern Berkshire Regional Vocational Technical,vocational,yes,506532,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
 Chester,Hampden,Gateway,regional,yes,944747,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
 Chesterfield,Hampshire,Chesterfield-Goshen,regional,yes,628954,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
 Chesterfield,Hampshire,Hampshire,regional,no,259090,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
 Chicopee,Hampden,Chicopee,town district,yes,35132393,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Chilmark,Dukes,Martha's Vineyard,regional,yes,452346,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Chilmark,Dukes,Up-Island Regional,regional,yes,715572,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
 Clarksburg,Berkshire,Clarksburg,town district,yes,806811,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
-Clarksburg,Berkshire,Northern Berkshire,vocational,no,318303,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Clarksburg,Berkshire,Northern Berkshire Regional Vocational Technical,vocational,yes,318303,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Clinton,Worcester,Clinton,town district,yes,14024833,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Cohasset,Norfolk,Cohasset,town district,yes,14717222,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Cohasset,Norfolk,South Shore Regional Vocational Technical,vocational,yes,154953,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Cohasset,Norfolk,Norfolk County Agricultural,vocational,yes,0,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
 Colrain,Franklin,Mohawk Trail,regional,yes,1193141,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
-Colrain,Franklin,Franklin County,vocational,no,290827,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Colrain,Franklin,Franklin County Regional Vocational Technical,vocational,yes,290827,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Concord,Middlesex,Concord,town district,yes,19933149,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Concord,Middlesex,Concord-Carlisle,regional,yes,11180167,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Concord,Middlesex,Minuteman Regional Vocational Technical,vocational,yes,723637,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
 Conway,Franklin,Conway,town district,yes,799627,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
 Conway,Franklin,Frontier,regional,yes,1025953,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
-Conway,Franklin,Franklin County,vocational,no,126224,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Conway,Franklin,Franklin County Regional Vocational Technical,vocational,yes,126224,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
 Cummington,Hampshire,Central Berkshire,regional,yes,585688,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
 Dalton,Berkshire,Central Berkshire,regional,yes,5962936,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Danvers,Essex,Danvers,town district,yes,34918958,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Danvers,Essex,Essex North Shore Agricultural and Technical School District,vocational,yes,3814450,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Dartmouth,Bristol,Dartmouth,town district,yes,36166183,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Dartmouth,Bristol,Greater New Bedford Regional Vocational Technical,vocational,yes,5868424,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Dartmouth,Bristol,Bristol County Agricultural,vocational,yes,388139,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Dedham,Norfolk,Dedham,town district,yes,29321375,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Dedham,Norfolk,Blue Hills Regional Vocational Technical,vocational,yes,1703037,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Dedham,Norfolk,Norfolk County Agricultural,vocational,yes,198390,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
 Deerfield,Franklin,Deerfield,town district,yes,2926651,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
 Deerfield,Franklin,Frontier,regional,yes,2576813,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
-Deerfield,Franklin,Franklin County,vocational,no,631119,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Deerfield,Franklin,Franklin County Regional Vocational Technical,vocational,yes,631119,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Dennis,Barnstable,Dennis-Yarmouth,regional,yes,13223870,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Dennis,Barnstable,Cape Cod Regional Vocational Technical,vocational,yes,1134387,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Dighton,Bristol,Dighton-Rehoboth,regional,yes,7767533,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Dighton,Bristol,Bristol-Plymouth Regional Vocational Technical,vocational,yes,1140996,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Dighton,Bristol,Bristol County Agricultural,vocational,yes,297981,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Douglas,Worcester,Douglas,town district,yes,8850986,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Douglas,Worcester,Blackstone Valley Regional Vocational Technical,vocational,yes,1517300,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Dover,Norfolk,Dover,town district,yes,4916523,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Dover,Norfolk,Dover-Sherborn,regional,yes,6627671,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Dover,Norfolk,Minuteman Regional Vocational Technical,vocational,yes,86147,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Dover,Norfolk,Norfolk County Agricultural,vocational,yes,36340,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Dracut,Middlesex,Dracut,town district,yes,27974680,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Dracut,Middlesex,Greater Lowell Regional Vocational Technical,vocational,yes,5822817,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Dudley,Worcester,Dudley-Charlton Reg,regional,yes,8078202,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Dudley,Worcester,Southern Worcester County Regional Vocational School District,vocational,yes,1001605,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Dunstable,Middlesex,Groton-Dunstable,regional,yes,5323258,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Dunstable,Middlesex,Greater Lowell Regional Vocational Technical,vocational,yes,146403,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Duxbury,Plymouth,Duxbury,town district,yes,27763489,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+East Bridgewater,Plymouth,East Bridgewater,town district,yes,14744525,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+East Bridgewater,Plymouth,Southeastern Regional Vocational Technical,vocational,yes,1208435,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+East Brookfield,Worcester,Spencer-E Brookfield,regional,yes,2090612,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Eastham,Barnstable,Eastham,town district,yes,2387276,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Eastham,Barnstable,Nauset,regional,yes,2940861,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Eastham,Barnstable,Cape Cod Regional Vocational Technical,vocational,yes,504172,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
 Easthampton,Hampshire,Easthampton,town district,yes,14936633,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
 East Longmeadow,Hampden,East Longmeadow,town district,yes,19663608,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Easton,Bristol,Easton,town district,yes,34692019,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Easton,Bristol,Southeastern Regional Vocational Technical,vocational,yes,1508497,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Easton,Bristol,Bristol County Agricultural,vocational,yes,146905,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Edgartown,Dukes,Edgartown,town district,yes,5539828,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Edgartown,Dukes,Martha's Vineyard,regional,yes,3268568,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
 Egremont,Berkshire,Southern Berkshire,regional,yes,1047443,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
 Erving,Franklin,Erving,town district,yes,2220663,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
-Erving,Franklin,Franklin County,vocational,no,475480,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Erving,Franklin,Franklin County Regional Vocational Technical,vocational,yes,475480,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Essex,Essex,Manchester Essex Regional,regional,yes,5126297,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Essex,Essex,Essex North Shore Agricultural and Technical School District,vocational,yes,308061,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Everett,Middlesex,Everett,town district,yes,43738229,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Fairhaven,Bristol,Fairhaven,town district,yes,14889430,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Fairhaven,Bristol,Greater New Bedford Regional Vocational Technical,vocational,yes,2523723,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Fairhaven,Bristol,Bristol County Agricultural,vocational,yes,394620,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Fall River,Bristol,Fall River,town district,yes,40721548,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Fall River,Bristol,Greater Fall River Regional Vocational Technical,vocational,yes,3951711,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Fall River,Bristol,Bristol County Agricultural,vocational,yes,178135,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Falmouth,Barnstable,Falmouth,town district,yes,35655232,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Falmouth,Barnstable,Upper Cape Cod Regional Vocational Technical,vocational,yes,3559718,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Fitchburg,Worcester,Fitchburg,town district,yes,23118748,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Fitchburg,Worcester,Montachusett Regional Vocational Technical,vocational,yes,1788912,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
 Florida,Berkshire,Florida,town district,yes,439942,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
-Florida,Berkshire,Northern Berkshire,vocational,no,356794,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Florida,Berkshire,Northern Berkshire Regional Vocational Technical,vocational,yes,356794,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Foxborough,Norfolk,Foxborough,town district,yes,28583943,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Foxborough,Norfolk,Southeastern Regional Vocational Technical,vocational,yes,808534,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Foxborough,Norfolk,Norfolk County Agricultural,vocational,yes,141450,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Framingham,Middlesex,Framingham,town district,yes,78033062,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Framingham,Middlesex,South Middlesex Regional Vocational Technical,vocational,yes,7106696,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Franklin,Norfolk,Franklin,town district,yes,49904466,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Franklin,Norfolk,Tri-County Regional Vocational Technical,vocational,yes,2711384,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Franklin,Norfolk,Norfolk County Agricultural,vocational,yes,247601,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Freetown,Bristol,Freetown-Lakeville,regional,yes,11082677,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Freetown,Bristol,Bristol-Plymouth Regional Vocational Technical,vocational,yes,755373,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Freetown,Bristol,Bristol County Agricultural,vocational,yes,334313,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Gardner,Worcester,Gardner,town district,yes,11909298,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Gardner,Worcester,Montachusett Regional Vocational Technical,vocational,yes,963184,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Georgetown,Essex,Georgetown,town district,yes,11942079,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Georgetown,Essex,Whittier Regional Vocational Technical,vocational,yes,1029931,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
 Gill,Franklin,Gill-Montague,regional,yes,1080125,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
-Gill,Franklin,Franklin County,vocational,no,189794,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Gill,Franklin,Franklin County Regional Vocational Technical,vocational,yes,189794,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Gloucester,Essex,Gloucester,town district,yes,37665556,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Gloucester,Essex,Essex North Shore Agricultural and Technical School District,vocational,yes,1523721,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
 Goshen,Hampshire,Chesterfield-Goshen,regional,yes,495669,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
 Goshen,Hampshire,Hampshire,regional,no,294026,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Grafton,Worcester,Grafton,town district,yes,25816666,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Grafton,Worcester,Blackstone Valley Regional Vocational Technical,vocational,yes,1401598,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
 Granby,Hampshire,Granby,town district,yes,5916543,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
-Granby,Hampshire,Pathfinder,vocational,no,253615,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Granby,Hampshire,Pathfinder Regional Vocational Technical,vocational,yes,253615,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
 Granville,Hampden,Southwick-Tolland-Granville Regional School District,regional,yes,1749216,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
 Great Barrington,Berkshire,Berkshire Hills,regional,yes,8593682,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
 Greenfield,Franklin,Greenfield,town district,yes,11465787,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
-Greenfield,Franklin,Franklin County,vocational,no,1183083,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Greenfield,Franklin,Franklin County Regional Vocational Technical,vocational,yes,1183083,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Groton,Middlesex,Groton-Dunstable,regional,yes,17487642,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Groton,Middlesex,Nashoba Valley Regional Vocational Technical,vocational,yes,848655,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Groveland,Essex,Pentucket,regional,yes,8159056,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Groveland,Essex,Whittier Regional Vocational Technical,vocational,yes,574271,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
 Hadley,Hampshire,Hadley,town district,yes,5123870,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Halifax,Plymouth,Silver Lake,regional,yes,4593741,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Hamilton,Essex,Hamilton-Wenham,regional,yes,10945972,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Hamilton,Essex,Essex North Shore Agricultural and Technical School District,vocational,yes,409400,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
 Hampden,Hampden,Hampden-Wilbraham,regional,yes,5897985,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
 Hancock,Berkshire,Hancock,town district,yes,820427,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Hanover,Plymouth,Hanover,town district,yes,24358612,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Hanover,Plymouth,South Shore Regional Vocational Technical,vocational,yes,1276375,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Hanson,Plymouth,Whitman-Hanson,regional,yes,11412032,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Hanson,Plymouth,South Shore Regional Vocational Technical,vocational,yes,972014,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Hardwick,Worcester,Quabbin,regional,yes,1776528,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Hardwick,Worcester,Pathfinder Regional Vocational Technical,vocational,yes,215787,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Harvard,Worcester,Harvard,town district,yes,8697832,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Harvard,Worcester,Montachusett Regional Vocational Technical,vocational,yes,144466,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Harwich,Barnstable,Monomoy Regional School District,regional,yes,15332048,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Harwich,Barnstable,Cape Cod Regional Vocational Technical,vocational,yes,1386473,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
 Hatfield,Hampshire,Hatfield,town district,yes,3438495,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Haverhill,Essex,Haverhill,town district,yes,52953650,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Haverhill,Essex,Whittier Regional Vocational Technical,vocational,yes,6817895,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
 Hawley,Franklin,Hawlemont,regional,yes,120543,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
 Hawley,Franklin,Mohawk Trail,regional,yes,120673,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
 Heath,Franklin,Mohawk Trail,regional,yes,425716,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
-Heath,Franklin,Franklin County,vocational,no,86390,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Heath,Franklin,Franklin County Regional Vocational Technical,vocational,yes,86390,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Hingham,Plymouth,Hingham,town district,yes,37854849,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
 Hinsdale,Berkshire,Central Berkshire,regional,yes,2107696,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Holbrook,Norfolk,Holbrook,town district,yes,10008705,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Holbrook,Norfolk,Blue Hills Regional Vocational Technical,vocational,yes,1150829,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Holbrook,Norfolk,Norfolk County Agricultural,vocational,yes,93234,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Holden,Worcester,Wachusett,regional,yes,23138212,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Holden,Worcester,Montachusett Regional Vocational Technical,vocational,yes,1707428,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Holland,Hampden,Holland,town district,yes,1515869,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Holland,Hampden,Tantasqua,regional,yes,1287649,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Holliston,Middlesex,Holliston,town district,yes,25423217,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Holliston,Middlesex,South Middlesex Regional Vocational Technical,vocational,yes,1489115,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
 Holyoke,Hampden,Holyoke,town district,yes,13183748,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Hopedale,Worcester,Hopedale,town district,yes,6842443,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Hopedale,Worcester,Blackstone Valley Regional Vocational Technical,vocational,yes,807260,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Hopkinton,Middlesex,Hopkinton,town district,yes,43451724,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Hopkinton,Middlesex,South Middlesex Regional Vocational Technical,vocational,yes,505586,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Hubbardston,Worcester,Quabbin,regional,yes,4225525,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Hubbardston,Worcester,Montachusett Regional Vocational Technical,vocational,yes,340322,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Hudson,Middlesex,Hudson,town district,yes,22432839,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Hudson,Middlesex,Assabet Valley Regional Vocational Technical,vocational,yes,2802088,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Hull,Plymouth,Hull,town district,yes,8920823,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
 Huntington,Hampshire,Gateway,regional,yes,1606237,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Ipswich,Essex,Ipswich,town district,yes,17194551,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Ipswich,Essex,Whittier Regional Vocational Technical,vocational,yes,471071,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Kingston,Plymouth,Silver Lake,regional,yes,9734882,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Lakeville,Plymouth,Freetown-Lakeville,regional,yes,13910037,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Lakeville,Plymouth,Old Colony Regional Vocational Technical,vocational,yes,2055263,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Lancaster,Worcester,Nashoba,regional,yes,8558850,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Lancaster,Worcester,Minuteman Regional Vocational Technical,vocational,yes,793908,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
 Lanesborough,Berkshire,Mount Greylock,regional,yes,2752902,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
-Lanesborough,Berkshire,Northern Berkshire,vocational,no,365907,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Lanesborough,Berkshire,Northern Berkshire Regional Vocational Technical,vocational,yes,365907,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Lawrence,Essex,Lawrence,town district,yes,15203337,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Lawrence,Essex,Greater Lawrence Regional Vocational Technical,vocational,yes,1667783,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
 Lee,Berkshire,Lee,town district,yes,7067255,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Leicester,Worcester,Leicester,town district,yes,10610635,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
 Lenox,Berkshire,Lenox,town district,yes,5629478,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Leominster,Worcester,Leominster,town district,yes,36964269,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
 Leverett,Franklin,Leverett,town district,yes,1083930,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
 Leverett,Franklin,Amherst-Pelham,regional,yes,1102340,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Lexington,Middlesex,Lexington,town district,yes,75453607,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Lexington,Middlesex,Minuteman Regional Vocational Technical,vocational,yes,1395586,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
 Leyden,Franklin,Pioneer Valley,regional,yes,546052,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
-Leyden,Franklin,Franklin County,vocational,no,49023,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Leyden,Franklin,Franklin County Regional Vocational Technical,vocational,yes,49023,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Lincoln,Middlesex,Lincoln,town district,yes,6200174,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Lincoln,Middlesex,Lincoln-Sudbury,regional,yes,2213241,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Littleton,Middlesex,Littleton,town district,yes,15942774,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Littleton,Middlesex,Nashoba Valley Regional Vocational Technical,vocational,yes,781285,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
 Longmeadow,Hampden,Longmeadow,town district,yes,27327546,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Lowell,Middlesex,Lowell,town district,yes,64989538,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Lowell,Middlesex,Greater Lowell Regional Vocational Technical,vocational,yes,8401339,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
 Ludlow,Hampden,Ludlow,town district,yes,18877355,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Lunenburg,Worcester,Lunenburg,town district,yes,12595979,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Lunenburg,Worcester,Montachusett Regional Vocational Technical,vocational,yes,1172254,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Lynn,Essex,Lynn,town district,yes,64398962,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Lynnfield,Essex,Lynnfield,town district,yes,22407746,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Lynnfield,Essex,Essex North Shore Agricultural and Technical School District,vocational,yes,581797,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Malden,Middlesex,Malden,town district,yes,57647090,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Malden,Middlesex,Northeast Metropolitan Regional Vocational Technical,vocational,yes,2016577,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Manchester By The Sea,Essex,Manchester Essex Regional,regional,yes,6899392,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Manchester By The Sea,Essex,Essex North Shore Agricultural and Technical School District,vocational,yes,216391,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Mansfield,Bristol,Mansfield,town district,yes,34993046,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Mansfield,Bristol,Southeastern Regional Vocational Technical,vocational,yes,1428253,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Mansfield,Bristol,Bristol County Agricultural,vocational,yes,158139,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Marblehead,Essex,Marblehead,town district,yes,27164100,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Marblehead,Essex,Essex North Shore Agricultural and Technical School District,vocational,yes,416136,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Marion,Plymouth,Marion,town district,yes,3952749,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Marion,Plymouth,Old Rochester,regional,yes,3321708,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Marion,Plymouth,Upper Cape Cod Regional Vocational Technical,vocational,yes,526560,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Marlborough,Middlesex,Marlborough,town district,yes,43502723,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Marlborough,Middlesex,Assabet Valley Regional Vocational Technical,vocational,yes,6160982,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Marshfield,Plymouth,Marshfield,town district,yes,40410183,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Marshfield,Plymouth,South Shore Regional Vocational Technical,vocational,yes,50874,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Mashpee,Barnstable,Mashpee,town district,yes,17203029,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Mashpee,Barnstable,Cape Cod Regional Vocational Technical,vocational,yes,1006442,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Mattapoisett,Plymouth,Mattapoisett,town district,yes,4014381,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Mattapoisett,Plymouth,Old Rochester,regional,yes,3829041,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Mattapoisett,Plymouth,Old Colony Regional Vocational Technical,vocational,yes,569503,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Maynard,Middlesex,Maynard,town district,yes,12813459,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Maynard,Middlesex,Assabet Valley Regional Vocational Technical,vocational,yes,1063034,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Medfield,Norfolk,Medfield,town district,yes,24726652,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Medfield,Norfolk,Tri-County Regional Vocational Technical,vocational,yes,120762,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Medfield,Norfolk,Norfolk County Agricultural,vocational,yes,54509,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Medford,Middlesex,Medford,town district,yes,57259487,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Medway,Norfolk,Medway,town district,yes,20376839,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Medway,Norfolk,Tri-County Regional Vocational Technical,vocational,yes,1235417,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Medway,Norfolk,Norfolk County Agricultural,vocational,yes,111074,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Melrose,Middlesex,Melrose,town district,yes,41053058,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Melrose,Middlesex,Northeast Metropolitan Regional Vocational Technical,vocational,yes,1312445,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Mendon,Worcester,Mendon-Upton,regional,yes,8740788,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Mendon,Worcester,Blackstone Valley Regional Vocational Technical,vocational,yes,1167729,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Merrimac,Essex,Pentucket,regional,yes,7456662,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Merrimac,Essex,Whittier Regional Vocational Technical,vocational,yes,615345,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Methuen,Essex,Methuen,town district,yes,47005987,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Methuen,Essex,Greater Lawrence Regional Vocational Technical,vocational,yes,4417949,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Middleborough,Plymouth,Middleborough,town district,yes,23019131,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Middleborough,Plymouth,Bristol-Plymouth Regional Vocational Technical,vocational,yes,1695019,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
 Middlefield,Hampshire,Gateway,regional,yes,266219,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Middleton,Essex,Middleton,town district,yes,7178981,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Middleton,Essex,Masconomet,regional,yes,5590819,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Middleton,Essex,Essex North Shore Agricultural and Technical School District,vocational,yes,898854,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Milford,Worcester,Milford,town district,yes,30457781,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Milford,Worcester,Blackstone Valley Regional Vocational Technical,vocational,yes,1183572,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Millbury,Worcester,Millbury,town district,yes,14332855,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Millbury,Worcester,Blackstone Valley Regional Vocational Technical,vocational,yes,1082426,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Millis,Norfolk,Millis,town district,yes,11879426,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Millis,Norfolk,Tri-County Regional Vocational Technical,vocational,yes,586559,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Millis,Norfolk,Norfolk County Agricultural,vocational,yes,145358,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Millville,Worcester,Blackstone-Millville,regional,yes,2697544,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Millville,Worcester,Blackstone Valley Regional Vocational Technical,vocational,yes,243108,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Milton,Norfolk,Milton,town district,yes,44754901,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Milton,Norfolk,Blue Hills Regional Vocational Technical,vocational,yes,607886,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Milton,Norfolk,Norfolk County Agricultural,vocational,yes,159331,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Monroe,Franklin,Northern Berkshire Regional Vocational Technical,vocational,yes,20119,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
 Monson,Hampden,Monson,town district,yes,6544648,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
-Monson,Hampden,Pathfinder,vocational,no,1129707,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Monson,Hampden,Pathfinder Regional Vocational Technical,vocational,yes,1129707,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
 Montague,Franklin,Gill-Montague,regional,yes,6282094,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
-Montague,Franklin,Franklin County,vocational,no,749611,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Montague,Franklin,Franklin County Regional Vocational Technical,vocational,yes,749611,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
 Monterey,Berkshire,Southern Berkshire,regional,yes,1001401,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
 Montgomery,Hampden,Gateway,regional,yes,782099,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Nahant,Essex,Nahant,town district,yes,2396244,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Nahant,Essex,Essex North Shore Agricultural and Technical School District,vocational,yes,233036,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Nantucket,Nantucket,Nantucket,town district,yes,21066477,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Natick,Middlesex,Natick,town district,yes,54650974,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Natick,Middlesex,South Middlesex Regional Vocational Technical,vocational,yes,1160422,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Needham,Norfolk,Needham,town district,yes,60067852,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Needham,Norfolk,Minuteman Regional Vocational Technical,vocational,yes,809785,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Needham,Norfolk,Norfolk County Agricultural,vocational,yes,18170,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+New Bedford,Bristol,New Bedford,town district,yes,38100672,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+New Bedford,Bristol,Greater New Bedford Regional Vocational Technical,vocational,yes,5253388,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+New Bedford,Bristol,Bristol County Agricultural,vocational,yes,170768,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+New Braintree,Worcester,Quabbin,regional,yes,973282,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+New Braintree,Worcester,Pathfinder Regional Vocational Technical,vocational,yes,143649,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Newbury,Essex,Triton,regional,yes,7117613,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Newbury,Essex,Whittier Regional Vocational Technical,vocational,yes,281765,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Newburyport,Essex,Newburyport,town district,yes,22663896,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Newburyport,Essex,Whittier Regional Vocational Technical,vocational,yes,562671,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
 New Marlborough,Berkshire,Southern Berkshire,regional,yes,1289160,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
 New Salem,Franklin,New Salem-Wendell,regional,yes,425038,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
 New Salem,Franklin,Ralph C Mahar,regional,yes,276406,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
-New Salem,Franklin,Franklin County,vocational,no,195953,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+New Salem,Franklin,Franklin County Regional Vocational Technical,vocational,yes,195953,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Newton,Middlesex,Newton,town district,yes,131678028,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Norfolk,Norfolk,Norfolk,town district,yes,9800477,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Norfolk,Norfolk,King Philip,regional,yes,7146329,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Norfolk,Norfolk,Tri-County Regional Vocational Technical,vocational,yes,684222,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Norfolk,Norfolk,Norfolk County Agricultural,vocational,yes,257368,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
 North Adams,Berkshire,North Adams,town district,yes,5756158,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
-North Adams,Berkshire,Northern Berkshire,vocational,no,927637,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+North Adams,Berkshire,Northern Berkshire Regional Vocational Technical,vocational,yes,927637,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
 Northampton,Hampshire,Northampton,town district,yes,29043502,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
-Northampton,Hampshire,Northampton Smith,vocational,no,3095469,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Northampton,Hampshire,Northampton-Smith Vocational Agricultural,vocational,yes,3095469,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+North Andover,Essex,North Andover,town district,yes,47473051,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+North Andover,Essex,Greater Lawrence Regional Vocational Technical,vocational,yes,816648,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+North Attleborough,Bristol,North Attleborough,town district,yes,34400627,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+North Attleborough,Bristol,Tri-County Regional Vocational Technical,vocational,yes,3353750,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+North Attleborough,Bristol,Bristol County Agricultural,vocational,yes,122824,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Northborough,Worcester,Northborough,town district,yes,16677517,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Northborough,Worcester,Northboro-Southboro,regional,yes,8278220,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Northborough,Worcester,Assabet Valley Regional Vocational Technical,vocational,yes,1227594,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Northbridge,Worcester,Northbridge,town district,yes,15208759,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Northbridge,Worcester,Blackstone Valley Regional Vocational Technical,vocational,yes,1675980,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+North Brookfield,Worcester,North Brookfield,town district,yes,3523318,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+North Brookfield,Worcester,Southern Worcester County Regional Vocational School District,vocational,yes,445933,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
 Northfield,Franklin,Pioneer Valley,regional,yes,2808685,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
-Northfield,Franklin,Franklin County,vocational,no,682301,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Northfield,Franklin,Franklin County Regional Vocational Technical,vocational,yes,682301,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+North Reading,Middlesex,North Reading,town district,yes,24047692,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+North Reading,Middlesex,Northeast Metropolitan Regional Vocational Technical,vocational,yes,769819,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Norton,Bristol,Norton,town district,yes,22278223,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Norton,Bristol,Southeastern Regional Vocational Technical,vocational,yes,1593386,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Norton,Bristol,Bristol County Agricultural,vocational,yes,237068,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Norwell,Plymouth,Norwell,town district,yes,22025558,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Norwell,Plymouth,South Shore Regional Vocational Technical,vocational,yes,378773,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Norwood,Norfolk,Norwood,town district,yes,39118730,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Norwood,Norfolk,Blue Hills Regional Vocational Technical,vocational,yes,1662150,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Norwood,Norfolk,Norfolk County Agricultural,vocational,yes,182870,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Oak Bluffs,Dukes,Oak Bluffs,town district,yes,5142926,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Oak Bluffs,Dukes,Martha's Vineyard,regional,yes,3166425,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Oakham,Worcester,Quabbin,regional,yes,1803220,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Oakham,Worcester,Pathfinder Regional Vocational Technical,vocational,yes,168066,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
 Orange,Franklin,Orange,town district,yes,2446944,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
 Orange,Franklin,Ralph C Mahar,regional,yes,1850347,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
-Orange,Franklin,Franklin County,vocational,no,528116,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Orange,Franklin,Franklin County Regional Vocational Technical,vocational,yes,528116,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Orleans,Barnstable,Orleans,town district,yes,1693404,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Orleans,Barnstable,Nauset,regional,yes,3135298,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Orleans,Barnstable,Cape Cod Regional Vocational Technical,vocational,yes,270092,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
 Otis,Berkshire,Farmington River Reg,regional,yes,1543202,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Oxford,Worcester,Oxford,town district,yes,11652431,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Oxford,Worcester,Southern Worcester County Regional Vocational School District,vocational,yes,1502190,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
 Palmer,Hampden,Palmer,town district,yes,7584489,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
-Palmer,Hampden,Pathfinder,vocational,no,1600136,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Palmer,Hampden,Pathfinder Regional Vocational Technical,vocational,yes,1600136,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Paxton,Worcester,Wachusett,regional,yes,4998051,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Paxton,Worcester,Southern Worcester County Regional Vocational School District,vocational,yes,527044,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Peabody,Essex,Peabody,town district,yes,58256933,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Peabody,Essex,Essex North Shore Agricultural and Technical School District,vocational,yes,5116925,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
 Pelham,Hampshire,Pelham,town district,yes,661794,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
 Pelham,Hampshire,Amherst-Pelham,regional,yes,777841,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Pembroke,Plymouth,Pembroke,town district,yes,25260111,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Pepperell,Middlesex,North Middlesex,regional,yes,11653324,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Pepperell,Middlesex,Nashoba Valley Regional Vocational Technical,vocational,yes,1592235,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
 Peru,Berkshire,Central Berkshire,regional,yes,605035,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
 Petersham,Worcester,Petersham,town district,yes,666342,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
 Petersham,Worcester,Ralph C Mahar,regional,yes,514474,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
-Petersham,Worcester,Montachusett,vocational,no,134551,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Petersham,Worcester,Montachusett Regional Vocational Technical,vocational,yes,134551,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Phillipston,Worcester,Narragansett,regional,yes,1500576,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Phillipston,Worcester,Montachusett Regional Vocational Technical,vocational,yes,244947,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
 Pittsfield,Berkshire,Pittsfield,town district,yes,33854715,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
 Plainfield,Hampshire,Mohawk Trail,regional,yes,614696,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Plainville,Norfolk,Plainville,town district,yes,6374798,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Plainville,Norfolk,King Philip,regional,yes,5435677,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Plainville,Norfolk,Tri-County Regional Vocational Technical,vocational,yes,1656899,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Plainville,Norfolk,Norfolk County Agricultural,vocational,yes,50339,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Plymouth,Plymouth,Plymouth,town district,yes,88503759,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Plympton,Plymouth,Silver Lake,regional,yes,1995976,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Princeton,Worcester,Wachusett,regional,yes,4223374,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Princeton,Worcester,Montachusett Regional Vocational Technical,vocational,yes,398238,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Provincetown,Barnstable,Provincetown,town district,yes,1304249,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Provincetown,Barnstable,Cape Cod Regional Vocational Technical,vocational,yes,108037,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Quincy,Norfolk,Quincy,town district,yes,127478124,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Quincy,Norfolk,Norfolk County Agricultural,vocational,yes,351204,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Randolph,Norfolk,Randolph,town district,yes,27738483,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Randolph,Norfolk,Blue Hills Regional Vocational Technical,vocational,yes,3300262,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Randolph,Norfolk,Norfolk County Agricultural,vocational,yes,79704,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Raynham,Bristol,Bridgewater-Raynham,regional,yes,17619629,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Raynham,Bristol,Bristol-Plymouth Regional Vocational Technical,vocational,yes,2139560,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Raynham,Bristol,Bristol County Agricultural,vocational,yes,124020,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Reading,Middlesex,Reading,town district,yes,38808790,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Reading,Middlesex,Northeast Metropolitan Regional Vocational Technical,vocational,yes,705369,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Rehoboth,Bristol,Dighton-Rehoboth,regional,yes,16034439,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Rehoboth,Bristol,Bristol-Plymouth Regional Vocational Technical,vocational,yes,955532,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Rehoboth,Bristol,Bristol County Agricultural,vocational,yes,601974,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Revere,Suffolk,Revere,town district,yes,48522644,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Revere,Suffolk,Northeast Metropolitan Regional Vocational Technical,vocational,yes,2110342,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
 Richmond,Berkshire,Richmond,town district,yes,1369869,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Rochester,Plymouth,Rochester,town district,yes,4161563,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Rochester,Plymouth,Old Rochester,regional,yes,2893111,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Rochester,Plymouth,Old Colony Regional Vocational Technical,vocational,yes,1278211,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Rockland,Plymouth,Rockland,town district,yes,17102717,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Rockland,Plymouth,South Shore Regional Vocational Technical,vocational,yes,1391008,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Rockport,Essex,Rockport,town district,yes,6313563,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Rockport,Essex,Essex North Shore Agricultural and Technical School District,vocational,yes,249682,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
 Rowe,Franklin,Rowe,town district,yes,647001,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Rowley,Essex,Triton,regional,yes,7727538,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Rowley,Essex,Whittier Regional Vocational Technical,vocational,yes,333447,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
 Royalston,Worcester,Athol-Royalston,regional,yes,677650,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
-Royalston,Worcester,Montachusett,vocational,no,79983,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Royalston,Worcester,Montachusett Regional Vocational Technical,vocational,yes,79983,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
 Russell,Hampden,Gateway,regional,yes,1285387,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Rutland,Worcester,Wachusett,regional,yes,9185777,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Rutland,Worcester,Southern Worcester County Regional Vocational School District,vocational,yes,626336,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Salem,Essex,Salem,town district,yes,45548652,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Salem,Essex,Essex North Shore Agricultural and Technical School District,vocational,yes,2077783,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Salisbury,Essex,Triton,regional,yes,9305123,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Salisbury,Essex,Whittier Regional Vocational Technical,vocational,yes,907103,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
 Sandisfield,Berkshire,Farmington River Reg,regional,yes,964037,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Sandwich,Barnstable,Sandwich,town district,yes,24315583,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Sandwich,Barnstable,Upper Cape Cod Regional Vocational Technical,vocational,yes,2753082,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Saugus,Essex,Saugus,town district,yes,32254007,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Saugus,Essex,Northeast Metropolitan Regional Vocational Technical,vocational,yes,2083754,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
 Savoy,Berkshire,Savoy,town district,yes,425422,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
-Savoy,Berkshire,Northern Berkshire,vocational,no,164868,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Savoy,Berkshire,Northern Berkshire Regional Vocational Technical,vocational,yes,164868,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Scituate,Plymouth,Scituate,town district,yes,28917602,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Scituate,Plymouth,South Shore Regional Vocational Technical,vocational,yes,929717,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Seekonk,Bristol,Seekonk,town district,yes,19300371,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Seekonk,Bristol,Tri-County Regional Vocational Technical,vocational,yes,1248891,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Seekonk,Bristol,Bristol County Agricultural,vocational,yes,195014,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Sharon,Norfolk,Sharon,town district,yes,35374920,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Sharon,Norfolk,Southeastern Regional Vocational Technical,vocational,yes,373641,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Sharon,Norfolk,Norfolk County Agricultural,vocational,yes,153761,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
 Sheffield,Berkshire,Southern Berkshire,regional,yes,3948054,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
 Shelburne,Franklin,Mohawk Trail,regional,yes,1644483,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
-Shelburne,Franklin,Franklin County,vocational,no,166036,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Shelburne,Franklin,Franklin County Regional Vocational Technical,vocational,yes,166036,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Sherborn,Middlesex,Sherborn,town district,yes,4017224,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Sherborn,Middlesex,Dover-Sherborn,regional,yes,5777120,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Sherborn,Middlesex,Tri-County Regional Vocational Technical,vocational,yes,69007,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Shirley,Middlesex,Ayer Shirley School District,regional,yes,5916983,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Shirley,Middlesex,Nashoba Valley Regional Vocational Technical,vocational,yes,597710,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Shrewsbury,Worcester,Shrewsbury,town district,yes,60858729,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
 Shutesbury,Franklin,Shutesbury,town district,yes,822355,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
 Shutesbury,Franklin,Amherst-Pelham,regional,yes,929296,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Somerset,Bristol,Somerset,town district,yes,10906308,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Somerset,Bristol,Somerset Berkley Regional School District,regional,yes,5572015,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Somerset,Bristol,Greater Fall River Regional Vocational Technical,vocational,yes,1723789,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Somerset,Bristol,Bristol County Agricultural,vocational,yes,357950,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Somerville,Middlesex,Somerville,town district,yes,76125804,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
 Southampton,Hampshire,Southampton,town district,yes,4421614,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
 Southampton,Hampshire,Hampshire,regional,no,3240713,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Southborough,Worcester,Southborough,town district,yes,12011425,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Southborough,Worcester,Northboro-Southboro,regional,yes,5212217,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Southborough,Worcester,Assabet Valley Regional Vocational Technical,vocational,yes,463423,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Southbridge,Worcester,Southbridge,town district,yes,9707895,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Southbridge,Worcester,Southern Worcester County Regional Vocational School District,vocational,yes,969813,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
 South Hadley,Hampshire,South Hadley,town district,yes,15934556,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
 Southwick,Hampden,Southwick-Tolland-Granville Regional School District,regional,yes,10498701,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Spencer,Worcester,Spencer-E Brookfield,regional,yes,8962650,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Spencer,Worcester,Southern Worcester County Regional Vocational School District,vocational,yes,1121543,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
 Springfield,Hampden,Springfield,town district,yes,51503174,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Sterling,Worcester,Wachusett,regional,yes,9647691,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Sterling,Worcester,Montachusett Regional Vocational Technical,vocational,yes,1098711,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
 Stockbridge,Berkshire,Berkshire Hills,regional,yes,1693659,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Stoneham,Middlesex,Stoneham,town district,yes,26075035,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Stoneham,Middlesex,Northeast Metropolitan Regional Vocational Technical,vocational,yes,1343400,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Stoughton,Norfolk,Stoughton,town district,yes,31939620,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Stoughton,Norfolk,Southeastern Regional Vocational Technical,vocational,yes,1420880,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Stoughton,Norfolk,Norfolk County Agricultural,vocational,yes,58103,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Stow,Middlesex,Nashoba,regional,yes,11127584,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Stow,Middlesex,Minuteman Regional Vocational Technical,vocational,yes,1235823,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Sturbridge,Worcester,Sturbridge,town district,yes,6370085,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Sturbridge,Worcester,Tantasqua,regional,yes,6886611,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Sudbury,Middlesex,Sudbury,town district,yes,23968199,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Sudbury,Middlesex,Lincoln-Sudbury,regional,yes,14372163,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
 Sunderland,Franklin,Sunderland,town district,yes,1678357,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
 Sunderland,Franklin,Frontier,regional,yes,1425470,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
-Sunderland,Franklin,Franklin County,vocational,no,158948,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Sunderland,Franklin,Franklin County Regional Vocational Technical,vocational,yes,158948,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Sutton,Worcester,Sutton,town district,yes,13481611,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Sutton,Worcester,Blackstone Valley Regional Vocational Technical,vocational,yes,1375925,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Swampscott,Essex,Swampscott,town district,yes,21599799,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Swampscott,Essex,Essex North Shore Agricultural and Technical School District,vocational,yes,388190,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Swansea,Bristol,Swansea,town district,yes,17101306,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Swansea,Bristol,Greater Fall River Regional Vocational Technical,vocational,yes,1827713,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Swansea,Bristol,Bristol County Agricultural,vocational,yes,380286,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Taunton,Bristol,Taunton,town district,yes,45058660,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Taunton,Bristol,Bristol-Plymouth Regional Vocational Technical,vocational,yes,3517819,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Taunton,Bristol,Bristol County Agricultural,vocational,yes,315303,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Templeton,Worcester,Narragansett,regional,yes,5514324,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Templeton,Worcester,Montachusett Regional Vocational Technical,vocational,yes,604576,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Tewksbury,Middlesex,Tewksbury,town district,yes,34163893,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Tewksbury,Middlesex,Shawsheen Valley Regional Vocational Technical,vocational,yes,5755316,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Tisbury,Dukes,Tisbury,town district,yes,4537062,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Tisbury,Dukes,Martha's Vineyard,regional,yes,2743262,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
 Tolland,Hampden,Southwick-Tolland-Granville Regional School District,regional,yes,354383,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Topsfield,Essex,Topsfield,town district,yes,5582684,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Topsfield,Essex,Masconomet,regional,yes,4946744,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Topsfield,Essex,Essex North Shore Agricultural and Technical School District,vocational,yes,394663,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Townsend,Middlesex,North Middlesex,regional,yes,7879597,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Townsend,Middlesex,Nashoba Valley Regional Vocational Technical,vocational,yes,1149538,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Truro,Barnstable,Truro,town district,yes,1890551,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Truro,Barnstable,Cape Cod Regional Vocational Technical,vocational,yes,198068,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Tyngsborough,Middlesex,Tyngsborough,town district,yes,14900523,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Tyngsborough,Middlesex,Greater Lowell Regional Vocational Technical,vocational,yes,1558140,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Upton,Worcester,Mendon-Upton,regional,yes,11051358,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Upton,Worcester,Blackstone Valley Regional Vocational Technical,vocational,yes,1399699,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Uxbridge,Worcester,Uxbridge,town district,yes,15614534,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Uxbridge,Worcester,Blackstone Valley Regional Vocational Technical,vocational,yes,1850105,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Wakefield,Middlesex,Wakefield,town district,yes,36213785,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Wakefield,Middlesex,Northeast Metropolitan Regional Vocational Technical,vocational,yes,1941522,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Wales,Hampden,Wales,town district,yes,599401,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Wales,Hampden,Tantasqua,regional,yes,795557,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Walpole,Norfolk,Walpole,town district,yes,39164094,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Walpole,Norfolk,Tri-County Regional Vocational Technical,vocational,yes,1561294,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Walpole,Norfolk,Norfolk County Agricultural,vocational,yes,451752,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Waltham,Middlesex,Waltham,town district,yes,79254279,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
 Ware,Hampshire,Ware,town district,yes,6201461,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
-Ware,Hampshire,Pathfinder,vocational,no,718594,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Ware,Hampshire,Pathfinder Regional Vocational Technical,vocational,yes,718594,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Wareham,Plymouth,Wareham,town district,yes,22749870,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Wareham,Plymouth,Upper Cape Cod Regional Vocational Technical,vocational,yes,3341728,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Warren,Worcester,Quaboag Regional,regional,yes,2961937,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Warren,Worcester,Pathfinder Regional Vocational Technical,vocational,yes,370210,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
 Warwick,Franklin,Warwick,town district,yes,501075,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
-Warwick,Franklin,Franklin County,vocational,no,78190,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Warwick,Franklin,Franklin County Regional Vocational Technical,vocational,yes,78190,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
 Washington,Berkshire,Central Berkshire,regional,yes,540192,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Watertown,Middlesex,Watertown,town district,yes,34885791,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Wayland,Middlesex,Wayland,town district,yes,27971884,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Webster,Worcester,Webster,town district,yes,13578012,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Webster,Worcester,Southern Worcester County Regional Vocational School District,vocational,yes,1275174,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Wellesley,Norfolk,Wellesley,town district,yes,44192838,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Wellesley,Norfolk,Norfolk County Agricultural,vocational,yes,18170,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Wellfleet,Barnstable,Wellfleet,town district,yes,1193401,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Wellfleet,Barnstable,Nauset,regional,yes,1591953,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Wellfleet,Barnstable,Cape Cod Regional Vocational Technical,vocational,yes,198068,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
 Wendell,Franklin,New Salem-Wendell,regional,yes,354209,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
 Wendell,Franklin,Ralph C Mahar,regional,yes,262040,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
-Wendell,Franklin,Franklin County,vocational,no,65714,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Wendell,Franklin,Franklin County Regional Vocational Technical,vocational,yes,65714,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Wenham,Essex,Hamilton-Wenham,regional,yes,5587757,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Wenham,Essex,Essex North Shore Agricultural and Technical School District,vocational,yes,256782,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Westborough,Worcester,Westborough,town district,yes,38095421,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Westborough,Worcester,Assabet Valley Regional Vocational Technical,vocational,yes,1173562,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+West Boylston,Worcester,West Boylston,town district,yes,8971206,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+West Bridgewater,Plymouth,West Bridgewater,town district,yes,9060869,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+West Bridgewater,Plymouth,Southeastern Regional Vocational Technical,vocational,yes,930352,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+West Brookfield,Worcester,Quaboag Regional,regional,yes,3659871,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
 Westfield,Hampden,Westfield,town district,yes,33756613,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Westford,Middlesex,Westford,town district,yes,43815994,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Westford,Middlesex,Nashoba Valley Regional Vocational Technical,vocational,yes,1294395,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
 Westhampton,Hampshire,Westhampton,town district,yes,1072012,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
 Westhampton,Hampshire,Hampshire,regional,no,965538,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Westminster,Worcester,Ashburnham-Westminster,regional,yes,8884901,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Westminster,Worcester,Montachusett Regional Vocational Technical,vocational,yes,767450,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+West Newbury,Essex,Pentucket,regional,yes,5800575,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+West Newbury,Essex,Whittier Regional Vocational Technical,vocational,yes,257751,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Weston,Middlesex,Weston,town district,yes,21765074,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Westport,Bristol,Westport,town district,yes,16573075,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Westport,Bristol,Greater Fall River Regional Vocational Technical,vocational,yes,1902695,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Westport,Bristol,Bristol County Agricultural,vocational,yes,514312,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
 West Springfield,Hampden,West Springfield,town district,yes,24010686,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
 West Stockbridge,Berkshire,Berkshire Hills,regional,yes,1499728,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+West Tisbury,Dukes,Martha's Vineyard,regional,yes,1721835,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+West Tisbury,Dukes,Up-Island Regional,regional,yes,3057442,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Westwood,Norfolk,Westwood,town district,yes,30155173,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Westwood,Norfolk,Blue Hills Regional Vocational Technical,vocational,yes,90833,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Westwood,Norfolk,Norfolk County Agricultural,vocational,yes,143905,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Weymouth,Norfolk,Weymouth,town district,yes,69831655,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Weymouth,Norfolk,Norfolk County Agricultural,vocational,yes,315751,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
 Whately,Franklin,Whately,town district,yes,859258,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
 Whately,Franklin,Frontier,regional,yes,585677,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
-Whately,Franklin,Franklin County,vocational,no,300655,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Whately,Franklin,Franklin County Regional Vocational Technical,vocational,yes,300655,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Whitman,Plymouth,Whitman-Hanson,regional,yes,13276139,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Whitman,Plymouth,South Shore Regional Vocational Technical,vocational,yes,1517197,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
 Wilbraham,Hampden,Hampden-Wilbraham,regional,yes,18893329,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
 Williamsburg,Hampshire,Williamsburg,town district,yes,1353300,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
 Williamsburg,Hampshire,Hampshire,regional,no,1040189,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
 Williamstown,Berkshire,Mount Greylock,regional,yes,7296914,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
-Williamstown,Berkshire,Northern Berkshire,vocational,no,306759,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Williamstown,Berkshire,Northern Berkshire Regional Vocational Technical,vocational,yes,306759,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Wilmington,Middlesex,Wilmington,town district,yes,29777494,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Wilmington,Middlesex,Shawsheen Valley Regional Vocational Technical,vocational,yes,5083817,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Winchendon,Worcester,Winchendon,town district,yes,6462904,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Winchendon,Worcester,Montachusett Regional Vocational Technical,vocational,yes,613683,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Winchester,Middlesex,Winchester,town district,yes,45664717,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Winchester,Middlesex,Northeast Metropolitan Regional Vocational Technical,vocational,yes,117561,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
 Windsor,Berkshire,Central Berkshire,regional,yes,678118,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Winthrop,Suffolk,Winthrop,town district,yes,20235207,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Winthrop,Suffolk,Northeast Metropolitan Regional Vocational Technical,vocational,yes,980650,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Woburn,Middlesex,Woburn,town district,yes,55994588,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Woburn,Middlesex,Northeast Metropolitan Regional Vocational Technical,vocational,yes,2312833,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Worcester,Worcester,Worcester,town district,yes,127670996,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
 Worthington,Hampshire,Worthington,town district,yes,1175020,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Wrentham,Norfolk,Wrentham,town district,yes,9445383,https://www.doe.mass.edu/finance/chapter70/profile.xlsx
+Wrentham,Norfolk,King Philip,regional,yes,7850919,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Wrentham,Norfolk,Tri-County Regional Vocational Technical,vocational,yes,1265248,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Wrentham,Norfolk,Norfolk County Agricultural,vocational,yes,155756,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Yarmouth,Barnstable,Dennis-Yarmouth,regional,yes,27380017,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
+Yarmouth,Barnstable,Cape Cod Regional Vocational Technical,vocational,yes,2348618,https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025-reg.xlsx
