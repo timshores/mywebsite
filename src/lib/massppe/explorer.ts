@@ -446,11 +446,11 @@ export async function startExplorer() {
     rememberNote();
   }
   function rememberNote() {
-    const btn = text("button", consent === "yes" ? "Forget them" : "Remember them", "link-button") as HTMLButtonElement;
+    const btn = text("button", consent === "yes" ? "Forget your choices" : "Remember them", "link-button") as HTMLButtonElement;
     btn.type = "button";
     btn.addEventListener("click", () => setConsent(consent === "yes" ? "no" : "yes"));
     $("remember-note").replaceChildren(consent === "yes"
-      ? "This page remembers your choices in this browser, and sends them nowhere. "
+      ? "This page remembers your choices in this browser, and collects no data about you. "
       : "This page can remember your choices in this browser, so it reopens where you left off. ", btn);
   }
   $("remember-yes").addEventListener("click", () => setConsent("yes"));
