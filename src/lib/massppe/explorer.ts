@@ -1052,12 +1052,41 @@ export async function startExplorer() {
   const goBack = text("button", "Go back ↓", "link-button go-back") as HTMLButtonElement;
   goBack.type = "button";
   let backTo: HTMLElement | null = null;
-  // The menu, ringed until the reader goes back or changes view
+  // The menu, ringed until the reader goes back, changes view, scrolls, or clicks anywhere else
   const compareMenus = () => [$("pick-compare"), $("pick-town-compare")];
+  let disarm: (() => void) | null = null;
   const settle = () => {
     goBack.remove();
     compareMenus().forEach((m) => m.classList.remove("beckon"));
+    disarm?.();
+    disarm = null;
   };
+  function arm(menu: HTMLElement) {
+    disarm?.();
+    const mine = (t: EventTarget | null) => t instanceof Node && (menu.contains(t) || goBack.contains(t));
+    const away = (ev: Event) => {
+      if (!mine(ev.target)) settle();
+    };
+    const scrolled = () => settle();
+    const SCROLL_KEYS = ["PageDown", "PageUp", "ArrowDown", "ArrowUp", "Home", "End", " "];
+    const keys = (ev: KeyboardEvent) => {
+      if (!mine(ev.target) && SCROLL_KEYS.includes(ev.key)) settle();
+    };
+    document.addEventListener("pointerdown", away, true);
+    document.addEventListener("keydown", keys, true);
+    window.addEventListener("wheel", scrolled, { passive: true });
+    window.addEventListener("touchmove", scrolled, { passive: true });
+    // The page's own smooth scroll up to the menu doesn't count; any scroll after it settles does
+    const later = window.setTimeout(() => window.addEventListener("scroll", scrolled, { passive: true }), 1000);
+    disarm = () => {
+      clearTimeout(later);
+      document.removeEventListener("pointerdown", away, true);
+      document.removeEventListener("keydown", keys, true);
+      window.removeEventListener("wheel", scrolled);
+      window.removeEventListener("touchmove", scrolled);
+      window.removeEventListener("scroll", scrolled);
+    };
+  }
   goBack.addEventListener("click", () => {
     backTo?.scrollIntoView({ behavior: "smooth", block: "center" });
     backTo?.querySelector<HTMLElement>("summary")?.focus({ preventScroll: true });
@@ -1078,6 +1107,7 @@ export async function startExplorer() {
       menu.classList.remove("beckon");
       void menu.offsetWidth;
       menu.classList.add("beckon");
+      arm(menu);
       menu.scrollIntoView({ behavior: "smooth", block: "center" });
       menu.focus({ preventScroll: true });
     });
