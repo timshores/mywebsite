@@ -761,11 +761,87 @@ import Layout from "../../layouts/Layout.astro";
     border-color: var(--accent);
   }
 
-  .explorer :global(.controls-dock-body .controls) {
-    margin: 0 0.9rem 0.8rem;
+  /* Docked open, the controls shrink to a line or two, labels beside them, so the charts below stay in
+     view while they change; the Hide button moves to the corner and the summary steps aside */
+  .explorer :global(.controls-dock.is-open .controls-dock-bar) {
+    position: absolute;
+    top: 0.4rem;
+    right: 0.9rem;
+    padding: 0;
   }
 
-  /* Docked, the controls skip their longer notes and the list of related towns and districts */
+  .explorer :global(.controls-dock.is-open .controls-dock-sum) {
+    display: none;
+  }
+
+  .explorer :global(.controls-dock-body) .controls {
+    align-items: center;
+    gap: 0.35rem 1.1rem;
+    margin: 0;
+    padding: 0.4rem 9.5rem 0.45rem 0.9rem;
+    background: none;
+    border: 0;
+    border-radius: 0;
+  }
+
+  .explorer :global(.controls-dock-body) .control {
+    flex-direction: row;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.76rem;
+  }
+
+  .explorer :global(.controls-dock-body) .control select {
+    font-size: 0.82rem;
+    padding: 0.2rem 0.45rem;
+  }
+
+  .explorer :global(.controls-dock-body .control .picker-button) {
+    width: 13rem;
+    padding-top: 0.2rem;
+    padding-bottom: 0.2rem;
+    font-size: 0.82rem;
+  }
+
+  .explorer :global(.controls-dock-body) .dollars-control,
+  .explorer :global(.controls-dock-body) .years-control {
+    min-width: 0;
+  }
+
+  .explorer :global(.controls-dock-body) .dollars-slider,
+  .explorer :global(.controls-dock-body) .years-slider {
+    min-height: 0;
+    gap: 0.4rem;
+  }
+
+  .explorer :global(.controls-dock-body) .dollars-slider input[type="range"],
+  .explorer :global(.controls-dock-body) .years-track {
+    flex: none;
+    width: 7rem;
+    min-width: 0;
+  }
+
+  .explorer :global(.controls-dock-body) .dollars-slider output,
+  .explorer :global(.controls-dock-body) .years-slider output {
+    min-width: 0;
+    font-size: 0.8rem;
+  }
+
+  .explorer :global(.controls-dock-body) .toggle legend {
+    float: left;
+    margin: 0 0.4rem 0 0;
+    line-height: 1.9;
+  }
+
+  .explorer :global(.controls-dock-body) .toggle-options span {
+    padding: 0.2rem 0.55rem;
+    font-size: 0.8rem;
+  }
+
+  /* Docked, the controls skip the slider ends, their longer notes and the list of related towns and
+     districts */
+  .explorer :global(.controls-dock-body) .dollars-ends,
+  .explorer :global(.controls-dock-body) .years-ends,
   .explorer :global(.controls-dock-body .controls-note),
   .explorer :global(.controls-dock-body .relations) {
     display: none;
