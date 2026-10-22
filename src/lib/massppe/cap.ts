@@ -463,12 +463,7 @@ export function startCap(root: HTMLElement, data: CapData, opts: { town: string 
         "expects the town with more income to tax the same house harder."),
       exPara(`If the formula counted property alone, both houses would owe ${usd(school / 2)}: ` +
         `${pct(school / 2 / incomes[0], 1)} of Town A's family income and ${pct(school / 2 / incomes[1], 1)} of ` +
-        `Town B's. Counting income moves ${usd(school / 2 - ceyEx[0])} of the bill from Town A to Town B.`),
-      exPara("The real formula does this for all 351 towns, using equalized property values. In " +
-        `FY${y.fy}, it's ${rate(y.property_pct)} of property value and ${rate(y.income_pct)} of income, and ` +
-        `statewide each half yields ${big(y.totals.cey / 2)}. Unlike this example, the towns together are asked for ` +
-        "59% of all foundation budgets, with state aid paying the rest, and the 82.5% cap holds down what the towns " +
-        "with the most wealth are asked for."));
+        `Town B's. Counting income moves ${usd(school / 2 - ceyEx[0])} of the bill from Town A to Town B.`));
     const p2 = el("p");
     p2.append("Someone has to cover the difference, and that someone is other towns. The state sets the two " +
       `percentages so that the towns together are asked for 59% of all foundation budgets, ${big(y.totals.target)} in ` +
