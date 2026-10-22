@@ -379,7 +379,7 @@ export function startCap(root: HTMLElement, data: CapData, opts: { town: string 
       "towns, the ones with the most property and income for the size of their schools, hit that 82.5% cap. They're asked " +
       `for less than the formula says they can afford, and the state pays at least the other ${pct(1 - y.max_pct, 1)}.`);
     const p2 = el("p");
-    p2.append("Someone covers the difference. The state sets the two percentages so that the towns together are asked " +
+    p2.append("Someone has to cover the difference, and that someone is other towns. The state sets the two percentages so that the towns together are asked " +
       `for 59% of all foundation budgets, ${big(y.totals.target)} in FY${y.fy}. With the capped towns held down, the ` +
       `percentages have to rise for everyone to reach that total: they're ${pct(lift)} higher than they would be with no ` +
       `cap, which would be ${rate(y.property_pct * y.factor)} of property value and ${rate(y.income_pct * y.factor)} of ` +
