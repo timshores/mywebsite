@@ -158,7 +158,8 @@ interface Data {
 
 type Compare = "none" | "cohort" | "cohort-state" | "region" | "state" | "gateway" | "other";
 type TownCompare = "none" | "peer" | "peer-state" | "region" | "state" | "gateway" | "other";
-type Dollars = "nominal" | "real";
+/** "nominal", or the fiscal year whose dollars every year is restated in ("2018") */
+type Dollars = string;
 /** What the town view's dollars are divided by */
 type Per = "resident" | "household" | "parcel";
 const PERS: Per[] = ["resident", "household", "parcel"];
@@ -384,7 +385,9 @@ export async function startExplorer() {
     cmp: oneOf(src.cmp, COMPARES, "none"),
     // The entity picked in the second menu when comparing with another district or average
     vs: listed.has(pickId(src.vs) ?? "") ? pickId(src.vs) : null as string | null,
-    usd: (src.usd === "real" ? "real" : "nominal") as Dollars,
+    // Any year in the series; "real", from older links, is the latest year
+    usd: (src.usd === "real" ? String(meta.latest)
+      : meta.years.includes(Number(src.usd)) ? String(Number(src.usd)) : "nominal") as Dollars,
     per: oneOf(src.per, PERS, "resident"),
     view: (VIEWS.includes(src.view as View) ? src.view : "districts") as View,
     // Town view: checked against the town list once towns.json loads
@@ -515,7 +518,17 @@ export async function startExplorer() {
   fillEntities(select);
   fillEntities(vsSelect);
   const compareSelect = $<HTMLSelectElement>("pick-compare");
-  const dollarInputs = document.querySelectorAll<HTMLInputElement>('input[name="dollars"]');
+  // The dollars slider: Nominal at the left, then each fiscal year's dollars
+  const dollarSlider = $<HTMLInputElement>("dollars");
+  const dollarOut = $("dollars-out");
+  dollarSlider.max = String(meta.years.length);
+  const dollarsAt = (v: number): Dollars => (v === 0 ? "nominal" : String(meta.years[v - 1]));
+  const showDollars = () => {
+    const label = state.usd === "nominal" ? "Nominal" : `FY${state.usd} dollars`;
+    dollarSlider.value = String(state.usd === "nominal" ? 0 : meta.years.indexOf(Number(state.usd)) + 1);
+    dollarSlider.setAttribute("aria-valuetext", label === "Nominal" ? "Nominal dollars" : label);
+    dollarOut.textContent = label;
+  };
   document.querySelectorAll("[data-latest]").forEach((n) => (n.textContent = String(meta.latest)));
 
   select.value = state.d;
@@ -524,7 +537,7 @@ export async function startExplorer() {
   // The long menus: searchable, with groups that start collapsed
   const districtPickers = [groupedPicker(select, "pick-district-label", "districts and averages"),
     groupedPicker(vsSelect, "pick-vs-label", "districts and averages")];
-  dollarInputs.forEach((r) => (r.checked = r.value === state.usd));
+  showDollars();
   select.addEventListener("change", () => update({ d: select.value }));
   compareSelect.addEventListener("change", () => {
     const cmp = compareSelect.value as Compare;
@@ -533,7 +546,7 @@ export async function startExplorer() {
     update({ cmp, vs });
   });
   vsSelect.addEventListener("change", () => update({ vs: vsSelect.value }));
-  dollarInputs.forEach((r) => r.addEventListener("change", () => r.checked && update({ usd: r.value as Dollars })));
+  dollarSlider.addEventListener("input", () => update({ usd: dollarsAt(Number(dollarSlider.value)) }));
   const perInputs = document.querySelectorAll<HTMLInputElement>('input[name="per"]');
   perInputs.forEach((r) => (r.checked = r.value === state.per));
   perInputs.forEach((r) => r.addEventListener("change", () => r.checked && update({ per: r.value as Per })));
@@ -684,7 +697,7 @@ export async function startExplorer() {
   // ---- Helpers that depend on state ----
   const deflate = (values: Values): Values => {
     if (state.usd === "nominal") return values;
-    const base = meta.cpi[String(meta.latest)];
+    const base = meta.cpi[state.usd];
     return values.map((v, i) => (v == null ? null : (v * base) / meta.cpi[String(years[i])]));
   };
 
@@ -1141,6 +1154,8 @@ export async function startExplorer() {
   /** Draw the view; refresh() has loaded what it needs. */
   function render() {
     applyView();
+    showDollars();
+    explainDollars();
     if (state.view === "districts") renderDistricts();
     else if (state.view === "commonwealth" || state.view === "cap") { /* these tabs draw themselves */ }
     else if (towns) renderTowns();
@@ -1158,8 +1173,8 @@ export async function startExplorer() {
   function renderDistricts() {
     const e = byId.get(state.d)!;
     const c = comparisonFor(e);
-    const real = state.usd === "real";
-    const dollarsNote = real ? `FY${meta.latest} dollars` : "Nominal dollars";
+    const real = state.usd !== "nominal";
+    const dollarsNote = real ? `FY${state.usd} dollars` : "Nominal dollars";
     const perDistrict = e.kind === "district" ? "" : ", average per district";
 
     // Comparison menu: shown only for "Another district or average" (applyView)
@@ -1558,8 +1573,8 @@ export async function startExplorer() {
   function renderTowns() {
     const t = townById.get(state.t)!;
     const c = townComparison(t);
-    const real = state.usd === "real";
-    const dollarsNote = real ? `FY${meta.latest} dollars` : "Nominal dollars";
+    const real = state.usd !== "nominal";
+    const dollarsNote = real ? `FY${state.usd} dollars` : "Nominal dollars";
     townSelect.value = t.id;
     townCompareSelect.value = state.tcmp;
     if (state.tvs) townVsSelect.value = state.tvs;
@@ -1866,16 +1881,20 @@ export async function startExplorer() {
     if (hovered != null) setHover(null, null);
   }
 
-  // Plain-language note on the two dollar modes, with a worked example from the index
-  const factor = meta.cpi[String(meta.latest)] / meta.cpi[String(meta.start)];
-  $("dollars-note").replaceChildren(
-    text("strong", "Nominal dollars"),
-    ` are the amounts reported each year, with no adjustment for inflation. `,
-    text("strong", `FY${meta.latest} dollars`),
-    ` restate every year in what a dollar bought in FY${meta.latest}, using the Northeast consumer price index: ` +
-      `$1,000 spent in FY${meta.start} is about ${usd(1000 * factor)} in FY${meta.latest} dollars. ` +
-      "Use them to see whether spending grew faster than prices.",
-  );
+  // Plain-language note on the dollar modes, with a worked example from the index for the year chosen
+  function explainDollars() {
+    const y = state.usd === "nominal" ? meta.latest : Number(state.usd);
+    const from = y === meta.start ? meta.latest : meta.start;
+    const factor = meta.cpi[String(y)] / meta.cpi[String(from)];
+    $("dollars-note").replaceChildren(
+      text("strong", "Nominal dollars"),
+      ` are the amounts reported each year, with no adjustment for inflation. `,
+      text("strong", `FY${y} dollars`),
+      ` restate every year in what a dollar bought in FY${y}, using the Northeast consumer price index: ` +
+        `$1,000 spent in FY${from} is about ${usd(1000 * factor)} in FY${y} dollars. ` +
+        "Slide to any year; use these to see whether spending grew faster than prices.",
+    );
+  }
 
   await refresh();
   ["svg-ppe", "svg-enroll", "svg-nss", "svg-rev", "svg-tspend", "svg-trev", "svg-tlevy", "svg-tbill", "svg-tval", "svg-tpar",

@@ -89,13 +89,14 @@ import Layout from "../../layouts/Layout.astro";
         <span id="pick-town-vs-label">Comparison town or average</span>
         <select id="pick-town-vs" aria-labelledby="pick-town-vs-label"></select>
       </div>
-      <fieldset class="control toggle">
-        <legend>Dollars</legend>
-        <div class="toggle-options">
-          <label><input type="radio" name="dollars" value="nominal" checked /><span>Nominal</span></label>
-          <label><input type="radio" name="dollars" value="real" /><span>FY<span data-latest>2025</span> dollars</span></label>
+      <div class="control dollars-control">
+        <span id="dollars-label">Dollars</span>
+        <div class="dollars-slider">
+          <input type="range" id="dollars" min="0" max="17" step="1" value="0" aria-labelledby="dollars-label" />
+          <output id="dollars-out" for="dollars">Nominal</output>
         </div>
-      </fieldset>
+        <div class="dollars-ends" aria-hidden="true"><span>Nominal</span><span>FY<span data-latest>2025</span></span></div>
+      </div>
       <fieldset class="control toggle" data-view-only="towns" hidden>
         <legend>Per</legend>
         <div class="toggle-options">
@@ -525,7 +526,7 @@ import Layout from "../../layouts/Layout.astro";
         FY2024 revenue includes $27.3 million of miscellaneous revenue, more than half its total.
       </p>
       <p>
-        <strong>FY<span data-latest>2025</span> dollars</strong> adjust for inflation with the Bureau of Labor
+        <strong>Constant dollars</strong>, in the dollars of any fiscal year the slider picks, adjust for inflation with the Bureau of Labor
         Statistics' <a href="https://data.bls.gov/timeseries/CUUR0100SA0">consumer price index for the Northeast</a>
         (<a href="/mass-school-spending/data/cpi.csv" download>CSV</a>; CPI-U, series CUUR0100SA0), averaged over each July–June
         fiscal year. The report's
@@ -897,6 +898,40 @@ import Layout from "../../layouts/Layout.astro";
     margin-bottom: 0.3rem;
   }
 
+
+  .dollars-control {
+    min-width: min(22rem, 100%);
+  }
+
+  .dollars-slider {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    min-height: 2.2rem;
+  }
+
+  .dollars-slider input[type="range"] {
+    flex: 1;
+    min-width: 8rem;
+    accent-color: var(--accent);
+  }
+
+  .dollars-slider output {
+    min-width: 7.5rem;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--ink);
+    white-space: nowrap;
+  }
+
+  .dollars-ends {
+    display: flex;
+    justify-content: space-between;
+    margin-right: 8.1rem;
+    font-size: 0.7rem;
+    font-weight: 400;
+    color: var(--muted);
+  }
 
   .toggle-options {
     display: flex;
