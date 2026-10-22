@@ -326,6 +326,18 @@ function cagr(first: number | null, last: number | null, years: number) {
   return (last / first) ** (1 / years) - 1;
 }
 
+/** A trend line's rise each year, and its average yearly growth, compounded from its first year to its last */
+function trendRate(trend: Values) {
+  const at = trend.flatMap((v, i) => (v == null ? [] : [i]));
+  if (at.length < 2) return null;
+  const [f, l] = [at[0], at[at.length - 1]];
+  return { perYear: (trend[l]! - trend[f]!) / (l - f), rate: cagr(trend[f], trend[l], l - f) };
+}
+
+/** A change, signed, in the panel's own format: +$521, −12 */
+const signed = (v: number, fmt: (v: number) => string) => `${v < 0 ? "−" : "+"}${fmt(Math.abs(v))}`;
+const signedPct = (v: number) => `${v < 0 ? "−" : "+"}${Math.abs(v * 100).toFixed(1)}%`;
+
 export async function startExplorer() {
   const root = $("explorer");
   let data: Data;
@@ -578,7 +590,15 @@ export async function startExplorer() {
   // Tabs: arrow keys move between them, as for any tab list
   const tabs = [...document.querySelectorAll<HTMLButtonElement>('[role="tab"]')];
   tabs.forEach((tab, k) => {
-    tab.addEventListener("click", () => update({ view: tab.dataset.view as View }));
+    tab.addEventListener("click", () => {
+      // From far down the page, where the tabs float, a new tab opens at its top
+      const bar = tab.parentElement!;
+      const panelTop = $("view-panel").getBoundingClientRect().top;
+      if (bar.getBoundingClientRect().top <= 0 && panelTop < bar.offsetHeight) {
+        window.scrollTo({ top: window.scrollY + panelTop - bar.offsetHeight, behavior: "smooth" });
+      }
+      update({ view: tab.dataset.view as View });
+    });
     tab.addEventListener("keydown", (ev) => {
       const next = { ArrowLeft: k - 1, ArrowRight: k + 1, Home: 0, End: tabs.length - 1 }[ev.key];
       if (next == null) return;
@@ -867,7 +887,9 @@ export async function startExplorer() {
 
   // ---- Legend: stacked segments are toggle buttons that isolate them; the lines are
   // toggle buttons that hide them on that chart ----
-  interface LegendItem { label: string; color: string; mark: "rect" | "line" | "dash" | "hatch"; key?: string; line?: Line }
+  interface LegendItem { label: string; color: string; mark: "rect" | "line" | "dash" | "hatch"; key?: string; line?: Line;
+    /** Beside the label, in lighter type: the trend's yearly rise */
+    detail?: string }
 
   // ---- Chart lines: the entity's own trend (dashed) and the comparison (solid, with dots).
   // Both follow what the legend isolates; either can be hidden from its legend entry. ----
@@ -877,12 +899,20 @@ export async function startExplorer() {
   const drawn = (panel: StackPanel, line: Line, s: Series | null): Series | null => (hiddenLines[panel].has(line) ? null : s);
   const hasLine = (s: Series | null): s is Series => !!s && s.values.some((v) => v != null);
   /** Legend entries for the lines the chart can draw, hidden ones included so they can come back. */
-  const lineLegend = (trend: Series | null, overlay: Series | null): LegendItem[] => [
-    ...(hasLine(trend) ? [{ label: trend.label, color: TREND_COLOR, mark: "dash" as const, line: "trend" as const }] : []),
+  const lineLegend = (trend: Series | null, overlay: Series | null, fmt: (v: number) => string = usd): LegendItem[] => [
+    ...(hasLine(trend) ? [{ label: trend.label, color: TREND_COLOR, mark: "dash" as const, line: "trend" as const,
+      detail: ((r) => (r ? `${signed(r.perYear, fmt)}${r.rate != null ? ` (${signedPct(r.rate)})` : ""} a year` : undefined))(
+        trendRate(trend.values)) }] : []),
     ...(overlay ? [{ label: overlay.label, color: COMPARE_COLOR, mark: "line" as const, line: "cmp" as const }] : []),
   ];
-  const trendRow = (trend: Series | null, i: number, fmt: (v: number) => string = usd): TipRow[] =>
-    trend && trend.values[i] != null ? [{ value: fmt(trend.values[i]!), label: trend.label, color: TREND_COLOR, mark: "dash" }] : [];
+  // The trend's value, and its step from the year before: the same in dollars each year, a shrinking share as it grows
+  const trendRow = (trend: Series | null, i: number, fmt: (v: number) => string = usd): TipRow[] => {
+    const v = trend?.values[i];
+    if (!trend || v == null) return [];
+    const prev = trend.values[i - 1];
+    const step = prev == null ? "" : `, ${signed(v - prev, fmt)}${prev > 0 ? ` (${signedPct((v - prev) / prev)})` : ""} on FY${years[i - 1]}`;
+    return [{ value: fmt(v), label: trend.label + step, color: TREND_COLOR, mark: "dash" }];
+  };
   let refocus: { panel: StackPanel; key: string } | null = null;
 
   function legend(list: HTMLElement, items: LegendItem[], panel?: StackPanel) {
@@ -905,7 +935,7 @@ export async function startExplorer() {
         btn.dataset.key = `line:${line}`;
         btn.setAttribute("aria-pressed", String(!off));
         btn.title = off ? "Show this line" : "Hide this line";
-        btn.append(swatch(it), text("span", it.label));
+        btn.append(swatch(it), text("span", it.label), ...(it.detail ? [text("span", it.detail, "legend-detail")] : []));
         btn.addEventListener("click", () => {
           if (off) hiddenLines[panel].delete(line);
           else hiddenLines[panel].add(line);
@@ -1022,11 +1052,17 @@ export async function startExplorer() {
   const goBack = text("button", "Go back ↓", "link-button go-back") as HTMLButtonElement;
   goBack.type = "button";
   let backTo: HTMLElement | null = null;
+  // The menu, ringed until the reader goes back or changes view
+  const compareMenus = () => [$("pick-compare"), $("pick-town-compare")];
+  const settle = () => {
+    goBack.remove();
+    compareMenus().forEach((m) => m.classList.remove("beckon"));
+  };
   goBack.addEventListener("click", () => {
     backTo?.scrollIntoView({ behavior: "smooth", block: "center" });
     backTo?.querySelector<HTMLElement>("summary")?.focus({ preventScroll: true });
     backTo = null;
-    goBack.remove();
+    settle();
   });
   function compareLink() {
     const a = document.createElement("a");
@@ -1038,6 +1074,10 @@ export async function startExplorer() {
       a.closest("dialog")?.close();
       const menu = $(state.view === "towns" ? "pick-town-compare" : "pick-compare");
       menu.after(goBack);
+      // Restart the ring's pulse, even when it's already showing
+      menu.classList.remove("beckon");
+      void menu.offsetWidth;
+      menu.classList.add("beckon");
       menu.scrollIntoView({ behavior: "smooth", block: "center" });
       menu.focus({ preventScroll: true });
     });
@@ -1192,7 +1232,7 @@ export async function startExplorer() {
 
   /** Show the active view's tab, controls and panels. */
   function applyView() {
-    goBack.remove();
+    settle();
     const onTowns = state.view === "towns";
     markTabs();
     $("view-panel").setAttribute("aria-labelledby", `tab-${state.view}`);
@@ -1619,7 +1659,7 @@ export async function startExplorer() {
       { value: shownTotal[s.end], text: fmt, index: s.end }, [], trend);
     legend($(`legend-${s.key}`), [
       ...s.series.map((x) => ({ key: x.key, label: x.label, color: x.color, mark: "rect" as const })),
-      ...lineLegend(trendAll, overlayAll),
+      ...lineLegend(trendAll, overlayAll, fmt),
     ], s.key);
     const units = s.kind === "count" ? "" : ` (${dollarsNote.toLowerCase()})`;
     compareTable($(`cmp-${s.key}`), `${s.caption}${sel ? `, ${sel}` : ""}, ${s.name}${units}`, s.rowLabel,

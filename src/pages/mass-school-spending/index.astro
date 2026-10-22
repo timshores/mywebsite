@@ -1017,10 +1017,16 @@ import Layout from "../../layouts/Layout.astro";
   }
 
   /* View tabs: an underline marks the open view */
+  /* The tabs stay at the top of the screen as the page scrolls */
   .view-tabs {
+    position: sticky;
+    top: 0;
+    z-index: 30;
     display: flex;
     gap: 0.25rem;
     margin-top: 1.4rem;
+    padding-top: 0.35rem;
+    background: var(--paper);
     border-bottom: 1px solid var(--line);
   }
 
@@ -1246,6 +1252,14 @@ import Layout from "../../layouts/Layout.astro";
   #rev-body[hidden],
   .panel-none[hidden] {
     display: none;
+  }
+
+  /* The trend's yearly rise, beside its legend entry */
+  .legend :global(.legend-detail) {
+    margin-left: 0.35rem;
+    color: var(--ink);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
   }
 
   .legend {
@@ -1879,6 +1893,27 @@ import Layout from "../../layouts/Layout.astro";
   /* The notes have the Data tab to themselves, so no rule above them */
   .notes {
     margin-top: 1rem;
+  }
+
+  /* "above" rings the comparison menu: it pulses in and out, then stays, until the reader goes back */
+  .control select:global(.beckon) {
+    animation: beckon 1.4s ease-in-out 0.35s both;
+  }
+
+  @keyframes beckon {
+    0%, 36%, 72% {
+      box-shadow: 0 0 0 2px var(--paper), 0 0 0 4px rgba(182, 92, 61, 0);
+    }
+    18%, 54%, 100% {
+      box-shadow: 0 0 0 2px var(--paper), 0 0 0 4px var(--accent);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .control select:global(.beckon) {
+      animation: none;
+      box-shadow: 0 0 0 2px var(--paper), 0 0 0 4px var(--accent);
+    }
   }
 
   /* Under the comparison menu, back to the table that sent the reader up; out of the flow, so the
