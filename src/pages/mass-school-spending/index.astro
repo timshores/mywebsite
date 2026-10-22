@@ -128,6 +128,8 @@ import Layout from "../../layouts/Layout.astro";
     <div id="tiles" class="tiles" data-view-only="districts towns"></div>
 
     <section id="cw-view" class="cw-view" data-view-only="commonwealth" hidden>
+      <div id="cw-map"></div>
+      <h3 class="cw-plots-title">Districts side by side</h3>
       <p class="cw-intro">
         Every Massachusetts school district side by side, two measures at a time. These plots are the pairs that
         line up most closely with the fewest cautions. Open one to choose other measures, the year, and which
@@ -2236,6 +2238,179 @@ import Layout from "../../layouts/Layout.astro";
     max-width: 68ch;
     color: var(--ink-soft);
     margin: 0.4rem 0 1.2rem;
+  }
+
+  /* The Commonwealth tab's map (map.ts) */
+  .explorer :global(.map-section) {
+    position: relative;
+    margin-bottom: 2.2rem;
+  }
+
+  .explorer :global(.map-title),
+  .explorer .cw-plots-title {
+    margin: 0 0 0.6rem;
+  }
+
+  .explorer :global(.map-controls) {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.6rem 1.4rem;
+    margin-bottom: 0.7rem;
+    font-size: 0.82rem;
+    color: var(--ink-soft);
+  }
+
+  .explorer :global(.map-seg) {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+  }
+
+  .explorer :global(.map-seg-label),
+  .explorer :global(.map-measure > span) {
+    font-weight: 500;
+    margin-right: 0.2rem;
+  }
+
+  .explorer :global(.map-seg-btn) {
+    font: inherit;
+    font-size: 0.82rem;
+    color: var(--ink);
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 0.2rem 0.7rem;
+    cursor: pointer;
+  }
+
+  .explorer :global(.map-seg-btn[aria-pressed="true"]) {
+    color: var(--paper);
+    background: var(--ink);
+    border-color: var(--ink);
+  }
+
+  .explorer :global(.map-measure) {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+  }
+
+  .explorer :global(.map-measure select) {
+    font: inherit;
+    font-size: 0.85rem;
+    color: var(--ink);
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 0.3rem 0.5rem;
+  }
+
+  .explorer :global(.map-about) {
+    max-width: 80ch;
+    line-height: 1.6;
+    margin: 0 0 0.7rem;
+  }
+
+  .explorer :global(.map-figure) {
+    position: relative;
+    margin: 0;
+  }
+
+  .explorer :global(.map-legend) {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem 1rem;
+    list-style: none;
+    padding: 0;
+    margin: 0 0 0.5rem;
+    font-size: 0.78rem;
+    color: var(--ink-soft);
+  }
+
+  .explorer :global(.map-legend li) {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+  }
+
+  .explorer :global(.map-swatch) {
+    width: 0.95rem;
+    height: 0.95rem;
+    border-radius: 3px;
+    box-shadow: inset 0 0 0 1px rgba(31, 31, 28, 0.12);
+  }
+
+  .explorer :global(.map-swatch.nodata) {
+    background: repeating-linear-gradient(45deg, #f4f1e8 0 3px, #bdb7aa 3px 5px);
+  }
+
+  .explorer :global(.map-svg) {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+
+  .explorer :global(.map-town) {
+    stroke: #fff;
+    stroke-width: 1.2;
+    stroke-linejoin: round;
+    fill-rule: evenodd;
+    cursor: pointer;
+  }
+
+  .explorer :global(.map-svg g:last-of-type .map-town) {
+    stroke: var(--ink);
+    stroke-width: 2.4;
+  }
+
+  .explorer :global(.map-tip) {
+    position: absolute;
+    z-index: 5;
+    min-width: 11rem;
+    max-width: 18rem;
+    padding: 0.5rem 0.65rem;
+    font-size: 0.8rem;
+    line-height: 1.45;
+    color: var(--ink);
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    box-shadow: 0 6px 18px var(--shadow);
+    pointer-events: none;
+  }
+
+  .explorer :global(.map-table) {
+    margin-top: 0.6rem;
+    font-size: 0.85rem;
+  }
+
+  .explorer :global(.map-table summary) {
+    color: var(--accent);
+    cursor: pointer;
+  }
+
+  .explorer :global(.map-table table) {
+    border-collapse: collapse;
+    margin-top: 0.4rem;
+  }
+
+  .explorer :global(.map-table th),
+  .explorer :global(.map-table td) {
+    text-align: left;
+    padding: 0.2rem 0.8rem 0.2rem 0;
+    border-bottom: 1px solid var(--grid);
+  }
+
+  .explorer :global(.map-table .num) {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .explorer :global(.map-source) {
+    margin: 0.5rem 0 0;
+    font-size: 0.78rem;
+    color: var(--muted);
   }
 
   .explorer :global(.cw-gallery) {

@@ -11,6 +11,7 @@ import { compact, lines, niceTicks, niceTicksRange, stackedColumns, type Panel, 
 import { enlargeButton } from "./enlarge";
 import type { CapData } from "./cap";
 import type { CwData } from "./commonwealth";
+import type { MapData } from "./map";
 import { groupedPicker, type Picker } from "./picker";
 
 type Values = Val[];
@@ -720,7 +721,12 @@ export async function startExplorer() {
   let cw: { openFromUrl(): void; close(): void } | null = null;
   async function loadCommonwealth() {
     if (cw) return;
-    const [mod, json] = await Promise.all([import("./commonwealth"), import("../../data/massppe/commonwealth.json")]);
+    const [mod, json, mapMod, mapJson] = await Promise.all([import("./commonwealth"), import("../../data/massppe/commonwealth.json"),
+      import("./map"), import("../../data/massppe/map.json")]);
+    mapMod.startMap($("cw-map"), mapJson.default as unknown as MapData, {
+      openTown: (id) => update({ view: "towns", t: id }),
+      openDistrict: (id) => update({ view: "districts", d: id }),
+    });
     cw = mod.startCommonwealth($("cw-root"), json.default as unknown as CwData, {
       openDistrict: (id) => update({ view: "districts", d: id }),
     });
@@ -730,7 +736,8 @@ export async function startExplorer() {
 
   // Pointing at either of these tabs starts its download, so it's usually ready by the click
   const warm: Record<string, () => void> = {
-    commonwealth: () => void Promise.all([import("./commonwealth"), import("../../data/massppe/commonwealth.json")]).catch(() => {}),
+    commonwealth: () => void Promise.all([import("./commonwealth"), import("../../data/massppe/commonwealth.json"), import("./map"),
+      import("../../data/massppe/map.json")]).catch(() => {}),
     cap: () => void Promise.all([import("./cap"), import("../../data/massppe/cap.json")]).catch(() => {}),
   };
   for (const tab of tabs) {
