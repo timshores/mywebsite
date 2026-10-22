@@ -498,7 +498,14 @@ export async function startExplorer() {
     });
   });
 
+  // A tab switch fades the copy that changes with the tab (the page's .view-copy and
+  // #view-panel styles) out, draws the new view, and fades it back in
+  const FADE_MS = 140;
+  const calm = matchMedia("(prefers-reduced-motion: reduce)");
+  let fading: number | undefined;
+
   function update(patch: Partial<typeof state>) {
+    const switching = patch.view != null && patch.view !== state.view;
     Object.assign(state, patch);
     const q = new URLSearchParams();
     if (state.view === "towns") {
@@ -514,7 +521,21 @@ export async function startExplorer() {
     if (state.usd !== "nominal") q.set("usd", state.usd);
     history.replaceState(null, "", `${location.pathname}?${q}`);
     askToRemember();
-    void refresh();
+    if (!switching && !root.classList.contains("is-switching")) {
+      void refresh();
+      return;
+    }
+    markTabs();
+    if (calm.matches) {
+      void refresh();
+      return;
+    }
+    root.classList.add("is-switching");
+    clearTimeout(fading);
+    fading = window.setTimeout(async () => {
+      await refresh();
+      root.classList.remove("is-switching");
+    }, FADE_MS);
   }
 
   /** Load what the view needs (the entity, the comparison), then draw. A newer update wins. */
@@ -989,14 +1010,19 @@ export async function startExplorer() {
   /** The panel column of the view on screen; every chart is drawn to its width. */
   const panelBox = () => $(state.view === "towns" ? "town-panels" : "panels");
 
-  /** Show the active view's tab, controls and panels. */
-  function applyView() {
-    const onTowns = state.view === "towns";
+  /** Select the active view's tab. */
+  function markTabs() {
     for (const tab of tabs) {
       const on = tab.dataset.view === state.view;
       tab.setAttribute("aria-selected", String(on));
       tab.tabIndex = on ? 0 : -1;
     }
+  }
+
+  /** Show the active view's tab, controls and panels. */
+  function applyView() {
+    const onTowns = state.view === "towns";
+    markTabs();
     $("view-panel").setAttribute("aria-labelledby", onTowns ? "tab-towns" : "tab-districts");
     document.querySelectorAll<HTMLElement>("[data-view-only]").forEach((n) => {
       n.hidden = n.dataset.viewOnly !== state.view;
