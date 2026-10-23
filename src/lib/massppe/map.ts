@@ -12,7 +12,7 @@ type Val = number[];
  * each weighted by the town's own pupils, where they differ */
 interface MapTown { id: string; name: string; d: string; elem: string | null; high: string | null; v: Record<string, Val>; all?: Record<string, Val> }
 export interface MapData {
-  meta: { start: number; latest: number; cap_fy: number; width: number; height: number; outlines: string };
+  meta: { start: number; latest: number; cap_fy: number; width: number; height: number; outlines: string; cpi: Record<string, number> };
   towns: MapTown[];
   districts: Record<string, { name: string; v: Record<string, Val> }>;
 }
@@ -27,12 +27,16 @@ interface Measure {
   /** A value in full, for the tooltip and the table; and short, for the legend */
   fmt: (v: number) => string;
   short: (v: number) => string;
-  /** What it measures, in a sentence or two */
-  about: (m: MapData["meta"]) => string;
+  /** What it measures, in a sentence or two, in nominal dollars or the latest year's */
+  about: (m: MapData["meta"], real: boolean) => string;
   /** How the towns, or districts, split: the words for above and below zero, for a change */
-  up?: string;
-  down?: string;
+  up?: (real: boolean) => string;
+  down?: (real: boolean) => string;
+  /** Growth in dollars, which the Dollars switch shows before or after inflation */
+  dollars?: boolean;
 }
+const inDollars = (m: MapData["meta"], real: boolean) => (real ? `in FY${m.latest} dollars, after inflation` : "in nominal dollars, before inflation");
+const grewOrNot = { up: (real: boolean) => (real ? "grew faster than prices" : "grew"), down: (real: boolean) => (real ? "fell behind them" : "shrank") };
 
 const sign = (v: number) => (v > 0 ? "+" : v < 0 ? "−" : "");
 const yearly = (v: number) => `${sign(v)}${Math.abs(v * 100).toFixed(1)}% a year`;
@@ -43,22 +47,22 @@ const money = (v: number) => `${sign(v)}$${Math.abs(Math.round(v)).toLocaleStrin
 
 const TOWN_MEASURES: Measure[] = [
   {
-    key: "spend", label: "Spending per resident, growth after inflation", kind: "change", fmt: yearly, short: yearlyShort,
-    about: (m) => `How fast each town's general fund spending per resident grew each year, FY${m.start} to FY${m.latest}, ` +
-      `in FY${m.latest} dollars.`,
-    up: "grew faster than prices", down: "fell behind them",
+    key: "spend", label: "Spending per resident, yearly growth", kind: "change", fmt: yearly, short: yearlyShort, dollars: true,
+    about: (m, real) => `How fast each town's general fund spending per resident grew each year, FY${m.start} to ` +
+      `FY${m.latest}, ${inDollars(m, real)}.`,
+    ...grewOrNot,
   },
   {
     key: "pop", label: "Population change", kind: "change", fmt: change, short: change,
     about: (m) => `Change in each town's population, July ${m.start - 1} to July ${m.latest - 1}, from the Census ` +
       "Bureau's estimates.",
-    up: "grew", down: "shrank",
+    up: () => "grew", down: () => "shrank",
   },
   {
-    key: "eqv", label: "Property value per resident, growth after inflation", kind: "change", fmt: yearly, short: yearlyShort,
-    about: (m) => "How fast each town's equalized property value per resident, the state's estimate of what its property " +
-      `would sell for, grew each year, FY${m.start} to FY${m.latest}, in FY${m.latest} dollars.`,
-    up: "grew faster than prices", down: "fell behind them",
+    key: "eqv", label: "Property value per resident, yearly growth", kind: "change", fmt: yearly, short: yearlyShort, dollars: true,
+    about: (m, real) => "How fast each town's equalized property value per resident, the state's estimate of what its " +
+      `property would sell for, grew each year, FY${m.start} to FY${m.latest}, ${inDollars(m, real)}.`,
+    ...grewOrNot,
   },
   {
     key: "levy_room", label: "Room under the levy limit", kind: "level", fmt: share, short: share,
@@ -75,21 +79,21 @@ const TOWN_MEASURES: Measure[] = [
     about: (m) => `How much more or less each town would be asked for in FY${m.cap_fy} with no cap, per household. Blue ` +
       "towns would be asked for more: today's cap saves them money. Orange towns would be asked for less: today's cap " +
       "costs them money.",
-    up: "would be asked for more with no cap", down: "would be asked for less",
+    up: () => "would be asked for more with no cap", down: () => "would be asked for less",
   },
 ];
 
 const DISTRICT_MEASURES: Measure[] = [
   {
-    key: "ppe", label: "Spending per pupil, growth after inflation", kind: "change", fmt: yearly, short: yearlyShort,
-    about: (m) => `How fast each district's in-district spending per pupil grew each year, FY${m.start} to FY${m.latest}, ` +
-      `in FY${m.latest} dollars.`,
-    up: "grew faster than prices", down: "fell behind them",
+    key: "ppe", label: "Spending per pupil, yearly growth", kind: "change", fmt: yearly, short: yearlyShort, dollars: true,
+    about: (m, real) => `How fast each district's in-district spending per pupil grew each year, FY${m.start} to ` +
+      `FY${m.latest}, ${inDollars(m, real)}.`,
+    ...grewOrNot,
   },
   {
     key: "enroll", label: "Enrollment change", kind: "change", fmt: change, short: change,
     about: (m) => `Change in each district's in-district pupils, full-time equivalents, FY${m.start} to FY${m.latest}.`,
-    up: "grew", down: "shrank",
+    up: () => "grew", down: () => "shrank",
   },
   {
     key: "above", label: "Spending above the requirement", kind: "level", fmt: share, short: share,
@@ -146,7 +150,13 @@ function el<K extends keyof HTMLElementTagNameMap>(tag: K, cls?: string, text?: 
 }
 const SVG = "http://www.w3.org/2000/svg";
 
-export function startMap(root: HTMLElement, data: MapData, opts: { openTown: (id: string) => void; openDistrict: (id: string) => void }) {
+/**
+ * real and setReal: the explorer's Dollars choice, which the map shares; refresh() redraws it when
+ * that choice changes elsewhere.
+ */
+export function startMap(root: HTMLElement, data: MapData, opts: {
+  openTown: (id: string) => void; openDistrict: (id: string) => void; real: () => boolean; setReal: (real: boolean) => void;
+}) {
   const { meta } = data;
   let layer: Layer = "districts";
   let grades: Grades = "all";
@@ -179,6 +189,7 @@ export function startMap(root: HTMLElement, data: MapData, opts: { openTown: (id
     grades = v as Grades;
     draw();
   });
+  const dollarSeg = seg("Dollars", [["nominal", "Nominal"], ["real", `FY${meta.latest} dollars`]], (v) => opts.setReal(v === "real"));
   const measureWrap = el("label", "map-measure");
   const measureSel = el("select");
   measureWrap.append(el("span", undefined, "Measure"), measureSel);
@@ -187,7 +198,7 @@ export function startMap(root: HTMLElement, data: MapData, opts: { openTown: (id
     else districtKey = measureSel.value;
     draw();
   });
-  controls.append(layerSeg.box, gradeSeg.box, measureWrap);
+  controls.append(layerSeg.box, gradeSeg.box, measureWrap, dollarSeg.box);
   const about = el("p", "map-about");
   const figure = el("figure", "map-figure");
   const legend = el("ul", "map-legend");
@@ -242,19 +253,31 @@ export function startMap(root: HTMLElement, data: MapData, opts: { openTown: (id
     measureSel.replaceChildren(...list.map((m) => new Option(m.label, m.key)));
     measureSel.value = onTowns ? townKey : districtKey;
     const measure = list.find((m) => m.key === measureSel.value)!;
+    // Growth in dollars is stored after inflation; nominal growth puts each value's own years' inflation back
+    const real = opts.real();
+    dollarSeg.set(real ? "real" : "nominal");
+    dollarSeg.box.classList.toggle("is-idle", !measure.dollars);
+    dollarSeg.box.title = measure.dollars ? "" : "This measure isn't growth in dollars, so inflation doesn't change it";
+    dollarSeg.box.querySelectorAll("button").forEach((b) => (b.disabled = !measure.dollars));
+    const asShown = (v: Val | null | undefined): Val | null => {
+      if (!v) return null;
+      if (!measure.dollars || real || v.length < 3) return v;
+      const [r, a, b] = v;
+      return [(1 + r) * (meta.cpi[String(b)] / meta.cpi[String(a)]) ** (1 / (b - a)) - 1, a, b];
+    };
     // All grades: a town with one district takes it; a town split between two takes the two combined
     const combinedAt = (t: MapTown) => !onTowns && grades === "all" && !!t.elem && t.elem !== t.high;
     const districtOf = (t: MapTown) => (onTowns || combinedAt(t) ? null : grades === "high" ? t.high : t.elem);
     const value = (t: MapTown): Val | null => {
-      if (onTowns) return t.v[measure.key] ?? null;
-      if (combinedAt(t)) return t.all?.[measure.key] ?? null;
+      if (onTowns) return asShown(t.v[measure.key]);
+      if (combinedAt(t)) return asShown(t.all?.[measure.key]);
       const d = districtOf(t);
-      return d ? data.districts[d]?.v[measure.key] ?? null : null;
+      return d ? asShown(data.districts[d]?.v[measure.key]) : null;
     };
     // Each district counts once, however many towns it covers; with all grades, each town counts
     const byTown = onTowns || grades === "all";
     const units = byTown ? data.towns.map(value).filter(Boolean) as Val[]
-      : [...new Set(data.towns.map(districtOf).filter((d): d is string => !!d))].map((d) => data.districts[d]?.v[measure.key])
+      : [...new Set(data.towns.map(districtOf).filter((d): d is string => !!d))].map((d) => asShown(data.districts[d]?.v[measure.key]))
         .filter(Boolean) as Val[];
     const values = units.map((u) => u[0]);
     const c = cuts(measure.kind, values);
@@ -269,10 +292,10 @@ export function startMap(root: HTMLElement, data: MapData, opts: { openTown: (id
 
     // What it shows, and how the towns or districts split
     const what = byTown ? "towns" : "districts";
-    about.replaceChildren(el("strong", "cw-var", measure.label), `. ${measure.about(meta)}`);
-    if (measure.kind === "change" && measure.up) {
+    about.replaceChildren(el("strong", "cw-var", measure.label), `. ${measure.about(meta, real)}`);
+    if (measure.kind === "change" && measure.up && measure.down) {
       const up = values.filter((v) => v > 0).length;
-      about.append(` Of ${values.length} ${what}, ${up} ${measure.up}; ${values.length - up} ${measure.down}.`);
+      about.append(` Of ${values.length} ${what}, ${up} ${measure.up(real)}; ${values.length - up} ${measure.down(real)}.`);
     } else {
       about.append(` Half the ${what} are above ${measure.fmt(quantile(values, 0.5))}.`);
     }
@@ -308,7 +331,7 @@ export function startMap(root: HTMLElement, data: MapData, opts: { openTown: (id
       ? data.towns.filter((t) => value(t)).map((t) => ({ name: onTowns || schoolsOf(t) === t.name ? t.name : `${t.name} (${schoolsOf(t)})`,
         v: value(t)! }))
       : [...new Set(data.towns.map(districtOf).filter((d): d is string => !!d))]
-        .filter((d) => data.districts[d]?.v[measure.key]).map((d) => ({ name: data.districts[d].name, v: data.districts[d].v[measure.key] }));
+        .filter((d) => data.districts[d]?.v[measure.key]).map((d) => ({ name: data.districts[d].name, v: asShown(data.districts[d].v[measure.key])! }));
     rows.sort((a, b) => b.v[0] - a.v[0]);
     tableSum.textContent = `Every ${what.slice(0, -1)}, highest first`;
     const t = el("table");
@@ -379,4 +402,5 @@ export function startMap(root: HTMLElement, data: MapData, opts: { openTown: (id
   });
 
   draw();
+  return { refresh: draw };
 }

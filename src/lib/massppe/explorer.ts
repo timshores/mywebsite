@@ -719,13 +719,17 @@ export async function startExplorer() {
 
   // The Commonwealth tab's gallery and data, loaded the first time it opens
   let cw: { openFromUrl(): void; close(): void } | null = null;
+  let map: { refresh(): void } | null = null;
   async function loadCommonwealth() {
     if (cw) return;
     const [mod, json, mapMod, mapJson] = await Promise.all([import("./commonwealth"), import("../../data/massppe/commonwealth.json"),
       import("./map"), import("../../data/massppe/map.json")]);
-    mapMod.startMap($("cw-map"), mapJson.default as unknown as MapData, {
+    map = mapMod.startMap($("cw-map"), mapJson.default as unknown as MapData, {
       openTown: (id) => update({ view: "towns", t: id }),
       openDistrict: (id) => update({ view: "districts", d: id }),
+      // The map shares the explorer's Dollars choice
+      real: () => state.usd !== "nominal",
+      setReal: (real) => update({ usd: real ? String(meta.latest) : "nominal" }),
     });
     cw = mod.startCommonwealth($("cw-root"), json.default as unknown as CwData, {
       openDistrict: (id) => update({ view: "districts", d: id }),
@@ -1450,9 +1454,15 @@ export async function startExplorer() {
     showDollars();
     showYears();
     explainDollars();
-    if (state.view === "districts") renderDistricts();
-    else if (state.view === "commonwealth" || state.view === "cap" || state.view === "data") { /* these draw themselves */ }
-    else if (towns) renderTowns();
+    // A redraw can come before a district's or town's data does (a resize as a tab opens);
+    // refresh() draws once it arrives
+    if (state.view === "districts") {
+      if (byId.has(state.d)) renderDistricts();
+    }
+    else if (state.view === "commonwealth") map?.refresh();
+    else if (state.view === "cap" || state.view === "data") { /* these draw themselves */ }
+    else if (towns && townById.has(state.t)) renderTowns();
+    else if (towns) { /* still loading */ }
     else {
       $("entity-name").textContent = "Town data unavailable";
       $("entity-meta").textContent = "The town data didn't load. Reload the page to try again.";

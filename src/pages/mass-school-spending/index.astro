@@ -2291,6 +2291,15 @@ import Layout from "../../layouts/Layout.astro";
     border-color: var(--ink);
   }
 
+  /* The Dollars switch, idle for a measure that isn't growth in dollars */
+  .explorer :global(.map-seg.is-idle) {
+    opacity: 0.45;
+  }
+
+  .explorer :global(.map-seg-btn:disabled) {
+    cursor: not-allowed;
+  }
+
   .explorer :global(.map-measure) {
     display: flex;
     align-items: center;
