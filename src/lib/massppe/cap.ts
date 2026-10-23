@@ -10,7 +10,7 @@
 import { svgEl } from "./charts";
 import { groupedPicker } from "./picker";
 import { enlargeButton, isEnlarged } from "./enlarge";
-import { scatter, spearman, ticksFor, type Group, type Point } from "./scatter";
+import { scatter, spearman, ticksFor, type Group, type Point, type ScatterView } from "./scatter";
 
 interface CapTown {
   lea: number; name: string; id: string; county: string | null; region: string | null;
@@ -363,6 +363,7 @@ export function startCap(root: HTMLElement, data: CapData, opts: { town: string 
   xSelect.value = xKey;
   xSelect.addEventListener("change", () => {
     xKey = xSelect.value as XKey;
+    zoom = null;
     render();
   });
   xWrap.append(el("span", undefined, "Compare towns by"), xSelect);
@@ -375,10 +376,104 @@ export function startCap(root: HTMLElement, data: CapData, opts: { town: string 
   svg.setAttribute("role", "img");
   const tip = el("div", "cw-tip");
   tip.hidden = true;
-  figure.append(legend, svg, tip);
-  chartBox.append(enlargeButton(chartBox, () => render(), () => scenRow), chartHead, chartIntro, chartControls, chartContext, figure);
-  // The width each chart is drawn at; enlarged, it keeps that drawing and scales it up
-  let chartW = 0;
+  // Zoom: buttons, a drag to move, a scroll of the wheel when enlarged (or with Ctrl anywhere), a
+  // double-click to see every town again
+  let zoom: { x: [number, number]; y: [number, number] } | null = null;
+  let plotView: ScatterView | null = null;
+  let fullView: ScatterView | null = null;
+  let drawPlot = () => {};
+  const zoomBar = el("div", "cap-zoom");
+  const zoomButton = (text: string, label: string, on: () => void) => {
+    const b = el("button", "cap-zoom-btn", text);
+    b.type = "button";
+    b.title = label;
+    b.setAttribute("aria-label", label);
+    b.addEventListener("click", on);
+    return b;
+  };
+  zoomBar.append(el("span", "cap-zoom-hint", "Drag to move"), zoomButton("+", "Zoom in", () => zoomBy(1 / 1.6)),
+    zoomButton("−", "Zoom out", () => zoomBy(1.6)), zoomButton("All", "Show every town", () => {
+      zoom = null;
+      drawPlot();
+    }));
+  figure.append(legend, zoomBar, svg, tip);
+  // The plot and its menu, apart from the text around them: Enlarge takes these, drawn to fill the window
+  const plotBox = el("div", "cap-plot");
+  const plotTitle = el("h3", "cap-plot-title", "Who pays more because of the cap?");
+  plotBox.append(enlargeButton(plotBox, () => render(), () => scenRow, () => render()), plotTitle, chartControls, figure);
+  chartBox.append(chartHead, chartIntro, chartContext, plotBox);
+
+  /** Zoom by f (under 1 in, over 1 out) about the middle of the view, or about a point in data terms */
+  function zoomBy(f: number, at?: { x: number; y: number }) {
+    if (!plotView) return;
+    const [xa, xb] = plotView.x.map(Math.log10);
+    const [ya, yb] = plotView.y;
+    const cx = at ? Math.log10(at.x) : (xa + xb) / 2;
+    const cy = at ? at.y : (ya + yb) / 2;
+    const next = { x: [10 ** (cx - (cx - xa) * f), 10 ** (cx + (xb - cx) * f)] as [number, number],
+      y: [cy - (cy - ya) * f, cy + (yb - cy) * f] as [number, number] };
+    // Zoomed out past every town: back to the whole view
+    const all = fullView;
+    zoom = all && f > 1 && next.x[0] <= all.x[0] && next.x[1] >= all.x[1] && next.y[0] <= all.y[0] && next.y[1] >= all.y[1]
+      ? null : next;
+    drawPlot();
+  }
+  /** Where a pointer is, in data terms */
+  const pointAt = (ev: MouseEvent) => {
+    if (!plotView) return undefined;
+    const box = svg.getBoundingClientRect();
+    const k = svg.viewBox.baseVal.width / box.width;
+    const fx = ((ev.clientX - box.left) * k - plotView.plot.left) / plotView.plot.width;
+    const fy = ((ev.clientY - box.top) * k - plotView.plot.top) / plotView.plot.height;
+    const [xa, xb] = plotView.x.map(Math.log10);
+    return { x: 10 ** (xa + fx * (xb - xa)), y: plotView.y[1] - fy * (plotView.y[1] - plotView.y[0]) };
+  };
+  let frame = 0;
+  const soon = () => {
+    cancelAnimationFrame(frame);
+    frame = requestAnimationFrame(() => drawPlot());
+  };
+  let drag: { x: number; y: number; view: ScatterView; moved: boolean } | null = null;
+  let dragged = false;
+  svg.addEventListener("pointerdown", (ev) => {
+    if (ev.button === 0 && plotView) drag = { x: ev.clientX, y: ev.clientY, view: plotView, moved: false };
+  });
+  window.addEventListener("pointermove", (ev) => {
+    if (!drag) return;
+    const dx = ev.clientX - drag.x;
+    const dy = ev.clientY - drag.y;
+    if (!drag.moved && Math.hypot(dx, dy) < 4) return;
+    drag.moved = true;
+    tip.hidden = true;
+    svg.classList.add("is-dragging");
+    const k = svg.viewBox.baseVal.width / svg.getBoundingClientRect().width;
+    const v = drag.view;
+    const [xa, xb] = v.x.map(Math.log10);
+    const sx = ((xb - xa) / v.plot.width) * k * dx;
+    const sy = ((v.y[1] - v.y[0]) / v.plot.height) * k * dy;
+    zoom = { x: [10 ** (xa - sx), 10 ** (xb - sx)], y: [v.y[0] + sy, v.y[1] + sy] };
+    soon();
+  });
+  window.addEventListener("pointerup", () => {
+    if (drag?.moved) dragged = true;
+    drag = null;
+    svg.classList.remove("is-dragging");
+  });
+  // A drag isn't a click: it doesn't pick the town under the pointer
+  figure.addEventListener("click", (ev) => {
+    if (!dragged) return;
+    dragged = false;
+    ev.stopPropagation();
+  }, true);
+  svg.addEventListener("wheel", (ev) => {
+    if (!isEnlarged(plotBox) && !ev.ctrlKey && !ev.metaKey) return;
+    ev.preventDefault();
+    zoomBy(ev.deltaY > 0 ? 1.25 : 0.8, pointAt(ev));
+  }, { passive: false });
+  svg.addEventListener("dblclick", () => {
+    zoom = null;
+    drawPlot();
+  });
   let yearsW = 0;
   const yearsEnlarge = enlargeButton(yearsBox, () => render(), () => scenRow);
 
@@ -760,12 +855,16 @@ export function startCap(root: HTMLElement, data: CapData, opts: { town: string 
       if (xv == null || yv == null || !isFinite(xv) || !isFinite(yv) || xv <= 0 || !x.foundation) continue;
       pts.push({ x: xv, y: yv, id: x.id, name: x.name, group: x.id === t.id ? "town" : x.capped ? "capped" : "below", label: x.id === t.id });
     }
-    const width = isEnlarged(chartBox) && chartW ? chartW : Math.max(300, figure.clientWidth || 800);
-    chartW = width;
-    const height = Math.round(Math.min(460, Math.max(280, width * 0.5)));
+    // Enlarged, drawn to fill the window; otherwise to the page's width
+    const enlarged = isEnlarged(plotBox);
+    const width = enlarged ? Math.max(300, Math.floor(Math.min(1500, window.innerWidth * 0.96) - 80))
+      : Math.max(300, figure.clientWidth || 800);
+    const height = enlarged ? Math.max(320, Math.floor(window.innerHeight * 0.94 - 200))
+      : Math.round(Math.min(460, Math.max(280, width * 0.5)));
     svg.setAttribute("aria-label", `Scatterplot of the change in target per household against ${xo.title.toLowerCase()} for ${pts.length} towns, FY${y.fy}.`);
-    scatter(svg, pts, {
-      width, height, logX: true, xFmt: xo.axis, yFmt: signed,
+    drawPlot = () => {
+      plotView = scatter(svg, pts, {
+      width, height, logX: true, xFmt: xo.axis, yFmt: signed, domain: zoom ?? undefined,
       xTitle: xo.title, xTitleShort: xo.short,
       yTitle: Y_TITLE, yTitleShort: "Change, per household",
       groups: GROUPS, smooth: false, refY: 0, refX: xKey === "cey_pct" ? y.max_pct : undefined,
@@ -794,7 +893,11 @@ export function startCap(root: HTMLElement, data: CapData, opts: { town: string 
         render();
         lookup.scrollIntoView({ behavior: "smooth", block: "start" });
       },
-    });
+      }).view;
+      if (!zoom) fullView = plotView;
+      zoomBar.classList.toggle("is-zoomed", !!zoom);
+    };
+    drawPlot();
     legend.replaceChildren(...Object.values(GROUPS).map((g) => {
       const li = el("li");
       const key = el("span", `cw-key ${g.shape}`);
@@ -841,7 +944,7 @@ export function startCap(root: HTMLElement, data: CapData, opts: { town: string 
 
   let lastW = 0;
   new ResizeObserver(() => {
-    if (isEnlarged(chartBox)) return;
+    if (isEnlarged(plotBox)) return;
     const w = figure.clientWidth;
     if (w > 0 && Math.abs(w - lastW) > 8) {
       lastW = w;

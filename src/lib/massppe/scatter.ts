@@ -42,7 +42,20 @@ export interface ScatterOpts {
   refX?: number;
   onHover?: (p: Point | null, at: { left: number; top: number } | null) => void;
   onPick?: (p: Point) => void;
+  /** A zoomed view: the ranges shown, in data units; points outside them are left out */
+  domain?: { x: [number, number]; y: [number, number] };
 }
+
+/** What a drawn scatterplot shows: its ranges in data units, and where its plot area sits */
+export interface ScatterView {
+  x: [number, number];
+  y: [number, number];
+  plot: { left: number; top: number; width: number; height: number };
+}
+
+// Each chart's pointer listeners, so a redraw replaces them rather than adding more
+const listening = new WeakMap<SVGSVGElement, AbortController>();
+let clipIds = 0;
 
 const FULL = { top: 14, right: 22, bottom: 52, left: 78 };
 // Axis titles: big and bold, the first place to look for what's plotted (.sc-title)
@@ -162,17 +175,32 @@ export function scatter(svg: SVGSVGElement, points: Point[], o: ScatterOpts) {
   const m = o.mini ? MINI : FULL;
   const pw = o.width - m.left - m.right;
   const ph = o.height - m.top - m.bottom;
-  const pts = o.logX ? points.filter((p) => p.x > 0) : points;
-  if (!pts.length) return { highlight: () => {} };
+  listening.get(svg)?.abort();
+  const all = o.logX ? points.filter((p) => p.x > 0) : points;
+  if (!all.length) return { highlight: () => {}, view: null };
   const fx = (v: number) => (o.logX ? Math.log10(v) : v);
-  const xsRaw = pts.map((p) => p.x);
-  const ys = pts.map((p) => p.y);
-  const xTicks = o.logX ? logTicks(Math.min(...xsRaw), Math.max(...xsRaw)) : ticksFor(Math.min(...xsRaw), Math.max(...xsRaw));
-  const yTicks = ticksFor(Math.min(...ys), Math.max(...ys));
-  // A log axis pads the data a little; a linear one runs from tick to tick
-  const x0 = o.logX ? Math.log10(Math.min(...xsRaw) / 1.15) : xTicks[0];
-  const x1 = o.logX ? Math.log10(Math.max(...xsRaw) * 1.15) : xTicks[xTicks.length - 1];
-  const [y0, y1] = [yTicks[0], yTicks[yTicks.length - 1]];
+  const unfx = (v: number) => (o.logX ? 10 ** v : v);
+  const xsRaw = all.map((p) => p.x);
+  const ys = all.map((p) => p.y);
+  let xTicks: number[], yTicks: number[], x0: number, x1: number, y0: number, y1: number;
+  if (o.domain) {
+    // Zoomed: the ranges asked for, with the ticks that fall inside them
+    [x0, x1] = [fx(o.domain.x[0]), fx(o.domain.x[1])];
+    [y0, y1] = o.domain.y;
+    xTicks = (o.logX ? logTicks(o.domain.x[0], o.domain.x[1]) : ticksFor(o.domain.x[0], o.domain.x[1]))
+      .filter((t) => fx(t) >= x0 && fx(t) <= x1);
+    yTicks = ticksFor(y0, y1).filter((t) => t >= y0 && t <= y1);
+  } else {
+    xTicks = o.logX ? logTicks(Math.min(...xsRaw), Math.max(...xsRaw)) : ticksFor(Math.min(...xsRaw), Math.max(...xsRaw));
+    yTicks = ticksFor(Math.min(...ys), Math.max(...ys));
+    // A log axis pads the data a little; a linear one runs from tick to tick
+    x0 = o.logX ? Math.log10(Math.min(...xsRaw) / 1.15) : xTicks[0];
+    x1 = o.logX ? Math.log10(Math.max(...xsRaw) * 1.15) : xTicks[xTicks.length - 1];
+    [y0, y1] = [yTicks[0], yTicks[yTicks.length - 1]];
+  }
+  // The points in view: all of them, unless zoomed
+  const pts = o.domain ? all.filter((p) => fx(p.x) >= x0 && fx(p.x) <= x1 && p.y >= y0 && p.y <= y1) : all;
+  const view: ScatterView = { x: [unfx(x0), unfx(x1)], y: [y0, y1], plot: { left: m.left, top: m.top, width: pw, height: ph } };
   const sx = (v: number) => m.left + ((fx(v) - x0) / (x1 - x0 || 1)) * pw;
   const sy = (v: number) => m.top + ph - ((v - y0) / (y1 - y0 || 1)) * ph;
 
@@ -215,7 +243,11 @@ export function scatter(svg: SVGSVGElement, points: Point[], o: ScatterOpts) {
     svgEl("line", { x1: sx(o.refX), x2: sx(o.refX), y1: m.top, y2: m.top + ph, class: "sc-ref" }, svg);
   }
 
-  const plot = svgEl("g", { class: "sc-points" }, svg);
+  // Everything drawn in the plot area stays inside it when zoomed
+  const clip = `sc-clip-${++clipIds}`;
+  const defs = svgEl("defs", {}, svg);
+  svgEl("rect", { x: m.left, y: m.top, width: pw, height: ph }, svgEl("clipPath", { id: clip }, defs));
+  const plot = svgEl("g", { class: "sc-points", "clip-path": `url(#${clip})` }, svg);
   const order = [...pts].sort((a, b) => (o.groups[a.group]?.z ?? 0) - (o.groups[b.group]?.z ?? 0));
   const r = o.mini ? 2.2 : 4;
   for (const p of order) {
@@ -224,10 +256,11 @@ export function scatter(svg: SVGSVGElement, points: Point[], o: ScatterOpts) {
   }
 
   if (o.smooth) {
-    const curve = loess(pts.map((p) => fx(p.x)), ys);
+    // Fitted on every point, zoomed or not, so the curve doesn't change shape as the view moves
+    const curve = loess(all.map((p) => fx(p.x)), ys);
     if (curve.length) {
       const d = curve.map(([cx, cy], k) => `${k ? "L" : "M"}${(m.left + ((cx - x0) / (x1 - x0 || 1)) * pw).toFixed(1)},${sy(cy).toFixed(1)}`).join("");
-      svgEl("path", { d, class: o.mini ? "sc-smooth mini" : "sc-smooth" }, svg);
+      svgEl("path", { d, class: o.mini ? "sc-smooth mini" : "sc-smooth", "clip-path": `url(#${clip})` }, svg);
     }
   }
 
@@ -278,6 +311,9 @@ export function scatter(svg: SVGSVGElement, points: Point[], o: ScatterOpts) {
     ring.setAttribute("cy", String(p ? sy(p.y) : -99));
   };
   if (!o.mini) {
+    const ac = new AbortController();
+    listening.set(svg, ac);
+    const signal = ac.signal;
     const nearest = (ev: PointerEvent) => {
       const box = svg.getBoundingClientRect();
       const scale = o.width / box.width;
@@ -296,15 +332,15 @@ export function scatter(svg: SVGSVGElement, points: Point[], o: ScatterOpts) {
       highlight(best?.id ?? null);
       svg.style.cursor = best && o.onPick ? "pointer" : "";
       o.onHover?.(best, best ? { left, top } : null);
-    });
+    }, { signal });
     svg.addEventListener("pointerleave", () => {
       highlight(null);
       o.onHover?.(null, null);
-    });
+    }, { signal });
     svg.addEventListener("click", (ev) => {
       const { best } = nearest(ev as PointerEvent);
       if (best) o.onPick?.(best);
-    });
+    }, { signal });
   }
-  return { highlight };
+  return { highlight, view };
 }

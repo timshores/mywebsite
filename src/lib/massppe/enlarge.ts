@@ -68,8 +68,10 @@ function fit(box: HTMLElement, dialog: HTMLDialogElement, strip: HTMLElement, bo
 /**
  * A button that opens `box` enlarged. `onClose` runs after it's back in place, for a chart that
  * should redraw at its usual size. `controls`, if given, returns the tab's controls to bring along.
+ * `onOpen` runs once the window is open, for a chart that redraws at the window's size.
  */
-export function enlargeButton(box: HTMLElement, onClose?: () => void, controls?: () => HTMLElement | null): HTMLButtonElement {
+export function enlargeButton(box: HTMLElement, onClose?: () => void, controls?: () => HTMLElement | null,
+  onOpen?: () => void): HTMLButtonElement {
   const b = document.createElement("button");
   b.type = "button";
   b.className = "enlarge-open";
@@ -95,6 +97,7 @@ export function enlargeButton(box: HTMLElement, onClose?: () => void, controls?:
     box.classList.add("is-enlarged");
     body.replaceChildren(box);
     dialog.showModal();
+    onOpen?.();
     const refit = () => fit(box, dialog, strip, body);
     refit();
     // Fit again when the window resizes or the chart redraws

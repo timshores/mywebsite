@@ -3553,6 +3553,71 @@ import Layout from "../../layouts/Layout.astro";
     min-width: 2.8rem;
   }
 
+  /* The cap chart's plot: its title shows only enlarged; zoom buttons over its top right */
+  .explorer :global(.cap-plot) {
+    position: relative;
+  }
+
+  .explorer :global(.cap-plot-title) {
+    display: none;
+  }
+
+  .explorer :global(.is-enlarged .cap-plot-title) {
+    display: block;
+    margin: 0 0 0.5rem;
+  }
+
+  .explorer :global(.cap-figure) {
+    position: relative;
+  }
+
+  .explorer :global(.cap-zoom) {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.3rem;
+    margin: 0 0 0.3rem;
+  }
+
+  .explorer :global(.cap-zoom-hint) {
+    margin-right: 0.3rem;
+    font-size: 0.75rem;
+    color: var(--muted);
+  }
+
+  .explorer :global(.cap-zoom-btn) {
+    min-width: 1.9rem;
+    padding: 0.15rem 0.5rem;
+    font: inherit;
+    font-size: 0.82rem;
+    color: var(--ink);
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    cursor: pointer;
+  }
+
+  .explorer :global(.cap-zoom-btn:hover),
+  .explorer :global(.cap-zoom-btn:focus-visible) {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .explorer :global(.cap-zoom.is-zoomed .cap-zoom-btn:last-child) {
+    color: var(--paper);
+    background: var(--ink);
+    border-color: var(--ink);
+  }
+
+  .explorer :global(svg.cap-chart) {
+    cursor: grab;
+    touch-action: none;
+  }
+
+  .explorer :global(svg.cap-chart.is-dragging) {
+    cursor: grabbing;
+  }
+
   .explorer :global(.cap-help) {
     display: inline-grid;
     place-items: center;
