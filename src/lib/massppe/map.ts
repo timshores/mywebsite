@@ -21,7 +21,11 @@ const KIND_NAME: Record<Kind, string> = { rural: "Rural", suburban: "Suburban an
 // The types run from the least dense to the most, so one blue ramp, light to dark, orders them
 const KIND_COLOR: Record<Kind, string> = { rural: "#86b6ef", suburban: "#3987e5", gateway: "#1c5cab", core: "#0d366b" };
 export interface MapData {
-  meta: { start: number; latest: number; cap_fy: number; width: number; height: number; outlines: string; cpi: Record<string, number> };
+  meta: {
+    start: number; latest: number; cap_fy: number; width: number; height: number; outlines: string;
+    /** Where each income fifth begins (the second through the highest), for towns and for districts */
+    fifths: { towns: number[] | null; districts: number[] | null; year: number | null };
+  };
   towns: MapTown[];
   districts: Record<string, { name: string; ct?: Kind | null; v: Record<string, Val> }>;
 }
@@ -52,6 +56,8 @@ interface Measure {
   over?: boolean;
   /** The legend's words for each class, with fixed cuts */
   classes?: string[];
+  /** Income: the classes are the income fifths, cut where the data says each begins */
+  fifths?: "towns" | "districts";
 }
 const inDollars = (m: MapData["meta"], real: boolean) => (real ? `in FY${m.latest} dollars, after inflation` : "in nominal dollars, before inflation");
 /** What the trend is, for the "?" beside a measure of growth */
@@ -66,6 +72,7 @@ const yearlyShort = (v: number) => `${sign(v)}${Math.abs(v * 100).toFixed(1)}%`;
 const change = (v: number) => `${sign(v)}${Math.abs(Math.round(v * 100))}%`;
 const share = (v: number) => `${(v * 100).toFixed(Math.abs(v) < 0.1 ? 1 : 0)}%`;
 const money = (v: number) => `${sign(v)}$${Math.abs(Math.round(v)).toLocaleString("en-US")}`;
+const dollars = (v: number) => `$${Math.round(v).toLocaleString("en-US")}`;
 const dense = (v: number) => (v < 100 ? v.toFixed(1) : Math.round(v).toLocaleString("en-US"));
 const denseShort = (v: number) => (v < 10 && v % 1 ? v.toFixed(1) : Math.round(v).toLocaleString("en-US"));
 const none = () => "";
@@ -98,6 +105,11 @@ const TOWN_MEASURES: Measure[] = [
     subject: "property value per resident",
     about: (m, real) => "How fast each town's equalized property value per resident grew each year on trend, from " +
       `FY${m.start} to FY${m.latest}, ${inDollars(m, real)}.`,
+  },
+  {
+    key: "income", label: "Income per resident", kind: "level", fmt: dollars, short: dollars, fifths: "towns",
+    about: (m) => `Each town's residents' income for the Chapter 70 formula, from ${m.fifths.year} state tax returns, ` +
+      `divided by its population in July ${m.fifths.year}. The five colors are the income fifths, 70 or 71 towns each.`,
   },
   {
     key: "levy_room", label: "Room under the levy limit", kind: "level", fmt: share, short: share,
@@ -141,6 +153,11 @@ const DISTRICT_MEASURES: Measure[] = [
   {
     key: "enroll", label: "Enrollment change", kind: "change", fmt: change, short: change, subject: "enrollment",
     about: (m) => `How much each district's in-district enrollment changed from FY${m.start} to FY${m.latest}.`,
+  },
+  {
+    key: "income", label: "Income per resident of its towns", kind: "level", fmt: dollars, short: dollars, fifths: "districts",
+    about: (m) => `The combined income of each district's towns for the Chapter 70 formula, from ${m.fifths.year} state ` +
+      `tax returns, divided by their combined population. The five colors are the districts' income fifths.`,
   },
   {
     key: "above", label: "Spending above the requirement", kind: "level", fmt: share, short: share,
@@ -335,7 +352,7 @@ export function startMap(root: HTMLElement, data: MapData, opts: {
       : [...new Set(data.towns.map(districtOf).filter((d): d is string => !!d))].map((d) => asShown(data.districts[d]?.v[measure.key]))
         .filter(Boolean) as Val[];
     const values = units.map((u) => u[0]);
-    const c = measure.cuts ?? cuts(measure.kind, values);
+    const c = (measure.fifths ? meta.fifths[measure.fifths] : null) ?? measure.cuts ?? cuts(measure.kind, values);
     const classOfV = (v: number) => (measure.over ? c.filter((x) => v > x).length : classOf(v, c));
     const colors = measure.kind === "change" ? DIVERGING : SEQUENTIAL;
     current = { measure, districtOf, value, c, combinedAt };
@@ -360,7 +377,10 @@ export function startMap(root: HTMLElement, data: MapData, opts: {
     if (!onTowns) about.append(gradeNote(measure));
 
     // Legend: each class's range, then the gray for none
-    const label = (k: number) => measure.classes?.[k] ?? (k === 0 ? `Below ${measure.short(c[0])}` : k === 4
+    const fifthWords = ["Lowest fifth", "Second", "Middle", "Fourth", "Highest fifth"];
+    const label = (k: number) => measure.fifths ? `${fifthWords[k]}: ${k === 0 ? `under ${measure.short(c[0])}`
+      : k === 4 ? `${measure.short(c[3])} and up` : `${measure.short(c[k - 1])} to ${measure.short(c[k] - 1)}`}`
+      : measure.classes?.[k] ?? (k === 0 ? `Below ${measure.short(c[0])}` : k === 4
       ? `${measure.short(c[3])} and up` : `${measure.short(c[k - 1])} to ${measure.short(c[k])}`);
     legend.replaceChildren(...colors.map((col, k) => {
       const li = el("li");

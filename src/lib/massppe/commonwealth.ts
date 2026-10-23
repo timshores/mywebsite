@@ -17,6 +17,8 @@ interface Row {
   valley: boolean;
   /** Community type: the Inner Core, the other Gateway Cities, rural, or suburban and other */
   ct?: "core" | "gateway" | "rural" | "suburban" | null;
+  /** Income fifth of the district's towns together, 1 lowest to 5 highest */
+  fifth?: number | null;
   v: Record<string, Values>;
 }
 
@@ -125,6 +127,20 @@ const HIGHLIGHTS: Record<string, { label: string; groups: Record<string, Group>;
       other: { ...OTHER, label: "Vocational and charter" },
     },
     of: (d) => d.ct ?? "other",
+    labels: new Set(),
+  },
+  // The fifths in order, one blue ramp from the lowest incomes (lightest) to the highest (darkest)
+  fifth: {
+    label: "Income fifth",
+    groups: {
+      f5: { label: "Highest income fifth", color: "#0d366b", shape: "circle", z: 5 },
+      f4: { label: "Fourth", color: "#1c5cab", shape: "circle", z: 4 },
+      f3: { label: "Middle", color: "#2a78d6", shape: "circle", z: 3 },
+      f2: { label: "Second", color: "#5598e7", shape: "circle", z: 2 },
+      f1: { label: "Lowest income fifth", color: "#86b6ef", shape: "circle", z: 1 },
+      other: { ...OTHER, color: "#d6d2c8", label: "Vocational and charter" },
+    },
+    of: (d) => (d.fifth ? `f${d.fifth}` : "other"),
     labels: new Set(),
   },
   western: {

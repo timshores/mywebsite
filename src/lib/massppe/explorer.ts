@@ -17,8 +17,10 @@ import { groupedPicker, type Picker } from "./picker";
 type Values = Val[];
 
 /** Ids to compare with, one per "Compare with" choice; null where there is none */
-type CmpIds = Partial<Record<"cohort" | "cohort_state" | "region" | "state" | "gateway" | "type", string | null>>;
-type TownCmpIds = Partial<Record<"peer" | "peer_state" | "region" | "state" | "gateway" | "type", string | null>>;
+type CmpIds = Partial<Record<"cohort" | "cohort_state" | "region" | "state" | "gateway" | "type" | "fifth", string | null>>;
+type TownCmpIds = Partial<Record<"peer" | "peer_state" | "region" | "state" | "gateway" | "type" | "fifth", string | null>>;
+/** Which fifth of the state a town, or a district's towns together, falls in by income per resident (1 lowest) */
+interface IncomeFifth { fifth: number; income_pc: number; year: number }
 /** The Inner Core (Boston and its densest neighbors), the other Gateway Cities, rural, or suburban and
  * other, with students (districts) or residents (towns) per square mile; rural districts carry DESE's
  * rural aid tier */
@@ -40,6 +42,7 @@ interface Entity {
   /** Districts: the district of one of the Commonwealth's Gateway Cities */
   gateway?: boolean;
   community?: Community;
+  income?: IncomeFifth;
   cmp: CmpIds;
   chunk: string;
   ppe: Record<string, Values>;
@@ -85,6 +88,7 @@ interface Town {
   /** Towns: one of the Commonwealth's Gateway Cities */
   gateway?: boolean;
   community?: Community;
+  income?: IncomeFifth;
   scope?: string;
   members?: number;
   /** Peer group averages: mid-sentence name, and the population range */
@@ -164,8 +168,8 @@ interface Data {
   districts: Listed[];
 }
 
-type Compare = "none" | "cohort" | "cohort-state" | "region" | "state" | "gateway" | "type" | "other";
-type TownCompare = "none" | "peer" | "peer-state" | "region" | "state" | "gateway" | "type" | "other";
+type Compare = "none" | "cohort" | "cohort-state" | "region" | "state" | "gateway" | "type" | "fifth" | "other";
+type TownCompare = "none" | "peer" | "peer-state" | "region" | "state" | "gateway" | "type" | "fifth" | "other";
 /** "nominal", or the fiscal year whose dollars every year is restated in ("2018") */
 type Dollars = string;
 /** What the town view's dollars are divided by */
@@ -184,14 +188,20 @@ type Line = "trend" | "cmp";
 // back to the statewide cohort where a region has too few districts of that size
 const CHAIN = {
   cohort: ["cohort", "cohort_state"], "cohort-state": ["cohort_state"], region: ["region"], state: ["state"], gateway: ["gateway"],
-  type: ["type"],
+  type: ["type"], fifth: ["fifth"],
 } as const;
 const TOWN_CHAIN = {
   peer: ["peer", "peer_state"], "peer-state": ["peer_state"], region: ["region"], state: ["state"], gateway: ["gateway"],
-  type: ["type"],
+  type: ["type"], fifth: ["fifth"],
 } as const;
-const COMPARES: Compare[] = ["none", "cohort", "cohort-state", "region", "state", "gateway", "type", "other"];
-const TOWN_COMPARES: TownCompare[] = ["none", "peer", "peer-state", "region", "state", "gateway", "type", "other"];
+const COMPARES: Compare[] = ["none", "cohort", "cohort-state", "region", "state", "gateway", "type", "fifth", "other"];
+const TOWN_COMPARES: TownCompare[] = ["none", "peer", "peer-state", "region", "state", "gateway", "type", "fifth", "other"];
+const FIFTH_NAMES = ["", "Lowest", "Second", "Middle", "Fourth", "Highest"];
+/** "Middle income fifth: $47,294 per resident, 2023", for a district's or town's heading */
+function incomeText(i: IncomeFifth | undefined, district: boolean) {
+  if (!i) return "";
+  return `${FIFTH_NAMES[i.fifth]} income fifth: $${i.income_pc.toLocaleString("en-US")} per resident${district ? " of its towns" : ""}, ${i.year}`;
+}
 /** "Rural, 4.2 students per square mile": the community type, for a district's or town's heading */
 function communityText(c: Community | undefined, per: "students" | "residents") {
   if (!c) return "";
@@ -1524,7 +1534,8 @@ export async function startExplorer() {
     const bits = e.kind === "average" ? [`${e.members} districts`]
       : [e.type === "vocational" ? "Vocational district" : e.type === "charter" ? "Charter school"
         : `${meta.cohorts[e.cohort!].short} cohort`, place,
-        e.gateway && e.community?.type !== "gateway" ? "Gateway City" : "", communityText(e.community, "students")];
+        e.gateway && e.community?.type !== "gateway" ? "Gateway City" : "", communityText(e.community, "students"),
+        incomeText(e.income, true)];
     // Said only when "Its cohort in its region" falls back to the statewide cohort
     if (c && state.cmp === "cohort" && e.type === "traditional" && !e.cmp.cohort && place)
       bits.push(`compared statewide: too few ${meta.cohorts[e.cohort!].short} districts in ${place}`);
@@ -1969,7 +1980,7 @@ export async function startExplorer() {
     const peerLabel = towns!.meta.peers.find((x) => x.id === t.peer)?.label;
     const place = t.region ? meta.regions[t.region] : "";
     const bits = t.kind === "town" ? [`${t.county} County`, place, t.gateway && t.community?.type !== "gateway" ? "Gateway City" : "",
-      communityText(t.community, "residents")]
+      communityText(t.community, "residents"), incomeText(t.income, false)]
       : [`${t.members} towns`];
     // Said only when "Its peer group in its region" falls back to the statewide peer group
     if (c && state.tcmp === "peer" && t.kind === "town" && !t.cmp.peer && place)

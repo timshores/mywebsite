@@ -73,6 +73,15 @@ const GROUPS: Record<string, Group> = {
   below: { label: "Below it", color: "#2a78d6", shape: "circle", z: 1 },
   town: { label: "Selected town", color: "#b65c3d", shape: "triangle", z: 3 },
 };
+// By income fifth: one blue ramp, lightest for the lowest incomes, darkest for the highest
+const FIFTH_GROUPS: Record<string, Group> = {
+  f1: { label: "Lowest income fifth", color: "#86b6ef", shape: "circle", z: 1 },
+  f2: { label: "Second", color: "#5598e7", shape: "circle", z: 1 },
+  f3: { label: "Middle", color: "#2a78d6", shape: "circle", z: 1 },
+  f4: { label: "Fourth", color: "#1c5cab", shape: "circle", z: 1 },
+  f5: { label: "Highest income fifth", color: "#0d366b", shape: "circle", z: 1 },
+  town: GROUPS.town,
+};
 
 /** Up and down the chart, always: how much more or less the town would be asked for, per household */
 const Y_TITLE = "Change in target, per household";
@@ -367,7 +376,22 @@ export function startCap(root: HTMLElement, data: CapData, opts: { town: string 
     render();
   });
   xWrap.append(el("span", undefined, "Compare towns by"), xSelect);
-  chartControls.append(xWrap);
+  // Color by: cap status, or income fifth
+  let colorBy: "cap" | "fifth" = "cap";
+  const colorWrap = el("div", "cap-field cap-color");
+  const colorButtons = (["cap", "fifth"] as const).map((v) => {
+    const b = el("button", "cap-year-btn", v === "cap" ? "Cap status" : "Income fifth");
+    b.type = "button";
+    b.addEventListener("click", () => {
+      colorBy = v;
+      render();
+    });
+    return b;
+  });
+  const colorRow = el("span", "cap-color-row");
+  colorRow.append(...colorButtons);
+  colorWrap.append(el("span", undefined, "Color by"), colorRow);
+  chartControls.append(xWrap, colorWrap);
   const chartContext = el("p");
   const legend = el("ul", "cw-legend");
   const figure = el("figure", "cap-figure");
@@ -500,7 +524,8 @@ export function startCap(root: HTMLElement, data: CapData, opts: { town: string 
     const downSum = down.reduce((a, x) => a + change(x), 0);
 
     // Income fifths: who is in each, for the explanation, the tiles and the table
-    const withIncome = towns.filter((x) => x.pop_income && x.foundation).map((x) => ({ x, inc: x.income / x.pop_income! }))
+    // Every town with income and population, as the explorer's income fifths count them elsewhere
+    const withIncome = towns.filter((x) => x.pop_income && x.income).map((x) => ({ x, inc: x.income / x.pop_income! }))
       .sort((a, b) => a.inc - b.inc);
     const n = withIncome.length;
     const fifthOf = new Map<string, number>();
@@ -853,7 +878,8 @@ export function startCap(root: HTMLElement, data: CapData, opts: { town: string 
       const xv = xOf(x, xKey);
       const yv = perHh(x);
       if (xv == null || yv == null || !isFinite(xv) || !isFinite(yv) || xv <= 0 || !x.foundation) continue;
-      pts.push({ x: xv, y: yv, id: x.id, name: x.name, group: x.id === t.id ? "town" : x.capped ? "capped" : "below", label: x.id === t.id });
+      const group = x.id === t.id ? "town" : colorBy === "fifth" ? `f${(fifthOf.get(x.id) ?? 0) + 1}` : x.capped ? "capped" : "below";
+      pts.push({ x: xv, y: yv, id: x.id, name: x.name, group, label: x.id === t.id });
     }
     // Enlarged, drawn to fill the window; otherwise to the page's width
     const enlarged = isEnlarged(plotBox);
@@ -867,7 +893,7 @@ export function startCap(root: HTMLElement, data: CapData, opts: { town: string 
       width, height, logX: true, xFmt: xo.axis, yFmt: signed, domain: zoom ?? undefined,
       xTitle: xo.title, xTitleShort: xo.short,
       yTitle: Y_TITLE, yTitleShort: "Change, per household",
-      groups: GROUPS, smooth: false, refY: 0, refX: xKey === "cey_pct" ? y.max_pct : undefined,
+      groups: colorBy === "fifth" ? FIFTH_GROUPS : GROUPS, smooth: false, refY: 0, refX: xKey === "cey_pct" ? y.max_pct : undefined,
       onHover: (p, pos) => {
         if (!p || !pos) {
           tip.hidden = true;
@@ -898,7 +924,8 @@ export function startCap(root: HTMLElement, data: CapData, opts: { town: string 
       zoomBar.classList.toggle("is-zoomed", !!zoom);
     };
     drawPlot();
-    legend.replaceChildren(...Object.values(GROUPS).map((g) => {
+    colorButtons.forEach((b, k) => b.classList.toggle("is-on", (k === 0) === (colorBy === "cap")));
+    legend.replaceChildren(...Object.values(colorBy === "fifth" ? FIFTH_GROUPS : GROUPS).map((g) => {
       const li = el("li");
       const key = el("span", `cw-key ${g.shape}`);
       key.style.setProperty("--c", g.color);
@@ -929,7 +956,7 @@ export function startCap(root: HTMLElement, data: CapData, opts: { town: string 
     const scroll = Object.assign(el("div", "table-scroll"), { tabIndex: 0 });
     scroll.append(tbl);
     fifths.replaceChildren(el("h3", undefined, "By income"),
-      el("p", "cap-note", `The ${n} towns with a foundation budget, in five groups by income per resident (${y.income_year} ` +
+      el("p", "cap-note", `All ${n} towns, in five groups by income per resident (${y.income_year} ` +
         `income over the July ${y.income_year} population estimate). A negative change means the group is asked for more ` +
         `with today's cap than it would be ${scenName}: the cap costs it money.`),
       scroll);
