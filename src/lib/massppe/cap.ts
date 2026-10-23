@@ -247,6 +247,7 @@ export function startCap(root: HTMLElement, data: CapData, opts: { town: string 
   const yearsBox = el("section", "cap-section");
   const chartBox = el("section", "cap-section");
   const fifths = el("section", "cap-section");
+  fifths.dataset.detail = "";
   root.replaceChildren(how, scenRow, tiles, scen, lookup, yearsBox, chartBox, fifths);
 
   // Year by year: each year's factor for the chosen cap, kept while only the town changes
@@ -365,6 +366,7 @@ export function startCap(root: HTMLElement, data: CapData, opts: { town: string 
   // Chart controls
   const chartHead = el("h3", undefined, "Who pays more because of the cap?");
   const chartIntro = el("p");
+  chartIntro.dataset.detail = "";
   const chartControls = el("div", "cap-controls");
   const xWrap = el("label", "cap-field");
   const xSelect = el("select");
@@ -393,6 +395,7 @@ export function startCap(root: HTMLElement, data: CapData, opts: { town: string 
   colorWrap.append(el("span", undefined, "Color by"), colorRow);
   chartControls.append(xWrap, colorWrap);
   const chartContext = el("p");
+  chartContext.dataset.detail = "";
   const legend = el("ul", "cw-legend");
   const figure = el("figure", "cap-figure");
   const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");

@@ -65,9 +65,12 @@ export function compact(v: number, prefix = ""): string {
   if (v === 0) return `${prefix}0`;
   const sign = v < 0 ? "−" : "";
   const a = Math.abs(v);
-  if (a >= 1000) {
-    const k = a / 1000;
-    return `${sign}${prefix}${Number.isInteger(k) ? k : k.toFixed(1)}K`;
+  // Thousands, millions or billions, one decimal where the number needs it
+  for (const [unit, size] of [["B", 1e9], ["M", 1e6], ["K", 1e3]] as const) {
+    if (a >= size) {
+      const k = a / size;
+      return `${sign}${prefix}${Number.isInteger(k) ? k : k.toFixed(1)}${unit}`;
+    }
   }
   return `${sign}${prefix}${Math.round(a)}`;
 }

@@ -54,6 +54,9 @@ interface Entity {
   rev?: Record<string, Values>;
   /** Averages only: how many regional districts they include */
   rev_members?: number;
+  /** In-district FTE of the regional districts the revenue pools, per district: what turns revenue per
+   * pupil back into dollars (a district's own FTE, or an average's average district's) */
+  rev_fte?: Values;
   /** Town-run districts only: Census's latest totals, in dollars */
   rev_check?: { fy: number; revenue: number; expenditure: number };
   /** Districts only: the town itself, or a regional district's member towns, each with what it must
@@ -172,12 +175,15 @@ type Compare = "none" | "cohort" | "cohort-state" | "region" | "state" | "gatewa
 type TownCompare = "none" | "peer" | "peer-state" | "region" | "state" | "gateway" | "type" | "fifth" | "other";
 /** "nominal", or the fiscal year whose dollars every year is restated in ("2018") */
 type Dollars = string;
-/** What the town view's dollars are divided by */
-type Per = "resident" | "household" | "parcel";
-const PERS: Per[] = ["resident", "household", "parcel"];
+/** What the town view's dollars are divided by, or "total" for the town's whole dollars */
+type Per = "resident" | "household" | "parcel" | "total";
+const PERS: Per[] = ["resident", "household", "parcel", "total"];
+/** What the district view's dollars are divided by: pupils, or nothing, for the district's whole dollars */
+type DPer = "pupil" | "total";
+const DPERS: DPer[] = ["pupil", "total"];
 /** The Years slider keeps at least three years in view, enough for a trend */
 const MIN_SPAN = 2;
-const PER_WORD: Record<Per, string> = { resident: "resident", household: "household", parcel: "taxable property" };
+const PER_WORD: Record<Per, string> = { resident: "resident", household: "household", parcel: "taxable property", total: "town" };
 type View = "districts" | "towns" | "commonwealth" | "cap" | "data";
 const VIEWS: View[] = ["districts", "towns", "commonwealth", "cap", "data"];
 type StackPanel = "ppe" | "nss" | "rev" | "tspend" | "trev" | "tval" | "tpar" | "tlevy";
@@ -310,6 +316,8 @@ const pct = (v: number) => `${v >= 0 ? "+" : "−"}${Math.abs(v * 100).toFixed(1
 const millions = (v: number) => `$${(v / 1e6).toFixed(v >= 1e8 ? 0 : 1)} million`;
 /** "$423 million", "$4.2 billion" */
 const amount = (v: number) => (v >= 1e9 ? `$${(v / 1e9).toFixed(1)} billion` : millions(v));
+/** A total: "$4.2 million", or whole dollars under a million, "−$310,250" */
+const whole$ = (v: number) => (Math.abs(v) >= 1e6 ? `${v < 0 ? "−" : ""}${amount(Math.abs(v))}` : usd(v));
 /** "A", "A and B", "A, B, and C" */
 const list = (items: string[]) =>
   items.length < 3 ? items.join(" and ") : `${items.slice(0, -1).join(", ")}, and ${items[items.length - 1]}`;
@@ -438,6 +446,9 @@ export async function startExplorer() {
     // Nominal, or the latest year's dollars; links that name another year, or "real", get the latest
     usd: (src.usd === "real" || meta.years.includes(Number(src.usd)) ? String(meta.latest) : "nominal") as Dollars,
     per: oneOf(src.per, PERS, "resident"),
+    dper: oneOf(src.dper, DPERS, "pupil"),
+    // Extra detail: the explanations around the charts, on unless turned off
+    detail: (src.detail === "off" ? "off" : "on") as "on" | "off",
     view: (VIEWS.includes(src.view as View) ? src.view : "districts") as View,
     // Town view: checked against the town list once towns.json loads
     t: pickId(src.t) ?? "leverett",
@@ -628,6 +639,23 @@ export async function startExplorer() {
   const perInputs = document.querySelectorAll<HTMLInputElement>('input[name="per"]');
   perInputs.forEach((r) => (r.checked = r.value === state.per));
   perInputs.forEach((r) => r.addEventListener("change", () => r.checked && update({ per: r.value as Per })));
+  // The detail dial: off hides the explanations around the charts, on every tab but Data
+  const dial = $<HTMLButtonElement>("detail-dial");
+  const showDetail = () => {
+    const on = state.detail === "on";
+    root.classList.toggle("detail-off", !on);
+    dial.setAttribute("aria-checked", String(on));
+    dial.querySelector(".dial-state")!.textContent = on ? "On" : "Off";
+    dial.title = on ? "Turn the explanations around the charts off" : "Turn the explanations around the charts back on";
+  };
+  showDetail();
+  dial.addEventListener("click", () => {
+    update({ detail: state.detail === "on" ? "off" : "on" });
+    showDetail();
+  });
+  const dperInputs = document.querySelectorAll<HTMLInputElement>('input[name="dper"]');
+  dperInputs.forEach((r) => (r.checked = r.value === state.dper));
+  dperInputs.forEach((r) => r.addEventListener("change", () => r.checked && update({ dper: r.value as DPer })));
 
   // Town controls: towns by county, then averages
   const townSelect = $<HTMLSelectElement>("pick-town");
@@ -696,8 +724,10 @@ export async function startExplorer() {
       q.set("d", state.d);
       if (state.cmp !== "none") q.set("cmp", state.cmp);
       if (state.cmp === "other" && state.vs) q.set("vs", state.vs);
+      if (state.dper !== "pupil") q.set("dper", state.dper);
     }
     if (state.usd !== "nominal") q.set("usd", state.usd);
+    if (state.detail === "off") q.set("detail", "off");
     if (state.view === "districts" || state.view === "towns") {
       if (state.from !== meta.start) q.set("from", String(state.from));
       if (state.to !== meta.latest) q.set("to", String(state.to));
@@ -880,14 +910,24 @@ export async function startExplorer() {
       : `The ${e.name} includes only ${n === 1 ? "one regional district" : `${n} regional districts`}, too few for a revenue average.`;
   }
 
+  /** Per pupil, or with Totals on, back to dollars: each year's figure times the pupils it was
+   * divided by. An average's figures are pooled per pupil and its enrollment is per district, so its
+   * totals are its average district's. */
+  const pupilsOf = (e: Entity, by: "in_district" | "foundation" | "rev"): Values =>
+    by === "rev" ? e.rev_fte ?? e.enroll.in_district : e.enroll[by];
+  const inDollars = (values: Values, e: Entity, by: "in_district" | "foundation" | "rev"): Values => {
+    if (state.dper !== "total") return values;
+    const n = pupilsOf(e, by);
+    return values.map((v, i) => (v == null || n[i] == null ? null : v * n[i]!));
+  };
   const ppeSeries = (e: Entity): Series[] =>
-    meta.categories.map((c, k) => ({ key: c, label: sentence(c), color: PPE_COLORS[k], values: deflate(e.ppe[c]) }));
+    meta.categories.map((c, k) => ({ key: c, label: sentence(c), color: PPE_COLORS[k], values: deflate(inDollars(e.ppe[c], e, "in_district")) }));
   const nssSeries = (e: Entity): Series[] =>
-    NSS_SERIES.map((s) => ({ ...s, values: deflate(e.nss[s.key]) }));
+    NSS_SERIES.map((s) => ({ ...s, values: deflate(inDollars(e.nss[s.key], e, "foundation")) }));
   const enrollSeries = (e: Entity): Series[] =>
     ENROLL_SERIES.map((s) => ({ ...s, values: e.enroll[s.key] }));
   const revSeries = (e: Entity): Series[] | null =>
-    e.rev ? REV_SERIES.map((s) => ({ ...s, values: deflate(e.rev![s.key]) })) : null;
+    e.rev ? REV_SERIES.map((s) => ({ ...s, values: deflate(inDollars(e.rev![s.key], e, "rev")) })) : null;
   /** Revenue averages cover only their regional districts, and say so. */
   const revName = (c: Entity) => (c.kind === "district" ? c.name : `${c.name} (regional districts)`);
   const totals = (series: Series[]): Values => years.map((_, i) => sumAt(series.map((s) => s.values), i));
@@ -1273,7 +1313,9 @@ export async function startExplorer() {
     const cmpSel = onTowns ? townCompareSelect : compareSelect;
     const cmp = cmpSel.value === "none" ? "No comparison"
       : `Compared with ${cmpSel.value === "other" ? chosen(onTowns ? townVsSelect : vsSelect) : chosen(cmpSel).replace(/^Its /, "its ")}`;
-    const rest = [cmp, ...(onTowns ? [`Per ${PER_WORD[state.per]}`] : []), `FY${state.from}–FY${state.to}`,
+    const amounts = onTowns ? (state.per === "total" ? "Totals" : `Per ${PER_WORD[state.per]}`)
+      : state.dper === "total" ? "Totals" : "Per pupil";
+    const rest = [cmp, amounts, `FY${state.from}–FY${state.to}`,
       state.usd === "nominal" ? "Nominal dollars" : `FY${state.usd} dollars`];
     dockSum.replaceChildren(text("strong", name), ` · ${rest.join(" · ")}`);
     dockSum.setAttribute("aria-label", `Show controls: ${name}, ${rest.join(", ")}`);
@@ -1299,7 +1341,7 @@ export async function startExplorer() {
     cmp: Named | null, { end = last, noCmpNote, per = "pupil" }: CmpOpts = {}) {
     const cName = cmp ? cmp.name : null;
     const fmt = kind === "usd" ? usd : kind === "count" ? (v: number) => Math.round(v).toLocaleString("en-US") : fte;
-    const unit = kind === "usd" ? ` $/${per}` : "";
+    const unit = kind === "usd" ? (per ? ` $/${per}` : " $") : "";
     const prior = end - 1;
     // Growth over the years shown, then over the last 10 and 5 when the window holds more
     const windows = [end, ...[10, 5].filter((n) => n < end)];
@@ -1523,6 +1565,16 @@ export async function startExplorer() {
     const real = state.usd !== "nominal";
     const dollarsNote = real ? `FY${state.usd} dollars` : "Nominal dollars";
     const perDistrict = e.kind === "district" ? "" : ", average per district";
+    // Per pupil, or with Totals on, the district's whole dollars (an average's average district's)
+    const whole = state.dper === "total";
+    const pp = whole ? "" : " per pupil";
+    const money = whole ? whole$ : usd;
+    const wholeNote = !whole ? "" : e.kind === "district" ? " In total: each year's figure per pupil times its pupils."
+      : " In total, for the average district: the group's figure per pupil times its average enrollment.";
+    const tableOpts = { per: whole ? "" : "pupil" };
+    document.querySelectorAll("[data-dper]").forEach((n) => (n.textContent = pp));
+    document.querySelectorAll("[data-aria-dper]").forEach((n) =>
+      n.setAttribute("aria-label", n.getAttribute("data-aria-dper")!.replace("{dper}", whole ? "" : n.id === "svg-nss" ? " per foundation pupil" : " per pupil")));
 
     // Comparison menu: shown only for "Another district or average" (applyView)
     select.value = e.id;
@@ -1576,21 +1628,22 @@ export async function startExplorer() {
     const above = nss[2].values[last];
     const aidShare = aid != null && nssTotal[last] ? aid / nssTotal[last]! : null;
     $("tiles").replaceChildren(
-      tile(`Spending per pupil, FY${years[last]}`, ppeTotal[last] != null ? usd(ppeTotal[last]!) : "–", [
+      tile(`Spending${pp}, FY${years[last]}`, ppeTotal[last] != null ? money(ppeTotal[last]!) : "–", [
         g != null ? `${pct(g)} a year on trend since FY${years[0]}${real ? ", after inflation" : ", before inflation"}` : "",
-        c && cPpeTotal?.[last] != null ? `${cName}: ${usd(cPpeTotal[last]!)}` : "",
+        c && cPpeTotal?.[last] != null ? `${cName}: ${money(cPpeTotal[last]!)}` : "",
       ]),
       tile(`In-district enrollment, FY${years[last]}`, e.enroll.in_district[last] != null ? `${fte(e.enroll.in_district[last]!)} FTE` : "–", [
         enrollChange != null ? `${pct(enrollChange)} since FY${years[0]}` : "",
         e.kind === "district" ? "" : "Average per district",
       ]),
-      tile(`Chapter 70 aid per foundation pupil, FY${years[last]}`, aid != null ? usd(aid) : "–", [
+      tile(`Chapter 70 aid${whole ? "" : " per foundation pupil"}, FY${years[last]}`, aid != null ? money(aid) : "–", [
         aidShare != null ? `${Math.round(aidShare * 100)}% of actual net school spending` : "",
-        cNss && cNss[0].values[last] != null ? `${cName}: ${usd(cNss[0].values[last]!)}` : "",
+        cNss && cNss[0].values[last] != null ? `${cName}: ${money(cNss[0].values[last]!)}` : "",
       ]),
-      tile(`Spending above required, FY${years[last]}`, above != null ? usd(above) : "Not reported", [
-        above != null ? "Per foundation pupil" : `DESE has not reported FY${years[last]} actual spending`,
-        cNss && cNss[2].values[last] != null ? `${cName}: ${usd(cNss[2].values[last]!)}` : "",
+      tile(`Spending above required, FY${years[last]}`, above != null ? money(above) : "Not reported", [
+        above == null ? `DESE has not reported FY${years[last]} actual spending`
+          : !whole ? "Per foundation pupil" : e.kind === "district" ? "In total" : "For the average district",
+        cNss && cNss[2].values[last] != null ? `${cName}: ${money(cNss[2].values[last]!)}` : "",
       ]),
     );
 
@@ -1618,18 +1671,19 @@ export async function startExplorer() {
     const ppeOverlay = drawn("ppe", "cmp", ppeOverlayAll);
     const ppeTrend = drawn("ppe", "trend", ppeTrendAll);
     $("ppe-sub").textContent =
-      `${dollarsNote} per in-district FTE pupil.` +
+      `${dollarsNote}${whole ? "" : " per in-district FTE pupil"}.${wholeNote}` +
+      (whole ? " Pupils are in-district FTE." : "") +
       (ppeSel ? " Scale fitted to the selection." : "");
-    const p1 = stackedColumns($("svg-ppe") as unknown as SVGSVGElement, frame(tall, "Spending per pupil"), ppeShown, ppeOverlay,
+    const p1 = stackedColumns($("svg-ppe") as unknown as SVGSVGElement, frame(tall, `Spending${pp}`), ppeShown, ppeOverlay,
       ppeSel ? fitTicks(ppeShown, ppeOverlay?.values ?? null) : dollarTicks, fmtUsd, setHover,
       { value: ppeShownTotal[last], text: usd }, [], ppeTrend);
     legend($("legend-ppe"), [
       ...ppe.map((s) => ({ key: s.key, label: s.label, color: s.color, mark: "rect" as const })),
       ...lineLegend(ppeTrendAll, ppeOverlayAll),
     ], "ppe");
-    compareTable($("cmp-ppe"), `Spending per in-district FTE pupil${ppeSel ? `, ${ppeSel}` : ""}, ${e.name} (${dollarsNote.toLowerCase()})`, "Category",
-      cmpRows(ppeShown, cPpe, ppeSel, ppeTotal, cPpeTotal, ppeShownTotal, cPpeShownTotal, "Total"), "usd", c);
-    fullTables.ppe = { caption: `Spending per in-district FTE pupil by category, ${e.name} (${dollarsNote.toLowerCase()})`, cols: [
+    compareTable($("cmp-ppe"), `Spending${whole ? "" : " per in-district FTE pupil"}${ppeSel ? `, ${ppeSel}` : ""}, ${e.name} (${dollarsNote.toLowerCase()})`, "Category",
+      cmpRows(ppeShown, cPpe, ppeSel, ppeTotal, cPpeTotal, ppeShownTotal, cPpeShownTotal, "Total"), "usd", c, tableOpts);
+    fullTables.ppe = { caption: `Spending${whole ? "" : " per in-district FTE pupil"} by category, ${e.name} (${dollarsNote.toLowerCase()})`, cols: [
       ...ppe.map((s) => ({ label: s.label, values: s.values, fmt: usd })),
       { label: "Total", values: ppeTotal, fmt: usd },
       ...(c ? [{ label: `${cName}, total`, values: cPpeTotal!, fmt: usd }] : []),
@@ -1666,10 +1720,11 @@ export async function startExplorer() {
     const nssTrend = drawn("nss", "trend", nssTrendAll);
     const unreported = showsAbove ? years.filter((_, i) => nss[2].values[i] == null && nss[0].values[i] != null) : [];
     $("nss-sub").textContent =
-      `${dollarsNote} per foundation pupil.` +
-      (nssSel ? " Scale fitted to the selection." : " Column height is actual net school spending per pupil.") +
+      `${dollarsNote}${whole ? "" : " per foundation pupil"}.${wholeNote}` +
+      (whole ? " Pupils are foundation enrollment." : "") +
+      (nssSel ? " Scale fitted to the selection." : ` Column height is actual net school spending${pp}.`) +
       (unreported.length ? ` Faded: DESE has not reported FY${unreported.join(", FY")} actual spending.` : "");
-    const p3 = stackedColumns($("svg-nss") as unknown as SVGSVGElement, frame(tall, "Net school spending per pupil", "Spending per pupil"), nssShown, nssOverlay,
+    const p3 = stackedColumns($("svg-nss") as unknown as SVGSVGElement, frame(tall, `Net school spending${pp}`, `Spending${pp}`), nssShown, nssOverlay,
       nssSel ? fitTicks(nssShown, nssOverlay?.values ?? null) : dollarTicks, fmtUsd, setHover,
       { value: nssShownTotal[last], text: usd }, years.map((_, i) => showsAbove && nss[2].values[i] == null), nssTrend);
     // The hatch only appears when a shortfall sits on top of other segments
@@ -1679,9 +1734,9 @@ export async function startExplorer() {
       ...(hasShortfall ? [{ label: "Below required (shortfall)", color: "#524f45", mark: "hatch" as const }] : []),
       ...lineLegend(nssTrendAll, nssOverlayAll),
     ], "nss");
-    compareTable($("cmp-nss"), `Chapter 70 aid and net school spending per foundation pupil${nssSel ? `, ${nssSel}` : ""}, ${e.name} (${dollarsNote.toLowerCase()})`, "Component",
-      cmpRows(nssShown, cNss, nssSel, nssTotal, cNssTotal, nssShownTotal, cNssShownTotal, "Actual net school spending"), "usd", c);
-    fullTables.nss = { caption: `Chapter 70 aid and net school spending per foundation pupil, ${e.name} (${dollarsNote.toLowerCase()})`, cols: [
+    compareTable($("cmp-nss"), `Chapter 70 aid and net school spending${whole ? "" : " per foundation pupil"}${nssSel ? `, ${nssSel}` : ""}, ${e.name} (${dollarsNote.toLowerCase()})`, "Component",
+      cmpRows(nssShown, cNss, nssSel, nssTotal, cNssTotal, nssShownTotal, cNssShownTotal, "Actual net school spending"), "usd", c, tableOpts);
+    fullTables.nss = { caption: `Chapter 70 aid and net school spending${whole ? "" : " per foundation pupil"}, ${e.name} (${dollarsNote.toLowerCase()})`, cols: [
       ...nss.map((s) => ({ label: s.label, values: s.values, fmt: usd })),
       { label: "Actual NSS", values: nssTotal, fmt: usd },
       ...(c ? [{ label: `${cName}, actual NSS`, values: cNssTotal!, fmt: usd }] : []),
@@ -1717,39 +1772,42 @@ export async function startExplorer() {
       const revOverlay = drawn("rev", "cmp", revOverlayAll);
       const revTrend = drawn("rev", "trend", revTrendAll);
       $("rev-sub").textContent =
-        `${dollarsNote} per in-district FTE pupil${e.kind === "district" ? "" : `, pooled over its ${e.rev_members} regional districts`}. ` +
+        (whole
+          ? `${dollarsNote}, in total${e.kind === "district" ? "" : `, for the average of its ${e.rev_members} regional districts`}: ` +
+            "each year's revenue per in-district FTE pupil times its pupils. "
+          : `${dollarsNote} per in-district FTE pupil${e.kind === "district" ? "" : `, pooled over its ${e.rev_members} regional districts`}. `) +
         `Census figures through FY${revYears.latest}.` +
         (c && !cRev ? ` ${capital(refName(c))} has no revenue chart to compare.` : "") +
         (revSel ? " Scale fitted to the selection." : "");
       let revMax = 0;
       years.forEach((_, i) => (revMax = Math.max(revMax, stackTop(rev, i), cRevTotal?.[i] ?? 0)));
-      p4 = stackedColumns($("svg-rev") as unknown as SVGSVGElement, frame(tall, "Revenue per pupil"), revShown, revOverlay,
+      p4 = stackedColumns($("svg-rev") as unknown as SVGSVGElement, frame(tall, `Revenue${pp}`), revShown, revOverlay,
         revSel ? fitTicks(revShown, revOverlay?.values ?? null) : niceTicks(revMax * 1.04), fmtUsd, setHover,
         { value: revShownTotal[end], text: usd, index: end }, [], revTrend);
       legend($("legend-rev"), [
         ...rev.map((s) => ({ key: s.key, label: s.label, color: s.color, mark: "rect" as const })),
         ...lineLegend(revTrendAll, revOverlayAll),
       ], "rev");
-      compareTable($("cmp-rev"), `Revenue per in-district FTE pupil${revSel ? `, ${revSel}` : ""}, ${e.name} (${dollarsNote.toLowerCase()})`, "Source",
+      compareTable($("cmp-rev"), `Revenue${whole ? "" : " per in-district FTE pupil"}${revSel ? `, ${revSel}` : ""}, ${e.name} (${dollarsNote.toLowerCase()})`, "Source",
         cmpRows(revShown, cRev, revSel, revTotal, cRevTotal, revShownTotal, cRevShownTotal, "Total"),
         "usd", cRev ? { ...c!, name: cRevName } : null, {
-        end, noCmpNote: c ? `${capital(refName(c))} has no revenue figures to shade this table against.` : undefined,
+        end, ...tableOpts, noCmpNote: c ? `${capital(refName(c))} has no revenue figures to shade this table against.` : undefined,
       });
-      fullTables.rev = { caption: `Revenue per in-district FTE pupil by source, ${e.name} (${dollarsNote.toLowerCase()})`, cols: [
+      fullTables.rev = { caption: `Revenue${whole ? "" : " per in-district FTE pupil"} by source, ${e.name} (${dollarsNote.toLowerCase()})`, cols: [
         ...rev.map((s) => ({ label: s.label, values: s.values, fmt: usd })),
         { label: "Total", values: revTotal, fmt: usd },
         ...(cRev ? [{ label: `${cRevName}, total`, values: cRevTotal!, fmt: usd }] : []),
       ] };
       revTip = (i) => revTotal[i] == null
         ? { title: `FY${years[i]}`, rows: [{ value: "–", label: "Not yet published by Census" }] }
-        : stackTip(i, revShown, revSel, revShownTotal, revTotal, revOverlay, revTrend, "Total revenue per pupil", "sources");
+        : stackTip(i, revShown, revSel, revShownTotal, revTotal, revOverlay, revTrend, `Total revenue${pp}`, "sources");
     }
 
     // Tooltips
     panels = [
       {
         panel: p1, figure: $("fig-ppe"),
-        tip: (i) => stackTip(i, ppeShown, ppeSel, ppeShownTotal, ppeTotal, ppeOverlay, ppeTrend, "Total per pupil", "categories"),
+        tip: (i) => stackTip(i, ppeShown, ppeSel, ppeShownTotal, ppeTotal, ppeOverlay, ppeTrend, `Total${pp}`, "categories"),
       },
       {
         panel: p2, figure: $("fig-enroll"),
@@ -1918,7 +1976,7 @@ export async function startExplorer() {
     const units = s.kind === "count" ? "" : ` (${dollarsNote.toLowerCase()})`;
     compareTable($(`cmp-${s.key}`), `${s.caption}${sel ? `, ${sel}` : ""}, ${s.name}${units}`, s.rowLabel,
       cmpRows(shown, s.cSeries, sel, total, cTotal, shownTotal, cShownTotal, "Total"), s.kind ?? "usd", s.cmp,
-      { end: s.end, per: PER_WORD[state.per], noCmpNote: s.noCmpNote });
+      { end: s.end, per: state.per === "total" ? "" : PER_WORD[state.per], noCmpNote: s.noCmpNote });
     fullTables[s.key] = { caption: `${s.caption} by year, ${s.name}${units}`, cols: [
       ...s.series.map((x) => ({ label: x.label, values: x.values, fmt })),
       { label: "Total", values: total, fmt },
@@ -1941,16 +1999,22 @@ export async function startExplorer() {
     for (const o of townVsSelect.options) o.disabled = o.value === t.id;
 
     // The data are per resident. Per household or taxable property, each year's values scale by
-    // residents over households or parcels, the town's (or an average's towns' combined) own.
+    // residents over households or parcels, the town's (or an average's towns' combined) own. In
+    // total they scale by residents: a town's whole dollars, or an average's average town's, its
+    // combined residents over its towns.
     const perWord = PER_WORD[state.per];
+    const inTotal = state.per === "total";
+    const perP = inTotal ? "" : ` per ${perWord}`;
+    const money = inTotal ? whole$ : usd;
     // Titles and chart descriptions name the unit the Per choice picks
-    document.querySelectorAll("[data-per]").forEach((n) => (n.textContent = perWord));
+    document.querySelectorAll("[data-per]").forEach((n) => (n.textContent = perP));
     document.querySelectorAll("[data-aria-per]").forEach((n) =>
-      n.setAttribute("aria-label", n.getAttribute("data-aria-per")!.replace("{per}", perWord)));
+      n.setAttribute("aria-label", n.getAttribute("data-aria-per")!.replace("{per}", perP)));
     const parcelCount = (x: Town): Values =>
       years.map((_, i) => (x.parcels ? sumAt(PARCEL_SERIES.map((q) => x.parcels![q.key]), i) : null));
     const perK = (x: Town): Values => {
       if (state.per === "resident") return years.map(() => 1);
+      if (state.per === "total") return x.pop.map((p) => (p == null ? null : x.kind === "average" && x.members ? p / x.members : p));
       const d = state.per === "household" ? x.hh ?? years.map(() => null) : parcelCount(x);
       return years.map((_, i) => (d[i] && x.pop[i] ? x.pop[i]! / d[i]! : null));
     };
@@ -1968,6 +2032,8 @@ export async function startExplorer() {
         "estimates carry wide margins of error.",
       parcel: "Taxable properties are the parcels of taxable real estate on each town's LA-4 report, as of January 1 " +
         "before the fiscal year. Personal property accounts and exempt parcels aren't counted.",
+      total: "Totals are each year's dollars for the whole town. An average's totals are its average town's: the " +
+        "group's figure per resident times its combined population over its towns.",
     };
     $("per-note").textContent = perNote[state.per];
     const spendTotal = totals(spend);
@@ -2041,19 +2107,20 @@ export async function startExplorer() {
     const eIdx = hasProp ? lastWith(t.eqv!) : end;
     const bIdx = hasProp ? lastWith(t.sf_bill!) : end;
     const propTiles = !hasProp ? [] : [
-      tile(`Assessed value per ${perWord}, FY${years[pEnd]}`, valTotal[pEnd] != null ? usd(valTotal[pEnd]!) : "–", [
-        t.kind === "town" && t.value_total?.[pEnd] != null ? `${amount(t.value_total[pEnd]!)} in all` : "",
+      tile(`Assessed value${perP}, FY${years[pEnd]}`, valTotal[pEnd] != null ? money(valTotal[pEnd]!) : "–", [
+        !inTotal && t.kind === "town" && t.value_total?.[pEnd] != null ? `${amount(t.value_total[pEnd]!)} in all` : "",
         homes(val, pEnd) != null ? `Residential: ${percent(homes(val, pEnd)!)} of it` : "",
-        cVal && totals(cVal)[pEnd] != null ? `${c!.name}: ${usd(totals(cVal)[pEnd]!)}` : "",
+        cVal && totals(cVal)[pEnd] != null ? `${c!.name}: ${money(totals(cVal)[pEnd]!)}` : "",
       ]),
       tile(`${t.kind === "town" ? "Parcels" : "Parcels per town"}, FY${years[pEnd]}`, parTotal[pEnd] != null ? count(parTotal[pEnd]!) : "–", [
         singles(par, pEnd) != null ? `${percent(singles(par, pEnd)!)} single-family homes` : "",
         cHasProp && singles(parcelSeries(c!), pEnd) != null ? `${c!.name}: ${percent(singles(parcelSeries(c!), pEnd)!)}` : "",
       ]),
-      tile(`Equalized valuation per ${perWord}, January ${years[eIdx] - 1}`,
-        per(t.eqv!, kT)[eIdx] != null ? usd(deflate(per(t.eqv!, kT))[eIdx]!) : "–", [
-        t.eqv_total?.[eIdx] != null ? `${amount(t.eqv_total[eIdx]!)} ${t.kind === "town" ? "in all" : "combined"}` : "",
-        c?.eqv && per(c.eqv, kC!)[eIdx] != null ? `${c.name}: ${usd(deflate(per(c.eqv, kC!))[eIdx]!)}` : "",
+      tile(`Equalized valuation${perP}, January ${years[eIdx] - 1}`,
+        per(t.eqv!, kT)[eIdx] != null ? money(deflate(per(t.eqv!, kT))[eIdx]!) : "–", [
+        t.eqv_total?.[eIdx] != null && !(inTotal && t.kind === "town")
+          ? `${amount(t.eqv_total[eIdx]!)} ${t.kind === "town" ? "in all" : "combined"}` : "",
+        c?.eqv && per(c.eqv, kC!)[eIdx] != null ? `${c.name}: ${money(deflate(per(c.eqv, kC!))[eIdx]!)}` : "",
       ]),
       tile(`Average single-family tax bill, FY${years[bIdx]}`, t.sf_bill![bIdx] != null ? usd(deflate(t.sf_bill!)[bIdx]!) : "–", [
         t.sf_bill_income?.[bIdx] != null ? `${percent(t.sf_bill_income[bIdx]!)} of income per capita` : "",
@@ -2061,17 +2128,18 @@ export async function startExplorer() {
       ]),
     ];
     $("tiles").replaceChildren(
-      tile(`General fund spending per ${perWord}, FY${fy}`, spendTotal[end] != null ? usd(spendTotal[end]!) : "–", [
+      tile(`General fund spending${perP}, FY${fy}`, spendTotal[end] != null ? money(spendTotal[end]!) : "–", [
         g != null ? `${pct(g)} a year on trend since FY${years[0]}${real ? ", after inflation" : ", before inflation"}` : "",
-        t.kind === "town" && allDollars != null ? `${millions(allDollars)} in all` : "",
-        c && cSpendTotal?.[end] != null ? `${c.name}: ${usd(cSpendTotal[end]!)}` : "",
+        !inTotal && t.kind === "town" && allDollars != null ? `${millions(allDollars)} in all` : "",
+        inTotal && t.kind === "average" ? "For the average town" : "",
+        c && cSpendTotal?.[end] != null ? `${c.name}: ${money(cSpendTotal[end]!)}` : "",
       ]),
       tile(`Education's share of spending, FY${fy}`, eduShare != null ? percent(eduShare) : "–", [
-        spend[0].values[end] != null ? `${usd(spend[0].values[end]!)} per ${perWord}` : "",
+        spend[0].values[end] != null ? `${money(spend[0].values[end]!)}${perP}` : "",
         c && cEduShare != null ? `${c.name}: ${percent(cEduShare)}` : "",
       ]),
       tile(`Taxes' share of revenue, FY${fy}`, taxShare != null ? percent(taxShare) : "–", [
-        rev[0].values[end] != null ? `${usd(rev[0].values[end]!)} per ${perWord}` : "",
+        rev[0].values[end] != null ? `${money(rev[0].values[end]!)}${perP}` : "",
         c && cTaxShare != null ? `${c.name}: ${percent(cTaxShare)}` : "",
       ]),
       tile(`${t.kind === "town" ? "Population" : "Combined population"}, July ${years[last] - 1}`, popNow != null ? count(popNow) : "–", [
@@ -2088,15 +2156,15 @@ export async function startExplorer() {
     // Panel 1: spending by function
     const p1 = townStack({
       key: "tspend", name: t.name, series: spend, cSeries: cSpend, cmp: c, noun: "functions", rowLabel: "Function",
-      caption: `General fund spending per ${perWord}`, yShort: `Spending per ${perWord}`, totalLabel: `Total per ${perWord}`, end, width,
-      sub: `${dollarsNote} per ${perWord}.${filed}`,
+      caption: `General fund spending${perP}`, yShort: `Spending${perP}`, totalLabel: `Total${perP}`, end, width,
+      sub: `${dollarsNote}${perP}.${filed}`,
     }, dollarsNote);
 
     // Panel 2: revenue by source
     const p2 = townStack({
       key: "trev", name: t.name, series: rev, cSeries: cRev, cmp: c, noun: "sources", rowLabel: "Source",
-      caption: `General fund revenue per ${perWord}`, yShort: `Revenue per ${perWord}`, totalLabel: `Total per ${perWord}`, end, width,
-      sub: `${dollarsNote} per ${perWord}.${filed}`,
+      caption: `General fund revenue${perP}`, yShort: `Revenue${perP}`, totalLabel: `Total${perP}`, end, width,
+      sub: `${dollarsNote}${perP}.${filed}`,
     }, dollarsNote);
 
     // The property tax: the levy against its Prop 2 1/2 limit, and the single-family bill
@@ -2114,8 +2182,8 @@ export async function startExplorer() {
         `(${percent((max - raised) / max)}) unused.` : "";
       const p7 = townStack({
         key: "tlevy", name: t.name, series: levy, cSeries: cLevy, cmp: cLevy ? c : null, noun: "parts", rowLabel: "Levy",
-        caption: `Property tax levy and its limit per ${perWord}`, yShort: `Levy per ${perWord}`, totalLabel: `Levy limit per ${perWord}`, end: lEnd, width,
-        sub: `${dollarsNote} per ${perWord}. Proposition 2½ limits each town's levy; the stack's full height is the limit, ` +
+        caption: `Property tax levy and its limit${perP}`, yShort: `Levy${perP}`, totalLabel: `Levy limit${perP}`, end: lEnd, width,
+        sub: `${dollarsNote}${perP}. Proposition 2½ limits each town's levy; the stack's full height is the limit, ` +
           `with voter-approved debt exclusions. ${used}`,
       }, dollarsNote);
       // The single-family bill, with its rate and its share of income in the tooltip
@@ -2161,8 +2229,8 @@ export async function startExplorer() {
     if (hasProp) {
       const p4 = townStack({
         key: "tval", name: t.name, series: val, cSeries: cVal, cmp: cVal ? c : null, noun: "property types",
-        rowLabel: "Property type", caption: `Assessed value per ${perWord}`, yShort: `Value per ${perWord}`, totalLabel: `Total per ${perWord}`, end: pEnd, width,
-        sub: `${dollarsNote} per ${perWord}: taxable property as assessed on January 1 before each fiscal year.`,
+        rowLabel: "Property type", caption: `Assessed value${perP}`, yShort: `Value${perP}`, totalLabel: `Total${perP}`, end: pEnd, width,
+        sub: `${dollarsNote}${perP}: taxable property as assessed on January 1 before each fiscal year.`,
         missing: "Not reported to the state",
       }, dollarsNote);
       const p5 = townStack({
@@ -2172,7 +2240,7 @@ export async function startExplorer() {
         sub: (t.kind === "town" ? "Parcels of taxable real estate by use." : `Average per town, across its ${t.members} towns.`) +
           " Personal property accounts and exempt parcels are not counted.",
         noCmpNote: "Parcel counts aren't compared, because towns differ so much in size; the assessed value chart compares " +
-          `property per ${perWord}.`,
+          (inTotal ? "towns' property values." : `property per ${perWord}.`),
         missing: "Not reported to the state",
       }, dollarsNote);
       // EQV every other year, joined across the years between
@@ -2182,22 +2250,22 @@ export async function startExplorer() {
       ];
       const eMax = Math.max(...eqvLines.flatMap((x) => x.values.map((v) => v ?? 0)));
       const p6 = lines($("svg-teqv") as unknown as SVGSVGElement,
-        { width, height: width < 520 ? 220 : 260, years, yTitle: `Equalized value per ${perWord}`, yTitleShort: `EQV per ${perWord}` }, eqvLines,
+        { width, height: width < 520 ? 220 : 260, years, yTitle: `Equalized value${perP}`, yTitleShort: `EQV${perP}` }, eqvLines,
         niceTicks(eMax * 1.04, 4), fmtUsd, usd, setHover, true);
       legend($("legend-teqv"), eqvLines.map((x) => ({ label: x.label, color: x.color, mark: "line" as const })));
       const k = towns!.meta.c70_target;
       const at = k ? years.indexOf(k.eqv_year + 1) : -1;
       const base = k && t.kind === "town" && at >= 0 ? t.eqv_total?.[at] ?? null : null;
-      $("teqv-sub").textContent = `${dollarsNote} per ${perWord}. Every two years the state sets each town's equalized ` +
+      $("teqv-sub").textContent = `${dollarsNote}${perP}. Every two years the state sets each town's equalized ` +
         "valuation, its estimate of what all the town's taxable property would sell for on January 1; each is shown at the " +
         "fiscal year whose assessments share that date." +
         (k && base != null ? ` For FY${k.fy}, Chapter 70 set ${t.name}'s target local contribution at ${k.property_pct}% of ` +
           `its January ${k.eqv_year} EQV (${usd(base * k.property_pct / 100)}) plus ${k.income_pct}% of its residents' ` +
           `${k.income_year} income, up to ${k.cap}% of its foundation budget.` : "");
       fullTables.teqv = { caption: `Equalized valuation, ${t.name} (${dollarsNote.toLowerCase()})`, cols: [
-        { label: `Per ${perWord}`, values: deflate(per(t.eqv!, kT)), fmt: usd },
+        { label: inTotal ? (t.kind === "town" ? "Total" : "Average town") : `Per ${perWord}`, values: deflate(per(t.eqv!, kT)), fmt: usd },
         { label: t.kind === "town" ? "In all (nominal)" : "Towns combined (nominal)", values: t.eqv_total ?? [], fmt: (v) => amount(v) },
-        ...(c?.eqv ? [{ label: `${c.name}, per ${perWord}`, values: deflate(per(c.eqv, kC!)), fmt: usd }] : []),
+        ...(c?.eqv ? [{ label: `${c.name}${inTotal ? ", total" : `, per ${perWord}`}`, values: deflate(per(c.eqv, kC!)), fmt: usd }] : []),
       ] };
       propPanels.push(
         { panel: p4.panel, figure: $("fig-tval"), tip: p4.tip },

@@ -1,5 +1,50 @@
 ---
 import Layout from "../../layouts/Layout.astro";
+
+// The agencies' files behind the explorer, as kept in the public pipeline repository
+const REPO_DATA = "https://github.com/timshores/schools/blob/main/ppe_report/data/";
+const SOURCE_FILES: { group: string; files: { file: string; holds: string; source: string; url: string; retrieved: string }[] }[] = [
+  { group: "School districts", files: [
+    { file: "dese_expenditures.csv", holds: "Spending per pupil by category, and enrollment, for every district, FY2009 on",
+      source: "DESE, District Expenditures by Spending Category", url: "https://educationtocareer.data.mass.gov/d/er3w-dyti", retrieved: "Oct 18, 2026" },
+    { file: "dese_c70_profile.csv", holds: "Foundation enrollment and budget, required local contribution, Chapter 70 aid, and required and actual net school spending, by district and year",
+      source: "DESE, Chapter 70 district profiles", url: "https://www.doe.mass.edu/finance/chapter70/default.html", retrieved: "Oct 18, 2026" },
+    { file: "dese_c70_regional_members.csv", holds: "Each regional district's member towns and their FY2025 required contributions",
+      source: "DESE, FY2025 Chapter 70 regional district summary", url: "https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025.html", retrieved: "Oct 21, 2026" },
+    { file: "census_f33_ma.csv", holds: "Revenue by source for every Massachusetts school system, FY2009 to FY2024",
+      source: "Census Bureau, Annual Survey of School System Finances", url: "https://www.census.gov/programs-surveys/school-finances.html", retrieved: "Oct 21, 2026" },
+    { file: "nces_ma_districts.csv", holds: "The crosswalk from federal district IDs to DESE's district codes",
+      source: "NCES Common Core of Data, through the Urban Institute's Education Data Portal", url: "https://educationdata.urban.org/", retrieved: "Oct 21, 2026" },
+  ] },
+  { group: "Chapter 70 formula", files: [
+    { file: "dese_c70_townwide.csv", holds: "Every town's FY2026 and FY2027 local contribution calculation, before and after the 82.5% cap",
+      source: "DESE, complete Chapter 70 formula spreadsheets", url: "https://www.doe.mass.edu/finance/chapter70/fy2027/chapter-2027.xlsm", retrieved: "Oct 21, 2026" },
+    { file: "dese_c70_town_history.csv", holds: "Every town's yield, foundation budget, target and required contribution, FY2007 on",
+      source: "DESE, Chapter 70 Trends in Aid and Local Contribution", url: "https://www.doe.mass.edu/finance/chapter70/keyfactors.xlsx", retrieved: "Oct 21, 2026" },
+  ] },
+  { group: "Cities and towns", files: [
+    { file: "dls_schedule_a_general_fund.csv", holds: "General fund revenue by source and spending by function, FY2002 on",
+      source: "Division of Local Services, Schedule A", url: "https://dls-gw.dor.state.ma.us/reports/rdPage.aspx?rdReport=ScheduleA.GenFund_MAIN", retrieved: "Oct 21, 2026" },
+    { file: "dls_la4_parcels.csv", holds: "Parcels and assessed values by property use, FY2003 on",
+      source: "Division of Local Services, LA-4", url: "https://dls-gw.dor.state.ma.us/reports/rdPage.aspx?rdReport=PropertyTaxInformation.LA4.Parcel_counts_vals", retrieved: "Oct 21, 2026" },
+    { file: "dls_eqv.csv", holds: "Equalized valuations, 1970 on",
+      source: "Division of Local Services, Equalized Valuations", url: "https://dls-gw.dor.state.ma.us/reports/rdPage.aspx?rdReport=PropertyTaxInformation.EQV.EQV", retrieved: "Oct 21, 2026" },
+    { file: "dls_single_family_tax_bill.csv", holds: "Average single-family value and tax bill, and income per capita, 1988 on",
+      source: "Division of Local Services, Average Single Family Tax Bill", url: "https://dls-gw.dor.state.ma.us/reports/rdPage.aspx?rdReport=AverageSingleTaxBill.SingleFamTaxBill_wRange", retrieved: "Oct 21, 2026" },
+    { file: "dls_levy_capacity.csv", holds: "Proposition 2½ levy limit, levy, excess capacity and ceiling, FY2007 on",
+      source: "Division of Local Services, Excess Levy Capacity and Overrides", url: "https://dls-gw.dor.state.ma.us/reports/rdPage.aspx?rdReport=Prop2.5.ExcessLevyCapandOverride_10_pres", retrieved: "Oct 21, 2026" },
+    { file: "census_town_population.csv", holds: "Population on July 1 at the start of each fiscal year, FY2009 on",
+      source: "Census Bureau, subcounty population estimates", url: "https://www.census.gov/programs-surveys/popest.html", retrieved: "Oct 21, 2026" },
+    { file: "census_town_households.csv", holds: "Households, each five-year release from 2005–2009 on",
+      source: "Census Bureau, American Community Survey, table B11001", url: "https://www.census.gov/programs-surveys/acs", retrieved: "Oct 21, 2026" },
+    { file: "town_boundaries.json", holds: "Town outlines for the map, and each town's land area",
+      source: "Census Bureau, 2023 cartographic boundary file", url: "https://www2.census.gov/geo/tiger/GENZ2023/shp/cb_2023_25_cousub_500k.zip", retrieved: "Oct 22, 2026" },
+  ] },
+  { group: "Prices", files: [
+    { file: "inflation_indices.csv", holds: "Fiscal-year averages of the Northeast consumer price index",
+      source: "Bureau of Labor Statistics, CPI-U Northeast", url: "https://data.bls.gov/timeseries/CUUR0100SA0", retrieved: "Oct 18, 2026" },
+  ] },
+];
 ---
 
 <Layout
@@ -38,12 +83,20 @@ import Layout from "../../layouts/Layout.astro";
       })();
     </script>
 
-    <div class="view-tabs" role="tablist" aria-label="Explorer view">
+    <div class="view-tabs">
+      <div class="view-tablist" role="tablist" aria-label="Explorer view">
       <button type="button" role="tab" id="tab-districts" data-view="districts" aria-controls="view-panel" aria-selected="true">School districts</button>
       <button type="button" role="tab" id="tab-towns" data-view="towns" aria-controls="view-panel" aria-selected="false" tabindex="-1">Towns</button>
       <button type="button" role="tab" id="tab-commonwealth" data-view="commonwealth" aria-controls="view-panel" aria-selected="false" tabindex="-1">Commonwealth</button>
       <button type="button" role="tab" id="tab-cap" data-view="cap" aria-controls="view-panel" aria-selected="false" tabindex="-1">The 82.5% cap</button>
       <button type="button" role="tab" id="tab-data" data-view="data" aria-controls="view-panel" aria-selected="false" tabindex="-1">Data</button>
+      </div>
+      <!-- Extra detail on or off: off leaves the controls, tiles, charts and legends -->
+      <button type="button" class="detail-dial" id="detail-dial" role="switch" aria-checked="true">
+        <span class="dial-label">Detail</span>
+        <span class="dial-face" aria-hidden="true"><span class="dial-pointer"></span></span>
+        <span class="dial-state" aria-hidden="true">On</span>
+      </button>
     </div>
 
     <div id="view-panel" role="tabpanel" aria-labelledby="tab-districts">
@@ -111,12 +164,20 @@ import Layout from "../../layouts/Layout.astro";
         </div>
         <div class="years-ends" aria-hidden="true"><span>FY<span data-start>2009</span></span><span>FY<span data-latest>2025</span></span></div>
       </div>
-      <fieldset class="control toggle" data-view-only="towns" hidden>
-        <legend>Per</legend>
+      <fieldset class="control toggle" data-view-only="districts">
+        <legend>Amounts</legend>
         <div class="toggle-options">
-          <label><input type="radio" name="per" value="resident" checked /><span>Resident</span></label>
-          <label><input type="radio" name="per" value="household" /><span>Household</span></label>
-          <label><input type="radio" name="per" value="parcel" /><span>Taxable property</span></label>
+          <label><input type="radio" name="dper" value="pupil" checked /><span>Per pupil</span></label>
+          <label><input type="radio" name="dper" value="total" /><span>Total</span></label>
+        </div>
+      </fieldset>
+      <fieldset class="control toggle" data-view-only="towns" hidden>
+        <legend>Amounts</legend>
+        <div class="toggle-options">
+          <label><input type="radio" name="per" value="resident" checked /><span>Per resident</span></label>
+          <label><input type="radio" name="per" value="household" /><span>Per household</span></label>
+          <label><input type="radio" name="per" value="parcel" /><span>Per property</span></label>
+          <label><input type="radio" name="per" value="total" /><span>Total</span></label>
         </div>
       </fieldset>
       <p class="controls-note" id="dollars-note"></p>
@@ -228,10 +289,10 @@ import Layout from "../../layouts/Layout.astro";
 
     <div id="panels" class="panels" data-view-only="districts">
       <figure id="fig-ppe" class="panel">
-        <h3>Spending per pupil by category</h3>
+        <h3>Spending<span data-dper> per pupil</span> by category</h3>
         <p class="panel-sub" id="ppe-sub"></p>
         <ul class="legend" id="legend-ppe" aria-label="Spending categories. Select one or more to show only those."></ul>
-        <svg id="svg-ppe" tabindex="0" role="img" aria-label="Stacked columns of spending per pupil by category for each fiscal year. Use the arrow keys to read each year; the data table below has every value."></svg>
+        <svg id="svg-ppe" tabindex="0" role="img" data-aria-dper="Stacked columns of spending{dper} by category for each fiscal year. Use the arrow keys to read each year; the data table below has every value." aria-label="Stacked columns of spending per pupil by category for each fiscal year. Use the arrow keys to read each year; the data table below has every value."></svg>
         <div class="tooltip" role="status" hidden></div>
         <details class="table-view compare-view">
           <summary>Comparison table</summary>
@@ -261,7 +322,7 @@ import Layout from "../../layouts/Layout.astro";
         <h3>Chapter 70 aid and net school spending</h3>
         <p class="panel-sub" id="nss-sub"></p>
         <ul class="legend" id="legend-nss" aria-label="Net school spending components. Select one or more to show only those."></ul>
-        <svg id="svg-nss" tabindex="0" role="img" aria-label="Stacked columns of Chapter 70 aid, required local contribution, and spending above the requirement per foundation pupil for each fiscal year. Use the arrow keys to read each year; the data table below has every value."></svg>
+        <svg id="svg-nss" tabindex="0" role="img" data-aria-dper="Stacked columns of Chapter 70 aid, required local contribution, and spending above the requirement{dper} for each fiscal year. Use the arrow keys to read each year; the data table below has every value." aria-label="Stacked columns of Chapter 70 aid, required local contribution, and spending above the requirement per foundation pupil for each fiscal year. Use the arrow keys to read each year; the data table below has every value."></svg>
         <div class="tooltip" role="status" hidden></div>
         <details class="table-view compare-view">
           <summary>Comparison table</summary>
@@ -273,12 +334,12 @@ import Layout from "../../layouts/Layout.astro";
       </figure>
 
       <figure id="fig-rev" class="panel">
-        <h3>Revenue per pupil by source</h3>
+        <h3>Revenue<span data-dper> per pupil</span> by source</h3>
         <p class="panel-sub" id="rev-sub"></p>
         <p class="panel-none" id="rev-none" hidden></p>
         <div id="rev-body">
           <ul class="legend" id="legend-rev" aria-label="Revenue sources. Select one or more to show only those."></ul>
-          <svg id="svg-rev" tabindex="0" role="img" aria-label="Stacked columns of revenue per pupil by source for each fiscal year. Use the arrow keys to read each year; the data table below has every value."></svg>
+          <svg id="svg-rev" tabindex="0" role="img" data-aria-dper="Stacked columns of revenue{dper} by source for each fiscal year. Use the arrow keys to read each year; the data table below has every value." aria-label="Stacked columns of revenue per pupil by source for each fiscal year. Use the arrow keys to read each year; the data table below has every value."></svg>
           <div class="tooltip" role="status" hidden></div>
           <details class="table-view compare-view">
             <summary>Comparison table</summary>
@@ -293,10 +354,10 @@ import Layout from "../../layouts/Layout.astro";
 
     <div id="town-panels" class="panels" data-view-only="towns" hidden>
       <figure id="fig-tspend" class="panel">
-        <h3>General fund spending per <span data-per>resident</span> by function</h3>
+        <h3>General fund spending<span data-per> per resident</span> by function</h3>
         <p class="panel-sub" id="tspend-sub"></p>
         <ul class="legend" id="legend-tspend" aria-label="Spending functions. Select one or more to show only those."></ul>
-        <svg id="svg-tspend" tabindex="0" role="img" data-aria-per="Stacked columns of general fund spending per {per} by function for each fiscal year. Use the arrow keys to read each year; the data table below has every value." aria-label="Stacked columns of general fund spending per resident by function for each fiscal year. Use the arrow keys to read each year; the data table below has every value."></svg>
+        <svg id="svg-tspend" tabindex="0" role="img" data-aria-per="Stacked columns of general fund spending{per} by function for each fiscal year. Use the arrow keys to read each year; the data table below has every value." aria-label="Stacked columns of general fund spending per resident by function for each fiscal year. Use the arrow keys to read each year; the data table below has every value."></svg>
         <div class="tooltip" role="status" hidden></div>
         <details class="table-view compare-view">
           <summary>Comparison table</summary>
@@ -308,10 +369,10 @@ import Layout from "../../layouts/Layout.astro";
       </figure>
 
       <figure id="fig-trev" class="panel">
-        <h3>General fund revenue per <span data-per>resident</span> by source</h3>
+        <h3>General fund revenue<span data-per> per resident</span> by source</h3>
         <p class="panel-sub" id="trev-sub"></p>
         <ul class="legend" id="legend-trev" aria-label="Revenue sources. Select one or more to show only those."></ul>
-        <svg id="svg-trev" tabindex="0" role="img" data-aria-per="Stacked columns of general fund revenue per {per} by source for each fiscal year. Use the arrow keys to read each year; the data table below has every value." aria-label="Stacked columns of general fund revenue per resident by source for each fiscal year. Use the arrow keys to read each year; the data table below has every value."></svg>
+        <svg id="svg-trev" tabindex="0" role="img" data-aria-per="Stacked columns of general fund revenue{per} by source for each fiscal year. Use the arrow keys to read each year; the data table below has every value." aria-label="Stacked columns of general fund revenue per resident by source for each fiscal year. Use the arrow keys to read each year; the data table below has every value."></svg>
         <div class="tooltip" role="status" hidden></div>
         <details class="table-view compare-view">
           <summary>Comparison table</summary>
@@ -323,10 +384,10 @@ import Layout from "../../layouts/Layout.astro";
       </figure>
 
       <figure id="fig-tlevy" class="panel">
-        <h3>Property tax levy and its limit per <span data-per>resident</span></h3>
+        <h3>Property tax levy and its limit<span data-per> per resident</span></h3>
         <p class="panel-sub" id="tlevy-sub"></p>
         <ul class="legend" id="legend-tlevy" aria-label="Levy and unused capacity. Select one to show only it."></ul>
-        <svg id="svg-tlevy" tabindex="0" role="img" data-aria-per="Stacked columns of the property tax levy and unused levy capacity per {per} for each fiscal year. Use the arrow keys to read each year; the data table below has every value." aria-label="Stacked columns of the property tax levy and unused levy capacity per resident for each fiscal year. Use the arrow keys to read each year; the data table below has every value."></svg>
+        <svg id="svg-tlevy" tabindex="0" role="img" data-aria-per="Stacked columns of the property tax levy and unused levy capacity{per} for each fiscal year. Use the arrow keys to read each year; the data table below has every value." aria-label="Stacked columns of the property tax levy and unused levy capacity per resident for each fiscal year. Use the arrow keys to read each year; the data table below has every value."></svg>
         <div class="tooltip" role="status" hidden></div>
         <details class="table-view compare-view">
           <summary>Comparison table</summary>
@@ -349,10 +410,10 @@ import Layout from "../../layouts/Layout.astro";
       </figure>
 
       <figure id="fig-tval" class="panel">
-        <h3>Assessed value per <span data-per>resident</span> by property type</h3>
+        <h3>Assessed value<span data-per> per resident</span> by property type</h3>
         <p class="panel-sub" id="tval-sub"></p>
         <ul class="legend" id="legend-tval" aria-label="Property types. Select one or more to show only those."></ul>
-        <svg id="svg-tval" tabindex="0" role="img" data-aria-per="Stacked columns of assessed property value per {per} by property type for each fiscal year. Use the arrow keys to read each year; the data table below has every value." aria-label="Stacked columns of assessed property value per resident by property type for each fiscal year. Use the arrow keys to read each year; the data table below has every value."></svg>
+        <svg id="svg-tval" tabindex="0" role="img" data-aria-per="Stacked columns of assessed property value{per} by property type for each fiscal year. Use the arrow keys to read each year; the data table below has every value." aria-label="Stacked columns of assessed property value per resident by property type for each fiscal year. Use the arrow keys to read each year; the data table below has every value."></svg>
         <div class="tooltip" role="status" hidden></div>
         <details class="table-view compare-view">
           <summary>Comparison table</summary>
@@ -379,10 +440,10 @@ import Layout from "../../layouts/Layout.astro";
       </figure>
 
       <figure id="fig-teqv" class="panel">
-        <h3>Equalized valuation per <span data-per>resident</span></h3>
+        <h3>Equalized valuation<span data-per> per resident</span></h3>
         <p class="panel-sub" id="teqv-sub"></p>
         <ul class="legend" id="legend-teqv"></ul>
-        <svg id="svg-teqv" tabindex="0" role="img" data-aria-per="Line of equalized valuation per {per}, every other fiscal year. Use the arrow keys to read each year; the data table below has every value." aria-label="Line of equalized valuation per resident, every other fiscal year. Use the arrow keys to read each year; the data table below has every value."></svg>
+        <svg id="svg-teqv" tabindex="0" role="img" data-aria-per="Line of equalized valuation{per}, every other fiscal year. Use the arrow keys to read each year; the data table below has every value." aria-label="Line of equalized valuation per resident, every other fiscal year. Use the arrow keys to read each year; the data table below has every value."></svg>
         <div class="tooltip" role="status" hidden></div>
         <button type="button" class="table-open" data-table="teqv" aria-haspopup="dialog">
           <span class="table-open-icon" aria-hidden="true">⤢</span> Full data table
@@ -450,6 +511,13 @@ import Layout from "../../layouts/Layout.astro";
         regional district's member towns, pays the required local contribution. Anything above that is a local choice. Because spending per pupil and
         net school spending use different denominators, the two charts are not the same measure: they are a picture
         of apples in the morning compared with a picture of apples in the evening. Both dollar charts share one scale.
+      </p>
+      <p>
+        <strong>Totals</strong>, under Amounts, turn the figures per pupil or per resident back into dollars. A
+        district's spending and revenue per pupil are multiplied by its in-district FTE, and its Chapter 70 figures by
+        its foundation enrollment. A town's figures are multiplied by its population. An average's totals are its
+        average member's: the group's pooled figure times its average enrollment or population. A total moves with
+        enrollment and population as well as with spending, so it can rise while spending per pupil falls.
       </p>
       <p>
         <strong>Cohorts</strong> group traditional districts by FY<span data-latest>2025</span> in-district FTE, using
@@ -521,7 +589,7 @@ import Layout from "../../layouts/Layout.astro";
         resident, using the Census Bureau's <a href="https://www.census.gov/programs-surveys/popest.html">population estimate</a> for July 1 at the start of each fiscal year. They can also be shown per household, using the Census Bureau's
         <a href="https://www.census.gov/programs-surveys/acs">American Community Survey</a> five-year estimates
         (<a href="/mass-school-spending/data/towns-households.csv" download>CSV</a>), or per taxable property, using the
-        parcels of taxable real estate on each town's LA-4. For FY2021
+        parcels of taxable real estate on each town's LA-4, or in total. For FY2021
         the April 1, 2020 estimate stands in, because the July 2020 estimate drops by more than a quarter in Amherst
         and recovers a year later.
       </p>
@@ -595,9 +663,38 @@ import Layout from "../../layouts/Layout.astro";
         <a href="/artifacts/western-ma-ppe-inflation-addendum-fy2025.pdf">inflation addendum</a> restates its growth
         rates against this index and against the federal price index for state and local government purchases.
       </p>
+      <h3 class="source-files-title">Source files</h3>
       <p>
-        The CSVs hold the data for these districts and towns as each agency published it, except that the revenue
-        file adds Census items up into the chart's sources, and every row links to its source. Built by Tim Shores with Claude Code. The code that prepares the data is at
+        The agencies' own files behind this explorer are on GitHub, in the repository with the code that prepares
+        them. Each file below links to its copy there, and each source links to the agency's page for it. The files
+        keep the rows as each agency published them: the scripts that download them keep the Massachusetts rows of
+        national files, stack years into one table, and add DESE's district codes. The repository's
+        <a href={`${REPO_DATA}README.md`}>data README</a> names the script that downloads each file again.
+      </p>
+      <div class="table-scroll">
+        <table class="source-files">
+          <thead>
+            <tr><th scope="col">File</th><th scope="col">What it holds</th><th scope="col">Where it comes from</th><th scope="col">Retrieved</th></tr>
+          </thead>
+          {SOURCE_FILES.map((g) => (
+            <tbody>
+              <tr class="source-group"><th scope="rowgroup" colspan="4">{g.group}</th></tr>
+              {g.files.map((f) => (
+                <tr>
+                  <td><a href={`${REPO_DATA}${f.file}`}>{f.file}</a></td>
+                  <td>{f.holds}</td>
+                  <td><a href={f.url}>{f.source}</a></td>
+                  <td class="source-date">{f.retrieved}</td>
+                </tr>
+              ))}
+            </tbody>
+          ))}
+        </table>
+      </div>
+      <p>
+        The CSV links in the paragraphs above are this explorer's own files: the data for these districts and towns
+        as each agency published it, except that the revenue file adds Census items up into the chart's sources, and
+        every row links to its source. Built by Tim Shores with Claude Code. The code that prepares the data is at
         <a href="https://github.com/timshores/schools">github.com/timshores/schools</a>.
       </p>
     </section>
@@ -1305,6 +1402,100 @@ import Layout from "../../layouts/Layout.astro";
     padding-top: 0.35rem;
     background: var(--paper);
     border-bottom: 1px solid var(--line);
+  }
+
+  /* On a narrow screen the tabs scroll sideways inside the bar, and the dial stays in view */
+  .view-tablist {
+    display: flex;
+    gap: 0.25rem;
+    min-width: 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .view-tablist::-webkit-scrollbar {
+    display: none;
+  }
+
+  .view-tablist [role="tab"] {
+    flex: none;
+  }
+
+  /* The detail dial: a knob turned left for off, right for on */
+  .detail-dial {
+    margin-left: auto;
+    align-self: center;
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    flex: none;
+    font: inherit;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--ink-soft);
+    background: none;
+    border: 0;
+    padding: 0.25rem 0.35rem;
+    cursor: pointer;
+  }
+
+  .detail-dial:hover {
+    color: var(--ink);
+  }
+
+  .detail-dial:focus-visible {
+    outline: 2px dashed var(--accent);
+    outline-offset: 2px;
+    border-radius: 6px;
+  }
+
+  .dial-face {
+    position: relative;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    border: 1.5px solid var(--ink-soft);
+    background: radial-gradient(circle at 40% 35%, #fff 0%, #efe8dc 75%);
+    box-shadow: 0 1px 2px rgba(31, 31, 28, 0.25);
+    transform: rotate(50deg);
+    transition: transform 0.25s ease;
+  }
+
+  .dial-pointer {
+    position: absolute;
+    top: 2px;
+    left: 50%;
+    width: 3px;
+    height: 9px;
+    border-radius: 2px;
+    background: var(--accent);
+    transform: translateX(-50%);
+  }
+
+  .detail-dial[aria-checked="false"] .dial-face {
+    transform: rotate(-50deg);
+  }
+
+  .detail-dial[aria-checked="false"] .dial-pointer {
+    background: var(--ink-soft);
+  }
+
+  .dial-state {
+    min-width: 1.6em;
+    text-align: left;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .dial-face {
+      transition: none;
+    }
+  }
+
+  /* Detail off: the controls, tiles, charts and legends stay; the explanations around them go */
+  .explorer.detail-off :global(:is(.intro, .panel-sub, .controls-note, .compare-view, .table-open, #entity-meta,
+    .relations, .cw-help, .cw-intro, .map-about, .map-source, .map-table, .cap-note, .cap-table-head, .cap-steps,
+    [data-detail])) {
+    display: none !important;
   }
 
   .view-tabs [role="tab"] {
@@ -2229,6 +2420,55 @@ import Layout from "../../layouts/Layout.astro";
 
   .notes strong {
     color: var(--ink);
+  }
+
+  .source-files-title {
+    margin: 1.6rem 0 0.4rem;
+    font-size: 1.1rem;
+  }
+
+  .source-files {
+    border-collapse: collapse;
+    font-size: 0.84rem;
+    margin: 0.4rem 0 1rem;
+    background: #fff;
+  }
+
+  /* Prose cells wrap, unlike the number tables' */
+  .table-scroll .source-files {
+    width: 100%;
+    white-space: normal;
+  }
+
+  .source-files th,
+  .source-files td {
+    text-align: left;
+    vertical-align: top;
+    padding: 0.4rem 0.6rem;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .source-files thead th {
+    font-weight: 600;
+    color: var(--ink);
+    border-bottom: 2px solid var(--line);
+  }
+
+  .source-files .source-group th {
+    padding-top: 0.8rem;
+    font-weight: 600;
+    color: var(--accent);
+    border-bottom: 1px solid var(--line);
+  }
+
+  .source-files td:first-child {
+    white-space: nowrap;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.8rem;
+  }
+
+  .source-files .source-date {
+    white-space: nowrap;
   }
 
   .explorer :global(.load-error) {
