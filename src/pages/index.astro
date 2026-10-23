@@ -2,9 +2,11 @@
 import Layout from "../layouts/Layout.astro";
 import { profile } from "../data/profile";
 import { resumeVariants } from "../data/resumeVariants";
+import LiveSash from "../components/LiveSash.astro";
 ---
 
 <Layout title={`${profile.name} - Portfolio`} description={profile.headline}>
+  <LiveSash />
   <section class="hero-section">
     <div class="hero-text">
       <p class="kicker">Portfolio / Resume / Who I Am</p>

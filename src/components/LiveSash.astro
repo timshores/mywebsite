@@ -1,0 +1,268 @@
+---
+// A fabric sash on the page card, linking to the school spending explorer. One set of cloth
+// definitions (satin sheen, weave, folds, stitching) serves two drawings of it:
+//
+// - Across the card's top-right corner, where there is room for it. Drawn in the card's own
+//   coordinates: the card's top-right corner is (0, 0), and the sash enters the top edge 330px
+//   left of the corner and leaves the right edge 235px below it. The cloth is drawn flat along
+//   the x axis, then turned onto that line, so its weave, folds and stitching run with the sash.
+// - On a phone, where the name and headline fill the card's width, straight across the top of
+//   the card instead, in the page's flow so it covers nothing.
+//
+// Past the card's edges a darker strip shows the cloth wrapping over them.
+const href = "/mass-school-spending/";
+const label = "Now live: Mass. School Spending Explorer";
+// The diagonal's centre line runs from (-A, 0) on the top edge to (0, B) on the right edge
+const A = 330;
+const B = 235;
+const THICK = 58;
+const angle = (Math.atan2(B, A) * 180) / Math.PI;
+const mid = `translate(${-A / 2} ${B / 2}) rotate(${angle.toFixed(2)})`;
+const half = THICK / 2;
+// How far the sash shows past the card's edges as it wraps over them
+const WRAP = 7;
+// The phone's straight sash
+const FLAT = 44;
+---
+
+<svg class="sash-defs" width="0" height="0" aria-hidden="true" focusable="false">
+  <defs>
+    <!-- Satin: dark at both hems, a sheen a little above the middle -->
+    <linearGradient id="sash-sheen" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#6e2a18" />
+      <stop offset="0.14" stop-color="#9c4329" />
+      <stop offset="0.38" stop-color="#c8623f" />
+      <stop offset="0.52" stop-color="#b85536" />
+      <stop offset="0.86" stop-color="#93402a" />
+      <stop offset="1" stop-color="#682715" />
+    </linearGradient>
+    <!-- Plain weave: a fine check of lighter and darker threads -->
+    <pattern id="sash-weave" width="2.4" height="2.4" patternUnits="userSpaceOnUse">
+      <rect width="1.2" height="1.2" fill="#fff" opacity="0.09" />
+      <rect x="1.2" y="1.2" width="1.2" height="1.2" fill="#fff" opacity="0.09" />
+      <rect x="1.2" width="1.2" height="1.2" fill="#000" opacity="0.07" />
+      <rect y="1.2" width="1.2" height="1.2" fill="#000" opacity="0.07" />
+    </pattern>
+    <!-- Cloth: soft creases lit from the upper left, then a fine grain of threads -->
+    <filter id="sash-cloth" x="-5%" y="-20%" width="110%" height="140%" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.011 0.028" numOctaves="2" seed="11" result="folds" />
+      <feDiffuseLighting in="folds" surfaceScale="9" lighting-color="#ffffff" result="light">
+        <feDistantLight azimuth="235" elevation="50" />
+      </feDiffuseLighting>
+      <feComposite in="SourceGraphic" in2="light" operator="arithmetic" k1="1.32" k2="0" k3="0" k4="0" result="lit" />
+      <feTurbulence type="fractalNoise" baseFrequency="1.1 0.6" numOctaves="1" seed="4" result="grain" />
+      <feColorMatrix in="grain" type="matrix" result="threads"
+        values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0.32 0 0 0 -0.11" />
+      <feComposite in="threads" in2="lit" operator="over" result="cloth" />
+      <feComposite in="cloth" in2="SourceGraphic" operator="in" />
+    </filter>
+    <filter id="sash-shadow" x="-10%" y="-20%" width="125%" height="160%">
+      <feDropShadow dx="1" dy="4" stdDeviation="3.5" flood-color="#3b2416" flood-opacity="0.38" />
+    </filter>
+    <!-- Shade over the wrapped strips, darkest where the cloth turns furthest from the light -->
+    <linearGradient id="sash-wrap-up" x1="0" y1="1" x2="0" y2="0">
+      <stop offset="0" stop-color="#000" stop-opacity="0.05" />
+      <stop offset="1" stop-color="#000" stop-opacity="0.45" />
+    </linearGradient>
+    <linearGradient id="sash-wrap-out" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#000" stop-opacity="0.05" />
+      <stop offset="1" stop-color="#000" stop-opacity="0.5" />
+    </linearGradient>
+    <linearGradient id="sash-wrap-back" x1="1" y1="0" x2="0" y2="0">
+      <stop offset="0" stop-color="#000" stop-opacity="0.05" />
+      <stop offset="1" stop-color="#000" stop-opacity="0.5" />
+    </linearGradient>
+  </defs>
+</svg>
+
+<svg class="live-sash" viewBox="-410 -14 424 314" width="424" height="314">
+  <defs>
+    <clipPath id="sash-card"><rect x="-410" y="0" width="410" height="300" /></clipPath>
+    <clipPath id="sash-band"><rect transform={mid} x="-300" y={-half} width="600" height={THICK} /></clipPath>
+    <clipPath id="sash-wrap">
+      <rect x="-410" y={-WRAP} width="410" height={WRAP} />
+      <rect x="0" y="0" width={WRAP} height="300" />
+    </clipPath>
+  </defs>
+  <g filter="url(#sash-shadow)">
+    <!-- Where the sash wraps over the card's edges: the same cloth, turned away from the light -->
+    <g clip-path="url(#sash-wrap)">
+      <g clip-path="url(#sash-band)">
+        <rect x="-410" y={-WRAP} width="424" height="314" fill="#5b2213" />
+        <rect x="-410" y={-WRAP} width="410" height={WRAP} fill="url(#sash-wrap-up)" />
+        <rect x="0" y="0" width={WRAP} height="300" fill="url(#sash-wrap-out)" />
+      </g>
+    </g>
+    <a href={href} aria-label={label}>
+      <g clip-path="url(#sash-card)">
+        <g transform={mid}>
+          <rect x="-300" y={-half} width="600" height={THICK} fill="url(#sash-sheen)" filter="url(#sash-cloth)" />
+          <rect x="-300" y={-half} width="600" height={THICK} fill="url(#sash-weave)" />
+          <!-- Hems, then the stitching just inside them -->
+          <line x1="-300" x2="300" y1={-half + 1} y2={-half + 1} class="sash-hem" />
+          <line x1="-300" x2="300" y1={half - 1} y2={half - 1} class="sash-hem" />
+          <line x1="-300" x2="300" y1={-half + 6} y2={-half + 6} class="sash-stitch" />
+          <line x1="-300" x2="300" y1={half - 6} y2={half - 6} class="sash-stitch" />
+          <rect x="-300" y={-half} width="600" height={THICK} class="sash-hover" />
+          <text x="0" y="5" text-anchor="middle" class="sash-text">
+            <tspan class="sash-strong">Now Live —</tspan> Mass. School Spending Explorer
+          </text>
+          <rect x="-190" y={-half + 3} width="380" height={THICK - 6} rx="4" class="sash-focus" />
+        </g>
+      </g>
+    </a>
+  </g>
+</svg>
+
+<a class="live-sash-flat" href={href} aria-label={label}>
+  <svg width="100%" height={FLAT + 6} aria-hidden="true" focusable="false">
+    <svg x="0" y="0" width="100%" height={FLAT} overflow="visible" filter="url(#sash-shadow)">
+      <rect width="100%" height={FLAT} fill="url(#sash-sheen)" filter="url(#sash-cloth)" />
+      <rect width="100%" height={FLAT} fill="url(#sash-weave)" />
+      <line x1="0" x2="100%" y1="1" y2="1" class="sash-hem" />
+      <line x1="0" x2="100%" y1={FLAT - 1} y2={FLAT - 1} class="sash-hem" />
+      <line x1="0" x2="100%" y1="6" y2="6" class="sash-stitch" />
+      <line x1="0" x2="100%" y1={FLAT - 6} y2={FLAT - 6} class="sash-stitch" />
+      <rect width="100%" height={FLAT} class="sash-hover" />
+      <text x="50%" y={FLAT / 2 + 5} text-anchor="middle" class="sash-text">
+        <tspan class="sash-strong">Now Live —</tspan> Mass. School Spending Explorer
+      </text>
+      <!-- The cloth past each side of the card, wrapping over its edges -->
+      <rect x="0" y="0" width={WRAP} height={FLAT} fill="#5b2213" />
+      <rect x="0" y="0" width={WRAP} height={FLAT} fill="url(#sash-wrap-back)" />
+      <svg x="100%" y="0" width={WRAP} height={FLAT} overflow="visible">
+        <rect x={-WRAP} y="0" width={WRAP} height={FLAT} fill="#5b2213" />
+        <rect x={-WRAP} y="0" width={WRAP} height={FLAT} fill="url(#sash-wrap-out)" />
+      </svg>
+    </svg>
+  </svg>
+</a>
+
+<style define:vars={{ wrap: `${WRAP}px` }}>
+  /* The card the sash sits on */
+  :global(main:has(> .live-sash)) {
+    position: relative;
+  }
+
+  .sash-defs {
+    position: absolute;
+    width: 0;
+    height: 0;
+    overflow: hidden;
+  }
+
+  .live-sash {
+    position: absolute;
+    top: -14px;
+    right: -14px;
+    z-index: 3;
+    overflow: visible;
+    /* Only the cloth takes clicks; the portrait under the rest of the box stays live */
+    pointer-events: none;
+  }
+
+  .live-sash a {
+    pointer-events: auto;
+    cursor: pointer;
+  }
+
+  .live-sash a:focus {
+    outline: none;
+  }
+
+  .sash-hem {
+    stroke: #4a1a0d;
+    stroke-width: 2;
+    opacity: 0.5;
+  }
+
+  .sash-stitch {
+    stroke: #f6dcc4;
+    stroke-width: 1.1;
+    stroke-dasharray: 4.5 3.5;
+    stroke-linecap: round;
+    opacity: 0.8;
+  }
+
+  .sash-text {
+    font-family: "Space Grotesk", sans-serif;
+    font-size: 14.5px;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    fill: #fff7ec;
+    paint-order: stroke;
+    stroke: rgba(70, 22, 8, 0.45);
+    stroke-width: 1.6px;
+  }
+
+  .sash-strong {
+    font-weight: 700;
+  }
+
+  .sash-hover {
+    fill: #fff;
+    opacity: 0;
+    transition: opacity 0.18s ease;
+  }
+
+  .live-sash a:hover .sash-hover,
+  .live-sash-flat:hover .sash-hover {
+    opacity: 0.09;
+  }
+
+  .sash-focus {
+    fill: none;
+    stroke: none;
+  }
+
+  .live-sash a:focus-visible .sash-focus {
+    stroke: #fff7ec;
+    stroke-width: 1.5;
+    stroke-dasharray: 3 2;
+  }
+
+  .live-sash-flat {
+    display: none;
+  }
+
+  /* On a narrower card the sash shrinks about the card's corner */
+  @media (max-width: 860px) {
+    .live-sash {
+      transform: scale(0.8);
+      transform-origin: calc(100% - 14px) 14px;
+    }
+  }
+
+  /* On a phone it runs straight across the top of the card, over both side edges */
+  @media (max-width: 640px) {
+    .live-sash {
+      display: none;
+    }
+
+    .live-sash-flat {
+      display: block;
+      margin: -0.45rem calc(-1.2rem - var(--wrap)) 0.9rem;
+    }
+
+    .live-sash-flat svg {
+      display: block;
+      overflow: visible;
+    }
+
+    .live-sash-flat .sash-text {
+      font-size: min(14px, 3.55vw);
+    }
+
+    .live-sash-flat:focus-visible {
+      outline: 2px dashed var(--accent);
+      outline-offset: 2px;
+    }
+  }
+
+  @media print {
+    .live-sash,
+    .live-sash-flat {
+      display: none;
+    }
+  }
+</style>
