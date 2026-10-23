@@ -50,8 +50,8 @@ interface Measure {
   /** The legend's words for each class, with fixed cuts */
   classes?: string[];
 }
-const inDollars = (m: MapData["meta"], real: boolean) => (real ? `in FY${m.latest} dollars, after inflation` : "in nominal dollars, before inflation");
-const grewOrNot = { up: (real: boolean) => (real ? "grew faster than prices" : "grew"), down: (real: boolean) => (real ? "fell behind them" : "shrank") };
+const inDollars = (m: MapData["meta"], real: boolean) => (real ? `after inflation (FY${m.latest} dollars)` : "before inflation");
+const grewOrNot = { up: (real: boolean) => (real ? "outpaced prices" : "grew"), down: (real: boolean) => (real ? "didn't" : "shrank") };
 
 const sign = (v: number) => (v > 0 ? "+" : v < 0 ? "−" : "");
 const yearly = (v: number) => `${sign(v)}${Math.abs(v * 100).toFixed(1)}% a year`;
@@ -66,86 +66,72 @@ const none = () => "";
 const TOWN_MEASURES: Measure[] = [
   {
     key: "ct", label: "Community type", kind: "type", fmt: none, short: none,
-    about: () => "The Inner Core is Boston and its densest neighbors, the Metropolitan Area Planning Council's " +
-      "Metropolitan Core Communities and Streetcar Suburbs. The Gateway Cities are the state's mid-size cities, less " +
-      "the four in the Inner Core. A rural town has fewer than 500 residents per square mile, the line in the " +
-      "Commonwealth's Rural Policy Plan. The state has no name for the rest.",
+    about: () => "MAPC's Inner Core (Boston and 15 neighbors), the other Gateway Cities, rural towns (under 500 " +
+      "residents per square mile), and the rest.",
   },
   {
     key: "density", label: "Residents per square mile", kind: "level", fmt: dense, short: denseShort, cuts: [250, 500, 1000, 2500],
-    about: (m) => `Each town's population, July ${m.latest - 1}, over its land area. Under 500 is rural by the Rural ` +
-      "Policy Plan's line.",
+    about: (m) => `July ${m.latest - 1}. Under 500 is rural.`,
   },
   {
     key: "spend", label: "Spending per resident, yearly growth", kind: "change", fmt: yearly, short: yearlyShort, dollars: true,
-    about: (m, real) => `How fast each town's general fund spending per resident grew each year, FY${m.start} to ` +
-      `FY${m.latest}, ${inDollars(m, real)}.`,
+    about: (m, real) => `General fund, FY${m.start}–FY${m.latest}, ${inDollars(m, real)}.`,
     ...grewOrNot,
   },
   {
     key: "pop", label: "Population change", kind: "change", fmt: change, short: change,
-    about: (m) => `Change in each town's population, July ${m.start - 1} to July ${m.latest - 1}, from the Census ` +
-      "Bureau's estimates.",
+    about: (m) => `July ${m.start - 1} to July ${m.latest - 1}.`,
     up: () => "grew", down: () => "shrank",
   },
   {
     key: "eqv", label: "Property value per resident, yearly growth", kind: "change", fmt: yearly, short: yearlyShort, dollars: true,
-    about: (m, real) => "How fast each town's equalized property value per resident, the state's estimate of what its " +
-      `property would sell for, grew each year, FY${m.start} to FY${m.latest}, ${inDollars(m, real)}.`,
+    about: (m, real) => `Equalized value, FY${m.start}–FY${m.latest}, ${inDollars(m, real)}.`,
     ...grewOrNot,
   },
   {
     key: "levy_room", label: "Room under the levy limit", kind: "level", fmt: share, short: share,
-    about: (m) => `How much more each town could raise in property taxes in FY${m.latest} without an override, as a share ` +
-      "of its Proposition 2½ levy limit. The lightest towns are at or near the limit.",
+    about: (m) => `Unused levy capacity as a share of the Proposition 2½ limit, FY${m.latest}. Lightest: at or near the limit.`,
   },
   {
     key: "bill_income", label: "Single-family tax bill as a share of income", kind: "level", fmt: share, short: share,
-    about: (m) => `The average single-family tax bill in FY${m.latest} as a share of income per capita. College towns ` +
-      "run high, because students count as residents but report little income.",
+    about: (m) => `Average bill over income per capita, FY${m.latest}. College towns run high: students count as residents.`,
   },
   {
     key: "cap_hh", label: "The 82.5% cap: change per household with no cap", kind: "change", fmt: money, short: money,
-    about: (m) => `How much more or less each town would be asked for in FY${m.cap_fy} with no cap, per household. Blue ` +
-      "towns would be asked for more: today's cap saves them money. Orange towns would be asked for less: today's cap " +
-      "costs them money.",
-    up: () => "would be asked for more with no cap", down: () => "would be asked for less",
+    about: (m) => `FY${m.cap_fy}. Blue: today's cap saves the town money. Orange: it costs the town money.`,
+    up: () => "would pay more with no cap", down: () => "less",
   },
 ];
 
 const DISTRICT_MEASURES: Measure[] = [
   {
     key: "ct", label: "Community type", kind: "type", fmt: none, short: none,
-    about: () => "A district is rural at 35 or fewer students per square mile, DESE's test for rural school aid. The " +
-      "Inner Core's districts are Boston's and its densest neighbors'; the Gateway Cities' are the other mid-size " +
-      "cities'. The state has no name for the rest.",
+    about: () => "Rural: 35 or fewer students per square mile, DESE's rural aid test. Inner Core and Gateway City " +
+      "districts are their cities'.",
   },
   {
     key: "density", label: "Students per square mile", kind: "level", fmt: dense, short: denseShort, cuts: [11, 21, 35, 200],
     over: true, classes: ["11 or fewer (rural, tier 1)", "Over 11 to 21 (rural, tier 2)", "Over 21 to 35 (rural, tier 3)",
       "Over 35 to 200", "Over 200"],
-    about: (m) => `Each district's foundation enrollment, FY${m.latest + 1}, over its towns' land area. DESE counts 35 ` +
-      "or fewer as rural, in tiers: 11 or fewer, over 11 to 21, and over 21 to 35.",
+    about: (m) => `Foundation enrollment over land area, FY${m.latest + 1}.`,
   },
   {
     key: "ppe", label: "Spending per pupil, yearly growth", kind: "change", fmt: yearly, short: yearlyShort, dollars: true,
-    about: (m, real) => `How fast each district's in-district spending per pupil grew each year, FY${m.start} to ` +
-      `FY${m.latest}, ${inDollars(m, real)}.`,
+    about: (m, real) => `In-district, FY${m.start}–FY${m.latest}, ${inDollars(m, real)}.`,
     ...grewOrNot,
   },
   {
     key: "enroll", label: "Enrollment change", kind: "change", fmt: change, short: change,
-    about: (m) => `Change in each district's in-district pupils, full-time equivalents, FY${m.start} to FY${m.latest}.`,
+    about: (m) => `In-district pupils, FY${m.start}–FY${m.latest}.`,
     up: () => "grew", down: () => "shrank",
   },
   {
     key: "above", label: "Spending above the requirement", kind: "level", fmt: share, short: share,
-    about: (m) => `How far each district's actual net school spending ran above the state's required minimum in FY${m.latest}, ` +
-      "as a share of the requirement.",
+    about: (m) => `Actual net school spending over the required minimum, FY${m.latest}.`,
   },
   {
     key: "aid", label: "Chapter 70 aid's share of required spending", kind: "level", fmt: share, short: share,
-    about: (m) => `How much of each district's required spending in FY${m.latest} Chapter 70 aid covers; its towns cover the rest.`,
+    about: (m) => `FY${m.latest}. Towns pay the rest.`,
   },
 ];
 
@@ -346,20 +332,16 @@ export function startMap(root: HTMLElement, data: MapData, opts: {
     about.replaceChildren(el("strong", "cw-var", measure.label), `. ${measure.about(meta, real)}`);
     if (measure.kind === "change" && measure.up && measure.down) {
       const up = values.filter((v) => v > 0).length;
-      about.append(` Of ${values.length} ${what}, ${up} ${measure.up(real)}; ${values.length - up} ${measure.down(real)}.`);
+      about.append(` ${up} of ${values.length} ${what} ${measure.up(real)}; ${values.length - up} ${measure.down(real)}.`);
     } else {
-      about.append(` Half the ${what} are above ${measure.fmt(quantile(values, 0.5))}.`);
+      about.append(` Median: ${measure.fmt(quantile(values, 0.5))}.`);
     }
     if (!onTowns) {
       about.append({
-        elem: " Each town shows the district that teaches its youngest pupils: its own district, or its regional district " +
-          "if it has none of its own.",
-        high: " Each town shows the district that teaches its older pupils: its regional district, or its own district if " +
-          "it doesn't belong to one.",
-        all: " Where one district teaches all of a town's grades, the town shows that district. Where a town's pupils go to " +
-          "one district for the early grades and another for the later ones, the town shows " +
-          (measure.key === "density" ? "the district for its early grades."
-            : "the two combined, weighted by how many of the town's pupils each teaches (FY2025)."),
+        elem: " Each town shows its elementary district.",
+        high: " Each town shows its secondary district: its regional one, if any.",
+        all: measure.key === "density" ? " A town with separate elementary and secondary districts shows its elementary one."
+          : " A town with separate elementary and secondary districts shows the two combined, weighted by its pupils in each.",
       }[grades]);
     }
 
@@ -419,10 +401,7 @@ export function startMap(root: HTMLElement, data: MapData, opts: {
         .map((d) => ({ name: data.districts[d]?.name ?? d, k: data.districts[d]?.ct ?? null }));
     const count = (k: Kind) => units.filter((u) => u.k === k).length;
     const what = onTowns ? "towns" : "districts";
-    const plural: Record<Kind, string> = { core: "in the Inner Core", gateway: onTowns ? "Gateway Cities" : "in Gateway Cities",
-      suburban: "suburban and other", rural: "rural" };
-    about.replaceChildren(el("strong", "cw-var", measure.label), `. ${measure.about(meta, false)} Of ${units.length} ${what}: ` +
-      [...KINDS].reverse().map((k) => `${count(k)} ${plural[k]}`).join(", ") + ".");
+    about.replaceChildren(el("strong", "cw-var", measure.label), `. ${measure.about(meta, false)}`);
     legend.replaceChildren(...KINDS.map((k) => {
       const li = el("li");
       const sw = el("span", "map-swatch");

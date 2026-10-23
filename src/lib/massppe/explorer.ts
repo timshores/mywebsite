@@ -326,17 +326,15 @@ function sumStrict(groups: Values[], i: number): number | null {
   return vals.some((v) => v == null) ? null : vals.reduce<number>((a, v) => a + v!, 0);
 }
 
-/** Least-squares straight line through the years that have a value, drawn across those years;
- * all null with fewer than three values. */
-function linearTrend(values: Values): Values {
-  const pts = values.flatMap((v, i) => (v == null ? [] : [[i, v] as const]));
-  if (pts.length < 3) return values.map(() => null);
-  const n = pts.length;
-  const mx = pts.reduce((a, [x]) => a + x, 0) / n;
-  const my = pts.reduce((a, [, y]) => a + y, 0) / n;
-  const slope = pts.reduce((a, [x, y]) => a + (x - mx) * (y - my), 0) / pts.reduce((a, [x]) => a + (x - mx) ** 2, 0);
-  const [first, lastAt] = [pts[0][0], pts[n - 1][0]];
-  return values.map((_, i) => (i < first || i > lastAt ? null : my + slope * (i - mx)));
+/** The growth path: from the first year with a value to the last, growing by the same share each year,
+ * so it starts and ends on the actual values and its yearly growth is the tiles' and the map's
+ * first-to-last growth. All null without two positive values a year or more apart. */
+function growthPath(values: Values): Values {
+  const at = values.flatMap((v, i) => (v != null && v > 0 ? [i] : []));
+  if (at.length < 2) return values.map(() => null);
+  const [a, b] = [at[0], at[at.length - 1]];
+  const rate = (values[b]! / values[a]!) ** (1 / (b - a));
+  return values.map((_, i) => (i < a || i > b ? null : values[a]! * rate ** (i - a)));
 }
 
 function cagr(first: number | null, last: number | null, years: number) {
@@ -344,7 +342,7 @@ function cagr(first: number | null, last: number | null, years: number) {
   return (last / first) ** (1 / years) - 1;
 }
 
-/** A trend line's rise each year, and its average yearly growth, compounded from its first year to its last */
+/** A growth path's average rise in dollars each year, and its yearly growth, compounded from its first year to its last */
 function trendRate(trend: Values) {
   const at = trend.flatMap((v, i) => (v == null ? [] : [i]));
   if (at.length < 2) return null;
@@ -659,6 +657,8 @@ export async function startExplorer() {
   const FADE_MS = 560;
   const calm = matchMedia("(prefers-reduced-motion: reduce)");
   let fading: number | undefined;
+  /** The tabs opened so far, the first one included */
+  const opened = new Set<View>([state.view]);
 
   function update(patch: Partial<typeof state>) {
     const switching = patch.view != null && patch.view !== state.view;
@@ -689,10 +689,14 @@ export async function startExplorer() {
       return;
     }
     markTabs();
-    if (calm.matches) {
+    // The fade marks a tab's first opening; back on a tab already seen, it shows at once
+    if (calm.matches || opened.has(state.view)) {
+      clearTimeout(fading);
+      root.classList.remove("is-switching");
       void refresh();
       return;
     }
+    opened.add(state.view);
     root.classList.add("is-switching");
     clearTimeout(fading);
     fading = window.setTimeout(async () => {
@@ -964,7 +968,7 @@ export async function startExplorer() {
   // ---- Chart lines: the entity's own trend (dashed) and the comparison (solid, with dots).
   // Both follow what the legend isolates; either can be hidden from its legend entry. ----
   const trendOf = (name: string, sel: string | null, shownTotal: Values): Series =>
-    ({ key: "trend", label: `${name} trend${sel ? `, ${sel}` : ""}`, color: TREND_COLOR, values: linearTrend(shownTotal) });
+    ({ key: "trend", label: `${name} growth${sel ? `, ${sel}` : ""}`, color: TREND_COLOR, values: growthPath(shownTotal) });
   /** The line as drawn: null while its legend entry has it hidden. */
   const drawn = (panel: StackPanel, line: Line, s: Series | null): Series | null => (hiddenLines[panel].has(line) ? null : s);
   const hasLine = (s: Series | null): s is Series => !!s && s.values.some((v) => v != null);
@@ -976,7 +980,7 @@ export async function startExplorer() {
         trendRate(trend.values)) }] : []),
     ...(overlay ? [{ label: overlay.label, color: COMPARE_COLOR, mark: "line" as const, line: "cmp" as const }] : []),
   ];
-  // The trend's value, and its step from the year before: the same in dollars each year, a shrinking share as it grows
+  // The growth path's value, and its step from the year before: the same share each year, a growing step in dollars
   const trendRow = (trend: Series | null, i: number, fmt: (v: number) => string = usd): TipRow[] => {
     const v = trend?.values[i];
     if (!trend || v == null) return [];
