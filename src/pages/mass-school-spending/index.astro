@@ -713,7 +713,8 @@ import Layout from "../../layouts/Layout.astro";
     padding: 0.9rem 1rem;
     border: 1px solid var(--line);
     border-radius: 14px;
-    background: rgba(255, 255, 255, 0.55);
+    /* Control boxes are white, the cap bar's standard, so they stand apart from the page when they float */
+    background: #fff;
   }
 
   /* Districts and towns: once the controls scroll away, a one-line summary under the tabs that opens
@@ -730,7 +731,7 @@ import Layout from "../../layouts/Layout.astro";
     top: 0;
     left: 0;
     right: 0;
-    background: var(--paper);
+    background: #fff;
     border: 1px solid var(--line);
     border-top: 0;
     border-radius: 0 0 12px 12px;
@@ -2278,6 +2279,10 @@ import Layout from "../../layouts/Layout.astro";
     align-items: center;
     gap: 0.6rem 1.4rem;
     margin-bottom: 0.7rem;
+    padding: 0.55rem 0.9rem;
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 12px;
     font-size: 0.82rem;
     color: var(--ink-soft);
   }
@@ -3076,6 +3081,7 @@ import Layout from "../../layouts/Layout.astro";
   .explorer :global(.enlarge-controls) {
     flex: none;
     padding: 0.45rem 3.2rem 0.45rem 1.8rem;
+    background: #fff;
     border-bottom: 1px solid var(--line);
   }
 

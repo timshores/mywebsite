@@ -38,9 +38,12 @@ interface Measure {
   short: (v: number) => string;
   /** What it measures, in a sentence or two, in nominal dollars or the latest year's */
   about: (m: MapData["meta"], real: boolean) => string;
-  /** How the towns, or districts, split: the words for above and below zero, for a change */
-  up?: (real: boolean) => string;
-  down?: (real: boolean) => string;
+  /** For a change: what grew, in the sentence on how the towns or districts split ("spending per pupil") */
+  subject?: string;
+  /** For the cap: its own sentence on the split */
+  split?: (up: number, down: number, n: number) => string;
+  /** After a level's median: its unit, if the number needs one (" residents per square mile") */
+  unit?: string;
   /** Growth in dollars, which the Dollars switch shows before or after inflation */
   dollars?: boolean;
   /** Fixed cut points, where the state draws its own lines, in place of fifths; "over" puts a value equal
@@ -50,8 +53,12 @@ interface Measure {
   /** The legend's words for each class, with fixed cuts */
   classes?: string[];
 }
-const inDollars = (m: MapData["meta"], real: boolean) => (real ? `after inflation (FY${m.latest} dollars)` : "before inflation");
-const grewOrNot = { up: (real: boolean) => (real ? "outpaced prices" : "grew"), down: (real: boolean) => (real ? "didn't" : "shrank") };
+const inDollars = (m: MapData["meta"], real: boolean) => (real ? `in FY${m.latest} dollars, after inflation` : "in nominal dollars, before inflation");
+/** What the trend is, for the "?" beside a measure of growth */
+const TREND_NOTE = "The trend is the straight line that best fits every year's value. Its growth is the yearly rate that " +
+  "carries the line from its first year to its last. Because the line weighs every year, an unusual first or last year " +
+  "moves it less than it would move growth measured from the first year's value to the last year's, and the line " +
+  "doesn't always start on the first year's value.";
 
 const sign = (v: number) => (v > 0 ? "+" : v < 0 ? "−" : "");
 const yearly = (v: number) => `${sign(v)}${Math.abs(v * 100).toFixed(1)}% a year`;
@@ -66,72 +73,84 @@ const none = () => "";
 const TOWN_MEASURES: Measure[] = [
   {
     key: "ct", label: "Community type", kind: "type", fmt: none, short: none,
-    about: () => "MAPC's Inner Core (Boston and 15 neighbors), the other Gateway Cities, rural towns (under 500 " +
-      "residents per square mile), and the rest.",
+    about: () => "The Inner Core is Boston and 15 neighboring cities and towns, as the Metropolitan Area Planning " +
+      "Council defines it. The Gateway Cities are the state's other 22 mid-size cities. A rural town has fewer than 500 " +
+      "residents per square mile. Every other town counts as suburban and other.",
   },
   {
     key: "density", label: "Residents per square mile", kind: "level", fmt: dense, short: denseShort, cuts: [250, 500, 1000, 2500],
-    about: (m) => `July ${m.latest - 1}. Under 500 is rural.`,
+    unit: " residents per square mile",
+    about: (m) => `Each town's population in July ${m.latest - 1}, divided by its land area. A town with fewer than 500 ` +
+      "residents per square mile counts as rural.",
   },
   {
     key: "spend", label: "Spending per resident, yearly growth", kind: "change", fmt: yearly, short: yearlyShort, dollars: true,
-    about: (m, real) => `General fund, FY${m.start}–FY${m.latest}, ${inDollars(m, real)}.`,
-    ...grewOrNot,
+    subject: "spending per resident",
+    about: (m, real) => `How fast each town's general fund spending per resident grew each year on trend, from FY${m.start} ` +
+      `to FY${m.latest}, ${inDollars(m, real)}.`,
   },
   {
-    key: "pop", label: "Population change", kind: "change", fmt: change, short: change,
-    about: (m) => `July ${m.start - 1} to July ${m.latest - 1}.`,
-    up: () => "grew", down: () => "shrank",
+    key: "pop", label: "Population change", kind: "change", fmt: change, short: change, subject: "population",
+    about: (m) => `How much each town's population changed from July ${m.start - 1} to July ${m.latest - 1}.`,
   },
   {
     key: "eqv", label: "Property value per resident, yearly growth", kind: "change", fmt: yearly, short: yearlyShort, dollars: true,
-    about: (m, real) => `Equalized value, FY${m.start}–FY${m.latest}, ${inDollars(m, real)}.`,
-    ...grewOrNot,
+    subject: "property value per resident",
+    about: (m, real) => "How fast each town's equalized property value per resident grew each year on trend, from " +
+      `FY${m.start} to FY${m.latest}, ${inDollars(m, real)}.`,
   },
   {
     key: "levy_room", label: "Room under the levy limit", kind: "level", fmt: share, short: share,
-    about: (m) => `Unused levy capacity as a share of the Proposition 2½ limit, FY${m.latest}. Lightest: at or near the limit.`,
+    about: (m) => `Each town's unused levy capacity in FY${m.latest}, as a share of its Proposition 2½ levy limit. The ` +
+      "lightest towns are taxing at or near their limit.",
   },
   {
     key: "bill_income", label: "Single-family tax bill as a share of income", kind: "level", fmt: share, short: share,
-    about: (m) => `Average bill over income per capita, FY${m.latest}. College towns run high: students count as residents.`,
+    about: (m) => `The average single-family tax bill in FY${m.latest}, as a share of income per capita. College towns run ` +
+      "high because their students count as residents but report little income.",
   },
   {
     key: "cap_hh", label: "The 82.5% cap: change per household with no cap", kind: "change", fmt: money, short: money,
-    about: (m) => `FY${m.cap_fy}. Blue: today's cap saves the town money. Orange: it costs the town money.`,
-    up: () => "would pay more with no cap", down: () => "less",
+    about: (m) => `How much more or less each town would be asked to pay toward its schools in FY${m.cap_fy} with no cap, ` +
+      "per household. Today's cap saves the blue towns money and costs the orange towns money.",
+    split: (up, down, n) => `With no cap, ${up} of ${n} towns would be asked for more and the other ${down} would be asked for less.`,
   },
 ];
 
 const DISTRICT_MEASURES: Measure[] = [
   {
     key: "ct", label: "Community type", kind: "type", fmt: none, short: none,
-    about: () => "Rural: 35 or fewer students per square mile, DESE's rural aid test. Inner Core and Gateway City " +
-      "districts are their cities'.",
+    about: () => "A district is rural if it has 35 or fewer students per square mile, the test DESE uses for rural school " +
+      "aid. Inner Core districts are the school districts of Boston and its 15 neighbors. Gateway City districts are the " +
+      "school districts of the other 22 Gateway Cities. Every other district counts as suburban and other.",
   },
   {
     key: "density", label: "Students per square mile", kind: "level", fmt: dense, short: denseShort, cuts: [11, 21, 35, 200],
     over: true, classes: ["11 or fewer (rural, tier 1)", "Over 11 to 21 (rural, tier 2)", "Over 21 to 35 (rural, tier 3)",
       "Over 35 to 200", "Over 200"],
-    about: (m) => `Foundation enrollment over land area, FY${m.latest + 1}.`,
+    unit: " students per square mile",
+    about: (m) => `Each district's FY${m.latest + 1} foundation enrollment, divided by the land area of its towns. DESE ` +
+      "counts a district with 35 or fewer students per square mile as rural.",
   },
   {
     key: "ppe", label: "Spending per pupil, yearly growth", kind: "change", fmt: yearly, short: yearlyShort, dollars: true,
-    about: (m, real) => `In-district, FY${m.start}–FY${m.latest}, ${inDollars(m, real)}.`,
-    ...grewOrNot,
+    subject: "spending per pupil",
+    about: (m, real) => `How fast each district's in-district spending per pupil grew each year on trend, from FY${m.start} ` +
+      `to FY${m.latest}, ${inDollars(m, real)}.`,
   },
   {
-    key: "enroll", label: "Enrollment change", kind: "change", fmt: change, short: change,
-    about: (m) => `In-district pupils, FY${m.start}–FY${m.latest}.`,
-    up: () => "grew", down: () => "shrank",
+    key: "enroll", label: "Enrollment change", kind: "change", fmt: change, short: change, subject: "enrollment",
+    about: (m) => `How much each district's in-district enrollment changed from FY${m.start} to FY${m.latest}.`,
   },
   {
     key: "above", label: "Spending above the requirement", kind: "level", fmt: share, short: share,
-    about: (m) => `Actual net school spending over the required minimum, FY${m.latest}.`,
+    about: (m) => `How far each district's actual net school spending in FY${m.latest} ran above the state's required ` +
+      "minimum, as a share of that minimum.",
   },
   {
     key: "aid", label: "Chapter 70 aid's share of required spending", kind: "level", fmt: share, short: share,
-    about: (m) => `FY${m.latest}. Towns pay the rest.`,
+    about: (m) => `The share of each district's required spending in FY${m.latest} that Chapter 70 aid covers. The ` +
+      "district's towns pay the rest.",
   },
 ];
 
@@ -282,17 +301,17 @@ export function startMap(root: HTMLElement, data: MapData, opts: {
     measureSel.replaceChildren(...list.map((m) => new Option(m.label, m.key)));
     measureSel.value = onTowns ? townKey : districtKey;
     const measure = list.find((m) => m.key === measureSel.value)!;
-    // Growth in dollars is stored after inflation; nominal growth puts each value's own years' inflation back
+    // Growth in dollars, before or after inflation
     const real = opts.real();
     dollarSeg.set(real ? "real" : "nominal");
     dollarSeg.box.classList.toggle("is-idle", !measure.dollars);
     dollarSeg.box.title = measure.dollars ? "" : "This measure isn't growth in dollars, so inflation doesn't change it";
     dollarSeg.box.querySelectorAll("button").forEach((b) => (b.disabled = !measure.dollars));
+    // Growth in dollars comes as [after inflation, first year, last year, before inflation], each its own trend
     const asShown = (v: Val | null | undefined): Val | null => {
       if (!v) return null;
-      if (!measure.dollars || real || v.length < 3) return v;
-      const [r, a, b] = v;
-      return [(1 + r) * (meta.cpi[String(b)] / meta.cpi[String(a)]) ** (1 / (b - a)) - 1, a, b];
+      if (!measure.dollars) return v;
+      return real || v.length < 4 ? v.slice(0, 3) : [v[3], v[1], v[2]];
     };
     // All grades: a town with one district takes it; a town split between two takes the two combined
     const combinedAt = (t: MapTown) => !onTowns && grades === "all" && !!t.elem && t.elem !== t.high;
@@ -330,20 +349,15 @@ export function startMap(root: HTMLElement, data: MapData, opts: {
     // What it shows, and how the towns or districts split
     const what = byTown ? "towns" : "districts";
     about.replaceChildren(el("strong", "cw-var", measure.label), `. ${measure.about(meta, real)}`);
-    if (measure.kind === "change" && measure.up && measure.down) {
-      const up = values.filter((v) => v > 0).length;
-      about.append(` ${up} of ${values.length} ${what} ${measure.up(real)}; ${values.length - up} ${measure.down(real)}.`);
-    } else {
-      about.append(` Median: ${measure.fmt(quantile(values, 0.5))}.`);
-    }
-    if (!onTowns) {
-      about.append({
-        elem: " Each town shows its elementary district.",
-        high: " Each town shows its secondary district: its regional one, if any.",
-        all: measure.key === "density" ? " A town with separate elementary and secondary districts shows its elementary one."
-          : " A town with separate elementary and secondary districts shows the two combined, weighted by its pupils in each.",
-      }[grades]);
-    }
+    if (measure.dollars) about.append(" ", trendHelp());
+    const up = values.filter((v) => v > 0).length;
+    const n = values.length;
+    about.append(" " + (measure.split ? measure.split(up, n - up, n)
+      : measure.kind === "change" ? (up === n ? `In all ${n} ${what}, ${measure.subject} grew` : up === 0 ? `In none of the ${n} ${what} did ${measure.subject} grow`
+        : `In ${up} of ${n} ${what}, ${measure.subject} grew`) + (measure.dollars && real ? " faster than prices" : "") +
+        (up === n || up === 0 ? "." : `; in the other ${n - up}, it did not.`)
+      : `The median across ${n} ${what} is ${measure.fmt(quantile(values, 0.5))}${measure.unit ?? ""}.`));
+    if (!onTowns) about.append(gradeNote(measure));
 
     // Legend: each class's range, then the gray for none
     const label = (k: number) => measure.classes?.[k] ?? (k === 0 ? `Below ${measure.short(c[0])}` : k === 4
@@ -387,6 +401,28 @@ export function startMap(root: HTMLElement, data: MapData, opts: {
     unlift();
   }
 
+  /** A "?" that explains the trend, on hover or focus */
+  function trendHelp() {
+    const h = el("span", "cw-help wide", "?");
+    h.tabIndex = 0;
+    h.setAttribute("role", "note");
+    h.setAttribute("aria-label", TREND_NOTE);
+    h.dataset.tip = TREND_NOTE;
+    return h;
+  }
+  /** What each town shows, for a district measure */
+  function gradeNote(measure: Measure) {
+    const own = " Each town shows the district that teaches its elementary grades.";
+    return {
+      elem: own,
+      high: " Each town shows the district that teaches its secondary grades, which is its regional district if it belongs to one.",
+      all: measure.key === "density" || measure.kind === "type"
+        ? " A town that sends its elementary and secondary pupils to different districts shows the district that teaches its elementary grades."
+        : " A town that sends its elementary and secondary pupils to different districts shows the two districts combined, " +
+          "weighted by how many of the town's pupils each one teaches.",
+    }[grades];
+  }
+
   /** The community type view: four colors, a count of each, and the table by type */
   function drawTypes(measure: Measure, onTowns: boolean, kindOf: (t: MapTown) => Kind | null,
     districtOf: (t: MapTown) => string | null, combinedAt: (t: MapTown) => boolean) {
@@ -402,6 +438,7 @@ export function startMap(root: HTMLElement, data: MapData, opts: {
     const count = (k: Kind) => units.filter((u) => u.k === k).length;
     const what = onTowns ? "towns" : "districts";
     about.replaceChildren(el("strong", "cw-var", measure.label), `. ${measure.about(meta, false)}`);
+    if (!onTowns) about.append(gradeNote(measure));
     legend.replaceChildren(...KINDS.map((k) => {
       const li = el("li");
       const sw = el("span", "map-swatch");

@@ -326,23 +326,32 @@ function sumStrict(groups: Values[], i: number): number | null {
   return vals.some((v) => v == null) ? null : vals.reduce<number>((a, v) => a + v!, 0);
 }
 
-/** The growth path: from the first year with a value to the last, growing by the same share each year,
- * so it starts and ends on the actual values and its yearly growth is the tiles' and the map's
- * first-to-last growth. All null without two positive values a year or more apart. */
-function growthPath(values: Values): Values {
-  const at = values.flatMap((v, i) => (v != null && v > 0 ? [i] : []));
-  if (at.length < 2) return values.map(() => null);
-  const [a, b] = [at[0], at[at.length - 1]];
-  const rate = (values[b]! / values[a]!) ** (1 / (b - a));
-  return values.map((_, i) => (i < a || i > b ? null : values[a]! * rate ** (i - a)));
+/** Least-squares straight line through the years that have a value, drawn across those years;
+ * all null with fewer than three values. Its growth (trendRate) is the explorer's yearly growth
+ * everywhere: the charts, the tiles and the map. */
+function linearTrend(values: Values): Values {
+  const pts = values.flatMap((v, i) => (v == null ? [] : [[i, v] as const]));
+  if (pts.length < 3) return values.map(() => null);
+  const n = pts.length;
+  const mx = pts.reduce((a, [x]) => a + x, 0) / n;
+  const my = pts.reduce((a, [, y]) => a + y, 0) / n;
+  const slope = pts.reduce((a, [x, y]) => a + (x - mx) * (y - my), 0) / pts.reduce((a, [x]) => a + (x - mx) ** 2, 0);
+  const [first, lastAt] = [pts[0][0], pts[n - 1][0]];
+  return values.map((_, i) => (i < first || i > lastAt ? null : my + slope * (i - mx)));
 }
+
+/** What the trend is, for the "?" beside it */
+const TREND_NOTE = "The trend is the straight line that best fits every year's value. Its growth is the yearly rate that " +
+  "carries the line from its first year to its last. Because the line weighs every year, an unusual first or last year " +
+  "moves it less than it would move growth measured from the first year's value to the last year's, and the line " +
+  "doesn't always start on the first year's value.";
 
 function cagr(first: number | null, last: number | null, years: number) {
   if (first == null || last == null || first <= 0 || last <= 0 || years <= 0) return null;
   return (last / first) ** (1 / years) - 1;
 }
 
-/** A growth path's average rise in dollars each year, and its yearly growth, compounded from its first year to its last */
+/** A trend line's rise each year, and its yearly growth, compounded from its first year to its last */
 function trendRate(trend: Values) {
   const at = trend.flatMap((v, i) => (v == null ? [] : [i]));
   if (at.length < 2) return null;
@@ -963,24 +972,26 @@ export async function startExplorer() {
   // toggle buttons that hide them on that chart ----
   interface LegendItem { label: string; color: string; mark: "rect" | "line" | "dash" | "hatch"; key?: string; line?: Line;
     /** Beside the label, in lighter type: the trend's yearly rise */
-    detail?: string }
+    detail?: string;
+    /** A "?" after the entry, with a note on hover or focus */
+    help?: string }
 
   // ---- Chart lines: the entity's own trend (dashed) and the comparison (solid, with dots).
   // Both follow what the legend isolates; either can be hidden from its legend entry. ----
   const trendOf = (name: string, sel: string | null, shownTotal: Values): Series =>
-    ({ key: "trend", label: `${name} growth${sel ? `, ${sel}` : ""}`, color: TREND_COLOR, values: growthPath(shownTotal) });
+    ({ key: "trend", label: `${name} trend${sel ? `, ${sel}` : ""}`, color: TREND_COLOR, values: linearTrend(shownTotal) });
   /** The line as drawn: null while its legend entry has it hidden. */
   const drawn = (panel: StackPanel, line: Line, s: Series | null): Series | null => (hiddenLines[panel].has(line) ? null : s);
   const hasLine = (s: Series | null): s is Series => !!s && s.values.some((v) => v != null);
   /** Legend entries for the lines the chart can draw, hidden ones included so they can come back. */
   const lineLegend = (trend: Series | null, overlay: Series | null, fmt: (v: number) => string = usd): LegendItem[] => [
-    ...(hasLine(trend) ? [{ label: trend.label, color: TREND_COLOR, mark: "dash" as const, line: "trend" as const,
+    ...(hasLine(trend) ? [{ label: trend.label, color: TREND_COLOR, mark: "dash" as const, line: "trend" as const, help: TREND_NOTE,
       detail: ((r) => (r ? `${signed(r.perYear, fmt)}${r.rate != null ? ` (${signedPct(r.rate)})` : ""} a year` +
         (fmt === usd ? (state.usd === "nominal" ? ", before inflation" : ", after inflation") : "") : undefined))(
         trendRate(trend.values)) }] : []),
     ...(overlay ? [{ label: overlay.label, color: COMPARE_COLOR, mark: "line" as const, line: "cmp" as const }] : []),
   ];
-  // The growth path's value, and its step from the year before: the same share each year, a growing step in dollars
+  // The trend's value, and its step from the year before: the same in dollars each year, a shrinking share as it grows
   const trendRow = (trend: Series | null, i: number, fmt: (v: number) => string = usd): TipRow[] => {
     const v = trend?.values[i];
     if (!trend || v == null) return [];
@@ -1018,7 +1029,7 @@ export async function startExplorer() {
           askToRemember();
           render();
         });
-        li.append(btn);
+        li.append(btn, ...(it.help ? [helpTip(it.help)] : []));
         return li;
       }
       if (!set || !it.key) {
@@ -1544,7 +1555,7 @@ export async function startExplorer() {
     const cName = c ? c.name : "";
 
     // Tiles (always whole totals, whatever the legend isolates)
-    const g = cagr(ppeTotal[0], ppeTotal[last], last);
+    const g = trendRate(linearTrend(ppeTotal))?.rate ?? null;
     const enrollChange =
       e.enroll.in_district[0] && e.enroll.in_district[last]
         ? e.enroll.in_district[last]! / e.enroll.in_district[0]! - 1
@@ -1554,7 +1565,7 @@ export async function startExplorer() {
     const aidShare = aid != null && nssTotal[last] ? aid / nssTotal[last]! : null;
     $("tiles").replaceChildren(
       tile(`Spending per pupil, FY${years[last]}`, ppeTotal[last] != null ? usd(ppeTotal[last]!) : "–", [
-        g != null ? `${pct(g)} a year since FY${years[0]}${real ? ", after inflation" : ", before inflation"}` : "",
+        g != null ? `${pct(g)} a year on trend since FY${years[0]}${real ? ", after inflation" : ", before inflation"}` : "",
         c && cPpeTotal?.[last] != null ? `${cName}: ${usd(cPpeTotal[last]!)}` : "",
       ]),
       tile(`In-district enrollment, FY${years[last]}`, e.enroll.in_district[last] != null ? `${fte(e.enroll.in_district[last]!)} FTE` : "–", [
@@ -1986,7 +1997,7 @@ export async function startExplorer() {
     const cSpendTotal = cSpend ? totals(cSpend) : null;
     const revTotal = totals(rev);
     const cRevTotal = cRev ? totals(cRev) : null;
-    const g = cagr(spendTotal[0], spendTotal[end], end);
+    const g = trendRate(linearTrend(spendTotal))?.rate ?? null;
     const eduShare = share(spend[0].values[end], spendTotal[end]);
     const cEduShare = cSpend ? share(cSpend[0].values[end], cSpendTotal![end]) : null;
     const taxShare = share(rev[0].values[end], revTotal[end]);
@@ -2039,7 +2050,7 @@ export async function startExplorer() {
     ];
     $("tiles").replaceChildren(
       tile(`General fund spending per ${perWord}, FY${fy}`, spendTotal[end] != null ? usd(spendTotal[end]!) : "–", [
-        g != null ? `${pct(g)} a year since FY${years[0]}${real ? ", after inflation" : ", before inflation"}` : "",
+        g != null ? `${pct(g)} a year on trend since FY${years[0]}${real ? ", after inflation" : ", before inflation"}` : "",
         t.kind === "town" && allDollars != null ? `${millions(allDollars)} in all` : "",
         c && cSpendTotal?.[end] != null ? `${c.name}: ${usd(cSpendTotal[end]!)}` : "",
       ]),
