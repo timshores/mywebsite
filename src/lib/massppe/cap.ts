@@ -600,7 +600,8 @@ export function startCap(root: HTMLElement, data: CapData, opts: { town: string 
 
     tiles.replaceChildren(
       tile(`Towns at the cap, FY${y.fy}`, String(y.totals.capped),
-        [`Of 351. Each is asked for ${pct(y.max_pct, 1)} of its foundation budget, less than the same effort would yield`]),
+        [`Of 351 towns. Each is asked for ${pct(y.max_pct, 1)} of its foundation budget, which is less than it would pay if ` +
+          "it made the same fiscal effort as every other town."]),
       tile("Statewide percentages", `${rate(y.property_pct)} · ${rate(y.income_pct)}`,
         ["Of property value and of income, with the cap", `With no cap: ${rate(y.property_pct * y.factor)} · ${rate(y.income_pct * y.factor)}`]),
       tile("Wealth redistributed by the cap", big(y.totals.up_sum), [
