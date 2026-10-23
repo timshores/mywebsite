@@ -1,8 +1,8 @@
 // A chart, enlarged in a window of its own. The chart's own element moves into the window, so its
 // legend, hover, tables and controls keep working, and moves back when the window closes. So do the
-// tab's own controls, in a strip across the top, to change while the chart is enlarged. The window
-// sizes the chart to fit the screen without scrolling: as wide as there's room for, unless the
-// chart would then run too tall.
+// tab's own controls, in a strip across the top, to change while the chart is enlarged. The element
+// takes the window's full width, and the chart fits the screen's height: as wide as there's room for,
+// unless it would then run too tall, when it narrows and centers.
 
 const ICON = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2 6V2h4M10 2h4v4M14 10v4h-4M6 14H2v-4" ' +
   'fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
@@ -34,11 +34,12 @@ function windowFor(near: Element) {
   return win;
 }
 
-/** The chart itself: the largest drawing in the element. */
+/** The chart itself: the largest drawing in the element, other than its own button's icon. */
 function chartOf(box: HTMLElement) {
   let best: SVGSVGElement | null = null;
   let area = 0;
   box.querySelectorAll<SVGSVGElement>("svg[viewBox]").forEach((svg) => {
+    if (svg.closest(".enlarge-open")) return;
     const vb = svg.viewBox.baseVal;
     if (vb && vb.width * vb.height > area) {
       area = vb.width * vb.height;
@@ -48,20 +49,49 @@ function chartOf(box: HTMLElement) {
   return best as SVGSVGElement | null;
 }
 
-/** Narrow the element until it fits the window's height, a few passes since its text rewraps. */
-function fit(box: HTMLElement, dialog: HTMLDialogElement, strip: HTMLElement, body: HTMLElement) {
+/** What below the chart stays in view with it: a line or two of links; anything taller scrolls */
+const KEEP_BELOW = 80;
+
+/** The chart's room in the window: the element's width, and the window's height less the controls
+ * strip, the padding, what sits above the chart and a line or two below it. */
+function room(box: HTMLElement, svg: SVGSVGElement) {
+  const { dialog, strip, body } = win!;
+  const cs = getComputedStyle(body);
+  const boxR = box.getBoundingClientRect();
+  const svgR = svg.getBoundingClientRect();
+  const below = Math.min(KEEP_BELOW, Math.max(0, boxR.bottom - svgR.bottom));
+  const height = window.innerHeight * 0.94 - (strip.hidden ? 0 : strip.offsetHeight) - parseFloat(cs.paddingTop) -
+    parseFloat(cs.paddingBottom) - (dialog.offsetHeight - dialog.clientHeight) - (svgR.top - boxR.top) - below;
+  return { width: box.clientWidth, height };
+}
+
+/** The room for the chart in `box` while it's enlarged, for a chart that draws to the window's size. */
+export function chartRoom(box: HTMLElement) {
+  const svg = chartOf(box);
+  return win && svg && isEnlarged(box) ? room(box, svg) : null;
+}
+
+/**
+ * Fit the chart to the window: the element keeps the window's full width, for its text and tables,
+ * and only the chart narrows, centered, when at full width it would run taller than its room. Where
+ * fitting would shrink it past half its width or under 280px, as on a phone, it keeps its width and
+ * the window scrolls.
+ */
+function fit(box: HTMLElement) {
   const svg = chartOf(box);
   if (!svg) return;
   const vb = svg.viewBox.baseVal;
-  const cs = getComputedStyle(body);
-  const roomH = window.innerHeight * 0.94 - (strip.hidden ? 0 : strip.offsetHeight) - parseFloat(cs.paddingTop) -
-    parseFloat(cs.paddingBottom) - (dialog.offsetHeight - dialog.clientHeight);
-  const roomW = body.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
   box.style.width = "";
-  for (let k = 0; k < 3; k++) {
-    const other = box.offsetHeight - svg.getBoundingClientRect().height;
-    const w = Math.min(roomW, ((roomH - other) * vb.width) / vb.height);
-    box.style.width = `${Math.max(280, Math.floor(w))}px`;
+  svg.style.width = "";
+  svg.style.marginLeft = "";
+  svg.style.marginRight = "";
+  const maxH = room(box, svg).height;
+  const fullH = svg.getBoundingClientRect().height;
+  const w = Math.floor((maxH * vb.width) / vb.height);
+  if (fullH > maxH && w >= Math.max(280, svg.getBoundingClientRect().width / 2)) {
+    svg.style.width = `${w}px`;
+    svg.style.marginLeft = "auto";
+    svg.style.marginRight = "auto";
   }
 }
 
@@ -98,7 +128,7 @@ export function enlargeButton(box: HTMLElement, onClose?: () => void, controls?:
     body.replaceChildren(box);
     dialog.showModal();
     onOpen?.();
-    const refit = () => fit(box, dialog, strip, body);
+    const refit = () => fit(box);
     refit();
     // Fit again when the window resizes or the chart redraws
     let frame = 0;
@@ -111,12 +141,21 @@ export function enlargeButton(box: HTMLElement, onClose?: () => void, controls?:
     redraws.observe(box, { subtree: true, attributes: true, attributeFilter: ["viewBox"] });
     const stripSize = new ResizeObserver(soon);
     stripSize.observe(strip);
+    // Opening or closing a table inside it refits the chart
+    box.addEventListener("toggle", soon, true);
     dialog.addEventListener("close", () => {
       window.removeEventListener("resize", soon);
       redraws.disconnect();
       stripSize.disconnect();
+      box.removeEventListener("toggle", soon, true);
       box.classList.remove("is-enlarged");
       box.style.width = "";
+      const svg = chartOf(box);
+      if (svg) {
+        svg.style.width = "";
+        svg.style.marginLeft = "";
+        svg.style.marginRight = "";
+      }
       if (holder.isConnected) holder.replaceWith(box);
       else box.remove();
       if (ctl && ctlHolder) {
@@ -128,6 +167,11 @@ export function enlargeButton(box: HTMLElement, onClose?: () => void, controls?:
     }, { once: true });
   });
   return b;
+}
+
+/** Close the window, if it's open: a link inside the chart that goes to another tab closes it first. */
+export function closeEnlarged() {
+  if (win?.dialog.open) win.dialog.close();
 }
 
 /** Whether `box` is open in the window now. */

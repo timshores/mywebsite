@@ -555,6 +555,8 @@ export function startMap(root: HTMLElement, data: MapData, opts: {
     const t = townById.get(target.dataset.id!)!;
     // A combined town opens its own, elementary, district; that page names the other
     const d = current.districtOf(t) ?? (layer === "districts" ? t.elem : null);
+    unlift();
+    tip.hidden = true;
     if (layer === "districts" && d) opts.openDistrict(d);
     else opts.openTown(t.id);
   });

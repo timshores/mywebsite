@@ -9,7 +9,7 @@
 
 import { svgEl } from "./charts";
 import { groupedPicker } from "./picker";
-import { enlargeButton, isEnlarged } from "./enlarge";
+import { chartRoom, enlargeButton, isEnlarged } from "./enlarge";
 import { scatter, spearman, ticksFor, type Group, type Point, type ScatterView } from "./scatter";
 
 interface CapTown {
@@ -882,12 +882,10 @@ export function startCap(root: HTMLElement, data: CapData, opts: { town: string 
       const group = x.id === t.id ? "town" : colorBy === "fifth" ? `f${(fifthOf.get(x.id) ?? 0) + 1}` : x.capped ? "capped" : "below";
       pts.push({ x: xv, y: yv, id: x.id, name: x.name, group, label: x.id === t.id });
     }
-    // Enlarged, drawn to fill the window; otherwise to the page's width
-    const enlarged = isEnlarged(plotBox);
-    const width = enlarged ? Math.max(300, Math.floor(Math.min(1500, window.innerWidth * 0.96) - 80))
-      : Math.max(300, figure.clientWidth || 800);
-    const height = enlarged ? Math.max(320, Math.floor(window.innerHeight * 0.94 - 200))
-      : Math.round(Math.min(460, Math.max(280, width * 0.5)));
+    // Enlarged, drawn to fill the window's room for it; otherwise to the page's width
+    const room = chartRoom(plotBox);
+    const width = Math.max(300, Math.floor(room ? room.width : figure.clientWidth || 800));
+    const height = room ? Math.max(240, Math.floor(room.height)) : Math.round(Math.min(460, Math.max(280, width * 0.5)));
     svg.setAttribute("aria-label", `Scatterplot of the change in target per household against ${xo.title.toLowerCase()} for ${pts.length} towns, FY${y.fy}.`);
     drawPlot = () => {
       plotView = scatter(svg, pts, {

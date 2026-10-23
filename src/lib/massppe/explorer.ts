@@ -8,7 +8,7 @@
 // compresses (it sends .json uncompressed).
 
 import { compact, lines, niceTicks, niceTicksRange, stackedColumns, type Panel, type Series, type Val } from "./charts";
-import { enlargeButton } from "./enlarge";
+import { closeEnlarged, enlargeButton } from "./enlarge";
 import type { CapData } from "./cap";
 import type { CwData } from "./commonwealth";
 import type { MapData } from "./map";
@@ -681,6 +681,7 @@ export async function startExplorer() {
 
   function update(patch: Partial<typeof state>) {
     const switching = patch.view != null && patch.view !== state.view;
+    if (switching) closeEnlarged();
     Object.assign(state, patch);
     const q = new URLSearchParams();
     if (state.view === "towns") {

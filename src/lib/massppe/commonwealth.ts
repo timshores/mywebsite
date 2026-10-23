@@ -797,7 +797,7 @@ export function startCommonwealth(root: HTMLElement, data: CwData, opts: { openD
 
     const omitted = v.all ? "" : ` Left out: Boston, Provincetown, and districts with fewer than ${MIN_FE} foundation pupils.`;
     const srcs = [...new Set([...yv.src, ...xv.src])].map((k) => SOURCES[k]);
-    caption.replaceChildren(`FY${v.fy} · ${n} districts.${omitted} Sources: `);
+    caption.replaceChildren(`FY${v.fy} · ${n} districts that ran schools that year.${omitted} Sources: `);
     srcs.forEach((s, k) => {
       const a = el("a", undefined, s.name);
       a.href = s.url;
