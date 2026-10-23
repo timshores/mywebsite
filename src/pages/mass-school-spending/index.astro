@@ -61,6 +61,7 @@ import Layout from "../../layouts/Layout.astro";
           <option value="region">Its region</option>
           <option value="state">Statewide</option>
           <option value="gateway">Gateway Cities</option>
+          <option value="type">Its community type</option>
           <option value="other">Another district or average</option>
         </select>
       </label>
@@ -81,6 +82,7 @@ import Layout from "../../layouts/Layout.astro";
           <option value="region">Its region</option>
           <option value="state">Statewide</option>
           <option value="gateway">Gateway Cities</option>
+          <option value="type">Its community type</option>
           <option value="other">Another town or average</option>
         </select>
       </label>
@@ -461,6 +463,18 @@ import Layout from "../../layouts/Layout.astro";
         below the state's (the list dates from 2014). Their districts, and the cities on the Towns tab, have averages
         of their own, alongside their size cohorts and peer groups. Two virtual schools, the state's institutional schools, and the Massachusetts
         Academy of Math and Science are not included.
+      </p>
+      <p>
+        <strong>Community types</strong> follow the Commonwealth's own lines where it draws them. A traditional district
+        is rural at 35 or fewer students per square mile, its foundation enrollment over its towns' land area: the test
+        for DESE's <a href="https://www.doe.mass.edu/finance/chapter70/foundation/fy2026-rural-school-aid.html">rural school
+        aid</a>, which also requires income below the state average. DESE's three tiers, 11 or fewer, over 11 to 21, and
+        over 21 to 35, have averages of their own. A town is rural under 500 residents per square mile, the line in the
+        <a href="https://berkshireplanning.org/wp-content/uploads/program_documents/brpc_initiative/massachusetts-rural-policy-plan/default/Rural_Policy_Plan_Launch_Presentation.pdf">Rural
+        Policy Plan</a> for the Commonwealth's Rural Policy Advisory Commission. Boston and the Gateway Cities are
+        urban. The state has no name for the rest, called suburban and other here. Land areas are the Census Bureau's
+        (<a href="https://www2.census.gov/geo/tiger/GENZ2023/shp/cb_2023_25_cousub_500k.zip">2023 cartographic
+        boundaries</a>); enrollment is DESE's latest foundation enrollment, and population the latest estimate.
       </p>
       <p>
         <strong>Revenue by source</strong> comes from the Census Bureau's
