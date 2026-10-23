@@ -10,11 +10,20 @@ import { enlargeButton } from "./enlarge";
 type Val = number[];
 /** elem and high: the districts serving its elementary and its secondary grades; all: the two combined,
  * each weighted by the town's own pupils, where they differ */
-interface MapTown { id: string; name: string; d: string; elem: string | null; high: string | null; v: Record<string, Val>; all?: Record<string, Val> }
+interface MapTown {
+  id: string; name: string; d: string; elem: string | null; high: string | null; ct?: Kind | null; v: Record<string, Val>;
+  all?: Record<string, Val>;
+}
+/** Community types, from least dense to most */
+type Kind = "rural" | "suburban" | "gateway" | "core";
+const KINDS: Kind[] = ["rural", "suburban", "gateway", "core"];
+const KIND_NAME: Record<Kind, string> = { rural: "Rural", suburban: "Suburban and other", gateway: "Gateway City", core: "Inner Core" };
+// The types run from the least dense to the most, so one blue ramp, light to dark, orders them
+const KIND_COLOR: Record<Kind, string> = { rural: "#86b6ef", suburban: "#3987e5", gateway: "#1c5cab", core: "#0d366b" };
 export interface MapData {
   meta: { start: number; latest: number; cap_fy: number; width: number; height: number; outlines: string; cpi: Record<string, number> };
   towns: MapTown[];
-  districts: Record<string, { name: string; v: Record<string, Val> }>;
+  districts: Record<string, { name: string; ct?: Kind | null; v: Record<string, Val> }>;
 }
 
 type Layer = "towns" | "districts";
@@ -22,8 +31,8 @@ type Grades = "elem" | "high" | "all";
 interface Measure {
   key: string;
   label: string;
-  /** "change" diverges around zero; "level" runs light to dark */
-  kind: "change" | "level";
+  /** "change" diverges around zero; "level" runs light to dark; "type" colors each community type */
+  kind: "change" | "level" | "type";
   /** A value in full, for the tooltip and the table; and short, for the legend */
   fmt: (v: number) => string;
   short: (v: number) => string;
@@ -34,6 +43,12 @@ interface Measure {
   down?: (real: boolean) => string;
   /** Growth in dollars, which the Dollars switch shows before or after inflation */
   dollars?: boolean;
+  /** Fixed cut points, where the state draws its own lines, in place of fifths; "over" puts a value equal
+   * to a cut in the class below it ("11 or fewer") */
+  cuts?: number[];
+  over?: boolean;
+  /** The legend's words for each class, with fixed cuts */
+  classes?: string[];
 }
 const inDollars = (m: MapData["meta"], real: boolean) => (real ? `in FY${m.latest} dollars, after inflation` : "in nominal dollars, before inflation");
 const grewOrNot = { up: (real: boolean) => (real ? "grew faster than prices" : "grew"), down: (real: boolean) => (real ? "fell behind them" : "shrank") };
@@ -44,8 +59,23 @@ const yearlyShort = (v: number) => `${sign(v)}${Math.abs(v * 100).toFixed(1)}%`;
 const change = (v: number) => `${sign(v)}${Math.abs(Math.round(v * 100))}%`;
 const share = (v: number) => `${(v * 100).toFixed(Math.abs(v) < 0.1 ? 1 : 0)}%`;
 const money = (v: number) => `${sign(v)}$${Math.abs(Math.round(v)).toLocaleString("en-US")}`;
+const dense = (v: number) => (v < 100 ? v.toFixed(1) : Math.round(v).toLocaleString("en-US"));
+const denseShort = (v: number) => (v < 10 && v % 1 ? v.toFixed(1) : Math.round(v).toLocaleString("en-US"));
+const none = () => "";
 
 const TOWN_MEASURES: Measure[] = [
+  {
+    key: "ct", label: "Community type", kind: "type", fmt: none, short: none,
+    about: () => "The Inner Core is Boston and its densest neighbors, the Metropolitan Area Planning Council's " +
+      "Metropolitan Core Communities and Streetcar Suburbs. The Gateway Cities are the state's mid-size cities, less " +
+      "the four in the Inner Core. A rural town has fewer than 500 residents per square mile, the line in the " +
+      "Commonwealth's Rural Policy Plan. The state has no name for the rest.",
+  },
+  {
+    key: "density", label: "Residents per square mile", kind: "level", fmt: dense, short: denseShort, cuts: [250, 500, 1000, 2500],
+    about: (m) => `Each town's population, July ${m.latest - 1}, over its land area. Under 500 is rural by the Rural ` +
+      "Policy Plan's line.",
+  },
   {
     key: "spend", label: "Spending per resident, yearly growth", kind: "change", fmt: yearly, short: yearlyShort, dollars: true,
     about: (m, real) => `How fast each town's general fund spending per resident grew each year, FY${m.start} to ` +
@@ -84,6 +114,19 @@ const TOWN_MEASURES: Measure[] = [
 ];
 
 const DISTRICT_MEASURES: Measure[] = [
+  {
+    key: "ct", label: "Community type", kind: "type", fmt: none, short: none,
+    about: () => "A district is rural at 35 or fewer students per square mile, DESE's test for rural school aid. The " +
+      "Inner Core's districts are Boston's and its densest neighbors'; the Gateway Cities' are the other mid-size " +
+      "cities'. The state has no name for the rest.",
+  },
+  {
+    key: "density", label: "Students per square mile", kind: "level", fmt: dense, short: denseShort, cuts: [11, 21, 35, 200],
+    over: true, classes: ["11 or fewer (rural, tier 1)", "Over 11 to 21 (rural, tier 2)", "Over 21 to 35 (rural, tier 3)",
+      "Over 35 to 200", "Over 200"],
+    about: (m) => `Each district's foundation enrollment, FY${m.latest + 1}, over its towns' land area. DESE counts 35 ` +
+      "or fewer as rural, in tiers: 11 or fewer, over 11 to 21, and over 21 to 35.",
+  },
   {
     key: "ppe", label: "Spending per pupil, yearly growth", kind: "change", fmt: yearly, short: yearlyShort, dollars: true,
     about: (m, real) => `How fast each district's in-district spending per pupil grew each year, FY${m.start} to ` +
@@ -242,7 +285,7 @@ export function startMap(root: HTMLElement, data: MapData, opts: {
 
   // What a town shows: its own value, or its district's
   let current: { measure: Measure; districtOf: (t: MapTown) => string | null; value: (t: MapTown) => Val | null; c: number[];
-    combinedAt: (t: MapTown) => boolean } | null = null;
+    combinedAt: (t: MapTown) => boolean; kindOf?: (t: MapTown) => Kind | null } | null = null;
 
   function draw() {
     const onTowns = layer === "towns";
@@ -270,24 +313,32 @@ export function startMap(root: HTMLElement, data: MapData, opts: {
     const districtOf = (t: MapTown) => (onTowns || combinedAt(t) ? null : grades === "high" ? t.high : t.elem);
     const value = (t: MapTown): Val | null => {
       if (onTowns) return asShown(t.v[measure.key]);
-      if (combinedAt(t)) return asShown(t.all?.[measure.key]);
+      // Density isn't combined: a split town takes its own district's
+      if (combinedAt(t)) return asShown(t.all?.[measure.key] ?? data.districts[t.elem!]?.v[measure.key]);
       const d = districtOf(t);
       return d ? asShown(data.districts[d]?.v[measure.key]) : null;
     };
+    // Community type: each town its own, or its district's (a town split between two takes its own district's)
+    if (measure.kind === "type") {
+      drawTypes(measure, onTowns, (t) => (onTowns ? t.ct ?? null
+        : data.districts[(combinedAt(t) ? t.elem : districtOf(t)) ?? ""]?.ct ?? null), districtOf, combinedAt);
+      return;
+    }
     // Each district counts once, however many towns it covers; with all grades, each town counts
     const byTown = onTowns || grades === "all";
     const units = byTown ? data.towns.map(value).filter(Boolean) as Val[]
       : [...new Set(data.towns.map(districtOf).filter((d): d is string => !!d))].map((d) => asShown(data.districts[d]?.v[measure.key]))
         .filter(Boolean) as Val[];
     const values = units.map((u) => u[0]);
-    const c = cuts(measure.kind, values);
+    const c = measure.cuts ?? cuts(measure.kind, values);
+    const classOfV = (v: number) => (measure.over ? c.filter((x) => v > x).length : classOf(v, c));
     const colors = measure.kind === "change" ? DIVERGING : SEQUENTIAL;
     current = { measure, districtOf, value, c, combinedAt };
     let none = 0;
     for (const t of data.towns) {
       const v = value(t);
       if (!v) none++;
-      paths.get(t.id)!.setAttribute("fill", v ? colors[classOf(v[0], c)] : NO_DATA);
+      paths.get(t.id)!.setAttribute("fill", v ? colors[classOfV(v[0])] : NO_DATA);
     }
 
     // What it shows, and how the towns or districts split
@@ -301,16 +352,20 @@ export function startMap(root: HTMLElement, data: MapData, opts: {
     }
     if (!onTowns) {
       about.append({
-        elem: " Each town takes the color of the district for its youngest pupils: its own, or its regional district if it has none.",
-        high: " Each town takes the color of its regional district, where its older pupils go; a town with none takes its own.",
-        all: " A town with one district for every grade takes that district's color. Where a town's pupils split between an " +
-          "elementary and a secondary district, the two are combined, each counting the town's own pupils in it (FY2025).",
+        elem: " Each town shows the district that teaches its youngest pupils: its own district, or its regional district " +
+          "if it has none of its own.",
+        high: " Each town shows the district that teaches its older pupils: its regional district, or its own district if " +
+          "it doesn't belong to one.",
+        all: " Where one district teaches all of a town's grades, the town shows that district. Where a town's pupils go to " +
+          "one district for the early grades and another for the later ones, the town shows " +
+          (measure.key === "density" ? "the district for its early grades."
+            : "the two combined, weighted by how many of the town's pupils each teaches (FY2025)."),
       }[grades]);
     }
 
     // Legend: each class's range, then the gray for none
-    const label = (k: number) => k === 0 ? `Below ${measure.short(c[0])}` : k === 4 ? `${measure.short(c[3])} and up`
-      : `${measure.short(c[k - 1])} to ${measure.short(c[k])}`;
+    const label = (k: number) => measure.classes?.[k] ?? (k === 0 ? `Below ${measure.short(c[0])}` : k === 4
+      ? `${measure.short(c[3])} and up` : `${measure.short(c[k - 1])} to ${measure.short(c[k])}`);
     legend.replaceChildren(...colors.map((col, k) => {
       const li = el("li");
       const sw = el("span", "map-swatch");
@@ -350,6 +405,52 @@ export function startMap(root: HTMLElement, data: MapData, opts: {
     unlift();
   }
 
+  /** The community type view: four colors, a count of each, and the table by type */
+  function drawTypes(measure: Measure, onTowns: boolean, kindOf: (t: MapTown) => Kind | null,
+    districtOf: (t: MapTown) => string | null, combinedAt: (t: MapTown) => boolean) {
+    current = { measure, districtOf, value: () => null, c: [], combinedAt, kindOf };
+    for (const t of data.towns) {
+      const k = kindOf(t);
+      paths.get(t.id)!.setAttribute("fill", k ? KIND_COLOR[k] : NO_DATA);
+    }
+    // Counted once each: towns, or districts
+    const units = onTowns ? data.towns.map((t) => ({ name: t.name, k: kindOf(t) }))
+      : [...new Set(data.towns.map((t) => (combinedAt(t) ? t.elem : districtOf(t))).filter((d): d is string => !!d))]
+        .map((d) => ({ name: data.districts[d]?.name ?? d, k: data.districts[d]?.ct ?? null }));
+    const count = (k: Kind) => units.filter((u) => u.k === k).length;
+    const what = onTowns ? "towns" : "districts";
+    const plural: Record<Kind, string> = { core: "in the Inner Core", gateway: onTowns ? "Gateway Cities" : "in Gateway Cities",
+      suburban: "suburban and other", rural: "rural" };
+    about.replaceChildren(el("strong", "cw-var", measure.label), `. ${measure.about(meta, false)} Of ${units.length} ${what}: ` +
+      [...KINDS].reverse().map((k) => `${count(k)} ${plural[k]}`).join(", ") + ".");
+    legend.replaceChildren(...KINDS.map((k) => {
+      const li = el("li");
+      const sw = el("span", "map-swatch");
+      sw.style.background = KIND_COLOR[k];
+      li.append(sw, el("span", undefined, `${KIND_NAME[k]} (${count(k)})`));
+      return li;
+    }), ...(data.towns.some((t) => !kindOf(t)) ? [(() => {
+      const li = el("li");
+      li.append(el("span", "map-swatch nodata"), el("span", undefined, "No district of its own"));
+      return li;
+    })()] : []));
+    svg.setAttribute("aria-label", `Map of Massachusetts's 351 cities and towns, colored by ${onTowns ? "their" : "their districts'"} ` +
+      "community type. The table below lists each.");
+    tableSum.textContent = `Every ${what.slice(0, -1)}, by type`;
+    const t = el("table");
+    t.createTHead().insertRow().append(el("th", undefined, onTowns ? "Town" : "District"), el("th", undefined, "Community type"));
+    const tb = t.createTBody();
+    for (const u of [...units].sort((a, b) => KINDS.indexOf(b.k!) - KINDS.indexOf(a.k!) || a.name.localeCompare(b.name))) {
+      const tr = tb.insertRow();
+      const th = el("th", undefined, u.name);
+      th.scope = "row";
+      tr.append(th, el("td", undefined, u.k ? KIND_NAME[u.k] : "–"));
+    }
+    tableHolder.replaceChildren(t);
+    tip.hidden = true;
+    unlift();
+  }
+
   // ---- Hover: the town, or every town of its district, outlined, with its value beside the pointer ----
   let hovered: string | null = null;
   const unlift = () => {
@@ -378,7 +479,9 @@ export function startMap(root: HTMLElement, data: MapData, opts: {
       tip.append(el("div", undefined, current.combinedAt(t) ? `${schoolsOf(t)}, combined` : d ? `${data.districts[d].name} district`
         : "No district of its own"));
     }
-    tip.append(el("div", undefined, v ? `${current.measure.fmt(v[0])}, ${v.length > 2 ? `FY${v[1]}–FY${v[2]}` : `FY${v[1]}`}` : "No data"),
+    const kind = current.kindOf?.(t);
+    tip.append(el("div", undefined, current.measure.kind === "type" ? (kind ? KIND_NAME[kind] : "No district of its own")
+      : v ? `${current.measure.fmt(v[0])}, ${v.length > 2 ? `FY${v[1]}–FY${v[2]}` : `FY${v[1]}`}` : "No data"),
       el("div", "cw-tip-hint", layer === "districts" && (d || t.elem) ? "Select to open the district" : "Select to open the town"));
     tip.hidden = false;
     const box = figure.getBoundingClientRect();

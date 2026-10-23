@@ -19,9 +19,10 @@ type Values = Val[];
 /** Ids to compare with, one per "Compare with" choice; null where there is none */
 type CmpIds = Partial<Record<"cohort" | "cohort_state" | "region" | "state" | "gateway" | "type", string | null>>;
 type TownCmpIds = Partial<Record<"peer" | "peer_state" | "region" | "state" | "gateway" | "type", string | null>>;
-/** Rural, suburban and other, or urban (Boston and the Gateway Cities), with students (districts) or
- * residents (towns) per square mile; rural districts carry DESE's rural aid tier */
-interface Community { type: "rural" | "suburban" | "urban"; density: number; tier?: number | null; fy: number }
+/** The Inner Core (Boston and its densest neighbors), the other Gateway Cities, rural, or suburban and
+ * other, with students (districts) or residents (towns) per square mile; rural districts carry DESE's
+ * rural aid tier */
+interface Community { type: "core" | "gateway" | "rural" | "suburban"; density: number; tier?: number | null; fy: number }
 
 /** A district or a district average, from its region's file */
 interface Entity {
@@ -195,7 +196,7 @@ const TOWN_COMPARES: TownCompare[] = ["none", "peer", "peer-state", "region", "s
 function communityText(c: Community | undefined, per: "students" | "residents") {
   if (!c) return "";
   const n = c.density < 100 ? c.density.toFixed(per === "students" ? 1 : 0) : Math.round(c.density).toLocaleString("en-US");
-  const name = { rural: "Rural", suburban: "Suburban or other", urban: "Urban" }[c.type];
+  const name = { core: "Inner Core", gateway: "Gateway City", rural: "Rural", suburban: "Suburban or other" }[c.type];
   return `${name}, ${n} ${per} per square mile`;
 }
 // Ids and choices from before the statewide explorer, so old links still open
@@ -1507,7 +1508,8 @@ export async function startExplorer() {
     const place = e.region ? meta.regions[e.region] : "";
     const bits = e.kind === "average" ? [`${e.members} districts`]
       : [e.type === "vocational" ? "Vocational district" : e.type === "charter" ? "Charter school"
-        : `${meta.cohorts[e.cohort!].short} cohort`, place, e.gateway ? "Gateway City" : "", communityText(e.community, "students")];
+        : `${meta.cohorts[e.cohort!].short} cohort`, place,
+        e.gateway && e.community?.type !== "gateway" ? "Gateway City" : "", communityText(e.community, "students")];
     // Said only when "Its cohort in its region" falls back to the statewide cohort
     if (c && state.cmp === "cohort" && e.type === "traditional" && !e.cmp.cohort && place)
       bits.push(`compared statewide: too few ${meta.cohorts[e.cohort!].short} districts in ${place}`);
@@ -1951,7 +1953,8 @@ export async function startExplorer() {
     const popNow = t.pop[last];
     const peerLabel = towns!.meta.peers.find((x) => x.id === t.peer)?.label;
     const place = t.region ? meta.regions[t.region] : "";
-    const bits = t.kind === "town" ? [`${t.county} County`, place, t.gateway ? "Gateway City" : "", communityText(t.community, "residents")]
+    const bits = t.kind === "town" ? [`${t.county} County`, place, t.gateway && t.community?.type !== "gateway" ? "Gateway City" : "",
+      communityText(t.community, "residents")]
       : [`${t.members} towns`];
     // Said only when "Its peer group in its region" falls back to the statewide peer group
     if (c && state.tcmp === "peer" && t.kind === "town" && !t.cmp.peer && place)

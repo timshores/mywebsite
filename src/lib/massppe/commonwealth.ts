@@ -15,6 +15,8 @@ interface Row {
   region: string | null;
   towns: string[];
   valley: boolean;
+  /** Community type: the Inner Core, the other Gateway Cities, rural, or suburban and other */
+  ct?: "core" | "gateway" | "rural" | "suburban" | null;
   v: Record<string, Values>;
 }
 
@@ -111,6 +113,19 @@ const HIGHLIGHTS: Record<string, { label: string; groups: Record<string, Group>;
     },
     of: (d) => (d.id && AP.has(d.id) ? "ap" : d.valley ? "valley" : "other"),
     labels: new Set([...AP, "northampton", "greenfield", "springfield"]),
+  },
+  // Four types, distinct in hue and, for the pair colorblind readers find closest, in shape
+  type: {
+    label: "Community type",
+    groups: {
+      core: { label: "Inner Core", color: "#e34948", shape: "triangle", z: 4 },
+      gateway: { label: "Gateway Cities outside the Inner Core", color: "#eda100", shape: "square", z: 3 },
+      suburban: { label: "Suburban and other", color: "#2a78d6", shape: "circle", z: 1 },
+      rural: { label: "Rural", color: "#1baf7a", shape: "circle", z: 2 },
+      other: { ...OTHER, label: "Vocational and charter" },
+    },
+    of: (d) => d.ct ?? "other",
+    labels: new Set(),
   },
   western: {
     label: "Western MA",
