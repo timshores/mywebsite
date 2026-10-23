@@ -40,6 +40,8 @@ export interface ScatterOpts {
   refY?: number;
   /** A reference line up the chart at this x, such as a threshold */
   refX?: number;
+  /** The reference line's value, written on the horizontal axis in place of the ticks beside it */
+  refXLabel?: string;
   onHover?: (p: Point | null, at: { left: number; top: number } | null) => void;
   onPick?: (p: Point) => void;
   /** A zoomed view: the ranges shown, in data units; points outside them are left out */
@@ -211,11 +213,19 @@ export function scatter(svg: SVGSVGElement, points: Point[], o: ScatterOpts) {
       const label = svgEl("text", { x: m.left - 8, y: sy(t), dy: "0.32em", "text-anchor": "end", class: "sc-tick" }, svg);
       label.textContent = o.yFmt(t);
     }
+    // The reference line's own label, where it falls in view; tick labels too close to it give way
+    const refAt = o.refX != null && o.refXLabel && (!o.logX || o.refX > 0) && fx(o.refX) >= x0 && fx(o.refX) <= x1
+      ? sx(o.refX) : null;
     for (const t of xTicks) {
       if (sx(t) < m.left - 1 || sx(t) > m.left + pw + 1) continue;
       svgEl("line", { x1: sx(t), x2: sx(t), y1: m.top, y2: m.top + ph }, grid);
+      if (refAt != null && Math.abs(sx(t) - refAt) < 38) continue;
       const label = svgEl("text", { x: sx(t), y: m.top + ph + 16, "text-anchor": "middle", class: "sc-tick" }, svg);
       label.textContent = o.xFmt(t);
+    }
+    if (refAt != null) {
+      const label = svgEl("text", { x: refAt, y: m.top + ph + 16, "text-anchor": "middle", class: "sc-ref-label" }, svg);
+      label.textContent = o.refXLabel!;
     }
     // The first name that fits: full, short, short without "(log scale)"; past that, smaller type
     const place = (t: SVGTextElement, names: (string | undefined)[], room: number) => {

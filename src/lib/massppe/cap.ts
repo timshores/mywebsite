@@ -894,7 +894,7 @@ export function startCap(root: HTMLElement, data: CapData, opts: { town: string 
       width, height, logX: true, xFmt: xo.axis, yFmt: signed, domain: zoom ?? undefined,
       xTitle: xo.title, xTitleShort: xo.short,
       yTitle: Y_TITLE, yTitleShort: "Change, per household",
-      groups: colorBy === "fifth" ? FIFTH_GROUPS : GROUPS, smooth: false, refY: 0, refX: xKey === "cey_pct" ? y.max_pct : undefined,
+      groups: colorBy === "fifth" ? FIFTH_GROUPS : GROUPS, smooth: false, refY: 0, refX: xKey === "cey_pct" ? y.max_pct : undefined, refXLabel: pct(y.max_pct, 1),
       onHover: (p, pos) => {
         if (!p || !pos) {
           tip.hidden = true;

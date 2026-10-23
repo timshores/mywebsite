@@ -2520,6 +2520,13 @@ import Layout from "../../layouts/Layout.astro";
     fill: var(--muted);
   }
 
+  /* A reference line's value on the axis, such as the cap's 82.5% */
+  .explorer :global(.sc-ref-label) {
+    font-size: 12px;
+    font-weight: 700;
+    fill: #c2541f;
+  }
+
   /* Axis titles name the measures: the first place a reader looks (scatter.ts TITLE_PX) */
   .explorer :global(.sc-title) {
     font-size: 15px;
