@@ -79,7 +79,7 @@ export function enlargeButton(box: HTMLElement, onClose?: () => void, controls?:
   b.innerHTML = `${ICON}<span>Enlarge</span>`;
   b.addEventListener("click", () => {
     const { dialog, strip, body } = windowFor(box);
-    const title = box.querySelector("h2, h3")?.textContent ?? "Chart";
+    const title = box.querySelector("h2, h3, h4")?.textContent ?? "Chart";
     dialog.setAttribute("aria-label", title);
     // Hold each element's place, so the page behind doesn't shift
     const hold = (el: HTMLElement) => {

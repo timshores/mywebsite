@@ -2353,7 +2353,56 @@ import Layout from "../../layouts/Layout.astro";
   .explorer :global(.map-about) {
     max-width: 80ch;
     line-height: 1.6;
-    margin: 0 0 0.7rem;
+    margin: 0.3rem 0 0.7rem;
+  }
+
+  /* The measure's name, a heading that folds its explanation away */
+  .explorer :global(.map-box) {
+    position: relative;
+  }
+
+  .explorer :global(.map-about-fold > summary) {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    list-style: none;
+  }
+
+  .explorer :global(.map-about-fold > summary::-webkit-details-marker) {
+    display: none;
+  }
+
+  .explorer :global(.map-about-fold > summary::before) {
+    content: "";
+    width: 7px;
+    height: 7px;
+    border: solid var(--ink-soft);
+    border-width: 0 1.5px 1.5px 0;
+    transform: rotate(-45deg);
+    transition: transform 0.12s ease;
+  }
+
+  .explorer :global(.map-about-fold[open] > summary::before) {
+    transform: rotate(45deg);
+  }
+
+  .explorer :global(.map-measure-title) {
+    margin: 0;
+    font-size: 1.1rem;
+  }
+
+  .explorer :global(.map-about-fold:not([open])) {
+    margin-bottom: 0.6rem;
+  }
+
+  /* Enlarged, the map keeps the measure's name and leaves its explanation on the page */
+  .explorer :global(.is-enlarged .map-about-fold > .map-about) {
+    display: none;
+  }
+
+  .explorer :global(.is-enlarged .map-about-fold) {
+    margin-bottom: 0.5rem;
   }
 
   .explorer :global(.map-figure) {

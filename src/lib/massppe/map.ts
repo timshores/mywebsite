@@ -264,7 +264,21 @@ export function startMap(root: HTMLElement, data: MapData, opts: {
     draw();
   });
   controls.append(layerSeg.box, gradeSeg.box, measureWrap, dollarSeg.box);
+  // The measure's name heads a fold holding what it means; closed, it stays closed in this browser if
+  // choices are remembered (the explorer's fold memory, mass-school-spending:map-about)
   const about = el("p", "map-about");
+  const fold = el("details", "map-about-fold");
+  fold.dataset.remember = "map-about";
+  const measureTitle = el("h4", "map-measure-title");
+  const foldHead = el("summary");
+  foldHead.append(measureTitle);
+  fold.append(foldHead, about);
+  let closed = false;
+  try {
+    closed = localStorage.getItem("mass-school-spending:remember") === "yes" &&
+      localStorage.getItem("mass-school-spending:map-about") === "closed";
+  } catch { /* storage blocked */ }
+  fold.open = !closed;
   const figure = el("figure", "map-figure");
   const legend = el("ul", "map-legend");
   const svg = document.createElementNS(SVG, "svg");
@@ -287,7 +301,10 @@ export function startMap(root: HTMLElement, data: MapData, opts: {
   const src = el("p", "map-source");
   src.append("Outlines: the Census Bureau's ", Object.assign(el("a", undefined, "cartographic boundary file"), { href: meta.outlines }),
     " of county subdivisions. Data: the explorer's own, as the Data tab describes.");
-  section.append(enlargeButton(section), head, controls, about, figure, tableBox, src);
+  // Enlarge takes the controls, the measure's name and the map, not the text and table around them
+  const mapBox = el("div", "map-box");
+  mapBox.append(enlargeButton(mapBox), controls, fold, figure);
+  section.append(head, mapBox, tableBox, src);
   root.replaceChildren(section);
 
   // One path per town, made once; each draw only recolors them
@@ -365,7 +382,8 @@ export function startMap(root: HTMLElement, data: MapData, opts: {
 
     // What it shows, and how the towns or districts split
     const what = byTown ? "towns" : "districts";
-    about.replaceChildren(el("strong", "cw-var", measure.label), `. ${measure.about(meta, real)}`);
+    measureTitle.textContent = measure.label;
+    about.replaceChildren(measure.about(meta, real));
     if (measure.dollars) about.append(" ", trendHelp());
     const up = values.filter((v) => v > 0).length;
     const n = values.length;
@@ -457,7 +475,8 @@ export function startMap(root: HTMLElement, data: MapData, opts: {
         .map((d) => ({ name: data.districts[d]?.name ?? d, k: data.districts[d]?.ct ?? null }));
     const count = (k: Kind) => units.filter((u) => u.k === k).length;
     const what = onTowns ? "towns" : "districts";
-    about.replaceChildren(el("strong", "cw-var", measure.label), `. ${measure.about(meta, false)}`);
+    measureTitle.textContent = measure.label;
+    about.replaceChildren(measure.about(meta, false));
     if (!onTowns) about.append(gradeNote(measure));
     legend.replaceChildren(...KINDS.map((k) => {
       const li = el("li");
