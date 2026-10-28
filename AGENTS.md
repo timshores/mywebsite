@@ -75,3 +75,11 @@ Links to other sites, and to files hosted here (PDFs, spreadsheets, documents), 
 by default (Tim's rule). A script in `src/layouts/Layout.astro` sets this for every page, including
 links added later by scripts; downloads, `mailto:` and links with their own `target` are left alone,
 and `data-same-tab` opts a link out. New pages should use `Layout` so they follow it.
+
+## Font Lab
+
+`npm run font-lab` runs the dev server with a floating panel for trying Google Fonts on every page
+(`astro.fontlab.config.mjs` injects `scripts/font-lab-panel.js`; dev only, never in the build).
+It loads the chosen fonts under the site's own names, "Karla" for body text and "Besley"
+for headings, so applying a pick means changing the Google Fonts link and those two family names
+in `src/layouts/Layout.astro`, plus the explicit uses in `src/pages/mass-school-spending/index.astro`.

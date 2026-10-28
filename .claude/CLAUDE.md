@@ -32,7 +32,7 @@ This is Tim Shores' professional/personal website showcasing work as a Data Stor
 - **Transitions**: Smooth hover animations and fade-in effects
 
 ### Typography
-- Primary font: System fonts with fallback stack
+- Body: Karla; headings: Besley (Google Fonts, loaded in `src/layouts/Layout.astro`)
 - Headings use varying weights for hierarchy
 
 ## Build & Development Commands

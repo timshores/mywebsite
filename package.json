@@ -12,6 +12,7 @@
     "dev": "npm run profile:check && astro dev",
     "build": "npm run profile:check && astro build",
     "preview": "astro preview",
+    "font-lab": "astro dev --config astro.fontlab.config.mjs",
     "astro": "astro"
   },
   "dependencies": {
