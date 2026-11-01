@@ -207,6 +207,22 @@ function cuts(kind: Measure["kind"], values: number[]): number[] {
 }
 const classOf = (v: number, c: number[]) => c.filter((x) => v >= x).length;
 
+// Growth in dollars: down in orange, then four blues, faster growth darker. One set of classes serves the map
+// before and after inflation, so the Dollars switch moves towns between them, as inflation does.
+const GROWTH = ["#c2541f", "#cde2fb", "#86b6ef", "#3987e5", "#1c5cab"];
+/** Cut points for growth in dollars, on its values before and after inflation together: zero, then the
+ * quartiles of the growth above it, to the nearest half point */
+function growthCuts(values: number[]): number[] {
+  const up = values.filter((v) => v > 0);
+  if (!up.length) return [0, 0.01, 0.02, 0.03];
+  const out = [0];
+  for (const q of [0.25, 0.5, 0.75]) {
+    const r = Math.max(0.005, Math.round(quantile(up, q) / 0.005) * 0.005);
+    out.push(r <= out[out.length - 1] ? out[out.length - 1] + 0.005 : r);
+  }
+  return out;
+}
+
 function el<K extends keyof HTMLElementTagNameMap>(tag: K, cls?: string, text?: string): HTMLElementTagNameMap[K] {
   const n = document.createElement(tag);
   if (cls) n.className = cls;
@@ -342,21 +358,22 @@ export function startMap(root: HTMLElement, data: MapData, opts: {
     dollarSeg.box.title = measure.dollars ? "" : "This measure isn't growth in dollars, so inflation doesn't change it";
     dollarSeg.box.querySelectorAll("button").forEach((b) => (b.disabled = !measure.dollars));
     // Growth in dollars comes as [after inflation, first year, last year, before inflation], each its own trend
-    const asShown = (v: Val | null | undefined): Val | null => {
+    const inMode = (v: Val | null | undefined, after: boolean): Val | null => {
       if (!v) return null;
       if (!measure.dollars) return v;
-      return real || v.length < 4 ? v.slice(0, 3) : [v[3], v[1], v[2]];
+      return after || v.length < 4 ? v.slice(0, 3) : [v[3], v[1], v[2]];
     };
     // All grades: a town with one district takes it; a town split between two takes the two combined
     const combinedAt = (t: MapTown) => !onTowns && grades === "all" && !!t.elem && t.elem !== t.high;
     const districtOf = (t: MapTown) => (onTowns || combinedAt(t) ? null : grades === "high" ? t.high : t.elem);
-    const value = (t: MapTown): Val | null => {
-      if (onTowns) return asShown(t.v[measure.key]);
+    const valueIn = (t: MapTown, after: boolean): Val | null => {
+      if (onTowns) return inMode(t.v[measure.key], after);
       // Density isn't combined: a split town takes its own district's
-      if (combinedAt(t)) return asShown(t.all?.[measure.key] ?? data.districts[t.elem!]?.v[measure.key]);
+      if (combinedAt(t)) return inMode(t.all?.[measure.key] ?? data.districts[t.elem!]?.v[measure.key], after);
       const d = districtOf(t);
-      return d ? asShown(data.districts[d]?.v[measure.key]) : null;
+      return d ? inMode(data.districts[d]?.v[measure.key], after) : null;
     };
+    const value = (t: MapTown) => valueIn(t, real);
     // Community type: each town its own, or its district's (a town split between two takes its own district's)
     if (measure.kind === "type") {
       drawTypes(measure, onTowns, (t) => (onTowns ? t.ct ?? null
@@ -365,13 +382,17 @@ export function startMap(root: HTMLElement, data: MapData, opts: {
     }
     // Each district counts once, however many towns it covers; with all grades, each town counts
     const byTown = onTowns || grades === "all";
-    const units = byTown ? data.towns.map(value).filter(Boolean) as Val[]
-      : [...new Set(data.towns.map(districtOf).filter((d): d is string => !!d))].map((d) => asShown(data.districts[d]?.v[measure.key]))
-        .filter(Boolean) as Val[];
+    const unitsIn = (after: boolean) => (byTown ? data.towns.map((t) => valueIn(t, after)).filter(Boolean) as Val[]
+      : [...new Set(data.towns.map(districtOf).filter((d): d is string => !!d))].map((d) => inMode(data.districts[d]?.v[measure.key], after))
+        .filter(Boolean) as Val[]);
+    const units = unitsIn(real);
     const values = units.map((u) => u[0]);
-    const c = (measure.fifths ? meta.fifths[measure.fifths] : null) ?? measure.cuts ?? cuts(measure.kind, values);
+    // Growth in dollars: the classes are cut on its values before and after inflation together, so both
+    // share one set of ranges and the Dollars switch moves towns between them, as inflation would
+    const c = (measure.fifths ? meta.fifths[measure.fifths] : null) ?? measure.cuts
+      ?? (measure.dollars ? growthCuts([...unitsIn(true), ...unitsIn(false)].map((u) => u[0])) : cuts(measure.kind, values));
     const classOfV = (v: number) => (measure.over ? c.filter((x) => v > x).length : classOf(v, c));
-    const colors = measure.kind === "change" ? DIVERGING : SEQUENTIAL;
+    const colors = measure.dollars ? GROWTH : measure.kind === "change" ? DIVERGING : SEQUENTIAL;
     current = { measure, districtOf, value, c, combinedAt };
     let none = 0;
     for (const t of data.towns) {
@@ -398,7 +419,7 @@ export function startMap(root: HTMLElement, data: MapData, opts: {
     const fifthWords = ["Lowest fifth", "Second", "Middle", "Fourth", "Highest fifth"];
     const label = (k: number) => measure.fifths ? `${fifthWords[k]}: ${k === 0 ? `under ${measure.short(c[0])}`
       : k === 4 ? `${measure.short(c[3])} and up` : `${measure.short(c[k - 1])} to ${measure.short(c[k] - 1)}`}`
-      : measure.classes?.[k] ?? (k === 0 ? `Below ${measure.short(c[0])}` : k === 4
+      : measure.classes?.[k] ?? (k === 0 ? (measure.dollars ? "Down, below 0%" : `Below ${measure.short(c[0])}`) : k === 4
       ? `${measure.short(c[3])} and up` : `${measure.short(c[k - 1])} to ${measure.short(c[k])}`);
     legend.replaceChildren(...colors.map((col, k) => {
       const li = el("li");
@@ -420,7 +441,7 @@ export function startMap(root: HTMLElement, data: MapData, opts: {
       ? data.towns.filter((t) => value(t)).map((t) => ({ name: onTowns || schoolsOf(t) === t.name ? t.name : `${t.name} (${schoolsOf(t)})`,
         v: value(t)! }))
       : [...new Set(data.towns.map(districtOf).filter((d): d is string => !!d))]
-        .filter((d) => data.districts[d]?.v[measure.key]).map((d) => ({ name: data.districts[d].name, v: asShown(data.districts[d].v[measure.key])! }));
+        .filter((d) => data.districts[d]?.v[measure.key]).map((d) => ({ name: data.districts[d].name, v: inMode(data.districts[d].v[measure.key], real)! }));
     rows.sort((a, b) => b.v[0] - a.v[0]);
     tableSum.textContent = `Every ${what.slice(0, -1)}, highest first`;
     const t = el("table");
