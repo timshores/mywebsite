@@ -170,39 +170,6 @@ const currentPath = Astro.url.pathname.replace(/\/$/, "") || "/";
     color: var(--accent-2);
   }
 
-  [data-expandable] {
-    cursor: auto;
-    user-select: text;
-    transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease;
-  }
-
-  [data-expandable]:focus-visible {
-    outline: 2px dashed var(--accent);
-    outline-offset: 4px;
-  }
-
-  [data-expandable].is-expanded {
-    transform: translate(-6px, -6px) !important;
-    border-color: var(--accent) !important;
-    position: relative;
-    z-index: 2;
-    box-shadow:
-      1px 1px 0 0 var(--accent),
-      2px 2px 0 0 var(--accent),
-      3px 3px 0 0 var(--accent),
-      4px 4px 0 0 var(--accent),
-      5px 5px 0 0 var(--accent),
-      6px 6px 0 0 var(--accent),
-      7px 7px 0 0 var(--accent),
-      8px 8px 0 0 var(--accent),
-      9px 9px 0 0 var(--accent),
-      10px 10px 0 0 var(--accent) !important;
-  }
-
-  [data-expandable][data-keep-left-rail].is-expanded {
-    border-left-color: var(--accent-2) !important;
-  }
-
   @media (max-width: 760px) {
     .container {
       padding: 1rem;
@@ -289,59 +256,5 @@ const currentPath = Astro.url.pathname.replace(/\/$/, "") || "/";
         syncPortraitMode();
       });
     }
-
-    const expandableNodes = document.querySelectorAll("[data-expandable]");
-    for (const node of expandableNodes) {
-      if (!(node instanceof HTMLElement)) continue;
-      if (!node.hasAttribute("tabindex")) node.tabIndex = 0;
-      if (!node.hasAttribute("role")) node.setAttribute("role", "button");
-      if (!node.hasAttribute("aria-pressed")) node.setAttribute("aria-pressed", "false");
-    }
-
-    const setExpandedState = (node, expanded) => {
-      node.classList.toggle("is-expanded", expanded);
-      node.setAttribute("aria-pressed", expanded ? "true" : "false");
-      if (!expanded) {
-        for (const child of node.querySelectorAll("[data-expandable].is-expanded")) {
-          if (!(child instanceof HTMLElement)) continue;
-          child.classList.remove("is-expanded");
-          child.setAttribute("aria-pressed", "false");
-        }
-      }
-    };
-
-    const shouldIgnoreEvent = (event) => {
-      if (
-        event.target instanceof Element &&
-        event.target.closest("a, button, input, textarea, select, label")
-      ) {
-        return true;
-      }
-      const selection = window.getSelection?.();
-      if (selection && !selection.isCollapsed) {
-        return true;
-      }
-      return false;
-    };
-
-    document.addEventListener("click", (event) => {
-      if (shouldIgnoreEvent(event)) return;
-      const target = event.target instanceof Element
-        ? event.target.closest("[data-expandable]")
-        : null;
-      if (!(target instanceof HTMLElement)) return;
-      const next = !target.classList.contains("is-expanded");
-      setExpandedState(target, next);
-    });
-
-    document.addEventListener("keydown", (event) => {
-      if (!(event.target instanceof HTMLElement)) return;
-      const target = event.target.closest("[data-expandable]");
-      if (!(target instanceof HTMLElement)) return;
-      if (event.key !== "Enter" && event.key !== " ") return;
-      event.preventDefault();
-      const next = !target.classList.contains("is-expanded");
-      setExpandedState(target, next);
-    });
   });
 </script>

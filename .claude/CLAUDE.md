@@ -26,7 +26,7 @@ This is Tim Shores' professional/personal website showcasing work as a Data Stor
 
 ### Key Design Patterns
 - **Navigation**: Sticky folder-tab style with `clip-path` for distinctive shape
-- **Cards**: Box-shadow hover effects with stepped shadow pattern (8px steps)
+- **Cards**: plain content panels. A card is not a control; only the links inside it act (design voice, 2026-11-01: the click-to-pop stepped shadow announced every card as a button and swallowed Enter on the links inside)
 - **Left Margin**: Decorative red line accent
 - **Responsive**: Mobile breakpoint at 768px
 - **Transitions**: Smooth hover animations and fade-in effects

@@ -12,25 +12,25 @@ import { profile } from "../data/profile";
   </p>
 
   <div class="contact-grid">
-    <article class="contact-item" data-expandable>
+    <article class="contact-item">
       <div class="contact-label">Email</div>
       <a href={`mailto:${profile.email}`} class="contact-value">{profile.email}</a>
     </article>
 
-    <article class="contact-item" data-expandable>
+    <article class="contact-item">
       <div class="contact-label">LinkedIn</div>
       <a href={profile.linkedin} target="_blank" rel="noopener noreferrer" class="contact-value">
         linkedin.com/in/timshores
       </a>
     </article>
 
-    <article class="contact-item" data-expandable>
+    <article class="contact-item">
       <div class="contact-label">Location</div>
       <span class="contact-value">{profile.location}</span>
     </article>
   </div>
 
-  <div class="contact-note" data-expandable data-keep-left-rail>
+  <div class="contact-note">
     <h2>Great Fit For</h2>
     <ul>
       <li>Community-based participatory research that turns local experience into usable evidence</li>

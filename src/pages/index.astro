@@ -45,19 +45,19 @@ import LiveSash from "../components/LiveSash.astro";
   </section>
 
   <h2>About</h2>
-  <div class="about-card" data-expandable>
+  <div class="about-card">
     {profile.summary.map((paragraph) => <p>{paragraph}</p>)}
   </div>
 
   <h2>Core Focus</h2>
   <div class="focus-groups">
-    <section class="focus-group" data-expandable>
+    <section class="focus-group">
       <h3>Practice Areas</h3>
       <ul class="focus-list">
         {profile.focusAreas.map((item) => <li>{item}</li>)}
       </ul>
     </section>
-    <section class="focus-group" data-expandable>
+    <section class="focus-group">
       <h3>Working Skills</h3>
       <ul class="focus-list">
         {profile.topSkills.map((skill) => <li>{skill}</li>)}
@@ -68,13 +68,13 @@ import LiveSash from "../components/LiveSash.astro";
   <h2>Selected Work</h2>
   <div class="experience-grid">
     {profile.selectedWork.map((project) => (
-      <article class="experience-item" data-expandable data-keep-left-rail>
+      <article class="experience-item">
         <span class="project-tag">{project.domain}</span>
         <h3>{project.title}</h3>
         <p>{project.description}</p>
         <p class="impact">{project.impact}</p>
         <div class="project-details">
-          {project.skills.map((skill) => <span data-expandable>{skill}</span>)}
+          {project.skills.map((skill) => <span>{skill}</span>)}
         </div>
       </article>
     ))}
@@ -82,14 +82,14 @@ import LiveSash from "../components/LiveSash.astro";
 
   <h2>Credentials</h2>
   <div class="credentials-grid">
-    <section class="credential-card" data-expandable>
+    <section class="credential-card">
       <h3>Certifications</h3>
       <ul>
         {profile.certifications.map((cert) => <li>{cert}</li>)}
       </ul>
     </section>
 
-    <section class="credential-card" data-expandable>
+    <section class="credential-card">
       <h3>Education</h3>
       <ul>
         {profile.education.map((edu) => (
@@ -104,7 +104,7 @@ import LiveSash from "../components/LiveSash.astro";
   </div>
 
   <h2>Community</h2>
-  <div class="about-card" data-expandable>
+  <div class="about-card">
     <p>
       I currently serve in local civic and education leadership roles, where policy,
       budgets, and community needs are translated into decisions people can use.
