@@ -1897,6 +1897,8 @@ export async function startExplorer() {
   function renderDistricts() {
     const e = win(entity(state.d)!);
     const c = comparisonFor(e);
+    // The menu follows the state, as the town view's does: a swap sets "Another district or average"
+    compareSelect.value = state.cmp;
     groupLink($<HTMLAnchorElement>("cmp-name"), c && RELATIVE_COMPARES.has(state.cmp) ? c : null);
     // A former district can't be a comparison, so it can't swap places with one
     swapButton($<HTMLButtonElement>("swap-district"), e.name, c, !!c && listed.has(c.id) && !isFormer(state.d));

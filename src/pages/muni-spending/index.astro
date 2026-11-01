@@ -126,7 +126,7 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
         <span class="district-head">
           <span id="pick-compare-label">Compare with</span>
           <!-- Swap: the comparison takes the focus, and this becomes the comparison (explorer.ts, swapButton) -->
-          <button type="button" class="swap is-idle" id="swap-district">⇄ Swap</button>
+          <button type="button" class="swap-btn is-idle" id="swap-district">⇄ Swap</button>
         </span>
         <div class="cmp-row">
           <select id="pick-compare" aria-labelledby="pick-compare-label" aria-describedby="cmp-name">
@@ -155,7 +155,7 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
       <div class="control" data-view-only="towns" hidden>
         <span class="district-head">
           <span id="pick-town-compare-label">Compare with</span>
-          <button type="button" class="swap is-idle" id="swap-town">⇄ Swap</button>
+          <button type="button" class="swap-btn is-idle" id="swap-town">⇄ Swap</button>
         </span>
         <div class="cmp-row">
           <select id="pick-town-compare" aria-labelledby="pick-town-compare-label" aria-describedby="town-cmp-name">
@@ -833,6 +833,13 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
     opacity: 0;
   }
 
+  /* The words that change with the tab, as a soft pill in the paragraph's own type */
+  span.swap {
+    padding: 0.05em 0.45em;
+    border-radius: 999px;
+    background: #efe9dd;
+  }
+
   @media (prefers-reduced-motion: reduce) {
     .swap,
     #view-panel {
@@ -1499,8 +1506,9 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
     outline-offset: -2px;
   }
 
-  /* Swap the focus and the comparison: a small pill, like Current and Former beside District */
-  .swap {
+  /* Swap the focus and the comparison: a small pill, like Current and Former beside District. Not .swap,
+     which is the intro's words that change with the tab */
+  .swap-btn {
     padding: 0.05rem 0.55rem;
     font: inherit;
     font-size: 0.72rem;
@@ -1512,24 +1520,24 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
     cursor: pointer;
   }
 
-  .swap:hover:not(:disabled) {
+  .swap-btn:hover:not(:disabled) {
     color: var(--ink);
     border-color: var(--ink-soft);
   }
 
-  .swap:focus-visible {
+  .swap-btn:focus-visible {
     outline: 2px dashed var(--accent);
     outline-offset: 2px;
   }
 
-  .swap:disabled {
+  .swap-btn:disabled {
     opacity: 0.45;
     cursor: default;
   }
 
   /* With no comparison it keeps its place, unseen (and out of reach), so the controls don't shift when it
      comes and goes */
-  .swap.is-idle {
+  .swap-btn.is-idle {
     visibility: hidden;
   }
 
