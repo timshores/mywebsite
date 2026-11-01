@@ -41,7 +41,7 @@ export const portfolioItems = [
     period: "Spring 2023",
     date: "2023-05-01",
     summary:
-      "Final DACSS 603 research project in R using Massachusetts state agency data to examine small-town elementary school effectiveness.",
+      "Final project for a UMass quantitative analysis course (DACSS 603), in R, using Massachusetts state agency data to examine small-town elementary school effectiveness.",
     details: [
       "Research question: in Massachusetts small town elementary schools, which factors have the strongest association with school effectiveness, and which are subject to local influence?",
     ],
@@ -114,7 +114,7 @@ export const portfolioItems = [
     period: "Fall 2026",
     date: "2026-10-21",
     summary:
-      "Updates the per-pupil expenditure report with DESE's FY2025 data, adds an inflation addendum that restates its growth rates in real dollars, and feeds an interactive explorer covering every Massachusetts school district and town.",
+      "Updates the per-pupil expenditure report with FY2025 data from the state education department (DESE), adds an inflation addendum that restates its growth rates in real dollars, and feeds an interactive explorer covering every Massachusetts school district and town.",
     details: [
       "Tables and charts run from FY2009 through FY2025, with FY2024 shown as revised beside FY2025. Some findings in the text still quote the first edition's 2009–2024 figures.",
     ],
@@ -154,7 +154,7 @@ export const portfolioItems = [
     summary:
       "Work as the Leverett member of the Amherst-Pelham Regional School Committee examining per-pupil expenditure patterns across Western Massachusetts school districts by enrollment-based cohorts.",
     details: [
-      "Frames PPE as a flawed lens for understanding school budgets, but one that can still be useful when its limits are made clear in public budget deliberations.",
+      "Frames per-pupil expenditure (PPE) as a flawed lens for understanding school budgets, but one that can still be useful when its limits are made clear in public budget deliberations.",
     ],
     links: [
       {
@@ -182,7 +182,7 @@ export const portfolioItems = [
     period: "2024-2026",
     date: "2026-05-01",
     summary:
-      "Selected Cisco documentation samples for SASE management, security insights, and network tunnel administration.",
+      "Selected Cisco documentation samples for SASE (secure access service edge) management, security insights, and network tunnel administration.",
     details: [
       "Representative product documentation written for cybersecurity administrators and technical users.",
     ],
