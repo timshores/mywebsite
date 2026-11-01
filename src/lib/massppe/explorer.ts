@@ -63,7 +63,25 @@ interface Entity {
    * contribute to this district and the other districts it belongs to */
   towns?: { id: string; name: string; contribution: number | null; also: TownDistrict[] }[];
   towns_kind?: "members" | "town";
+  /** With Since 1990 on: DESE's older day-program spending per pupil, in total and, for a district, by
+   * program; DESE's average membership (FY1997 on) and NCES fall enrollment (before); for an average,
+   * how many districts each year counts */
+  day?: Partial<Record<DayKey, Values>> & { total: Values };
+  day_memb?: Values;
+  nces?: Values;
+  day_n?: Values;
+  /** A district that no longer exists: the years it has figures for, and what became of it */
+  former?: { first: number; last: number };
+  note?: { text: string; source: string | null };
+  /** Payments to out-of-district schools per out-of-district FTE pupil (an average's pooled) */
+  ood?: Values;
 }
+
+type DayKey = "total" | "regular" | "special" | "bilingual" | "occupational";
+/** A district's or average's earlier years, FY1990 to FY2008, from its region's districts-history file.
+ * A former district's record is its whole entity, with its FY2009-on series in main. */
+type HistRec = Pick<Entity, "id" | "ppe" | "enroll" | "nss" | "ood" | "day" | "day_memb" | "nces" | "day_n"> & Partial<Entity> &
+  { main?: Pick<Entity, "ppe" | "enroll" | "nss" | "ood"> };
 
 /** What the menus need to know of a district or average before its file loads */
 interface Listed {
@@ -77,6 +95,8 @@ interface Listed {
   regional?: boolean;
   fte?: number;
   gateway?: boolean;
+  /** Former districts: their years, and which list they go in: ended before FY2009, after, or charter */
+  former?: { first: number; last: number; group?: "early" | "later" | "charter" };
 }
 
 /** A town or a town average, from its region's file */
@@ -163,12 +183,18 @@ interface Meta {
   cpi: Record<string, number>;
   /** Census revenue years, which trail the DESE years */
   revenue: { first: number; latest: number; min_members: number } | null;
+  /** The earlier years, for Since 1990: their years, the year the explorer's own measure begins, the
+   * day program's years, and the years DESE's membership and NCES enrollment weight its averages */
+  history?: { years: number[]; functional_from: number; day: [number, number]; membership_from: number;
+    chapter70_from: number; nces: [number, number] };
 }
 
 interface Data {
   meta: Meta;
   averages: Listed[];
   districts: Listed[];
+  /** Districts the older files or the Hub have and the explorer's own years don't */
+  former?: Listed[];
 }
 
 type Compare = "none" | "cohort" | "cohort-state" | "region" | "state" | "gateway" | "type" | "fifth" | "other";
@@ -186,9 +212,11 @@ const MIN_SPAN = 2;
 const PER_WORD: Record<Per, string> = { resident: "resident", household: "household", parcel: "taxable property", total: "town" };
 type View = "districts" | "towns" | "commonwealth" | "cap" | "data";
 const VIEWS: View[] = ["districts", "towns", "commonwealth", "cap", "data"];
-type StackPanel = "ppe" | "nss" | "rev" | "tspend" | "trev" | "tval" | "tpar" | "tlevy";
-/** The two lines a stacked chart can draw over its columns */
-type Line = "trend" | "cmp";
+type StackPanel = "ppe" | "ood" | "nss" | "rev" | "tspend" | "trev" | "tval" | "tpar" | "tlevy";
+/** The lines a stacked chart can draw over its columns: its trend, the comparison, and, with Since 1990
+ * on, the older measure's line and the comparison's */
+type Line = "trend" | "cmp" | "day" | "cday";
+const LINES: Line[] = ["trend", "cmp", "day", "cday"];
 
 // Each comparison choice, as the ids to try in order: "Its cohort in its region" falls
 // back to the statewide cohort where a region has too few districts of that size
@@ -293,6 +321,39 @@ const ENROLL_SERIES = [
   { key: "out_of_district", label: "Out-of-district FTE", color: "#1baf7a" },
 ] as const;
 const COMPARE_COLOR = "#524f45";
+// Pupils educated elsewhere: the out-of-district color from the enrollment chart
+const OOD_COLOR = "#1baf7a";
+// The older measure: a color of its own and dashed, so it never reads as part of the columns
+const DAY_COLOR = "#0f6f78";
+const DAY_DASH = "6 4";
+const DAY_LABEL = "Older, narrower DESE measure";
+const PROGRAM_SERIES = [
+  { key: "regular", label: "Regular classes", color: "#355c7d" },
+  { key: "special", label: "Special education", color: "#c06c84" },
+  { key: "bilingual", label: "Bilingual (to FY2003)", color: "#6c8e3f" },
+  { key: "occupational", label: "Vocational", color: "#b8860b" },
+] as const;
+const DAY_NOTE = "From FY1990 to FY2006, DESE published a narrower figure it called \u201cday program\u201d spending. It is " +
+  "what a district spent running its own schools (regular classes, special education, bilingual and vocational " +
+  "programs), divided by the pupils enrolled there, including pupils from other towns. It leaves out pupils the " +
+  "district sends to other schools and what it pays for them, and it counts mainly the school committee budget and " +
+  "the town's indirect costs for its schools. So it usually runs below the columns. In FY2005, before inflation, " +
+  "Abington's was $6,766 per pupil, against $7,463 in the columns.\n\nDESE's names for the programs: regular day, " +
+  "special needs, bilingual, and occupational day.";
+const WEIGHT_NOTE = "An average weights each district's figure by its pupils. From FY1997 those are DESE's average " +
+  "membership: full-time equivalents over the year. DESE's reports for FY1990 to FY1996 give no pupils, so those " +
+  "years use the fall enrollment the National Center for Education Statistics counts (Common Core of Data), a head " +
+  "count from a different agency. In FY1997 and FY1998, when both exist, nine districts in ten differ by less than 9%.";
+const MEASURE_NOTE = "In FY2005 DESE began measuring spending per pupil by function, from all funds: the measure the " +
+  "columns show. Before then the dashed line shows DESE's older, narrower day-program figure. The two are never " +
+  "joined, and trends and growth rates stay on one side of the change.";
+const HIST_NOTE = "Before FY2005, DESE measured only spending in a district's own schools, mostly from its school " +
+  "budget. The dashed line shows that narrower figure. In FY2005 and FY2006, the gap between the line and the " +
+  "columns is the difference between the two measures.";
+const SWITCH_NOTE = "Adds DESE's per-pupil reports from FY1990 to FY2008, which its Public Records Center provided in " +
+  "October 2026 (public records request P004939-101625). FY2005 to FY2008 are the explorer's own measure; FY1990 to " +
+  "FY2006 also have DESE's older, narrower day-program figure, drawn as a dashed line. Districts that no longer " +
+  "exist are listed under Former districts.";
 // The site accent (Layout.astro --accent), dashed, so the trend reads apart from the comparison
 const TREND_COLOR = "#b65c3d";
 
@@ -318,9 +379,6 @@ const millions = (v: number) => `$${(v / 1e6).toFixed(v >= 1e8 ? 0 : 1)} million
 const amount = (v: number) => (v >= 1e9 ? `$${(v / 1e9).toFixed(1)} billion` : millions(v));
 /** A total: "$4.2 million", or whole dollars under a million, "−$310,250" */
 const whole$ = (v: number) => (Math.abs(v) >= 1e6 ? `${v < 0 ? "−" : ""}${amount(Math.abs(v))}` : usd(v));
-/** "A", "A and B", "A, B, and C" */
-const list = (items: string[]) =>
-  items.length < 3 ? items.join(" and ") : `${items.slice(0, -1).join(", ")}, and ${items[items.length - 1]}`;
 const sentence = (s: string) => s.charAt(0) + s.slice(1).toLowerCase();
 const capital = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
@@ -396,19 +454,92 @@ export async function startExplorer() {
   // tables all follow.
   let years = meta.years;
   let last = years.length - 1;
+  // The earlier years, for Since 1990: FY1990 to FY2008 in front of the explorer's own
+  const H = meta.history ?? null;
+  const fullYears = H ? [...H.years, ...meta.years] : meta.years;
 
   // ---- Data, loaded a region at a time ----
-  const listed = new Map<string, Listed>([...data.districts, ...data.averages].map((e) => [e.id, e]));
+  const listed = new Map<string, Listed>([...data.districts, ...data.averages, ...(data.former ?? [])].map((e) => [e.id, e]));
   const byId = new Map<string, Entity>();
   const districtFiles = import.meta.glob<{ default: { entities: Entity[] } }>("../../data/massppe/districts/*.json");
   const loaded = new Set<string>();
+  // The earlier years, a region at a time, the first time Since 1990 needs them; a former district's
+  // whole record is there
+  const histById = new Map<string, HistRec>();
+  const histFiles = import.meta.glob<{ default: { entities: HistRec[] } }>("../../data/massppe/districts-history/*.json");
+  const histLoaded = new Set<string>();
+  const isFormer = (id: string | null | undefined) => !!(id && listed.get(id)?.former);
+  /** A former district whose figures all come before the explorer's own years */
+  const earlyOnly = (id: string | null | undefined) => !!(id && (listed.get(id)?.former?.last ?? Infinity) < meta.start);
   async function ensure(ids: (string | null | undefined)[]) {
-    const chunks = new Set(ids.flatMap((id) => (id && listed.has(id) ? [listed.get(id)!.chunk] : [])));
-    await Promise.all([...chunks].filter((c) => !loaded.has(c)).map(async (c) => {
-      const file = (await districtFiles[`../../data/massppe/districts/${c}.json`]()).default;
-      file.entities.forEach((e) => byId.set(e.id, e));
-      loaded.add(c);
-    }));
+    const want = ids.filter((id): id is string => !!id && listed.has(id));
+    const chunks = new Set(want.filter((id) => !isFormer(id)).map((id) => listed.get(id)!.chunk));
+    const hist = new Set(H ? want.filter((id) => isFormer(id) || state.hist === "on").map((id) => listed.get(id)!.chunk) : []);
+    await Promise.all([
+      ...[...chunks].filter((c) => !loaded.has(c)).map(async (c) => {
+        const file = (await districtFiles[`../../data/massppe/districts/${c}.json`]()).default;
+        file.entities.forEach((e) => byId.set(e.id, e));
+        loaded.add(c);
+      }),
+      ...[...hist].filter((c) => !histLoaded.has(c)).map(async (c) => {
+        const file = (await histFiles[`../../data/massppe/districts-history/${c}.json`]()).default;
+        file.entities.forEach((r) => histById.set(r.id, r));
+        histLoaded.add(c);
+      }),
+    ]);
+  }
+
+  // ---- With Since 1990 on, each series gains the earlier years in front ----
+  const nH = H ? H.years.length : 0;
+  const nM = meta.years.length;
+  const nulls = (n: number): Values => Array(n).fill(null);
+  /** Each named series: the earlier years, then the explorer's own */
+  function join<T extends object>(early: T | undefined, later: T | undefined): T {
+    const a = (early ?? {}) as Record<string, Values>;
+    const b = (later ?? {}) as Record<string, Values>;
+    const keys = [...new Set([...Object.keys(a), ...Object.keys(b)])];
+    return Object.fromEntries(keys.map((k) => [k, [...(a[k] ?? nulls(nH)), ...(b[k] ?? nulls(nM))]])) as T;
+  }
+  /** The older measure's series run to FY2008; the explorer's years have none */
+  const early = (v: Values | undefined) => (v ? [...v, ...nulls(nM)] : undefined);
+  const dayJoin = (h: HistRec): Partial<Entity> => ({
+    day: h.day ? join(h.day, undefined) as Entity["day"] : undefined,
+    day_memb: early(h.day_memb), nces: early(h.nces), day_n: early(h.day_n),
+  });
+  const made = new Map<string, Entity>();
+  /** A district or average as the district view draws it: with Since 1990 on, its earlier years in
+   * front. A former district comes from its history record. Undefined until its data has loaded. */
+  function entity(id: string | null | undefined): Entity | undefined {
+    if (!id) return undefined;
+    const on = state.hist === "on";
+    if (!on && !isFormer(id)) return byId.get(id);
+    const key = `${id}:${on}`;
+    const hit = made.get(key);
+    if (hit) return hit;
+    const h = histById.get(id);
+    let e: Entity | undefined;
+    if (isFormer(id)) {
+      if (!h?.main) return undefined;
+      const rec = { ...h } as Entity & { main?: unknown };
+      delete rec.main;
+      e = on
+        ? { ...rec, ppe: join(h.ppe, h.main.ppe), enroll: join(h.enroll, h.main.enroll), nss: join(h.nss, h.main.nss),
+          ood: [...(h.ood ?? nulls(nH)), ...(h.main.ood ?? nulls(nM))], ...dayJoin(h) }
+        : { ...rec, ppe: h.main.ppe, enroll: h.main.enroll, nss: h.main.nss, ood: h.main.ood, day: undefined, day_memb: undefined,
+          nces: undefined, day_n: undefined };
+    } else {
+      const base = byId.get(id);
+      if (!base || !h) return undefined;
+      e = {
+        ...base, ppe: join(h.ppe, base.ppe), enroll: join(h.enroll, base.enroll), nss: join(h.nss, base.nss),
+        ood: [...(h.ood ?? nulls(nH)), ...(base.ood ?? nulls(nM))],
+        ...(base.rev ? { rev: join(undefined, base.rev) } : {}),
+        ...(base.rev_fte ? { rev_fte: [...nulls(nH), ...base.rev_fte] } : {}),
+        ...dayJoin(h),
+      };
+    }
+    made.set(key, e);
+    return e;
   }
 
   // While any window is open (a data table, a plot), the page behind it doesn't scroll
@@ -437,11 +568,15 @@ export async function startExplorer() {
     const c = v ? CHOICE_ALIASES[v] ?? v : null;
     return allowed.includes(c as T) ? (c as T) : fallback;
   };
+  // Since 1990: on with a link's hist=on, a first or last year before FY{start}, or a former district
+  // whose figures all come before it
+  const histYear = (v: string | null | undefined) => !!H && H.years.includes(Number(v));
+  const histOn = !!H && (src.hist === "on" || histYear(src.from) || histYear(src.to) || earlyOnly(pickId(src.d)));
   const state = {
     d: listed.has(pickId(src.d) ?? "") ? pickId(src.d)! : "leverett",
     cmp: oneOf(src.cmp, COMPARES, "none"),
     // The entity picked in the second menu when comparing with another district or average
-    vs: listed.has(pickId(src.vs) ?? "") ? pickId(src.vs) : null as string | null,
+    vs: listed.has(pickId(src.vs) ?? "") && !isFormer(pickId(src.vs)) ? pickId(src.vs) : null as string | null,
     // Any year in the series; "real", from older links, is the latest year
     // Nominal, or the latest year's dollars; links that name another year, or "real", get the latest
     usd: (src.usd === "real" || meta.years.includes(Number(src.usd)) ? String(meta.latest) : "nominal") as Dollars,
@@ -454,23 +589,28 @@ export async function startExplorer() {
     t: pickId(src.t) ?? "leverett",
     tcmp: oneOf(src.tcmp, TOWN_COMPARES, "none"),
     tvs: pickId(src.tvs),
-    // The first and last years shown, at least MIN_SPAN apart
-    from: meta.years.includes(Number(src.from)) ? Number(src.from) : meta.start,
-    to: meta.years.includes(Number(src.to)) ? Number(src.to) : meta.latest,
+    // The earlier years on the district view, FY1990 to FY2008
+    hist: (histOn ? "on" : "off") as "on" | "off",
+    // The first and last years shown, at least MIN_SPAN apart; a former district whose figures all come
+    // before FY{start} opens on the earlier years
+    from: fullYears.includes(Number(src.from)) ? Number(src.from) : histOn ? fullYears[0] : meta.start,
+    to: fullYears.includes(Number(src.to)) ? Number(src.to) : earlyOnly(pickId(src.d)) ? meta.start - 1 : meta.latest,
   };
   if (state.cmp === "other" && !state.vs) state.cmp = "none";
-  if (state.to - state.from < MIN_SPAN) [state.from, state.to] = [meta.start, meta.latest];
+  /** The first year of the slider's scale, where a window starts by default */
+  const firstYear = () => (state.hist === "on" ? fullYears[0] : meta.start);
+  if (state.to - state.from < MIN_SPAN) [state.from, state.to] = [firstYear(), meta.latest];
   // Legend selections; empty means every segment shows. Kept across districts so
   // one category can be followed from district to district.
   const isolated: Record<StackPanel, Set<string>> = {
-    ppe: new Set(saved?.isolated?.ppe), nss: new Set(saved?.isolated?.nss), rev: new Set(saved?.isolated?.rev),
+    ppe: new Set(saved?.isolated?.ppe), ood: new Set(), nss: new Set(saved?.isolated?.nss), rev: new Set(saved?.isolated?.rev),
     tspend: new Set(saved?.isolated?.tspend), trev: new Set(saved?.isolated?.trev),
     tval: new Set(saved?.isolated?.tval), tpar: new Set(saved?.isolated?.tpar), tlevy: new Set(saved?.isolated?.tlevy),
   };
   // Lines hidden from each chart's legend; both show until clicked off
-  const hidden = (k: string) => new Set((saved?.hidden?.[k] ?? []).filter((l): l is Line => l === "trend" || l === "cmp"));
+  const hidden = (k: string) => new Set((saved?.hidden?.[k] ?? []).filter((l): l is Line => LINES.includes(l as Line)));
   const hiddenLines: Record<StackPanel, Set<Line>> = {
-    ppe: hidden("ppe"), nss: hidden("nss"), rev: hidden("rev"), tspend: hidden("tspend"), trev: hidden("trev"),
+    ppe: hidden("ppe"), ood: hidden("ood"), nss: hidden("nss"), rev: hidden("rev"), tspend: hidden("tspend"), trev: hidden("trev"),
     tval: hidden("tval"), tpar: hidden("tpar"), tlevy: hidden("tlevy"),
   };
 
@@ -581,10 +721,42 @@ export async function startExplorer() {
     addGroup(sel, "Statewide averages", data.averages.filter((a) => !a.region), true);
     regions.forEach(([rk, rl]) => addGroup(sel, `${rl} averages`, data.averages.filter((a) => a.region === rk)));
   }
+  /** The district menu's other list: districts that no longer exist, with the years they have figures for */
+  function fillFormer(sel: HTMLSelectElement) {
+    const f = data.former ?? [];
+    const named = (xs: Listed[]) => xs.map((x) => ({ id: x.id, name: `${x.name} (FY${x.former!.first}–FY${x.former!.last})` }));
+    addGroup(sel, "Ended before FY2009", named(f.filter((x) => x.former!.group === "early")));
+    addGroup(sel, "Ended FY2009 or later", named(f.filter((x) => x.former!.group === "later")));
+    addGroup(sel, "Charter schools", named(f.filter((x) => x.former!.group === "charter")));
+  }
   const select = $<HTMLSelectElement>("pick-district");
   const vsSelect = $<HTMLSelectElement>("pick-vs");
-  fillEntities(select);
+  // The district menu lists current districts or former ones; the comparison menu, current ones only
+  let menuMode: "current" | "former" = isFormer(state.d) ? "former" : "current";
+  (menuMode === "former" ? fillFormer : fillEntities)(select);
   fillEntities(vsSelect);
+  // The last of each kind looked at, to come back to when the menu switches
+  let lastCurrent = isFormer(state.d) ? "leverett" : state.d;
+  let lastFormer = isFormer(state.d) ? state.d : (data.former ?? []).find((x) => x.former!.group === "early")?.id ?? null;
+  const dmodeInputs = document.querySelectorAll<HTMLInputElement>('input[name="dmode"]');
+  dmodeInputs.forEach((r) => r.addEventListener("change", () => {
+    if (!r.checked) return;
+    const id = r.value === "former" ? lastFormer : lastCurrent;
+    if (id) update({ d: id, ...histFor(id) });
+  }));
+  /** The menu follows the district shown: its list, and the switch above it */
+  function syncMenu() {
+    if (isFormer(state.d)) lastFormer = state.d;
+    else lastCurrent = state.d;
+    const mode = isFormer(state.d) ? "former" : "current";
+    dmodeInputs.forEach((r) => (r.checked = r.value === mode));
+    if (mode === menuMode) return;
+    menuMode = mode;
+    select.replaceChildren();
+    (mode === "former" ? fillFormer : fillEntities)(select);
+    select.value = state.d;
+    districtPickers[0].rebuild();
+  }
   const compareSelect = $<HTMLSelectElement>("pick-compare");
   // Dollars: nominal, or the latest year's
   const dollarInputs = document.querySelectorAll<HTMLInputElement>('input[name="dollars"]');
@@ -592,33 +764,76 @@ export async function startExplorer() {
   document.querySelectorAll("[data-latest]").forEach((n) => (n.textContent = String(meta.latest)));
   document.querySelectorAll("[data-start]").forEach((n) => (n.textContent = String(meta.start)));
 
-  // The Years slider: two handles, the first and last years shown, kept MIN_SPAN apart
+  // The Years slider: two handles, the first and last years shown, kept MIN_SPAN apart. Its scale
+  // starts at FY1990 on the district view with Since 1990 on.
   const fromSlider = $<HTMLInputElement>("year-from");
   const toSlider = $<HTMLInputElement>("year-to");
   const yearsOut = $("years-out");
-  const yearAt = (k: number) => meta.years.indexOf(k);
-  for (const sl of [fromSlider, toSlider]) sl.max = String(meta.years.length - 1);
+  const yearsMark = $("years-mark");
+  const scale = () => (state.hist === "on" && state.view === "districts" ? fullYears : meta.years);
+  /** The window's ends on the scale; a window off it (an early window, on the town view) is the whole scale */
+  function span(): [number, number] {
+    const ys = scale();
+    const a = Math.max(0, ys.indexOf(state.from));
+    const b = ys.indexOf(state.to);
+    return b < 0 || b - a < MIN_SPAN ? [0, ys.length - 1] : [a, b];
+  }
   const showYears = () => {
-    const [a, b] = [yearAt(state.from), yearAt(state.to)];
+    const ys = scale();
+    const [a, b] = span();
+    for (const sl of [fromSlider, toSlider]) sl.max = String(ys.length - 1);
     fromSlider.value = String(a);
     toSlider.value = String(b);
-    fromSlider.setAttribute("aria-valuetext", `FY${state.from}`);
-    toSlider.setAttribute("aria-valuetext", `FY${state.to}`);
+    fromSlider.setAttribute("aria-valuetext", `FY${ys[a]}`);
+    toSlider.setAttribute("aria-valuetext", `FY${ys[b]}`);
     const track = fromSlider.parentElement!;
-    track.style.setProperty("--a", String(a / (meta.years.length - 1)));
-    track.style.setProperty("--b", String(b / (meta.years.length - 1)));
-    yearsOut.textContent = `FY${state.from}–FY${state.to}`;
+    track.style.setProperty("--a", String(a / (ys.length - 1)));
+    track.style.setProperty("--b", String(b / (ys.length - 1)));
+    // Where the explorer's own measure begins, marked on the track with Since 1990 on
+    const m = H && ys === fullYears ? ys.indexOf(H.functional_from) : -1;
+    yearsMark.hidden = m < 0;
+    if (m >= 0) track.style.setProperty("--m", String(m / (ys.length - 1)));
+    // A window across the change says so, on a line of its own under the years
+    yearsOut.replaceChildren(`FY${ys[a]}–FY${ys[b]}`, ...(m >= 0 && a < m && b >= m ? [text("span", "two measures", "years-two")] : []));
+    $("years-first").textContent = String(ys[0]);
   };
   fromSlider.addEventListener("input", () => {
-    const a = Math.min(Number(fromSlider.value), yearAt(state.to) - MIN_SPAN);
+    const ys = scale();
+    const [, b] = span();
+    const a = Math.min(Number(fromSlider.value), b - MIN_SPAN);
     fromSlider.value = String(a);
-    if (meta.years[a] !== state.from) update({ from: meta.years[a] });
+    if (ys[a] !== state.from || ys[b] !== state.to) update({ from: ys[a], to: ys[b] });
   });
   toSlider.addEventListener("input", () => {
-    const b = Math.max(Number(toSlider.value), yearAt(state.from) + MIN_SPAN);
+    const ys = scale();
+    const [a] = span();
+    const b = Math.max(Number(toSlider.value), a + MIN_SPAN);
     toSlider.value = String(b);
-    if (meta.years[b] !== state.to) update({ to: meta.years[b] });
+    if (ys[b] !== state.to || ys[a] !== state.from) update({ to: ys[b], from: ys[a] });
   });
+  yearsMark.append(helpTip(MEASURE_NOTE));
+
+  // Since 1990: on, the slider's first handle moves to FY1990 if it was at the start; off, any handle
+  // before FY{start} comes back to it
+  const histSwitch = $<HTMLButtonElement>("hist-switch");
+  function histPatch(on: boolean): Partial<typeof state> {
+    if (on) return { hist: "on", from: state.from === meta.start ? fullYears[0] : state.from };
+    const from = Math.max(state.from, meta.start);
+    return { hist: "off", from, to: state.to - from < MIN_SPAN ? meta.latest : state.to };
+  }
+  /** Choosing a former district whose figures all come before FY{start} turns Since 1990 on and shows the
+   * earlier years */
+  const histFor = (id: string): Partial<typeof state> =>
+    (earlyOnly(id) && state.to >= meta.start ? { ...histPatch(true), from: fullYears[0], to: meta.start - 1 } : {});
+  const showHist = () => {
+    const on = state.hist === "on";
+    histSwitch.setAttribute("aria-checked", String(on));
+    histSwitch.querySelector(".dial-state")!.textContent = on ? "On" : "Off";
+    histSwitch.title = on ? "Show FY2009 on only" : "Add the years FY1990 to FY2008";
+  };
+  histSwitch.closest<HTMLElement>(".control")!.hidden = !H;
+  $("hist-label").after(helpTip(SWITCH_NOTE));
+  histSwitch.addEventListener("click", () => update(histPatch(state.hist !== "on")));
 
   select.value = state.d;
   compareSelect.value = state.cmp;
@@ -627,14 +842,14 @@ export async function startExplorer() {
   const districtPickers = [groupedPicker(select, "pick-district-label", "districts and averages"),
     groupedPicker(vsSelect, "pick-vs-label", "districts and averages")];
   showDollars();
-  select.addEventListener("change", () => update({ d: select.value }));
+  select.addEventListener("change", () => update({ d: select.value, ...histFor(select.value) }));
   compareSelect.addEventListener("change", () => {
     const cmp = compareSelect.value as Compare;
     // Start the second menu on whatever was being compared, so nothing jumps
-    const vs = cmp === "other" && !state.vs ? (comparisonId(byId.get(state.d)) ?? "statewide") : state.vs;
+    const vs = cmp === "other" && !state.vs ? (comparisonId(entity(state.d)) ?? "statewide") : state.vs;
     update({ cmp, vs });
   });
-  vsSelect.addEventListener("change", () => update({ vs: vsSelect.value }));
+  vsSelect.addEventListener("change", () => update({ vs: vsSelect.value, ...(earlyOnly(vsSelect.value) && state.hist !== "on" ? histPatch(true) : {}) }));
   dollarInputs.forEach((r) => r.addEventListener("change", () => r.checked && update({ usd: r.value === "real" ? String(meta.latest) : "nominal" })));
   const perInputs = document.querySelectorAll<HTMLInputElement>('input[name="per"]');
   perInputs.forEach((r) => (r.checked = r.value === state.per));
@@ -725,11 +940,12 @@ export async function startExplorer() {
       if (state.cmp !== "none") q.set("cmp", state.cmp);
       if (state.cmp === "other" && state.vs) q.set("vs", state.vs);
       if (state.dper !== "pupil") q.set("dper", state.dper);
+      if (state.hist === "on") q.set("hist", "on");
     }
     if (state.usd !== "nominal") q.set("usd", state.usd);
     if (state.detail === "off") q.set("detail", "off");
     if (state.view === "districts" || state.view === "towns") {
-      if (state.from !== meta.start) q.set("from", String(state.from));
+      if (state.from !== firstYear()) q.set("from", String(state.from));
       if (state.to !== meta.latest) q.set("to", String(state.to));
     }
     history.replaceState(null, "", `${location.pathname}?${q}`);
@@ -763,7 +979,7 @@ export async function startExplorer() {
     try {
       if (state.view === "districts") {
         await ensure([state.d, state.vs]);
-        await ensure([comparisonId(byId.get(state.d))]);
+        await ensure([comparisonId(entity(state.d))]);
       } else if (state.view === "commonwealth") {
         await loadCommonwealth();
       } else if (state.view === "cap") {
@@ -871,7 +1087,7 @@ export async function startExplorer() {
   }
   const comparisonFor = (e: Entity) => {
     const id = comparisonId(e);
-    const c = id ? byId.get(id) : null;
+    const c = id ? entity(id) : null;
     return c ? win(c) : null;
   };
 
@@ -895,16 +1111,9 @@ export async function startExplorer() {
 
   /** Why an entity has no revenue chart, in the chart's place. */
   function noRevenue(e: Entity): string {
-    if (e.type === "charter") return "Census's school finance survey does not cover charter schools.";
-    if (e.kind === "district") {
-      const r = e.rev_check;
-      const peers = data.districts.filter((x) => x.regional && x.cohort === e.cohort && x.region === e.region).map((x) => x.name);
-      return "This chart covers regional districts only: for town-run districts, Census's local revenue often falls well " +
-        "short of what the town spends on its schools." +
-        (r ? ` For ${e.name} in FY${r.fy}, Census reports ${millions(r.revenue)} of revenue against ${millions(r.expenditure)} of spending.` : "") +
-        (peers.length && peers.length <= 8 && e.cohort && e.region
-          ? ` ${meta.regions[e.region]} ${meta.cohorts[e.cohort].short} regional districts: ${list(peers)}.` : "");
-    }
+    // The source and why it falls short for these are in the Data tab, not here
+    if (e.type === "charter") return "Detailed revenue figures aren't available for charter schools.";
+    if (e.kind === "district") return "Detailed revenue figures aren't available for town-run districts.";
     const n = e.rev_members ?? 0;
     return n === 0 ? `The ${e.name} includes no regional districts, so it has no revenue average.`
       : `The ${e.name} includes only ${n === 1 ? "one regional district" : `${n} regional districts`}, too few for a revenue average.`;
@@ -924,8 +1133,22 @@ export async function startExplorer() {
     meta.categories.map((c, k) => ({ key: c, label: sentence(c), color: PPE_COLORS[k], values: deflate(inDollars(e.ppe[c], e, "in_district")) }));
   const nssSeries = (e: Entity): Series[] =>
     NSS_SERIES.map((s) => ({ ...s, values: deflate(inDollars(e.nss[s.key], e, "foundation")) }));
-  const enrollSeries = (e: Entity): Series[] =>
-    ENROLL_SERIES.map((s) => ({ ...s, values: e.enroll[s.key] }));
+  const enrollSeries = (e: Entity): Series[] => [
+    ...ENROLL_SERIES.map((s) => ({ ...s, values: e.enroll[s.key] })),
+    // With Since 1990 on, the earlier counts, each from its own source
+    ...(state.hist === "on" && H ? [
+      { key: "day_memb", label: "Day-program membership (DESE)", color: DAY_COLOR, dash: DAY_DASH, values: e.day_memb ?? nulls(years.length) },
+      { key: "nces", label: "Fall enrollment (NCES)", color: "#8f8a7f", dash: "2 3", values: e.nces ?? nulls(years.length) },
+    ] : []),
+  ];
+  /** The first and last positions with a value, or -1 */
+  const firstAt = (vals: Values) => vals.findIndex((v) => v != null);
+  const lastAt = (vals: Values) => {
+    for (let i = vals.length - 1; i >= 0; i--) if (vals[i] != null) return i;
+    return -1;
+  };
+  /** The older measure's programs, drawn only when asked for */
+  let showPrograms = false;
   const revSeries = (e: Entity): Series[] | null =>
     e.rev ? REV_SERIES.map((s) => ({ ...s, values: deflate(inDollars(e.rev![s.key], e, "rev")) })) : null;
   /** Revenue averages cover only their regional districts, and say so. */
@@ -1025,7 +1248,10 @@ export async function startExplorer() {
     /** Beside the label, in lighter type: the trend's yearly rise */
     detail?: string;
     /** A "?" after the entry, with a note on hover or focus */
-    help?: string }
+    help?: string;
+    /** A button that shows or hides something else, pressed while it shows */
+    toggle?: () => void;
+    on?: boolean }
 
   // ---- Chart lines: the entity's own trend (dashed) and the comparison (solid, with dots).
   // Both follow what the legend isolates; either can be hidden from its legend entry. ----
@@ -1040,7 +1266,7 @@ export async function startExplorer() {
       detail: ((r) => (r ? `${signed(r.perYear, fmt)}${r.rate != null ? ` (${signedPct(r.rate)})` : ""} a year` +
         (fmt === usd ? (state.usd === "nominal" ? ", before inflation" : ", after inflation") : "") : undefined))(
         trendRate(trend.values)) }] : []),
-    ...(overlay ? [{ label: overlay.label, color: COMPARE_COLOR, mark: "line" as const, line: "cmp" as const }] : []),
+    ...(overlay && (state.hist !== "on" || hasLine(overlay)) ? [{ label: overlay.label, color: COMPARE_COLOR, mark: "line" as const, line: "cmp" as const }] : []),
   ];
   // The trend's value, and its step from the year before: the same in dollars each year, a shrinking share as it grows
   const trendRow = (trend: Series | null, i: number, fmt: (v: number) => string = usd): TipRow[] => {
@@ -1063,6 +1289,21 @@ export async function startExplorer() {
     };
     const nodes = items.map((it) => {
       const li = document.createElement("li");
+      if (panel && it.toggle) {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "legend-btn legend-line";
+        btn.dataset.key = "toggle";
+        btn.setAttribute("aria-pressed", String(!!it.on));
+        btn.append(swatch(it), text("span", it.label));
+        btn.addEventListener("click", () => {
+          it.toggle!();
+          refocus = { panel, key: "toggle" };
+          render();
+        });
+        li.append(btn, ...(it.help ? [helpTip(it.help)] : []));
+        return li;
+      }
       if (panel && it.line) {
         const line = it.line;
         const off = hiddenLines[panel].has(line);
@@ -1085,7 +1326,7 @@ export async function startExplorer() {
       }
       if (!set || !it.key) {
         li.className = "legend-static";
-        li.append(swatch(it), text("span", it.label));
+        li.append(swatch(it), text("span", it.label), ...(it.help ? [helpTip(it.help)] : []));
         return li;
       }
       const key = it.key;
@@ -1168,9 +1409,11 @@ export async function startExplorer() {
   // ---- Comparison table: the report's start year, growth rates and last two years,
   // shaded against the comparison. `end` is the last year's index, for a source
   // that trails the others. ----
-  interface CmpRow { label: string; color: string; mark: "rect" | "line"; values: Values; base: Values | null; total?: boolean }
+  interface CmpRow { label: string; color: string; mark: "rect" | "line" | "dash"; values: Values; base: Values | null; total?: boolean }
 
-  interface CmpOpts { end?: number; noCmpNote?: string; per?: string }
+  interface CmpOpts { end?: number; noCmpNote?: string; per?: string;
+    /** The first year's position; with Since 1990 on, by default the first year any row has */
+    start?: number }
 
   /** Rows for what the legend shows: each shown segment, then the total, or the selection's
    * total when several are isolated. */
@@ -1266,8 +1509,13 @@ export async function startExplorer() {
   // there, and opens the controls themselves in place of it; scrolling back up puts them home ----
   const tabsBar = document.querySelector<HTMLElement>(".view-tabs")!;
   const controlsForm = document.querySelector<HTMLFormElement>("form.controls")!;
-  // The tabs' height, for whatever floats under them
-  new ResizeObserver(() => root.style.setProperty("--tabs-h", `${tabsBar.offsetHeight}px`)).observe(tabsBar);
+  // The tabs pin to the top of the screen, except where they're a grid that scrolls away (a
+  // phone); what floats under them floats under the pinned tabs, or at the very top
+  const tabsPinned = () => getComputedStyle(tabsBar).position === "sticky";
+  const pinnedBottom = () => (tabsPinned() ? tabsBar.getBoundingClientRect().bottom : 0);
+  const setTabsH = () => root.style.setProperty("--tabs-h", `${tabsPinned() ? tabsBar.offsetHeight : 0}px`);
+  new ResizeObserver(setTabsH).observe(tabsBar);
+  window.addEventListener("resize", setTabsH);
   const dock = text("div", "", "controls-dock");
   dock.hidden = true;
   const dockPanel = text("div", "", "controls-dock-panel");
@@ -1315,14 +1563,14 @@ export async function startExplorer() {
       : `Compared with ${cmpSel.value === "other" ? chosen(onTowns ? townVsSelect : vsSelect) : chosen(cmpSel).replace(/^Its /, "its ")}`;
     const amounts = onTowns ? (state.per === "total" ? "Totals" : `Per ${PER_WORD[state.per]}`)
       : state.dper === "total" ? "Totals" : "Per pupil";
-    const rest = [cmp, amounts, `FY${state.from}–FY${state.to}`,
+    const rest = [cmp, amounts, `FY${years[0]}–FY${years[last]}`,
       state.usd === "nominal" ? "Nominal dollars" : `FY${state.usd} dollars`];
     dockSum.replaceChildren(text("strong", name), ` · ${rest.join(" · ")}`);
     dockSum.setAttribute("aria-label", `Show controls: ${name}, ${rest.join(", ")}`);
   }
   function dockCheck() {
     const on = (state.view === "districts" || state.view === "towns") &&
-      dockSentinel.getBoundingClientRect().top < tabsBar.getBoundingClientRect().bottom;
+      dockSentinel.getBoundingClientRect().top < pinnedBottom();
     if (!on) dockClose();
     dock.hidden = !on;
   }
@@ -1338,19 +1586,23 @@ export async function startExplorer() {
   dockLabel();
 
   function compareTable(holder: HTMLElement, caption: string, rowLabel: string, rows: CmpRow[], kind: "usd" | "fte" | "count",
-    cmp: Named | null, { end = last, noCmpNote, per = "pupil" }: CmpOpts = {}) {
+    cmp: Named | null, { end = last, noCmpNote, per = "pupil", start }: CmpOpts = {}) {
     const cName = cmp ? cmp.name : null;
     const fmt = kind === "usd" ? usd : kind === "count" ? (v: number) => Math.round(v).toLocaleString("en-US") : fte;
     const unit = kind === "usd" ? (per ? ` $/${per}` : " $") : "";
     const prior = end - 1;
+    const s0 = start ?? (state.hist === "on" ? Math.max(0, Math.min(...rows.map((r) => {
+      const i = firstAt(r.values);
+      return i < 0 ? Infinity : i;
+    }))) : 0);
     // Growth over the years shown, then over the last 10 and 5 when the window holds more
-    const windows = [end, ...[10, 5].filter((n) => n < end)];
+    const windows = [end - s0, ...[10, 5].filter((n) => n < end - s0)].filter((n) => n > 0);
     const t = document.createElement("table");
     t.append(text("caption", caption));
     const head = t.createTHead().insertRow();
     const blank = text("th", "");
     blank.className = "swatch-col";
-    head.append(blank, text("th", rowLabel, "label-col"), text("th", `${years[0]}${unit}`),
+    head.append(blank, text("th", rowLabel, "label-col"), text("th", `${years[s0]}${unit}`),
       ...windows.map((n) => text("th", `CAGR ${n}y`)),
       text("th", `${years[prior]}${unit}`), text("th", `${years[end]}${unit}`));
 
@@ -1400,7 +1652,7 @@ export async function startExplorer() {
       }
       const th = text("th", r.label);
       th.setAttribute("scope", "row");
-      tr.append(sw, th, level(r, 0), ...windows.map((n) => growth(r, n)), level(r, prior), level(r, end));
+      tr.append(sw, th, level(r, s0), ...windows.map((n) => growth(r, n)), level(r, prior), level(r, end));
     }
 
     const note = document.createElement("div");
@@ -1503,30 +1755,31 @@ export async function startExplorer() {
   }
 
   /** Draw the view; refresh() has loaded what it needs. */
-  // ---- The window of years: each entity's yearly series, cut to it, made once per window ----
-  const allYears = meta.years.length;
-  const yearly = (v: unknown) => Array.isArray(v) && v.length === allYears && v.every((x) => x === null || typeof x === "number");
-  function cut<T>(o: T, a: number, b: number): T {
-    if (Array.isArray(o)) return (yearly(o) ? o.slice(a, b + 1) : o.map((x) => cut(x, a, b))) as T;
-    if (o && typeof o === "object") return Object.fromEntries(Object.entries(o).map(([k, v]) => [k, cut(v, a, b)])) as T;
+  // ---- The window of years: each entity's yearly series, cut to it, made once per window. A series
+  // is yearly when it runs the length of the slider's scale. ----
+  const yearly = (v: unknown, n: number) => Array.isArray(v) && v.length === n && v.every((x) => x === null || typeof x === "number");
+  function cut<T>(o: T, a: number, b: number, n: number): T {
+    if (Array.isArray(o)) return (yearly(o, n) ? o.slice(a, b + 1) : o.map((x) => cut(x, a, b, n))) as T;
+    if (o && typeof o === "object") return Object.fromEntries(Object.entries(o).map(([k, v]) => [k, cut(v, a, b, n)])) as T;
     return o;
   }
   const cuts = new WeakMap<object, { key: string; value: unknown }>();
   function win<T extends object>(o: T): T {
-    const [a, b] = [yearAt(state.from), yearAt(state.to)];
-    if (a === 0 && b === allYears - 1) return o;
-    const key = `${a}-${b}`;
+    const n = scale().length;
+    const [a, b] = span();
+    if (a === 0 && b === n - 1) return o;
+    const key = `${n}:${a}-${b}`;
     const hit = cuts.get(o);
     if (hit?.key === key) return hit.value as T;
-    const value = cut(o, a, b);
+    const value = cut(o, a, b, n);
     cuts.set(o, { key, value });
     return value;
   }
   function setWindow() {
-    const a = yearAt(state.from);
-    const b = yearAt(state.to);
-    if (years[0] === meta.years[a] && years.length === b - a + 1) return;
-    years = meta.years.slice(a, b + 1);
+    const ys = scale();
+    const [a, b] = span();
+    if (years[0] === ys[a] && years.length === b - a + 1) return;
+    years = ys.slice(a, b + 1);
     last = years.length - 1;
     hovered = null;
   }
@@ -1536,11 +1789,12 @@ export async function startExplorer() {
     applyView();
     showDollars();
     showYears();
+    showHist();
     explainDollars();
     // A redraw can come before a district's or town's data does (a resize as a tab opens);
     // refresh() draws once it arrives
     if (state.view === "districts") {
-      if (byId.has(state.d)) renderDistricts();
+      if (entity(state.d)) renderDistricts();
     }
     else if (state.view === "commonwealth") map?.refresh();
     else if (state.view === "cap" || state.view === "data") { /* these draw themselves */ }
@@ -1552,6 +1806,7 @@ export async function startExplorer() {
       relations(null);
       $("tiles").replaceChildren();
     }
+    if (state.view === "districts") syncMenu();
     for (const pk of [...districtPickers, ...townPickers]) pk.sync();
     dockSummary();
     dockCheck();
@@ -1560,8 +1815,9 @@ export async function startExplorer() {
   }
 
   function renderDistricts() {
-    const e = win(byId.get(state.d)!);
+    const e = win(entity(state.d)!);
     const c = comparisonFor(e);
+    const histOn = state.hist === "on" && !!H;
     const real = state.usd !== "nominal";
     const dollarsNote = real ? `FY${state.usd} dollars` : "Nominal dollars";
     const perDistrict = e.kind === "district" ? "" : ", average per district";
@@ -1585,6 +1841,9 @@ export async function startExplorer() {
     $("entity-name").textContent = e.name;
     const place = e.region ? meta.regions[e.region] : "";
     const bits = e.kind === "average" ? [`${e.members} districts`]
+      : e.former ? [`Former ${e.type === "vocational" ? "vocational district" : e.type === "charter" ? "charter school" : "district"}`,
+        `figures for FY${e.former.first}–FY${e.former.last}`, place,
+        e.former.last < meta.start && !histOn ? "turn on Since 1990 to see its years" : ""]
       : [e.type === "vocational" ? "Vocational district" : e.type === "charter" ? "Charter school"
         : `${meta.cohorts[e.cohort!].short} cohort`, place,
         e.gateway && e.community?.type !== "gateway" ? "Gateway City" : "", communityText(e.community, "students"),
@@ -1594,14 +1853,30 @@ export async function startExplorer() {
       bits.push(`compared statewide: too few ${meta.cohorts[e.cohort!].short} districts in ${place}`);
     else if (!c && state.cmp === "other") bits.push("pick a different district or average to compare with");
     $("entity-meta").textContent = bits.filter(Boolean).join(" · ");
+    // A former district: what became of it, from the figures and DESE's list of regional district members,
+    // or from a source that says why
+    const note = $("entity-note");
+    note.hidden = !e.note;
+    if (e.note) {
+      const src = document.createElement("span");
+      src.className = "note-source";
+      if (e.note.source) {
+        const a = text("a", "DESE") as HTMLAnchorElement;
+        a.href = e.note.source;
+        src.append("Source: ", a, ".");
+      } else src.append(`From DESE's figures and its FY${meta.latest} list of regional district members.`);
+      note.replaceChildren(e.note.text, " ", src);
+    }
     // Its towns, each with its contribution and the other districts it funds
+    // A former district's towns, with the districts they belong to today
     relations(e.towns?.length ? {
       root: e.name,
-      note: `${e.towns_kind === "members" ? "Member towns" : "Town"} · FY${meta.latest} required local contribution`,
+      note: e.former ? `${e.towns_kind === "members" ? "Member towns · their" : "Town · its"} school districts today`
+        : `${e.towns_kind === "members" ? "Member towns" : "Town"} · FY${meta.latest} required local contribution`,
       rows: e.towns.map((t) => ({
         name: viewLink(t.name, { view: "towns", t: t.id }),
-        amount: t.contribution,
-        extra: t.also.length ? ["also funds", t.also.map((a) => districtName(a, true))] : null,
+        amount: e.former ? undefined : t.contribution,
+        extra: t.also.length ? [e.former ? "now in" : "also funds", t.also.map((a) => districtName(a, true))] : null,
       })),
     } : null);
 
@@ -1618,39 +1893,76 @@ export async function startExplorer() {
     const cNssTotal = cNss ? actualNss(cNss) : null;
     const cName = c ? c.name : "";
 
-    // Tiles (always whole totals, whatever the legend isolates)
+    // The older measure, with Since 1990 on: the day-program line, the comparison's, and a district's
+    // programs. With Totals on, the line is the day-program total times DESE's average membership.
+    const dayValues = (x: Entity, v: Values | undefined): Values | null => {
+      if (!v) return null;
+      const n = x.day_memb;
+      return deflate(whole ? v.map((y, i) => (y == null || n?.[i] == null ? null : y * n[i]!)) : v);
+    };
+    const dayAll: Series | null = histOn && e.day ? { key: "day", label: DAY_LABEL, color: DAY_COLOR, dash: DAY_DASH,
+      values: dayValues(e, e.day.total)! } : null;
+    const cDayAll: Series | null = histOn && c?.day ? { key: "cday", label: `${cName}, older measure`, color: COMPARE_COLOR,
+      dash: DAY_DASH, values: dayValues(c, c.day.total)! } : null;
+    const hasPrograms = !!(histOn && e.kind === "district" && e.day && PROGRAM_SERIES.some((p) => hasLine({ ...p, values: e.day![p.key] ?? [] })));
+    const programs: Series[] = hasPrograms && showPrograms && !whole
+      ? PROGRAM_SERIES.flatMap((p) => (e.day![p.key] ? [{ key: p.key, label: p.label, color: p.color, dash: "2 3", values: dayValues(e, e.day![p.key])! }] : []))
+      : [];
+    const dayRate = dayAll ? trendRate(linearTrend(dayAll.values)) : null;
+    const dayEnds = dayAll ? [firstAt(dayAll.values), lastAt(dayAll.values)] : [-1, -1];
+    const dayGrowth = dayRate?.rate != null
+      ? `${pct(dayRate.rate)} a year on trend, FY${years[dayEnds[0]]}–FY${years[dayEnds[1]]}${real ? ", after inflation" : ", before inflation"}` : "";
+    const colFirst = firstAt(ppeTotal);
+
+    // Tiles (always whole totals, whatever the legend isolates). With Since 1990 on, growth counts from
+    // the first year with figures, and a window before FY2005 shows the older measure. A former district's
+    // are for its last year in the window.
+    const tl = e.former && years.indexOf(e.former.last) >= 0 ? years.indexOf(e.former.last) : last;
     const g = trendRate(linearTrend(ppeTotal))?.rate ?? null;
+    const enrollFirst = histOn ? Math.max(0, firstAt(e.enroll.in_district)) : 0;
     const enrollChange =
-      e.enroll.in_district[0] && e.enroll.in_district[last]
-        ? e.enroll.in_district[last]! / e.enroll.in_district[0]! - 1
+      e.enroll.in_district[enrollFirst] && e.enroll.in_district[tl]
+        ? e.enroll.in_district[tl]! / e.enroll.in_district[enrollFirst]! - 1
         : null;
-    const aid = nss[0].values[last];
-    const above = nss[2].values[last];
-    const aidShare = aid != null && nssTotal[last] ? aid / nssTotal[last]! : null;
+    const spendTile = ppeTotal[tl] == null && dayAll && dayEnds[1] >= 0
+      ? tile(`Spending${pp}, FY${years[dayEnds[1]]}`, money(dayAll.values[dayEnds[1]]!), [dayGrowth, DAY_LABEL,
+        c && cDayAll?.values[dayEnds[1]] != null ? `${cName}: ${money(cDayAll.values[dayEnds[1]]!)}` : ""])
+      : tile(`Spending${pp}, FY${years[tl]}`, ppeTotal[tl] != null ? money(ppeTotal[tl]!) : "–", [
+        g != null ? `${pct(g)} a year on trend since FY${years[Math.max(0, colFirst)]}${real ? ", after inflation" : ", before inflation"}` : "",
+        c && cPpeTotal?.[tl] != null ? `${cName}: ${money(cPpeTotal[tl]!)}` : "",
+        dayGrowth && colFirst > 0 ? `Older measure: ${dayGrowth}` : "",
+      ]);
+    // Before FY2005, the older counts: DESE's day-program membership, or before FY1997, NCES's
+    const earlyPupils = e.enroll.in_district[tl] == null && histOn
+      ? (e.day_memb?.[tl] != null ? { v: e.day_memb[tl]!, src: "day-program membership (DESE)" }
+        : e.nces?.[tl] != null ? { v: e.nces[tl]!, src: "fall enrollment (NCES)" } : null) : null;
+    const aid = nss[0].values[tl];
+    const above = nss[2].values[tl];
+    const aidShare = aid != null && nssTotal[tl] ? aid / nssTotal[tl]! : null;
     $("tiles").replaceChildren(
-      tile(`Spending${pp}, FY${years[last]}`, ppeTotal[last] != null ? money(ppeTotal[last]!) : "–", [
-        g != null ? `${pct(g)} a year on trend since FY${years[0]}${real ? ", after inflation" : ", before inflation"}` : "",
-        c && cPpeTotal?.[last] != null ? `${cName}: ${money(cPpeTotal[last]!)}` : "",
-      ]),
-      tile(`In-district enrollment, FY${years[last]}`, e.enroll.in_district[last] != null ? `${fte(e.enroll.in_district[last]!)} FTE` : "–", [
-        enrollChange != null ? `${pct(enrollChange)} since FY${years[0]}` : "",
-        e.kind === "district" ? "" : "Average per district",
-      ]),
-      tile(`Chapter 70 aid${whole ? "" : " per foundation pupil"}, FY${years[last]}`, aid != null ? money(aid) : "–", [
+      spendTile,
+      earlyPupils
+        ? tile(`Enrollment, FY${years[tl]}`, fte(earlyPupils.v), [capital(earlyPupils.src), e.kind === "district" ? "" : "Average per district"])
+        : tile(`In-district enrollment, FY${years[tl]}`, e.enroll.in_district[tl] != null ? `${fte(e.enroll.in_district[tl]!)} FTE` : "–", [
+          enrollChange != null ? `${pct(enrollChange)} since FY${years[enrollFirst]}` : "",
+          e.kind === "district" ? "" : "Average per district",
+        ]),
+      tile(`Chapter 70 aid${whole ? "" : " per foundation pupil"}, FY${years[tl]}`, aid != null ? money(aid) : "–", [
         aidShare != null ? `${Math.round(aidShare * 100)}% of actual net school spending` : "",
-        cNss && cNss[0].values[last] != null ? `${cName}: ${money(cNss[0].values[last]!)}` : "",
+        cNss && cNss[0].values[tl] != null ? `${cName}: ${money(cNss[0].values[tl]!)}` : "",
       ]),
-      tile(`Spending above required, FY${years[last]}`, above != null ? money(above) : "Not reported", [
-        above == null ? `DESE has not reported FY${years[last]} actual spending`
+      tile(`Spending above required, FY${years[tl]}`, above != null ? money(above) : aid != null ? "Not reported" : "–", [
+        above == null ? (aid != null ? `DESE has not reported FY${years[tl]} actual spending` : "")
           : !whole ? "Per foundation pupil" : e.kind === "district" ? "In total" : "For the average district",
-        cNss && cNss[2].values[last] != null ? `${cName}: ${money(cNss[2].values[last]!)}` : "",
+        cNss && cNss[2].values[tl] != null ? `${cName}: ${money(cNss[2].values[tl]!)}` : "",
       ]),
     );
 
     // Shared dollar scale for both dollar panels while nothing is isolated
     let dollarMax = 0;
     years.forEach((_, i) => {
-      dollarMax = Math.max(dollarMax, stackTop(ppe, i), stackTop(nss, i), cPpeTotal?.[i] ?? 0, cNssTotal?.[i] ?? 0);
+      dollarMax = Math.max(dollarMax, stackTop(ppe, i), stackTop(nss, i), cPpeTotal?.[i] ?? 0, cNssTotal?.[i] ?? 0,
+        dayAll?.values[i] ?? 0, cDayAll?.values[i] ?? 0, ...programs.map((p) => p.values[i] ?? 0));
     });
     const dollarTicks = niceTicks(dollarMax * 1.04);
     const enrollMax = Math.max(...enroll.flatMap((s) => s.values.map((v) => v ?? 0)));
@@ -1670,24 +1982,100 @@ export async function startExplorer() {
     const ppeTrendAll = trendOf(e.name, ppeSel, ppeShownTotal);
     const ppeOverlay = drawn("ppe", "cmp", ppeOverlayAll);
     const ppeTrend = drawn("ppe", "trend", ppeTrendAll);
+    // The older measure's lines are totals, so they leave the chart while categories are isolated
+    const dayShown = ppeSel ? null : drawn("ppe", "day", dayAll);
+    const cDayShown = ppeSel ? null : drawn("ppe", "cday", cDayAll);
+    const extras = [cDayShown, dayShown, ...(ppeSel ? [] : programs)].filter(hasLine);
+    const earlyWindow = dayAll != null && hasLine(dayAll) && dayEnds[0] >= 0 && years[dayEnds[0]] < H!.functional_from;
     $("ppe-sub").textContent =
       `${dollarsNote}${whole ? "" : " per in-district FTE pupil"}.${wholeNote}` +
       (whole ? " Pupils are in-district FTE." : "") +
-      (ppeSel ? " Scale fitted to the selection." : "");
+      (ppeSel ? " Scale fitted to the selection." : "") +
+      (earlyWindow ? ` ${years[last] >= H!.functional_from ? HIST_NOTE : HIST_NOTE.replace(/ In FY2005 and FY2006.*$/, "")}` : "") +
+      (earlyWindow && whole ? " With Totals on, the dashed line is the day-program figure times DESE's average membership, FY1997 to FY2006." : "") +
+      (histOn && ppeSel && dayAll && hasLine(dayAll) ? " The older measure's line is a total, so it shows when every category does." : "");
     const p1 = stackedColumns($("svg-ppe") as unknown as SVGSVGElement, frame(tall, `Spending${pp}`), ppeShown, ppeOverlay,
       ppeSel ? fitTicks(ppeShown, ppeOverlay?.values ?? null) : dollarTicks, fmtUsd, setHover,
-      { value: ppeShownTotal[last], text: usd }, [], ppeTrend);
+      { value: ppeShownTotal[last], text: usd }, [], ppeTrend, extras);
     legend($("legend-ppe"), [
       ...ppe.map((s) => ({ key: s.key, label: s.label, color: s.color, mark: "rect" as const })),
       ...lineLegend(ppeTrendAll, ppeOverlayAll),
+      ...(dayAll && hasLine(dayAll) && !ppeSel ? [{ label: DAY_LABEL, color: DAY_COLOR, mark: "dash" as const, line: "day" as const,
+        detail: dayGrowth || undefined, help: e.kind === "average" ? `${DAY_NOTE}\n\n${WEIGHT_NOTE}` : DAY_NOTE }] : []),
+      ...(cDayAll && hasLine(cDayAll) && !ppeSel ? [{ label: cDayAll.label, color: COMPARE_COLOR, mark: "dash" as const, line: "cday" as const,
+        help: c!.kind === "average" ? WEIGHT_NOTE : undefined }] : []),
+      ...(hasPrograms && !whole && !ppeSel ? [{ label: showPrograms ? "Hide the programs" : "Show the programs, older measure", color: DAY_COLOR, mark: "dash" as const, on: showPrograms,
+        toggle: () => (showPrograms = !showPrograms),
+        help: "DESE's day-program figure for each program the district ran: regular classes (regular day), special " +
+          "education (special needs), bilingual programs (to FY2003, when DESE folded them into regular education) and " +
+          "vocational programs (occupational day). Each is per pupil in that program, so they don't add up to the total." },
+        ...programs.map((p) => ({ label: p.label, color: p.color, mark: "dash" as const }))] : []),
     ], "ppe");
     compareTable($("cmp-ppe"), `Spending${whole ? "" : " per in-district FTE pupil"}${ppeSel ? `, ${ppeSel}` : ""}, ${e.name} (${dollarsNote.toLowerCase()})`, "Category",
       cmpRows(ppeShown, cPpe, ppeSel, ppeTotal, cPpeTotal, ppeShownTotal, cPpeShownTotal, "Total"), "usd", c, tableOpts);
+    // The older measure's own table, over its own years
+    const dayHolder = $("cmp-day");
+    if (dayAll && dayEnds[1] - dayEnds[0] >= 1) {
+      const cDayProg = (k: DayKey) => (c?.day?.[k] && c.kind === "district" ? dayValues(c, c.day[k]) : null);
+      const progRows = whole ? [] : PROGRAM_SERIES.flatMap((p) => (e.day![p.key] && hasLine({ ...p, values: e.day![p.key]! })
+        ? [{ label: p.label, color: p.color, mark: "dash" as const, values: dayValues(e, e.day![p.key])!, base: cDayProg(p.key) }] : []));
+      compareTable(dayHolder, `${DAY_LABEL}: day-program spending${whole ? "" : " per pupil"}, ${e.name} (${dollarsNote.toLowerCase()})`, "Program",
+        [...progRows, { label: "Total, all day programs", color: "", mark: "dash" as const, values: dayAll.values, base: cDayAll?.values ?? null, total: true }],
+        "usd", c, { ...tableOpts, start: dayEnds[0], end: dayEnds[1] });
+    } else dayHolder.replaceChildren();
     fullTables.ppe = { caption: `Spending${whole ? "" : " per in-district FTE pupil"} by category, ${e.name} (${dollarsNote.toLowerCase()})`, cols: [
       ...ppe.map((s) => ({ label: s.label, values: s.values, fmt: usd })),
       { label: "Total", values: ppeTotal, fmt: usd },
       ...(c ? [{ label: `${cName}, total`, values: cPpeTotal!, fmt: usd }] : []),
+      ...(dayAll && hasLine(dayAll) ? [{ label: `${DAY_LABEL} (day program)`, values: dayAll.values, fmt: usd }] : []),
+      ...(cDayAll && hasLine(cDayAll) ? [{ label: cDayAll.label, values: cDayAll.values, fmt: usd }] : []),
     ] };
+
+    // Pupils educated elsewhere: what the district pays to educate its own pupils in other schools, per
+    // out-of-district FTE pupil, or with Totals on, in dollars. DESE's totals give it (export: ood_series).
+    const oodOf = (x: Entity): Series => {
+      const v = x.ood ?? nulls(years.length);
+      const n = x.enroll.out_of_district;
+      return { key: "ood", label: whole ? "Payments to out-of-district schools" : "Per pupil educated elsewhere", color: OOD_COLOR,
+        values: deflate(whole ? v.map((y, i) => (y == null || n[i] == null ? null : y * n[i]!)) : v) };
+    };
+    const ood = oodOf(e);
+    const cOod = c ? oodOf(c) : null;
+    const oodOverlayAll = cOod ? { key: "cmp", label: cName, color: COMPARE_COLOR, values: cOod.values } : null;
+    const oodTrendAll = trendOf(e.name, null, ood.values);
+    const oodOverlay = drawn("ood", "cmp", oodOverlayAll);
+    const oodTrend = drawn("ood", "trend", oodTrendAll);
+    $("ood-sub").replaceChildren(
+      `${dollarsNote}${whole ? `, in total${perDistrict}` : " per out-of-district FTE pupil"}: tuition and other payments for the ` +
+      "district's own pupils educated elsewhere, such as charter schools, other districts, and special education schools. " +
+      "With only a few pupils placed out, one placement moves the figure a lot. ", helpTip(
+        "DESE's data reports no separate figure for these payments from FY2009. The explorer works them out from DESE's " +
+        "totals: total spending per pupil times all FTE pupils, less in-district spending per pupil times in-district " +
+        "pupils, over out-of-district pupils. For FY2005 to FY2008, where DESE printed the figure, the two agree to within " +
+        "0.7%. An average pools its districts' payments over their out-of-district pupils."));
+    let oodMax = 0;
+    years.forEach((_, i) => (oodMax = Math.max(oodMax, ood.values[i] ?? 0, oodOverlay?.values[i] ?? 0)));
+    const p5 = stackedColumns($("svg-ood") as unknown as SVGSVGElement, frame(width < 520 ? 220 : 260, whole ? "Payments" : "Per pupil placed out", "Per pupil"),
+      [ood], oodOverlay, niceTicks(oodMax * 1.04), fmtUsd, setHover, { value: ood.values[last], text: usd }, [], oodTrend);
+    legend($("legend-ood"), [{ label: ood.label, color: OOD_COLOR, mark: "rect" as const }, ...lineLegend(oodTrendAll, oodOverlayAll)], "ood");
+    const oodCaption = `Payments to out-of-district schools${whole ? "" : " per out-of-district FTE pupil"}, ${e.name} (${dollarsNote.toLowerCase()})`;
+    compareTable($("cmp-ood"), oodCaption, "Measure",
+      [{ label: ood.label, color: OOD_COLOR, mark: "rect", values: ood.values, base: cOod?.values ?? null }], "usd", c, tableOpts);
+    fullTables.ood = { caption: oodCaption, cols: [
+      { label: ood.label, values: ood.values, fmt: usd },
+      { label: "Out-of-district FTE pupils", values: e.enroll.out_of_district, fmt: fte },
+      ...(cOod ? [{ label: cName, values: cOod.values, fmt: usd }] : []),
+    ] };
+    const oodTip = (i: number): TipContent => ({
+      title: `FY${years[i]}`,
+      rows: [
+        { value: ood.values[i] != null ? usd(ood.values[i]!) : "–", label: ood.label, strong: true },
+        ...(e.enroll.out_of_district[i] != null ? [{ value: fte(e.enroll.out_of_district[i]!), label: `Out-of-district FTE pupils${perDistrict ? ", average per district" : ""}` }] : []),
+        ...trendRow(oodTrend, i),
+        ...(oodOverlay && oodOverlay.values[i] != null ? [{ value: usd(oodOverlay.values[i]!), label: oodOverlay.label, color: COMPARE_COLOR, mark: "line" as const }] : []),
+      ],
+      note: yoy(ood.values, i),
+    });
 
     // Panel 2: enrollment
     $("enroll-sub").replaceChildren(`Pupils counted three ways${perDistrict}. `, helpTip(
@@ -1698,11 +2086,21 @@ export async function startExplorer() {
       "the district is financially responsible for on one day, October 1, the fall before the fiscal year begins: " +
       `FY${meta.latest}'s count is from October 1, ${meta.latest - 2}. Pre-kindergarten and half-day kindergarten pupils ` +
       "count as half."));
+    if (histOn && enroll.some((s) => s.dash && hasLine(s))) $("enroll-sub").append("In earlier years, two more. ", helpTip(
+      "Day-program membership: DESE's average membership in its day programs, FY1997 to FY2006, full-time " +
+      "equivalents over the year, as its older per-pupil figure divides by.\n\nFall enrollment: the pupils the " +
+      "National Center for Education Statistics counted in each district's schools each fall, FY1990 to FY1996, " +
+      "for which DESE's reports give no pupils (Common Core of Data). It is a head count from a different agency, so " +
+      "it differs a little from DESE's counts. Averages are per district."));
     const p2 = lines($("svg-enroll") as unknown as SVGSVGElement, frame(width < 520 ? 200 : 230, "Pupils"), enroll, enrollTicks,
       (v) => compact(v), fte, setHover);
-    legend($("legend-enroll"), enroll.map((s) => ({ label: s.label, color: s.color, mark: "line" as const })));
+    legend($("legend-enroll"), enroll.filter((s) => !s.dash || hasLine(s))
+      .map((s) => ({ label: s.label, color: s.color, mark: s.dash ? "dash" as const : "line" as const })));
     compareTable($("cmp-enroll"), `Enrollment, ${e.name}${perDistrict}`, "Measure",
-      enroll.map((s, k) => ({ label: s.label, color: s.color, mark: "line" as const, values: s.values, base: cEnroll ? cEnroll[k].values : null })),
+      // The earlier counts end before the table's last years; the full data table has them
+      enroll.filter((s) => !s.dash)
+        .map((s) => ({ label: s.label, color: s.color, mark: "line" as const, values: s.values,
+          base: cEnroll?.find((x) => x.key === s.key)?.values ?? null })),
       "fte", c);
     fullTables.enroll = { caption: `Enrollment, ${e.name}${perDistrict}`, cols: enroll.map((s) => ({ label: s.label, values: s.values, fmt: fte })) };
 
@@ -1807,14 +2205,27 @@ export async function startExplorer() {
     panels = [
       {
         panel: p1, figure: $("fig-ppe"),
-        tip: (i) => stackTip(i, ppeShown, ppeSel, ppeShownTotal, ppeTotal, ppeOverlay, ppeTrend, `Total${pp}`, "categories"),
+        tip: (i) => {
+          const t = stackTip(i, ppeShown, ppeSel, ppeShownTotal, ppeTotal, ppeOverlay, ppeTrend, `Total${pp}`, "categories");
+          // The older measure's lines, under the columns' figures; alone, before FY2005
+          const at = (x: Series | null) => (x && x.values[i] != null ? x.values[i]! : null);
+          const rows: TipRow[] = [
+            ...(at(dayShown) != null ? [{ value: usd(at(dayShown)!), label: `${DAY_LABEL} (day program)`, color: DAY_COLOR, mark: "dash" as const,
+              strong: ppeTotal[i] == null }] : []),
+            ...programs.filter((p) => at(p) != null).map((p) => ({ value: usd(at(p)!), label: p.label, color: p.color, mark: "dash" as const })),
+            ...(at(cDayShown) != null ? [{ value: usd(at(cDayShown)!), label: cDayShown!.label, color: COMPARE_COLOR, mark: "dash" as const }] : []),
+          ];
+          if (!rows.length) return t;
+          if (ppeTotal[i] == null) return { title: t.title, rows, note: dayShown ? yoy(dayShown.values, i) : undefined };
+          return { ...t, rows: [...t.rows, ...rows] };
+        },
       },
       {
         panel: p2, figure: $("fig-enroll"),
         tip: (i) => ({
           title: `FY${years[i]}`,
           rows: enroll.filter((s) => s.values[i] != null)
-            .map((s) => ({ value: fte(s.values[i]!), label: s.label, color: s.color, mark: "line" as const })),
+            .map((s) => ({ value: fte(s.values[i]!), label: s.label, color: s.color, mark: s.dash ? "dash" as const : "line" as const })),
           note: perDistrict ? "Average per district" : undefined,
         }),
       },
@@ -1838,6 +2249,7 @@ export async function startExplorer() {
         },
       },
       ...(p4 && revTip ? [{ panel: p4, figure: $("fig-rev"), tip: revTip }] : []),
+      { panel: p5, figure: $("fig-ood"), tip: oodTip },
     ];
     if (hovered != null) setHover(null, null);
 
@@ -1880,7 +2292,7 @@ export async function startExplorer() {
     return list;
   }
 
-  interface RelRow { name: HTMLElement; kind?: string; amount: number | null; extra: [string, HTMLElement[]] | null }
+  interface RelRow { name: HTMLElement; kind?: string; amount?: number | null; extra: [string, HTMLElement[]] | null }
 
   function relations(spec: { root: string; note: string; rows: RelRow[] } | null) {
     const box = $("relations");
@@ -1901,7 +2313,7 @@ export async function startExplorer() {
       name.append(r.name);
       li.append(name);
       if (r.kind != null) li.append(text("span", r.kind, "rel-kind"));
-      li.append(text("span", r.amount != null ? millions(r.amount) : "–", "rel-amt"));
+      if (r.amount !== undefined) li.append(text("span", r.amount != null ? millions(r.amount) : "–", "rel-amt"));
       if (r.extra) {
         const extra = document.createElement("span");
         extra.className = "rel-extra";

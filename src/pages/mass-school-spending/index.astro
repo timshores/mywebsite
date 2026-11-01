@@ -16,6 +16,16 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
     { file: "nces_ma_districts.csv", holds: "The crosswalk from federal district IDs to DESE's district codes",
       source: "NCES Common Core of Data, through the Urban Institute's Education Data Portal", url: "https://educationdata.urban.org/", retrieved: "Oct 21, 2026" },
   ] },
+  { group: "School districts before FY2009", files: [
+    { file: "dese_expenditures_fy2005_2008.csv", holds: "Spending per pupil by category, and FTE enrollment, for every district, FY2005 to FY2008: the explorer's own measure",
+      source: "DESE, Office of School Finance workbooks, public records request P004939-101625", url: `${REPO_DATA}dese_archive/README.md`, retrieved: "Oct 28, 2026" },
+    { file: "dese_day_program_fy1990_2006.csv", holds: "DESE's older, narrower day-program spending per pupil, by program and in total, for every district, FY1990 to FY2006",
+      source: "DESE, Per Pupil Expenditures reports and workbooks, the same request", url: `${REPO_DATA}dese_archive/README.md`, retrieved: "Oct 28, 2026" },
+    { file: "dese_archive/README.md", holds: "The 25 files DESE sent, as received, and how the scanned reports were read and checked",
+      source: "DESE, Public Records Center", url: "https://www.doe.mass.edu/", retrieved: "Oct 28, 2026" },
+    { file: "nces_ma_enrollment_fy1990_2006.csv", holds: "Each district's fall enrollment, FY1990 to FY2006, which weights the older measure's averages before FY1997",
+      source: "NCES Common Core of Data, through the Urban Institute's Education Data Portal", url: "https://educationdata.urban.org/", retrieved: "Oct 30, 2026" },
+  ] },
   { group: "Chapter 70 formula", files: [
     { file: "dese_c70_townwide.csv", holds: "Every town's FY2026 and FY2027 local contribution calculation, before and after the 82.5% cap",
       source: "DESE, complete Chapter 70 formula spreadsheets", url: "https://www.doe.mass.edu/finance/chapter70/fy2027/chapter-2027.xlsm", retrieved: "Oct 21, 2026" },
@@ -87,7 +97,7 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
       <div class="view-tablist" role="tablist" aria-label="Explorer view">
       <button type="button" role="tab" id="tab-districts" data-view="districts" aria-controls="view-panel" aria-selected="true">School districts</button>
       <button type="button" role="tab" id="tab-towns" data-view="towns" aria-controls="view-panel" aria-selected="false" tabindex="-1">Towns</button>
-      <button type="button" role="tab" id="tab-commonwealth" data-view="commonwealth" aria-controls="view-panel" aria-selected="false" tabindex="-1">Commonwealth</button>
+      <button type="button" role="tab" id="tab-commonwealth" data-view="commonwealth" aria-controls="view-panel" aria-selected="false" tabindex="-1">Common&shy;wealth</button>
       <button type="button" role="tab" id="tab-cap" data-view="cap" aria-controls="view-panel" aria-selected="false" tabindex="-1">The 82.5% cap</button>
       <button type="button" role="tab" id="tab-data" data-view="data" aria-controls="view-panel" aria-selected="false" tabindex="-1">Data</button>
       </div>
@@ -102,7 +112,14 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
     <div id="view-panel" role="tabpanel" aria-labelledby="tab-districts">
     <form class="controls" onsubmit="return false" data-view-only="districts towns">
       <div class="control" data-view-only="districts">
-        <span id="pick-district-label">District</span>
+        <span class="district-head">
+          <span id="pick-district-label">District</span>
+          <!-- Districts that no longer exist have a menu of their own -->
+          <span class="dmode" role="group" aria-label="Which districts the menu lists">
+            <label><input type="radio" name="dmode" value="current" checked /><span>Current</span></label>
+            <label><input type="radio" name="dmode" value="former" /><span>Former</span></label>
+          </span>
+        </span>
         <select id="pick-district" aria-labelledby="pick-district-label"></select>
       </div>
       <label class="control" data-view-only="districts">
@@ -157,12 +174,22 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
         <div class="years-slider" role="group" aria-labelledby="years-label">
           <div class="years-track">
             <div class="years-fill"></div>
+            <!-- With Since 1990 on: where the explorer's own measure begins, FY2005 -->
+            <span class="years-mark" id="years-mark" hidden><span class="years-mark-label" data-detail>Measure changes</span></span>
             <input type="range" id="year-from" min="0" max="16" step="1" value="0" aria-label="First year shown" />
             <input type="range" id="year-to" min="0" max="16" step="1" value="16" aria-label="Last year shown" />
           </div>
           <output id="years-out">FY2009–FY2025</output>
         </div>
-        <div class="years-ends" aria-hidden="true"><span>FY<span data-start>2009</span></span><span>FY<span data-latest>2025</span></span></div>
+        <div class="years-ends" aria-hidden="true"><span>FY<span id="years-first">2009</span></span><span>FY<span data-latest>2025</span></span></div>
+      </div>
+      <!-- The earlier years, FY1990 to FY2008, from DESE's archive -->
+      <div class="control hist-control" data-view-only="districts">
+        <span class="hist-head"><span id="hist-label">Since 1990</span></span>
+        <button type="button" class="detail-dial hist-dial" id="hist-switch" role="switch" aria-checked="false" aria-labelledby="hist-label">
+          <span class="dial-face" aria-hidden="true"><span class="dial-pointer"></span></span>
+          <span class="dial-state" aria-hidden="true">Off</span>
+        </button>
       </div>
       <fieldset class="control toggle" data-view-only="districts">
         <legend>Amounts</legend>
@@ -188,6 +215,7 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
     <header class="entity" data-view-only="districts towns">
       <h2 id="entity-name">Loading…</h2>
       <p id="entity-meta"></p>
+      <p id="entity-note" class="entity-note" hidden></p>
     </header>
 
     <div id="tiles" class="tiles" data-view-only="districts towns"></div>
@@ -204,7 +232,7 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
     </section>
 
     <section id="cap-view" class="cap-view" data-view-only="cap" hidden>
-      <h2 class="cap-title">The 82.5% cap — <i>page very much still under development</i></h2>
+      <h2 class="cap-title">The 82.5% cap</h2>
       <details class="intro" id="cap-intro" data-remember="cap-intro">
       <summary>About this tab</summary>
       <p class="cap-lede">
@@ -297,8 +325,24 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
         <details class="table-view compare-view">
           <summary>Comparison table</summary>
           <div class="table-scroll" id="cmp-ppe"></div>
+          <div class="table-scroll" id="cmp-day"></div>
         </details>
         <button type="button" class="table-open" data-table="ppe" aria-haspopup="dialog">
+          <span class="table-open-icon" aria-hidden="true">⤢</span> Full data table
+        </button>
+      </figure>
+
+      <figure id="fig-ood" class="panel">
+        <h3>Pupils educated elsewhere</h3>
+        <p class="panel-sub" id="ood-sub"></p>
+        <ul class="legend" id="legend-ood"></ul>
+        <svg id="svg-ood" tabindex="0" role="img" aria-label="Columns of what the district pays to educate its pupils elsewhere, for each fiscal year. Use the arrow keys to read each year; the data table below has every value."></svg>
+        <div class="tooltip" role="status" hidden></div>
+        <details class="table-view compare-view">
+          <summary>Comparison table</summary>
+          <div class="table-scroll" id="cmp-ood"></div>
+        </details>
+        <button type="button" class="table-open" data-table="ood" aria-haspopup="dialog">
           <span class="table-open-icon" aria-hidden="true">⤢</span> Full data table
         </button>
       </figure>
@@ -491,7 +535,10 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
         (<a href="/mass-school-spending/data/districts-spending-per-pupil.csv" download>CSV</a>) from each district's end-of-year report, divided by in-district FTE and grouped
         into the report's nine categories; its Other combines DESE's professional development and instructional
         materials, equipment, and technology. It leaves out tuition for pupils educated elsewhere, because, as DESE puts
-        it, those costs "vary greatly depending on the reason for going out of district."
+        it, those costs "vary greatly depending on the reason for going out of district." The panel
+        <strong>Pupils educated elsewhere</strong> shows them on their own, per out-of-district FTE pupil. DESE's data
+        has no separate figure for them from FY2009, so the explorer works it out from DESE's totals: total spending
+        less in-district spending. For FY2005 to FY2008, where DESE printed the figure, the two agree to within 0.7%.
       </p>
       <p>
         <strong>Enrollment</strong> comes in three measures. In-district FTE is full-year enrollment of students who
@@ -511,6 +558,24 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
         regional district's member towns, pays the required local contribution. Anything above that is a local choice. Because spending per pupil and
         net school spending use different denominators, the two charts are not the same measure: they are a picture
         of apples in the morning compared with a picture of apples in the evening. Both dollar charts share one scale.
+      </p>
+      <p>
+        <strong>Since 1990</strong> adds DESE's per-pupil reports from FY1990 to FY2008, which its Public Records Center
+        provided in October 2026 in answer to public records request P004939-101625
+        (<a href="https://github.com/timshores/schools/blob/main/ppe_report/data/dese_archive/README.md">the files, and
+        how they were read</a>). FY2005 to FY2008 are the explorer's own measure and extend its columns. FY1990 to
+        FY2006 also have DESE's older, narrower measure, which it called day-program spending: what a district spent
+        running its own schools, mainly from its school committee budget and the town's indirect costs for them,
+        divided by the pupils enrolled there. It leaves out pupils sent to other schools and what is paid for them, so
+        it usually runs below the columns. In FY2005, which DESE's workbook sets out both ways, Abington's was $6,766
+        per pupil against $7,463 in the columns. The explorer draws it as a dashed line, never joined to the columns,
+        and keeps trends and growth rates on one side of the change. Its averages weight each district by DESE's
+        average membership from FY1997. DESE's reports give no pupils for FY1990 to FY1996, so those years use the fall
+        enrollment the National Center for Education Statistics counts
+        (<a href="https://educationdata.urban.org/">Common Core of Data</a>), a head count from a different agency; in
+        FY1997 and FY1998, when both exist, nine districts in ten differ by less than 9%. Chapter 70 figures reach back
+        to FY1993, DESE's first profile year. Districts that no longer exist, including towns that once ran their own
+        schools, are listed under Former districts with the years they have figures for.
       </p>
       <p>
         <strong>Totals</strong>, under Amounts, turn the figures per pupil or per resident back into dollars. A
@@ -1321,6 +1386,110 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
     outline-offset: 2px;
   }
 
+  /* Where the explorer's own measure begins: a tick on the track, named under it */
+  .years-mark {
+    position: absolute;
+    top: 1px;
+    left: calc(8px + (100% - 16px) * var(--m, 0));
+    width: 2px;
+    height: 14px;
+    margin-left: -1px;
+    background: var(--ink-soft);
+    pointer-events: none;
+  }
+
+  .years-mark-label {
+    position: absolute;
+    top: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 0.68rem;
+    font-weight: 500;
+    color: var(--ink-soft);
+    white-space: nowrap;
+  }
+
+  .years-mark :global(.cw-help) {
+    position: absolute;
+    top: 15px;
+    left: calc(50% + 3.1rem);
+    pointer-events: auto;
+  }
+
+  .district-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.6rem;
+  }
+
+  /* Current or former districts in the menu: two small pills */
+  .dmode {
+    display: inline-flex;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    overflow: hidden;
+  }
+
+  .dmode input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .dmode span {
+    display: block;
+    padding: 0.05rem 0.55rem;
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--ink-soft);
+    cursor: pointer;
+  }
+
+  .dmode input:checked + span {
+    background: var(--ink);
+    color: var(--paper);
+  }
+
+  .dmode input:focus-visible + span {
+    outline: 2px dashed var(--accent);
+    outline-offset: -2px;
+  }
+
+  .entity-note {
+    max-width: 46rem;
+    margin: 0.4rem 0 0;
+    padding: 0.55rem 0.75rem;
+    border-left: 3px solid var(--line);
+    font-size: 0.9rem;
+    color: var(--ink-soft);
+  }
+
+  .entity-note :global(.note-source) {
+    display: block;
+    margin-top: 0.25rem;
+    font-size: 0.78rem;
+  }
+
+  .hist-head {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+  }
+
+  .detail-dial.hist-dial {
+    margin-left: 0;
+    align-self: flex-start;
+    padding-left: 0;
+  }
+
+  .years-slider :global(.years-two) {
+    display: block;
+    font-size: 0.7rem;
+    font-weight: 500;
+    color: var(--ink-soft);
+  }
+
   .years-slider output {
     min-width: 7.5rem;
     font-size: 0.95rem;
@@ -1528,6 +1697,70 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
 
   .view-tabs + #view-panel .controls {
     margin-top: 1rem;
+  }
+
+  /* Where the tabs would run past the bar's edge, they become a grid of buttons, all in sight,
+     with the dial in the grid's sixth cell. The grid is too tall to keep pinned on a phone, so it
+     scrolls away with the page; the docked controls pin to the top in its place (explorer.ts). */
+  @media (max-width: 860px) {
+    .view-tabs {
+      position: relative;
+      display: block;
+      padding: 0.45rem 0;
+    }
+
+    .view-tablist {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      grid-auto-rows: 1fr;
+      gap: 0.35rem;
+      overflow: visible;
+    }
+
+    .view-tabs [role="tab"] {
+      min-height: 2.6rem;
+      margin: 0;
+      padding: 0.3rem 0.5rem;
+      font-size: 0.92rem;
+      line-height: 1.2;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: #fff;
+    }
+
+    .view-tabs [role="tab"][aria-selected="true"] {
+      color: var(--paper);
+      background: var(--ink);
+      border-color: var(--ink);
+      box-shadow: none;
+    }
+
+    .view-tabs [role="tab"]:focus-visible {
+      outline-offset: 2px;
+    }
+
+    /* One column wide and one row high, bottom right; the bar is its containing block */
+    .view-tabs .detail-dial {
+      position: absolute;
+      right: 0;
+      bottom: 0.45rem;
+      width: calc((100% - 0.7rem) / 3);
+      height: calc((100% - 0.9rem - 0.35rem) / 2);
+      justify-content: center;
+      gap: 0.3rem;
+      padding: 0;
+    }
+
+    .view-tabs .dial-face {
+      flex: none;
+    }
+  }
+
+  /* Too narrow for the word beside the knob; the knob's turn still shows on or off */
+  @media (max-width: 380px) {
+    .view-tabs .dial-state {
+      display: none;
+    }
   }
 
   .panels[hidden] {
@@ -1940,6 +2173,14 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
     fill: none;
     stroke-width: 2.25;
     stroke-dasharray: 7 5;
+    stroke-linecap: round;
+  }
+
+  /* The older measure, beside the columns rather than in them */
+  .panel :global(.extra-line) {
+    fill: none;
+    stroke-width: 2.25;
+    stroke-linejoin: round;
     stroke-linecap: round;
   }
 
@@ -3334,6 +3575,11 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
   .explorer :global(.enlarge-open svg) {
     width: 0.85rem;
     height: 0.85rem;
+  }
+
+  /* Nothing to enlarge where a note stands in for the chart */
+  .explorer :global(figure.panel:has(> .panel-none:not([hidden])) > .enlarge-open) {
+    display: none;
   }
 
   .explorer :global(.enlarge-open:hover),

@@ -10,6 +10,8 @@ export interface Series {
   label: string;
   color: string;
   values: Val[];
+  /** A dashed line's dash pattern (SVG stroke-dasharray), for a measure drawn apart from the rest */
+  dash?: string;
 }
 
 export interface Frame {
@@ -182,7 +184,8 @@ function hoverLayer(svg: SVGSVGElement, ax: Axis, onHover: (i: number | null, so
 
 /**
  * Stacked columns, bottom to top in series order, with an optional overlay line
- * (the comparison) and an optional dashed trend line (the columns' own fitted trend).
+ * (the comparison), an optional dashed trend line (the columns' own fitted trend),
+ * and extra lines for a measure drawn beside the columns rather than in them.
  * A negative last segment (spending below the requirement) clips the solid stack
  * at the actual total and hatches the shortfall up to the requirement. A column
  * with no positive parts (one negative segment shown alone) hangs below zero.
@@ -198,6 +201,7 @@ export function stackedColumns(
   cap?: { value: number | null; text: (v: number) => string; index?: number },
   faded: boolean[] = [],
   trend: Series | null = null,
+  extras: Series[] = [],
 ): Panel {
   svg.replaceChildren();
   svg.setAttribute("viewBox", `0 0 ${frame.width} ${frame.height + X_TITLE_ROOM}`);
@@ -267,6 +271,16 @@ export function stackedColumns(
     const d = linePath(ax, trend.values);
     svgEl("path", { d, class: "trend-halo" }, tg);
     svgEl("path", { d, class: "trend-line", stroke: trend.color }, tg);
+  }
+
+  // Extra lines, each with a dot on every year it has: their measure is not the columns'
+  for (const s of extras) {
+    if (!s.values.some((v) => v != null)) continue;
+    const eg = svgEl("g", { class: "extra" }, svg);
+    svgEl("path", { d: linePath(ax, s.values), class: "extra-line", stroke: s.color, ...(s.dash ? { "stroke-dasharray": s.dash } : {}) }, eg);
+    s.values.forEach((v, i) => {
+      if (v != null) svgEl("circle", { cx: ax.x(i), cy: ax.y(v), r: 2.5, fill: s.color, class: "extra-dot" }, eg);
+    });
   }
 
   let overlayDots: SVGGElement | null = null;
@@ -354,7 +368,7 @@ export function lines(
   const ends: { y: number; text: string }[] = [];
   for (const s of series) {
     if (!s.values.some((v) => v != null)) continue;
-    svgEl("path", { d: linePath(ax, s.values, sparse), stroke: s.color, class: "series-line" }, g);
+    svgEl("path", { d: linePath(ax, s.values, sparse), stroke: s.color, class: "series-line", ...(s.dash ? { "stroke-dasharray": s.dash } : {}) }, g);
     if (sparse) {
       s.values.forEach((v, i) => {
         if (v != null) svgEl("circle", { cx: ax.x(i), cy: ax.y(v), r: 3, fill: s.color, class: "dot" }, g);
