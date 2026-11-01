@@ -50,8 +50,8 @@ export const profile = {
     {
       title: "Cisco Secure Access Content Strategy",
       domain: "Cybersecurity",
-      description: "Content strategy lead for Cisco Secure Access, architecting end-to-end content strategy and launching documentation for SASE Management in close collaboration with product, engineering, UX, and CX teams.",
-      impact: "Member of Cisco's AI-Native Content Strategy tiger team, focused on content modeling and context engineering for graphRAG-structured knowledge, AI reasoning, and dynamic persona-driven content experiences.",
+      description: "Content strategy lead for Cisco Secure Access, a security product. Set its content strategy and launched a new documentation set for SASE (secure access service edge) management, working with product, engineering, user experience, and customer experience teams.",
+      impact: "Member of Cisco's AI-Native Content Strategy tiger team: modeled documentation so generative AI products can deliver it accurately and tailor it to each reader's role.",
       skills: [
         "Content Strategy",
         "Information Architecture",
