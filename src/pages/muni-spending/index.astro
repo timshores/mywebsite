@@ -112,14 +112,8 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
     <div id="view-panel" role="tabpanel" aria-labelledby="tab-districts">
     <form class="controls" onsubmit="return false" data-view-only="districts towns">
       <div class="control" data-view-only="districts">
-        <span class="district-head">
-          <span id="pick-district-label">District</span>
-          <!-- Districts that no longer exist have a menu of their own -->
-          <span class="dmode" role="group" aria-label="Which districts the menu lists">
-            <label><input type="radio" name="dmode" value="current" checked /><span>Current</span></label>
-            <label><input type="radio" name="dmode" value="former" /><span>Former</span></label>
-          </span>
-        </span>
+        <!-- Districts that no longer exist: a link at the foot of this menu lists them (explorer.ts, switchMenu) -->
+        <span id="pick-district-label">District</span>
         <select id="pick-district" aria-labelledby="pick-district-label"></select>
       </div>
       <div class="control" data-view-only="districts">
@@ -1330,6 +1324,31 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
     color: var(--muted);
   }
 
+  /* The district menu's foot: former districts, for the few who want them (picker.ts, PickerFoot) */
+  .explorer :global(.control .picker-foot) {
+    display: block;
+    width: 100%;
+    margin-top: 0.3rem;
+    padding: 0.5rem 1rem 0.35rem;
+    font: inherit;
+    font-size: 0.8rem;
+    font-weight: 400;
+    color: var(--muted);
+    text-align: left;
+    background: none;
+    border: 0;
+    border-top: 1px solid var(--line);
+    cursor: pointer;
+  }
+
+  .explorer :global(.control .picker-foot:hover),
+  .explorer :global(.control .picker-foot:focus-visible) {
+    color: var(--accent);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    outline: none;
+  }
+
   .toggle legend {
     padding: 0;
     margin-bottom: 0.3rem;
@@ -1473,41 +1492,8 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
     gap: 0.6rem;
   }
 
-  /* Current or former districts in the menu: two small pills */
-  .dmode {
-    display: inline-flex;
-    border: 1px solid var(--line);
-    border-radius: 999px;
-    overflow: hidden;
-  }
-
-  .dmode input {
-    position: absolute;
-    opacity: 0;
-    pointer-events: none;
-  }
-
-  .dmode span {
-    display: block;
-    padding: 0.05rem 0.55rem;
-    font-size: 0.72rem;
-    font-weight: 600;
-    color: var(--ink-soft);
-    cursor: pointer;
-  }
-
-  .dmode input:checked + span {
-    background: var(--ink);
-    color: var(--paper);
-  }
-
-  .dmode input:focus-visible + span {
-    outline: 2px dashed var(--accent);
-    outline-offset: -2px;
-  }
-
-  /* Swap the focus and the comparison: a small pill, like Current and Former beside District. Not .swap,
-     which is the intro's words that change with the tab */
+  /* Swap the focus and the comparison: a small pill beside Compare with. Not .swap, which is the intro's
+     words that change with the tab */
   .swap-btn {
     padding: 0.05rem 0.55rem;
     font: inherit;
@@ -2551,10 +2537,14 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
     max-width: none;
   }
 
+  /* Above and Below, at the table's right edge, under the columns they shade most */
   .compare-view :global(.chips) {
     display: flex;
     flex-wrap: wrap;
+    justify-content: flex-end;
     gap: 0.3rem 1rem;
+    /* A little room at the right, where the scrolling table's edge would otherwise clip the last letter */
+    padding-right: 3px;
     font-size: 0.82rem;
     color: var(--ink-soft);
   }

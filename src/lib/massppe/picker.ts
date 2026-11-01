@@ -11,11 +11,19 @@ export interface Picker {
   sync(): void;
 }
 
+/** A quiet link at the foot of the menu, for what few people need (the district menu's former
+ * districts): its words, read each time the menu opens, and what it does */
+export interface PickerFoot {
+  text: () => string;
+  title?: string;
+  act: () => void;
+}
+
 const fold = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
 
 let openPicker: (() => void) | null = null;
 
-export function groupedPicker(select: HTMLSelectElement, labelId: string, noun: string): Picker {
+export function groupedPicker(select: HTMLSelectElement, labelId: string, noun: string, foot?: PickerFoot): Picker {
   const wrap = document.createElement("div");
   wrap.className = "picker";
   const button = document.createElement("button");
@@ -49,6 +57,17 @@ export function groupedPicker(select: HTMLSelectElement, labelId: string, noun: 
   empty.textContent = "No matches";
   empty.hidden = true;
   panel.append(search, groupsBox, empty);
+  const footBtn = foot ? document.createElement("button") : null;
+  if (foot && footBtn) {
+    footBtn.type = "button";
+    footBtn.className = "picker-foot";
+    if (foot.title) footBtn.title = foot.title;
+    footBtn.addEventListener("click", () => {
+      close(true);
+      foot.act();
+    });
+    panel.append(footBtn);
+  }
   wrap.append(button, panel);
   select.hidden = true;
   select.tabIndex = -1;
@@ -157,6 +176,7 @@ export function groupedPicker(select: HTMLSelectElement, labelId: string, noun: 
 
   function open() {
     if (openPicker && openPicker !== close) openPicker();
+    if (foot && footBtn) footBtn.textContent = foot.text();
     mark();
     search.value = "";
     filter();
@@ -194,7 +214,7 @@ export function groupedPicker(select: HTMLSelectElement, labelId: string, noun: 
 
   /** Everything the arrow keys move through: group heads and the options showing. */
   const focusables = () =>
-    [...panel.querySelectorAll<HTMLElement>(".picker-group:not([hidden]) .picker-group-head, .picker-options:not([hidden]) li:not([hidden]) .picker-option:not(:disabled)")];
+    [...panel.querySelectorAll<HTMLElement>(".picker-group:not([hidden]) .picker-group-head, .picker-options:not([hidden]) li:not([hidden]) .picker-option:not(:disabled), .picker-foot")];
 
   button.addEventListener("click", () => (panel.hidden ? open() : close(true)));
   button.addEventListener("keydown", (ev) => {

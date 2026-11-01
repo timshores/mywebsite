@@ -740,18 +740,17 @@ export async function startExplorer() {
   // The last of each kind looked at, to come back to when the menu switches
   let lastCurrent = isFormer(state.d) ? "leverett" : state.d;
   let lastFormer = isFormer(state.d) ? state.d : (data.former ?? []).find((x) => x.former!.group === "early")?.id ?? null;
-  const dmodeInputs = document.querySelectorAll<HTMLInputElement>('input[name="dmode"]');
-  dmodeInputs.forEach((r) => r.addEventListener("change", () => {
-    if (!r.checked) return;
-    const id = r.value === "former" ? lastFormer : lastCurrent;
+  /** Former districts, from the quiet link at the foot of the district menu: its other list, opening on
+   * the last of that kind looked at */
+  const switchMenu = () => {
+    const id = menuMode === "former" ? lastCurrent : lastFormer;
     if (id) update({ d: id, ...histFor(id) });
-  }));
-  /** The menu follows the district shown: its list, and the switch above it */
+  };
+  /** The menu follows the district shown: its list, and the link at its foot */
   function syncMenu() {
     if (isFormer(state.d)) lastFormer = state.d;
     else lastCurrent = state.d;
     const mode = isFormer(state.d) ? "former" : "current";
-    dmodeInputs.forEach((r) => (r.checked = r.value === mode));
     if (mode === menuMode) return;
     menuMode = mode;
     select.replaceChildren();
@@ -824,9 +823,11 @@ export async function startExplorer() {
     return { hist: "off", from, to: state.to - from < MIN_SPAN ? meta.latest : state.to };
   }
   /** Choosing a former district whose figures all come before FY{start} turns Since 1990 on and shows the
-   * earlier years */
+   * earlier years; choosing any other while the window ends before FY{start} runs it to FY{latest} again,
+   * or the district would show none of its own years */
   const histFor = (id: string): Partial<typeof state> =>
-    (earlyOnly(id) && state.to >= meta.start ? { ...histPatch(true), from: fullYears[0], to: meta.start - 1 } : {});
+    earlyOnly(id) ? (state.to >= meta.start ? { ...histPatch(true), from: fullYears[0], to: meta.start - 1 } : {})
+      : state.to < meta.start ? { to: meta.latest } : {};
   const showHist = () => {
     const on = state.hist === "on";
     histSwitch.setAttribute("aria-checked", String(on));
@@ -841,7 +842,11 @@ export async function startExplorer() {
   compareSelect.value = state.cmp;
   if (state.vs) vsSelect.value = state.vs;
   // The long menus: searchable, with groups that start collapsed
-  const districtPickers = [groupedPicker(select, "pick-district-label", "districts and averages"),
+  const districtPickers = [groupedPicker(select, "pick-district-label", "districts and averages", {
+    text: () => (menuMode === "former" ? "Current districts and averages" : "Former districts"),
+    title: "Districts that no longer exist, with the years they have figures for",
+    act: switchMenu,
+  }),
     groupedPicker(vsSelect, "pick-vs-label", "districts and averages")];
   showDollars();
   select.addEventListener("change", () => update({ d: select.value, ...histFor(select.value) }));
