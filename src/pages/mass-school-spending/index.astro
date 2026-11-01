@@ -122,20 +122,24 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
         </span>
         <select id="pick-district" aria-labelledby="pick-district-label"></select>
       </div>
-      <label class="control" data-view-only="districts">
-        <span>Compare with</span>
-        <select id="pick-compare">
-          <option value="none">No comparison</option>
-          <option value="cohort">Its cohort in its region</option>
-          <option value="cohort-state">Its cohort statewide</option>
-          <option value="region">Its region</option>
-          <option value="state">Statewide</option>
-          <option value="gateway">Gateway Cities</option>
-          <option value="type">Its community type</option>
-          <option value="fifth">Its income fifth</option>
-          <option value="other">Another district or average</option>
-        </select>
-      </label>
+      <div class="control" data-view-only="districts">
+        <span id="pick-compare-label">Compare with</span>
+        <div class="cmp-row">
+          <select id="pick-compare" aria-labelledby="pick-compare-label" aria-describedby="cmp-name">
+            <option value="none">No comparison</option>
+            <option value="cohort">Its cohort in its region</option>
+            <option value="cohort-state">Its cohort statewide</option>
+            <option value="region">Its region</option>
+            <option value="state">Statewide</option>
+            <option value="gateway">Gateway Cities</option>
+            <option value="type">Its community type</option>
+            <option value="fifth">Its income fifth</option>
+            <option value="other">Another district or average</option>
+          </select>
+          <!-- The group a relative choice resolves to, by name, or all the groups (explorer.ts, groupLink) -->
+          <a class="cmp-name" id="cmp-name" href="/mass-school-spending/groups/">All groups</a>
+        </div>
+      </div>
       <div class="control" id="vs-control" hidden>
         <span id="pick-vs-label">Comparison district</span>
         <select id="pick-vs" aria-labelledby="pick-vs-label"></select>
@@ -144,20 +148,23 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
         <span id="pick-town-label">Town</span>
         <select id="pick-town" aria-labelledby="pick-town-label"></select>
       </div>
-      <label class="control" data-view-only="towns" hidden>
-        <span>Compare with</span>
-        <select id="pick-town-compare">
-          <option value="none">No comparison</option>
-          <option value="peer">Its peer group in its region</option>
-          <option value="peer-state">Its peer group statewide</option>
-          <option value="region">Its region</option>
-          <option value="state">Statewide</option>
-          <option value="gateway">Gateway Cities</option>
-          <option value="type">Its community type</option>
-          <option value="fifth">Its income fifth</option>
-          <option value="other">Another town or average</option>
-        </select>
-      </label>
+      <div class="control" data-view-only="towns" hidden>
+        <span id="pick-town-compare-label">Compare with</span>
+        <div class="cmp-row">
+          <select id="pick-town-compare" aria-labelledby="pick-town-compare-label" aria-describedby="town-cmp-name">
+            <option value="none">No comparison</option>
+            <option value="peer">Its peer group in its region</option>
+            <option value="peer-state">Its peer group statewide</option>
+            <option value="region">Its region</option>
+            <option value="state">Statewide</option>
+            <option value="gateway">Gateway Cities</option>
+            <option value="type">Its community type</option>
+            <option value="fifth">Its income fifth</option>
+            <option value="other">Another town or average</option>
+          </select>
+          <a class="cmp-name" id="town-cmp-name" href="/mass-school-spending/groups/">All groups</a>
+        </div>
+      </div>
       <div class="control" id="town-vs-control" hidden>
         <span id="pick-town-vs-label">Comparison town or average</span>
         <select id="pick-town-vs" aria-labelledby="pick-town-vs-label"></select>
@@ -623,7 +630,9 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
         among the 286 traditional districts, 57 or 58 to a fifth. Each fifth has an average of its own, for "Its income
         fifth" under Compare with. The cap tab ranks the towns the same way, for whichever year it shows. Land areas are the Census Bureau's
         (<a href="https://www2.census.gov/geo/tiger/GENZ2023/shp/cb_2023_25_cousub_500k.zip">2023 cartographic
-        boundaries</a>); enrollment is DESE's latest foundation enrollment, and population the latest estimate.
+        boundaries</a>); enrollment is DESE's latest foundation enrollment, and population the latest estimate. A
+        <a href="/mass-school-spending/groups/">list of every group and its members</a> has a page of its own, and a
+        file (<a href="/mass-school-spending/data/groups.csv" download>CSV</a>).
       </p>
       <p>
         <strong>Revenue by source</strong> comes from the Census Bureau's
@@ -1054,6 +1063,26 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
 
   .control[hidden] {
     display: none;
+  }
+
+  /* Beside Compare with: the group "Its region" and the like stand for, by name, or all the groups, linking
+     to the groups page; under the menu where it takes the width */
+  .cmp-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.3rem 0.6rem;
+  }
+
+  .cmp-name {
+    font-size: 0.8rem;
+    font-weight: 500;
+    line-height: 1.25;
+    max-width: 12rem;
+  }
+
+  .cmp-name.is-group {
+    font-weight: 600;
   }
 
   .controls-note {
@@ -3541,6 +3570,13 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
     color: var(--ink);
   }
 
+  /* In an enlarged chart's window, a note with no room below opens above its "?" (explorer.ts, placeTip) */
+  .explorer :global(.cw-help.tip-above:hover::after),
+  .explorer :global(.cw-help.tip-above:focus::after) {
+    top: auto;
+    bottom: calc(100% + 6px);
+  }
+
   /* A longer note: wider, anchored at the "?", paragraphs kept */
   .explorer :global(.cw-help.wide:hover::after),
   .explorer :global(.cw-help.wide:focus::after) {
@@ -3554,6 +3590,21 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
     width: 100%;
     height: auto;
     display: block;
+  }
+
+  /* A legend entry hovered or focused: its marks in the chart stay, the rest fade (explorer.ts, spotlight) */
+  .explorer :global(svg [data-key]) {
+    transition: opacity 0.12s ease;
+  }
+
+  .explorer :global(svg.is-spotlit [data-key]:not(.is-lit)) {
+    opacity: 0.15;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .explorer :global(svg [data-key]) {
+      transition: none;
+    }
   }
 
   /* Enlarge: a button at each chart's top right, and the window it opens (enlarge.ts) */

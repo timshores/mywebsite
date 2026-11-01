@@ -204,6 +204,8 @@ export function stackedColumns(
   extras: Series[] = [],
 ): Panel {
   svg.replaceChildren();
+  // Every mark carries its series' key, data-key, which a legend entry spotlights (explorer.ts)
+  svg.classList.remove("is-spotlit");
   svg.setAttribute("viewBox", `0 0 ${frame.width} ${frame.height + X_TITLE_ROOM}`);
   const ax = new Axis(frame, ticks);
   const defs = svgEl("defs", {}, svg);
@@ -227,9 +229,9 @@ export function stackedColumns(
     const solidTop = Math.min(positiveTop, Math.max(0, total));
     const x = ax.x(i) - w / 2;
     if (positiveTop === 0 && total < 0) {
-      const color = stacks.find((s, k) => (vals[k] ?? 0) < 0)?.color ?? "currentColor";
+      const neg = stacks.find((s, k) => (vals[k] ?? 0) < 0);
       const h = ax.y(total) - ax.y(0);
-      if (h > 0.5) svgEl("path", { d: bottomRoundedRect(x, ax.y(0), w, h, RADIUS), fill: color }, g);
+      if (h > 0.5) svgEl("path", { d: bottomRoundedRect(x, ax.y(0), w, h, RADIUS), fill: neg?.color ?? "currentColor", "data-key": neg?.key ?? "" }, g);
       return;
     }
     let base = 0;
@@ -248,16 +250,16 @@ export function stackedColumns(
       const h = yBot - yTop;
       if (h <= 0.5) return;
       if (k === segs.length - 1) {
-        svgEl("path", { d: topRoundedRect(x, yTop, w, h, RADIUS), fill: s.color }, g);
+        svgEl("path", { d: topRoundedRect(x, yTop, w, h, RADIUS), fill: s.color, "data-key": s.key }, g);
       } else {
-        svgEl("rect", { x, y: yTop, width: w, height: h, fill: s.color }, g);
+        svgEl("rect", { x, y: yTop, width: w, height: h, fill: s.color, "data-key": s.key }, g);
       }
     });
     if (positiveTop > solidTop) {
       const yTop = ax.y(positiveTop);
       const h = ax.y(solidTop) - GAP - yTop;
       if (h > 0.5) {
-        svgEl("rect", { x, y: yTop, width: w, height: h, fill: `url(#${svg.id}-hatch)`, class: "shortfall" }, g);
+        svgEl("rect", { x, y: yTop, width: w, height: h, fill: `url(#${svg.id}-hatch)`, class: "shortfall", "data-key": "shortfall" }, g);
       }
     }
   });
@@ -267,7 +269,7 @@ export function stackedColumns(
   if (trend && trend.values.some((v) => v != null)) {
     const clip = svgEl("clipPath", { id: `${svg.id}-plot` }, defs);
     svgEl("rect", { x: MARGIN.left, y: MARGIN.top, width: ax.plotW, height: ax.plotH }, clip);
-    const tg = svgEl("g", { class: "trend", "clip-path": `url(#${svg.id}-plot)` }, svg);
+    const tg = svgEl("g", { class: "trend", "clip-path": `url(#${svg.id}-plot)`, "data-key": "line:trend" }, svg);
     const d = linePath(ax, trend.values);
     svgEl("path", { d, class: "trend-halo" }, tg);
     svgEl("path", { d, class: "trend-line", stroke: trend.color }, tg);
@@ -276,7 +278,7 @@ export function stackedColumns(
   // Extra lines, each with a dot on every year it has: their measure is not the columns'
   for (const s of extras) {
     if (!s.values.some((v) => v != null)) continue;
-    const eg = svgEl("g", { class: "extra" }, svg);
+    const eg = svgEl("g", { class: "extra", "data-key": `line:${s.key}` }, svg);
     svgEl("path", { d: linePath(ax, s.values), class: "extra-line", stroke: s.color, ...(s.dash ? { "stroke-dasharray": s.dash } : {}) }, eg);
     s.values.forEach((v, i) => {
       if (v != null) svgEl("circle", { cx: ax.x(i), cy: ax.y(v), r: 2.5, fill: s.color, class: "extra-dot" }, eg);
@@ -285,7 +287,7 @@ export function stackedColumns(
 
   let overlayDots: SVGGElement | null = null;
   if (overlay && overlay.values.some((v) => v != null)) {
-    const og = svgEl("g", { class: "overlay" }, svg);
+    const og = svgEl("g", { class: "overlay", "data-key": "line:cmp" }, svg);
     svgEl("path", { d: linePath(ax, overlay.values), class: "overlay-line", stroke: overlay.color }, og);
     overlayDots = svgEl("g", {}, og);
     overlay.values.forEach((v, i) => {
@@ -359,6 +361,7 @@ export function lines(
   sparse = false,
 ): Panel {
   svg.replaceChildren();
+  svg.classList.remove("is-spotlit");
   svg.setAttribute("viewBox", `0 0 ${frame.width} ${frame.height + X_TITLE_ROOM}`);
   const ax = new Axis(frame, ticks);
   drawGrid(svg, ax, fmt);
@@ -368,16 +371,17 @@ export function lines(
   const ends: { y: number; text: string }[] = [];
   for (const s of series) {
     if (!s.values.some((v) => v != null)) continue;
-    svgEl("path", { d: linePath(ax, s.values, sparse), stroke: s.color, class: "series-line", ...(s.dash ? { "stroke-dasharray": s.dash } : {}) }, g);
+    const sg = svgEl("g", { "data-key": s.key }, g);
+    svgEl("path", { d: linePath(ax, s.values, sparse), stroke: s.color, class: "series-line", ...(s.dash ? { "stroke-dasharray": s.dash } : {}) }, sg);
     if (sparse) {
       s.values.forEach((v, i) => {
-        if (v != null) svgEl("circle", { cx: ax.x(i), cy: ax.y(v), r: 3, fill: s.color, class: "dot" }, g);
+        if (v != null) svgEl("circle", { cx: ax.x(i), cy: ax.y(v), r: 3, fill: s.color, class: "dot" }, sg);
       });
     }
     const last = s.values.map((v, i) => [v, i] as const).filter(([v]) => v != null).pop();
     if (last) {
       const [v, i] = last;
-      svgEl("circle", { cx: ax.x(i), cy: ax.y(v!), r: 4, fill: s.color, class: "dot" }, g);
+      svgEl("circle", { cx: ax.x(i), cy: ax.y(v!), r: 4, fill: s.color, class: "dot" }, sg);
       if (i === frame.years.length - 1) ends.push({ y: ax.y(v!), text: endFmt(v!) });
     }
   }

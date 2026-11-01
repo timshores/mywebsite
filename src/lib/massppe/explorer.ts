@@ -228,6 +228,8 @@ const TOWN_CHAIN = {
   peer: ["peer", "peer_state"], "peer-state": ["peer_state"], region: ["region"], state: ["state"], gateway: ["gateway"],
   type: ["type"], fifth: ["fifth"],
 } as const;
+/** The Compare with choices that stand for a group relative to the district or town, named under the menu */
+const RELATIVE_COMPARES = new Set<string>(["cohort", "cohort-state", "peer", "peer-state", "region", "type", "fifth"]);
 const COMPARES: Compare[] = ["none", "cohort", "cohort-state", "region", "state", "gateway", "type", "fifth", "other"];
 const TOWN_COMPARES: TownCompare[] = ["none", "peer", "peer-state", "region", "state", "gateway", "type", "fifth", "other"];
 const FIFTH_NAMES = ["", "Lowest", "Second", "Middle", "Fourth", "Highest"];
@@ -1210,11 +1212,20 @@ export async function startExplorer() {
     const w = cs.boxSizing === "border-box" ? inner
       : inner + parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight) + parseFloat(cs.borderLeftWidth) + parseFloat(cs.borderRightWidth);
     const r = h.getBoundingClientRect();
+    // Inside an enlarged chart's window the note stays within that window; elsewhere, within the page
+    const dlg = h.closest("dialog");
+    const area = dlg?.open ? dlg.getBoundingClientRect() : null;
+    const edgeL = (area?.left ?? 0) + TIP_MARGIN;
+    const edgeR = (area?.right ?? document.documentElement.clientWidth) - TIP_MARGIN;
     const left = h.classList.contains("wide") ? r.left : r.left + r.width / 2 - w / 2;
-    const right = document.documentElement.clientWidth - TIP_MARGIN;
-    const dx = left + w > right ? Math.max(right - (left + w), TIP_MARGIN - left) : left < TIP_MARGIN ? TIP_MARGIN - left : 0;
+    const dx = left + w > edgeR ? Math.max(edgeR - (left + w), edgeL - left) : left < edgeL ? edgeL - left : 0;
     if (dx) h.style.setProperty("--tip-dx", `${Math.round(dx)}px`);
     else h.style.removeProperty("--tip-dx");
+    // ...and opens above the "?" where it would run past the window's bottom and there's room above
+    if (area) {
+      const ht = parseFloat(cs.height) + parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom) + 2;
+      h.classList.toggle("tip-above", r.bottom + 6 + ht > area.bottom - TIP_MARGIN && r.top - 6 - ht > area.top + TIP_MARGIN);
+    }
   }
   const tipTarget = (ev: Event) => (ev.target instanceof Element ? ev.target.closest<HTMLElement>(".cw-help") : null);
   for (const type of ["pointerover", "focusin"]) {
@@ -1246,6 +1257,13 @@ export async function startExplorer() {
     const left = x + 16 + w > figBox.width ? x - 16 - w : x + 16;
     tip.style.left = `${Math.max(0, left)}px`;
     tip.style.top = `${svgBox.top - figBox.top + 8}px`;
+    // A tall tip on a phone can run past the bottom of the screen, or of an enlarged chart's window;
+    // move it up until it fits
+    const dlg = figure.closest("dialog");
+    const area = dlg?.open ? dlg.getBoundingClientRect() : { top: 0, bottom: window.innerHeight };
+    const box = tip.getBoundingClientRect();
+    const over = box.bottom - (area.bottom - 8);
+    if (over > 0) tip.style.top = `${Math.max(box.top - over, area.top + 8) - figBox.top}px`;
   }
 
   function setHover(i: number | null, source: SVGSVGElement | null) {
@@ -1273,6 +1291,8 @@ export async function startExplorer() {
   // ---- Legend: stacked segments are toggle buttons that isolate them; the lines are
   // toggle buttons that hide them on that chart ----
   interface LegendItem { label: string; color: string; mark: "rect" | "line" | "dash" | "hatch"; key?: string; line?: Line;
+    /** The chart marks (their data-key) a plain entry spotlights on hover or focus, without isolating them */
+    spot?: string;
     /** Beside the label, in lighter type: the trend's yearly rise */
     detail?: string;
     /** A "?" after the entry, with a note on hover or focus */
@@ -1354,6 +1374,7 @@ export async function startExplorer() {
       }
       if (!set || !it.key) {
         li.className = "legend-static";
+        if (it.spot) li.dataset.key = it.spot;
         li.append(swatch(it), text("span", it.label), ...(it.help ? [helpTip(it.help)] : []));
         return li;
       }
@@ -1392,6 +1413,28 @@ export async function startExplorer() {
     }
     list.replaceChildren(...nodes);
   }
+
+  // A legend entry, hovered or focused from the keyboard, spotlights its marks in its chart: they stay,
+  // the rest fade. A tap on a touch screen isolates instead, as a click does, so touch doesn't spotlight.
+  function spotlight(entry: HTMLElement | null, on: boolean) {
+    const key = entry?.dataset.key;
+    const box = entry?.closest("figure");
+    if (!key || key === "toggle" || !box) return;
+    for (const svg of box.querySelectorAll<SVGSVGElement>("svg")) {
+      svg.querySelectorAll(".is-lit").forEach((m) => m.classList.remove("is-lit"));
+      const marks = on ? svg.querySelectorAll(`[data-key="${CSS.escape(key)}"]`) : [];
+      marks.forEach((m) => m.classList.add("is-lit"));
+      svg.classList.toggle("is-spotlit", marks.length > 0);
+    }
+  }
+  const legendEntry = (ev: Event) => (ev.target instanceof Element ? ev.target.closest<HTMLElement>(".legend [data-key]") : null);
+  document.addEventListener("pointerover", (ev) => ev.pointerType !== "touch" && spotlight(legendEntry(ev), true));
+  document.addEventListener("pointerout", (ev) => ev.pointerType !== "touch" && spotlight(legendEntry(ev), false));
+  document.addEventListener("focusin", (ev) => {
+    const entry = legendEntry(ev);
+    if (entry?.matches(":focus-visible")) spotlight(entry, true);
+  });
+  document.addEventListener("focusout", (ev) => spotlight(legendEntry(ev), false));
 
   // ---- Full data table: every year, shown in an overlay wider than the page column ----
   type TableCol = { label: string; values: Values; fmt: (v: number) => string };
@@ -1845,6 +1888,7 @@ export async function startExplorer() {
   function renderDistricts() {
     const e = win(entity(state.d)!);
     const c = comparisonFor(e);
+    groupLink($<HTMLAnchorElement>("cmp-name"), c && RELATIVE_COMPARES.has(state.cmp) ? c : null);
     const histOn = state.hist === "on" && !!H;
     const real = state.usd !== "nominal";
     const dollarsNote = real ? `FY${state.usd} dollars` : "Nominal dollars";
@@ -2037,7 +2081,7 @@ export async function startExplorer() {
         help: "DESE's day-program figure for each program the district ran: regular classes (regular day), special " +
           "education (special needs), bilingual programs (to FY2003, when DESE folded them into regular education) and " +
           "vocational programs (occupational day). Each is per pupil in that program, so they don't add up to the total." },
-        ...programs.map((p) => ({ label: p.label, color: p.color, mark: "dash" as const }))] : []),
+        ...programs.map((p) => ({ label: p.label, color: p.color, mark: "dash" as const, spot: `line:${p.key}` }))] : []),
     ], "ppe");
     compareTable($("cmp-ppe"), `Spending${whole ? "" : " per in-district FTE pupil"}${ppeSel ? `, ${ppeSel}` : ""}, ${e.name} (${dollarsNote.toLowerCase()})`, "Category",
       cmpRows(ppeShown, cPpe, ppeSel, ppeTotal, cPpeTotal, ppeShownTotal, cPpeShownTotal, "Total"), "usd", c, tableOpts);
@@ -2085,7 +2129,7 @@ export async function startExplorer() {
     years.forEach((_, i) => (oodMax = Math.max(oodMax, ood.values[i] ?? 0, oodOverlay?.values[i] ?? 0)));
     const p5 = stackedColumns($("svg-ood") as unknown as SVGSVGElement, frame(width < 520 ? 220 : 260, whole ? "Payments" : "Per pupil placed out", "Per pupil"),
       [ood], oodOverlay, niceTicks(oodMax * 1.04), fmtUsd, setHover, { value: ood.values[last], text: usd }, [], oodTrend);
-    legend($("legend-ood"), [{ label: ood.label, color: OOD_COLOR, mark: "rect" as const }, ...lineLegend(oodTrendAll, oodOverlayAll)], "ood");
+    legend($("legend-ood"), [{ label: ood.label, color: OOD_COLOR, mark: "rect" as const, spot: ood.key }, ...lineLegend(oodTrendAll, oodOverlayAll)], "ood");
     const oodCaption = `Payments to out-of-district schools${whole ? "" : " per out-of-district FTE pupil"}, ${e.name} (${dollarsNote.toLowerCase()})`;
     compareTable($("cmp-ood"), oodCaption, "Measure",
       [{ label: ood.label, color: OOD_COLOR, mark: "rect", values: ood.values, base: cOod?.values ?? null }], "usd", c, tableOpts);
@@ -2123,7 +2167,7 @@ export async function startExplorer() {
     const p2 = lines($("svg-enroll") as unknown as SVGSVGElement, frame(width < 520 ? 200 : 230, "Pupils"), enroll, enrollTicks,
       (v) => compact(v), fte, setHover);
     legend($("legend-enroll"), enroll.filter((s) => !s.dash || hasLine(s))
-      .map((s) => ({ label: s.label, color: s.color, mark: s.dash ? "dash" as const : "line" as const })));
+      .map((s) => ({ label: s.label, color: s.color, mark: s.dash ? "dash" as const : "line" as const, spot: s.key })));
     compareTable($("cmp-enroll"), `Enrollment, ${e.name}${perDistrict}`, "Measure",
       // The earlier counts end before the table's last years; the full data table has them
       enroll.filter((s) => !s.dash)
@@ -2157,7 +2201,7 @@ export async function startExplorer() {
     const hasShortfall = showsAbove && nssShown.length > 1 && nss[2].values.some((v) => v != null && v < 0);
     legend($("legend-nss"), [
       ...nss.map((s) => ({ key: s.key, label: s.label, color: s.color, mark: "rect" as const })),
-      ...(hasShortfall ? [{ label: "Below required (shortfall)", color: "#524f45", mark: "hatch" as const }] : []),
+      ...(hasShortfall ? [{ label: "Below required (shortfall)", color: "#524f45", mark: "hatch" as const, spot: "shortfall" }] : []),
       ...lineLegend(nssTrendAll, nssOverlayAll),
     ], "nss");
     compareTable($("cmp-nss"), `Chapter 70 aid and net school spending${whole ? "" : " per foundation pupil"}${nssSel ? `, ${nssSel}` : ""}, ${e.name} (${dollarsNote.toLowerCase()})`, "Component",
@@ -2322,6 +2366,14 @@ export async function startExplorer() {
 
   interface RelRow { name: HTMLElement; kind?: string; amount?: number | null; extra: [string, HTMLElement[]] | null }
 
+  /** Beside Compare with: a relative choice ("Its cohort in its region") as the group it stands for, by name,
+   * linking to that group on the groups page; otherwise a link to all the groups */
+  function groupLink(a: HTMLAnchorElement, group: Named & { id: string } | null) {
+    a.textContent = group ? group.name : "All groups";
+    a.href = `/mass-school-spending/groups/${group ? `#${group.id}` : ""}`;
+    a.classList.toggle("is-group", !!group);
+  }
+
   function relations(spec: { root: string; note: string; rows: RelRow[] } | null) {
     const box = $("relations");
     box.hidden = !spec;
@@ -2431,6 +2483,7 @@ export async function startExplorer() {
   function renderTowns() {
     const t = win(townById.get(state.t)!);
     const c = townComparison(t);
+    groupLink($<HTMLAnchorElement>("town-cmp-name"), c && RELATIVE_COMPARES.has(state.tcmp) ? c : null);
     const real = state.usd !== "nominal";
     const dollarsNote = real ? `FY${state.usd} dollars` : "Nominal dollars";
     townSelect.value = t.id;
@@ -2639,7 +2692,7 @@ export async function startExplorer() {
       const p8 = lines($("svg-tbill") as unknown as SVGSVGElement,
         { width, height: width < 520 ? 220 : 260, years, yTitle: "Single-family tax bill", yTitleShort: "Tax bill" }, bills,
         niceTicks(bMax * 1.04, 4), fmtUsd, usd, setHover);
-      legend($("legend-tbill"), bills.map((x) => ({ label: x.label, color: x.color, mark: "line" as const })));
+      legend($("legend-tbill"), bills.map((x) => ({ label: x.label, color: x.color, mark: "line" as const, spot: x.key })));
       const rate = t.sf_rate?.[bIdx];
       $("tbill-sub").textContent = `${dollarsNote}. The state's average single-family tax bill: single-family assessed ` +
         "value over single-family homes, times the tax rate." +
@@ -2696,7 +2749,7 @@ export async function startExplorer() {
       const p6 = lines($("svg-teqv") as unknown as SVGSVGElement,
         { width, height: width < 520 ? 220 : 260, years, yTitle: `Equalized value${perP}`, yTitleShort: `EQV${perP}` }, eqvLines,
         niceTicks(eMax * 1.04, 4), fmtUsd, usd, setHover, true);
-      legend($("legend-teqv"), eqvLines.map((x) => ({ label: x.label, color: x.color, mark: "line" as const })));
+      legend($("legend-teqv"), eqvLines.map((x) => ({ label: x.label, color: x.color, mark: "line" as const, spot: x.key })));
       const k = towns!.meta.c70_target;
       const at = k ? years.indexOf(k.eqv_year + 1) : -1;
       const base = k && t.kind === "town" && at >= 0 ? t.eqv_total?.[at] ?? null : null;
@@ -2737,7 +2790,7 @@ export async function startExplorer() {
     const popMax = Math.max(...t.pop.map((v) => v ?? 0));
     const p3 = lines($("svg-tpop") as unknown as SVGSVGElement, { width, height: width < 520 ? 200 : 230, years, yTitle: "Population" }, pop,
       niceTicks(popMax * 1.04, 4), (v) => compact(v), count, setHover);
-    legend($("legend-tpop"), [{ label: popLabel, color: POP_COLOR, mark: "line" }]);
+    legend($("legend-tpop"), [{ label: popLabel, color: POP_COLOR, mark: "line", spot: "pop" }]);
     fullTables.tpop = { caption: `Population, ${t.name}`, cols: [
       { label: popLabel, values: t.pop, fmt: count },
       ...(c ? [{ label: c.kind === "town" ? c.name : `${c.name}, combined`, values: c.pop, fmt: count }] : []),
