@@ -1,0 +1,4 @@
+# The explorer moved to /muni-spending/ on 2026-11-01. Where the server reads this file, every old
+# address, pages and data files alike, gets a permanent redirect to the same place under the new one,
+# with its query string. The pages beside it (src/pages/mass-school-spending/) cover servers that don't.
+RedirectMatch 301 ^/mass-school-spending/(.*)$ /muni-spending/$1

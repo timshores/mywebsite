@@ -126,9 +126,12 @@ import LiveSash from "../components/LiveSash.astro";
     margin-bottom: 2.2rem;
   }
 
+  /* Wide enough for the longest role on one line at full size; narrow enough that, where the hero is one
+     column, no line runs under the sash across the card's corner */
   .headline {
     font-size: clamp(1.1rem, 2.4vw, 1.45rem);
     color: var(--ink);
+    max-width: 34rem;
     list-style: none;
     display: flex;
     flex-wrap: wrap;

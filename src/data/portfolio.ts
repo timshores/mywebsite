@@ -136,8 +136,8 @@ export const portfolioItems = [
         url: "/artifacts/western-ma-ppe-inflation-addendum-fy2025.pdf",
       },
       {
-        label: "School spending explorer",
-        url: "/mass-school-spending/",
+        label: "Municipal spending explorer",
+        url: "/muni-spending/",
       },
       {
         label: "GitHub source",

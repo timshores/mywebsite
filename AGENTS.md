@@ -82,4 +82,4 @@ and `data-same-tab` opts a link out. New pages should use `Layout` so they follo
 (`astro.fontlab.config.mjs` injects `scripts/font-lab-panel.js`; dev only, never in the build).
 It loads the chosen fonts under the site's own names, "Karla" for body text and "Besley"
 for headings, so applying a pick means changing the Google Fonts link and those two family names
-in `src/layouts/Layout.astro`, plus the explicit uses in `src/pages/mass-school-spending/index.astro`.
+in `src/layouts/Layout.astro`, plus the explicit uses in `src/pages/muni-spending/index.astro`.

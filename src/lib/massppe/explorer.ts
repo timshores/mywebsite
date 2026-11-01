@@ -1,5 +1,5 @@
 /// <reference types="vite/client" />
-// The Massachusetts school spending explorer: a district view and a town view.
+// The Massachusetts municipal spending explorer: a district view and a town view.
 // Data: src/data/massppe/, written by the report pipeline (github.com/timshores/schools,
 // ppe_report/export_explorer_data.py). explorer.json and towns.json list every
 // district, town and average; each region's full data is its own file under
@@ -893,6 +893,15 @@ export async function startExplorer() {
     update({ tcmp, tvs });
   });
   townVsSelect.addEventListener("change", () => update({ tvs: townVsSelect.value }));
+  // Swap: what was compared becomes the focus, and what was the focus its comparison, by name ("Another ...")
+  $("swap-district").addEventListener("click", () => {
+    const id = comparisonId(entity(state.d));
+    if (id) update({ d: id, cmp: "other", vs: state.d });
+  });
+  $("swap-town").addEventListener("click", () => {
+    const id = townComparisonId(townById.get(state.t));
+    if (id) update({ t: id, tcmp: "other", tvs: state.t });
+  });
 
   // Tabs: arrow keys move between them, as for any tab list
   const tabs = [...document.querySelectorAll<HTMLButtonElement>('[role="tab"]')];
@@ -1889,6 +1898,8 @@ export async function startExplorer() {
     const e = win(entity(state.d)!);
     const c = comparisonFor(e);
     groupLink($<HTMLAnchorElement>("cmp-name"), c && RELATIVE_COMPARES.has(state.cmp) ? c : null);
+    // A former district can't be a comparison, so it can't swap places with one
+    swapButton($<HTMLButtonElement>("swap-district"), e.name, c, !!c && listed.has(c.id) && !isFormer(state.d));
     const histOn = state.hist === "on" && !!H;
     const real = state.usd !== "nominal";
     const dollarsNote = real ? `FY${state.usd} dollars` : "Nominal dollars";
@@ -2371,8 +2382,18 @@ export async function startExplorer() {
   function groupLink(a: HTMLAnchorElement, group: Named & { id: string } | null) {
     a.textContent = group ? group.name : "All groups";
     a.title = group ? `${group.name}: its members` : "Every group and its members";
-    a.href = `/mass-school-spending/groups/${group ? `#${group.id}` : ""}`;
+    a.href = `/muni-spending/groups/${group ? `#${group.id}` : ""}`;
     a.classList.toggle("is-group", !!group);
+  }
+
+  /** Swap beside Compare with: shown while there's a comparison, and active when the comparison can be the
+   * focus (it's in the District or Town menu) and the focus can be its comparison */
+  function swapButton(b: HTMLButtonElement, name: string, c: (Named & { id: string }) | null, can: boolean) {
+    b.classList.toggle("is-idle", !c);
+    b.disabled = !can;
+    const what = c && can ? `Show ${c.name}, compared with ${name}` : "Can't swap these two";
+    b.title = what;
+    b.setAttribute("aria-label", `Swap: ${what}`);
   }
 
   function relations(spec: { root: string; note: string; rows: RelRow[] } | null) {
@@ -2485,6 +2506,7 @@ export async function startExplorer() {
     const t = win(townById.get(state.t)!);
     const c = townComparison(t);
     groupLink($<HTMLAnchorElement>("town-cmp-name"), c && RELATIVE_COMPARES.has(state.tcmp) ? c : null);
+    swapButton($<HTMLButtonElement>("swap-town"), t.name, c, !!c && townListed.has(c.id));
     const real = state.usd !== "nominal";
     const dollarsNote = real ? `FY${state.usd} dollars` : "Nominal dollars";
     townSelect.value = t.id;
