@@ -17,9 +17,15 @@ import { profile } from "../data/profile";
         <p class="company">
           {item.company} | {item.period}
         </p>
-        <ul>
-          {item.highlights.map((line) => <li>{line}</li>)}
-        </ul>
+        <p class="lead">{item.highlights[0]}</p>
+        {item.highlights.length > 1 && (
+          <details class="more">
+            <summary>{item.highlights.length - 1} more {item.highlights.length === 2 ? "detail" : "details"}</summary>
+            <ul>
+              {item.highlights.slice(1).map((line) => <li>{line}</li>)}
+            </ul>
+          </details>
+        )}
       </article>
     ))}
   </div>
@@ -49,6 +55,22 @@ import { profile } from "../data/profile";
   .timeline-item ul {
     margin-left: 1rem;
     color: var(--ink-soft);
+  }
+
+  .lead {
+    max-width: none;
+    margin-bottom: 0.4rem;
+  }
+
+  .more summary {
+    cursor: pointer;
+    color: var(--accent);
+    font-weight: 500;
+    font-size: 0.92rem;
+  }
+
+  .more[open] summary {
+    margin-bottom: 0.45rem;
   }
 
   .company {
