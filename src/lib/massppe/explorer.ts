@@ -2370,6 +2370,7 @@ export async function startExplorer() {
    * linking to that group on the groups page; otherwise a link to all the groups */
   function groupLink(a: HTMLAnchorElement, group: Named & { id: string } | null) {
     a.textContent = group ? group.name : "All groups";
+    a.title = group ? `${group.name}: its members` : "Every group and its members";
     a.href = `/mass-school-spending/groups/${group ? `#${group.id}` : ""}`;
     a.classList.toggle("is-group", !!group);
   }

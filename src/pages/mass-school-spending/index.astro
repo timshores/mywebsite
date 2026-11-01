@@ -1075,10 +1075,16 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
   }
 
   .cmp-name {
+    /* A slot of fixed size, two lines high, for every name a relative choice gives (53 characters at most),
+       so choosing another group doesn't move the controls around it */
+    display: flex;
+    align-items: center;
+    width: 14rem;
+    height: 2.5em;
+    overflow: hidden;
     font-size: 0.8rem;
     font-weight: 500;
     line-height: 1.25;
-    max-width: 12rem;
   }
 
   .cmp-name.is-group {
@@ -2755,6 +2761,12 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
   @media (max-width: 520px) {
     .controls {
       padding: 0.75rem;
+    }
+
+    /* Under the menu, which takes the width */
+    .cmp-name {
+      width: auto;
+      height: auto;
     }
 
     .control,
