@@ -12,9 +12,6 @@ const linkTarget = (url: string) =>
 
 <Layout title={`Portfolio - ${profile.name}`} description="Selected reports, research, civic planning, and technology artifacts">
   <h1>Portfolio</h1>
-  <p class="subtitle">
-    Reports, research, civic planning work, and project artifacts that are easier to understand in one place than scattered across LinkedIn, GitHub, and Drive.
-  </p>
   <p class="portfolio-statement">
     Taken together, this is the work I keep trying to do: help people face complicated systems with better evidence, clearer language, more useful tools, and enough shared understanding to make decisions together.
   </p>
@@ -28,17 +25,17 @@ const linkTarget = (url: string) =>
         </div>
         <h3>{item.title}</h3>
         <p>{item.summary}</p>
+        {item.links && (
+          <div class="artifact-links">
+            {item.links.map((link) => (
+              <a href={link.url} {...linkTarget(link.url)} aria-label={`${link.label}: ${item.title}`}>{link.label}</a>
+            ))}
+          </div>
+        )}
         {item.details.length > 0 && (
           <ul>
             {item.details.map((detail) => <li>{detail}</li>)}
           </ul>
-        )}
-        {item.links && (
-          <div class="artifact-links">
-            {item.links.map((link) => (
-              <a href={link.url} {...linkTarget(link.url)}>{link.label}</a>
-            ))}
-          </div>
         )}
       </article>
     ))}
@@ -46,13 +43,9 @@ const linkTarget = (url: string) =>
 </Layout>
 
 <style>
-  .subtitle {
-    font-size: 1.08rem;
-    margin-bottom: 0.7rem;
-  }
-
   .portfolio-statement {
     max-width: 78ch;
+    font-size: 1.08rem;
     color: var(--ink);
     margin-bottom: 1.45rem;
   }
@@ -92,7 +85,7 @@ const linkTarget = (url: string) =>
     flex-direction: column;
     align-items: flex-start;
     gap: 0.45rem;
-    margin-top: 0.75rem;
+    margin: 0.25rem 0 0.9rem;
   }
 
   .artifact-links a {
