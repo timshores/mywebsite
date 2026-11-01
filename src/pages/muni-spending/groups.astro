@@ -4,24 +4,112 @@ import Layout from "../../layouts/Layout.astro";
 // when the site is built, so the explorer itself doesn't carry the member lists
 import groups from "../../data/massppe/groups.json";
 
-type Group = { id: string; name: string; scope: string; members: { id: string; name: string }[] };
+// The explorer's own meta, read here at build only: cohort ranges, the town peer groups, the cities set
+// apart, and the income fifths' cut points, so this page states the same lines the explorer draws
+import explorer from "../../data/massppe/explorer.json";
+import towns from "../../data/massppe/towns.json";
+import mapData from "../../data/massppe/map.json";
 
-// The explorer's averages by kind, in the order its menus list them; a kind not named here still shows
-const KINDS: Record<"districts" | "towns", [string, string][]> = {
-  districts: [["state", "Statewide"], ["region", "Regions"], ["cohort", "Cohorts"], ["region-cohort", "Cohorts by region"],
-    ["group", "Gateway Cities"], ["type", "Community types"], ["fifth", "Income fifths"]],
-  towns: [["state", "Statewide"], ["region", "Regions"], ["peer", "Peer groups"], ["region-peer", "Peer groups by region"],
-    ["group", "Gateway Cities"], ["type", "Community types"], ["fifth", "Income fifths"]],
+type Group = { id: string; name: string; scope: string; members: { id: string; name: string }[] };
+const all = groups as Record<"districts" | "towns", Group[]>;
+
+// Sources, linked where a note names them
+const a = (href: string, text: string) => `<a href="${href}">${text}</a>`;
+const HUB = a("https://educationtocareer.data.mass.gov/d/er3w-dyti", "DESE's District Expenditures by Spending Category");
+const E2C = a("https://educationtocareer.data.mass.gov/", "Education-to-Career data");
+const C70 = a("https://www.doe.mass.edu/finance/chapter70/default.html", "Chapter 70 district profiles");
+const REPORT = a("/artifacts/western-ma-ppe-report-fy2025.pdf", "the Western MA per-pupil expenditure report");
+const GATEWAY = a("https://www.mass.gov/doc/gatewaycitiesdocx/download", "the Commonwealth's list");
+const RURAL_AID = a("https://www.doe.mass.edu/finance/chapter70/foundation/fy2026-rural-school-aid.html", "DESE's rural school aid");
+const MAPC = a("https://www.mapc.org/wp-content/uploads/2017/09/Massachusetts-Community-Types-Summary-July_2008.pdf", "community types");
+const RURAL_PLAN = a("https://berkshireplanning.org/wp-content/uploads/program_documents/brpc_initiative/massachusetts-rural-policy-plan/default/Rural_Policy_Plan_Launch_Presentation.pdf", "Rural Policy Plan");
+const LAND = a("https://www2.census.gov/geo/tiger/GENZ2023/shp/cb_2023_25_cousub_500k.zip", "2023 cartographic boundaries");
+const FORMULA = a("https://www.doe.mass.edu/finance/chapter70/fy2027/chapter-2027.xlsm", "FY2027 Chapter 70 formula");
+const POP = a("https://www.census.gov/programs-surveys/popest.html", "population estimates");
+const DLS = a("https://dls-gw.dor.state.ma.us/reports/rdPage.aspx?rdReport=ScheduleA.GenFund_MAIN", "Schedule A");
+
+// The numbers in the notes, from the data
+const meta = explorer.meta;
+const latest = meta.latest;
+const num = (n: number) => n.toLocaleString("en-US");
+const usd = (n: number) => `$${num(n)}`;
+const SIZES = ["TINY", "SMALL", "MEDIUM", "LARGE", "XLARGE"] as const;
+const sizes = SIZES.map((k) => {
+  const c = (meta.cohorts as Record<string, { label: string; range: (number | null)[] | null }>)[k];
+  const [lo, hi] = c.range!;
+  const name = c.label.split(" (")[0];
+  return `${name} ${lo === 0 ? `up to ${num(hi!)}` : hi == null ? `over ${num(lo! - 1)}` : `${num(lo!)}–${num(hi)}`}`;
+}).join(", ");
+const veryLarge = (explorer.districts as { cohort: string | null }[]).filter((d) => d.cohort === "XLARGE").length;
+const apart = towns.meta.apart as string[];
+const apartList = `${apart.slice(0, -1).join(", ")} and ${apart[apart.length - 1]}`;
+const peers = (towns.meta.peers as { label: string }[]).map((p) => p.label.replace(/ residents$/, "")).join("; ");
+const fifths = mapData.meta.fifths as { towns: number[]; districts: number[]; year: number };
+const fifthText = (c: number[]) => `lowest, under ${usd(c[0])}; second, ${usd(c[0])}–${usd(c[1] - 1)}; middle, ` +
+  `${usd(c[1])}–${usd(c[2] - 1)}; fourth, ${usd(c[2])}–${usd(c[3] - 1)}; highest, ${usd(c[3])} and up`;
+const spread = (view: "districts" | "towns", scope: string) => {
+  const ns = all[view].filter((g) => g.scope === scope).map((g) => g.members.length);
+  const lo = Math.min(...ns), hi = Math.max(...ns);
+  return { total: ns.reduce((x, y) => x + y, 0), per: lo === hi ? `${lo}` : `${lo} or ${hi}` };
+};
+const dFifth = spread("districts", "fifth");
+const tFifth = spread("towns", "fifth");
+const gatewayN = all.districts.find((g) => g.scope === "group")?.members.length ?? 26;
+
+// The explorer's averages by kind, in the order its menus list them, each with how it's drawn and from what;
+// a kind not named here still shows
+const KINDS: Record<"districts" | "towns", [string, string, string][]> = {
+  districts: [
+    ["state", "Statewide", `Every traditional district except the ${veryLarge} very large ones, over 10,000 in-district ` +
+      `pupils, which are a cohort of their own. Spending averages weight each district by its in-district FTE pupils; ` +
+      `Chapter 70 averages, by foundation enrollment. From ${HUB} and DESE's ${C70}.`],
+    ["region", "Regions", "The state's six Executive Office of Health and Human Services (EOHHS) regions, as DESE assigns " +
+      `districts to them in its ${E2C}: traditional districts, less the very large.`],
+    ["cohort", "Cohorts", `Traditional districts by FY${latest} in-district FTE pupils: ${sizes}. The boundaries are those ` +
+      `${REPORT} set from FY2024 Western MA enrollment. Vocational and technical districts and charter schools are ` +
+      `cohorts of their own. Enrollment from ${HUB}.`],
+    ["region-cohort", "Cohorts by region", "Each cohort within each region, where at least three districts share both. " +
+      "Where they don't, “Its cohort in its region” compares with the cohort statewide."],
+    ["group", "Gateway Cities", `The ${gatewayN} cities on ${GATEWAY} of Gateway Cities, from 2014. State law (M.G.L. ` +
+      "c. 23A, § 3A) defines one as a city of 35,000 to 250,000 residents whose median household income and share of " +
+      "adults with a bachelor's degree are both below the state's. Their districts are in their size cohorts too."],
+    ["type", "Community types", "Rural: 35 or fewer students per square mile, counting a district's foundation " +
+      `enrollment over its towns' land area. It's the test for ${RURAL_AID} (which also requires income below the ` +
+      "state average), and DESE splits it in three tiers: 11 or fewer, over 11 to 21, and over 21 to 35. Inner Core: " +
+      "Boston and its densest neighbors, the Metropolitan Area Planning Council's Metropolitan Core Communities and " +
+      `Streetcar Suburbs in its ${MAPC}. Gateway Cities outside the Inner Core: the other 22. Suburban and other: the ` +
+      `rest, which the state doesn't name. Land areas from the Census Bureau's ${LAND}.`],
+    ["fifth", "Income fifths", `The ${dFifth.total} traditional districts ranked by their towns' combined income per ` +
+      `resident, ${dFifth.per} to a fifth: ${fifthText(fifths.districts)}. Income per resident is the residents' ` +
+      `income the ${FORMULA} uses, from ${fifths.year} state tax returns, divided by the Census Bureau's ` +
+      `${POP.replace("estimates", "estimate")} for July ${fifths.year}.`],
+  ],
+  towns: [
+    ["state", "Statewide", `Every city and town except the ${apart.length} whose own school districts are very large: ` +
+      `${apartList}. Each average pools its towns: their combined dollars over their combined residents. Budgets from ` +
+      `the Division of Local Services' ${DLS}; population from the Census Bureau's ${POP}.`],
+    ["region", "Regions", `The same six EOHHS regions, less the ${apart.length} cities set apart.`],
+    ["peer", "Peer groups by population", `Towns by the Census Bureau's estimate of their population on July 1, ` +
+      `${towns.meta.peer_year}: ${peers}. The ${apart.length} cities set apart are in none.`],
+    ["region-peer", "Peer groups by population and region", "Each peer group within each region, where at least three " +
+      "towns share both. Where they don't, “Its peer group in its region” compares with the peer group statewide."],
+    ["group", "Gateway Cities", `The same ${gatewayN} cities, the very large ones included.`],
+    ["type", "Community types", `Rural: under 500 residents per square mile, the line in the ${RURAL_PLAN} for the ` +
+      "Commonwealth's Rural Policy Advisory Commission. Inner Core, Gateway Cities outside it, and suburban and other, " +
+      `as for districts. Land areas from the Census Bureau's ${LAND}.`],
+    ["fifth", "Income fifths", `All ${tFifth.total} cities and towns ranked by income per resident, ${tFifth.per} to a ` +
+      `fifth: ${fifthText(fifths.towns)}. Income and population as for districts.`],
+  ],
 };
 const VIEWS = [
   { key: "districts" as const, title: "School districts", one: "district", many: "districts", href: (id: string) => `/muni-spending/?d=${id}` },
   { key: "towns" as const, title: "Cities and towns", one: "town", many: "towns", href: (id: string) => `/muni-spending/?view=towns&t=${id}` },
 ];
 const sections = VIEWS.map((v) => {
-  const all = (groups as Record<string, Group[]>)[v.key];
+  const mine = all[v.key];
   const named = new Set(KINDS[v.key].map(([scope]) => scope));
-  const kinds = [...KINDS[v.key], ...[...new Set(all.map((g) => g.scope))].filter((s) => !named.has(s)).map((s) => [s, "Other"])]
-    .map(([scope, title]) => ({ title, groups: all.filter((g) => g.scope === scope) }))
+  const kinds = [...KINDS[v.key], ...[...new Set(mine.map((g) => g.scope))].filter((s) => !named.has(s)).map((s) => [s, "Other", ""])]
+    .map(([scope, title, note]) => ({ title, note, groups: mine.filter((g) => g.scope === scope) }))
     .filter((k) => k.groups.length);
   return { ...v, kinds };
 });
@@ -32,9 +120,9 @@ const sections = VIEWS.map((v) => {
   <p class="back"><a href="/muni-spending/">Municipal spending explorer</a></p>
   <h1>Groups and their members</h1>
   <p class="lede">
-    The averages the explorer compares with, and the districts and towns in each. How each group is drawn is in the
-    explorer's <a href="/muni-spending/?view=data">Data tab</a>. All of it in one file:
-    <a href="/muni-spending/data/groups.csv" download>CSV</a>.
+    The averages the explorer compares with: how each kind is drawn, from what, and the districts and towns in each.
+    The explorer's <a href="/muni-spending/?view=data">Data tab</a> has the rest of its sources. The groups and
+    their members in one file: <a href="/muni-spending/data/groups.csv" download>CSV</a>.
   </p>
   <nav class="jump" aria-label="Sections">
     {sections.map((v) => <a href={`#${v.key}`}>{v.title}</a>)}
@@ -46,6 +134,7 @@ const sections = VIEWS.map((v) => {
       {v.kinds.map((k) => (
         <>
           <h3>{k.title}</h3>
+          {k.note && <p class="note" set:html={k.note} />}
           {k.groups.map((g) => (
             <details id={g.id}>
               <summary>
@@ -106,6 +195,13 @@ const sections = VIEWS.map((v) => {
     margin: 1.6rem 0 0.4rem;
     font-size: 1.05rem;
     color: var(--ink-soft);
+  }
+
+  /* How each kind is drawn: the body's own type, a little smaller, above its groups */
+  .note {
+    max-width: 72ch;
+    font-size: 0.92rem;
+    margin-bottom: 0.6rem;
   }
 
   details {

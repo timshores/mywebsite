@@ -46,7 +46,7 @@ const VARS: Var[] = [
   { key: "nss_pct_fb", label: "Actual net school spending as a share of the foundation budget", short: "spending as % of foundation", unit: "pct", role: "outcome", src: ["c70"] },
   { key: "nss_pct_req", label: "Actual net school spending as a share of required", short: "spending as % of required", unit: "pct", role: "outcome", src: ["c70"] },
   { key: "nss_pfe", label: "Actual net school spending per foundation pupil", short: "net school spending per pupil", unit: "usd", role: "outcome", src: ["c70"] },
-  { key: "above_pfe", label: "Spending above the requirement per foundation pupil", short: "spending above required per pupil", unit: "usd", role: "outcome", src: ["c70"] },
+  { key: "above_pfe", label: "Local contribution above required per foundation pupil", short: "local contribution above required per pupil", unit: "usd", role: "outcome", src: ["c70"] },
   { key: "ppe", label: "In-district spending per pupil", short: "spending per pupil", unit: "usd", role: "outcome", src: ["ppe"] },
   { key: "aid_pfe", label: "Chapter 70 aid per foundation pupil", short: "Chapter 70 aid per pupil", unit: "usd", role: "outcome", src: ["c70"] },
   { key: "aid_share", label: "Chapter 70 aid as a share of the foundation budget", short: "aid as % of foundation", unit: "pct", role: "outcome", src: ["c70"] },

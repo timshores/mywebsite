@@ -6,6 +6,11 @@
 
 const ICON = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2 6V2h4M10 2h4v4M14 10v4h-4M6 14H2v-4" ' +
   'fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+// Collapse and Expand: a chevron up, folding the chart away, and down, bringing it back
+const chevron = (d: string) => `<svg viewBox="0 0 16 16" aria-hidden="true"><path d="${d}" fill="none" ` +
+  'stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+const UP = chevron("M4 10l4-4 4 4");
+const DOWN = chevron("M4 6l4 4 4-4");
 
 let win: { dialog: HTMLDialogElement; strip: HTMLElement; body: HTMLElement } | null = null;
 
@@ -39,7 +44,7 @@ function chartOf(box: HTMLElement) {
   let best: SVGSVGElement | null = null;
   let area = 0;
   box.querySelectorAll<SVGSVGElement>("svg[viewBox]").forEach((svg) => {
-    if (svg.closest(".enlarge-open")) return;
+    if (svg.closest(".enlarge-tools")) return;
     const vb = svg.viewBox.baseVal;
     if (vb && vb.width * vb.height > area) {
       area = vb.width * vb.height;
@@ -96,12 +101,31 @@ function fit(box: HTMLElement) {
 }
 
 /**
- * A button that opens `box` enlarged. `onClose` runs after it's back in place, for a chart that
- * should redraw at its usual size. `controls`, if given, returns the tab's controls to bring along.
- * `onOpen` runs once the window is open, for a chart that redraws at the window's size.
+ * Collapse and Enlarge, side by side, for `box`. Collapse folds the chart away, leaving its heading,
+ * so the charts above and below it come together; it reads Expand while folded. Enlarge opens `box`
+ * in a window of its own. `onClose` runs after it's back in place, or unfolded, for a chart that should
+ * redraw at its usual size. `controls`, if given, returns the tab's controls to bring along. `onOpen`
+ * runs once the window is open, for a chart that redraws at the window's size.
  */
 export function enlargeButton(box: HTMLElement, onClose?: () => void, controls?: () => HTMLElement | null,
-  onOpen?: () => void): HTMLButtonElement {
+  onOpen?: () => void): HTMLElement {
+  const tools = document.createElement("span");
+  tools.className = "enlarge-tools";
+  const fold = document.createElement("button");
+  fold.type = "button";
+  fold.className = "collapse-toggle";
+  const setFolded = (folded: boolean) => {
+    box.classList.toggle("is-collapsed", folded);
+    fold.setAttribute("aria-expanded", String(!folded));
+    fold.innerHTML = folded ? `${DOWN}<span>Expand</span>` : `${UP}<span>Collapse</span>`;
+    fold.title = folded ? "Show this chart again" : "Fold this chart away, leaving its heading";
+  };
+  setFolded(false);
+  fold.addEventListener("click", () => {
+    const folded = !box.classList.contains("is-collapsed");
+    setFolded(folded);
+    if (!folded) onClose?.();
+  });
   const b = document.createElement("button");
   b.type = "button";
   b.className = "enlarge-open";
@@ -166,7 +190,8 @@ export function enlargeButton(box: HTMLElement, onClose?: () => void, controls?:
       b.focus();
     }, { once: true });
   });
-  return b;
+  tools.append(fold, b);
+  return tools;
 }
 
 /** Close the window, if it's open: a link inside the chart that goes to another tab closes it first. */

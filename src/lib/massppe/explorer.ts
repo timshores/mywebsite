@@ -256,7 +256,7 @@ const PPE_COLORS = ["#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#e87ba4", "#008
 const NSS_SERIES = [
   { key: "ch70_aid", label: "Chapter 70 state aid", color: "#008300" },
   { key: "required_local", label: "Required local contribution", color: "#eda100" },
-  { key: "above_required", label: "Spending above required", color: "#6250d6" },
+  { key: "above_required", label: "Local contribution above required", color: "#6250d6" },
 ] as const;
 // Bottom to top, as the export orders them (ppe_report/export_explorer_data.py
 // REVENUE). Chapter 70 and the towns' share keep their colors from the NSS chart;
@@ -2041,7 +2041,7 @@ export async function startExplorer() {
         aidShare != null ? `${Math.round(aidShare * 100)}% of actual net school spending` : "",
         cNss && cNss[0].values[tl] != null ? `${cName}: ${money(cNss[0].values[tl]!)}` : "",
       ]),
-      tile(`Spending above required, FY${years[tl]}`, above != null ? money(above) : aid != null ? "Not reported" : "–", [
+      tile(`Local contribution above required, FY${years[tl]}`, above != null ? money(above) : aid != null ? "Not reported" : "–", [
         above == null ? (aid != null ? `DESE has not reported FY${years[tl]} actual spending` : "")
           : !whole ? "Per foundation pupil" : e.kind === "district" ? "In total" : "For the average district",
         cNss && cNss[2].values[tl] != null ? `${cName}: ${money(cNss[2].values[tl]!)}` : "",
