@@ -9,13 +9,11 @@ import LiveSash from "../components/LiveSash.astro";
   <LiveSash />
   <section class="hero-section">
     <div class="hero-text">
-      <p class="kicker">Portfolio / Resume / Who I Am</p>
       <h1>{profile.name}</h1>
-      <p class="headline">
-        {profile.headlineLines[0]}
-        <br>
-        {profile.headlineLines[1]}
-      </p>
+      <!-- One item per role, so a wrapped line never starts with a separator -->
+      <ul class="headline">
+        {profile.headline.split(" | ").map((role) => <li>{role}</li>)}
+      </ul>
       <p class="location">{profile.location}</p>
       <div class="resume-downloads">
         <p class="actions-label">Download resume</p>
@@ -124,22 +122,26 @@ import LiveSash from "../components/LiveSash.astro";
     margin-bottom: 2.2rem;
   }
 
-  .kicker {
-    display: inline-block;
-    font-size: 0.77rem;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    padding: 0.3rem 0.65rem;
-    border: 1px solid var(--line);
-    border-radius: 999px;
-    margin-bottom: 0.7rem;
-    color: var(--ink-soft);
-  }
-
   .headline {
     font-size: clamp(1.1rem, 2.4vw, 1.45rem);
     color: var(--ink);
-    max-width: 35ch;
+    list-style: none;
+    display: flex;
+    flex-wrap: wrap;
+    column-gap: 0.5rem;
+  }
+
+  .headline li:not(:last-child)::after {
+    content: "·";
+    margin-left: 0.5rem;
+    color: var(--ink-soft);
+  }
+
+  /* Each role wraps whole where the column is wide enough to hold the longest one */
+  @media (min-width: 600px) {
+    .headline li {
+      white-space: nowrap;
+    }
   }
 
   .location {
