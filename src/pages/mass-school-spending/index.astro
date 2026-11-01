@@ -7,6 +7,8 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
   { group: "School districts", files: [
     { file: "dese_expenditures.csv", holds: "Spending per pupil by category, and enrollment, for every district, FY2009 on",
       source: "DESE, District Expenditures by Spending Category", url: "https://educationtocareer.data.mass.gov/d/er3w-dyti", retrieved: "Oct 18, 2026" },
+    { file: "dese_expenditures_fy2005_2008.csv", holds: "The same, FY2005 to FY2008",
+      source: "DESE, Office of School Finance workbooks, public records request P004939-101625", url: `${REPO_DATA}dese_archive/README.md`, retrieved: "Oct 28, 2026" },
     { file: "dese_c70_profile.csv", holds: "Foundation enrollment and budget, required local contribution, Chapter 70 aid, and required and actual net school spending, by district and year",
       source: "DESE, Chapter 70 district profiles", url: "https://www.doe.mass.edu/finance/chapter70/default.html", retrieved: "Oct 18, 2026" },
     { file: "dese_c70_regional_members.csv", holds: "Each regional district's member towns and their FY2025 required contributions",
@@ -16,9 +18,7 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
     { file: "nces_ma_districts.csv", holds: "The crosswalk from federal district IDs to DESE's district codes",
       source: "NCES Common Core of Data, through the Urban Institute's Education Data Portal", url: "https://educationdata.urban.org/", retrieved: "Oct 21, 2026" },
   ] },
-  { group: "School districts before FY2009", files: [
-    { file: "dese_expenditures_fy2005_2008.csv", holds: "Spending per pupil by category, and FTE enrollment, for every district, FY2005 to FY2008: the explorer's own measure",
-      source: "DESE, Office of School Finance workbooks, public records request P004939-101625", url: `${REPO_DATA}dese_archive/README.md`, retrieved: "Oct 28, 2026" },
+  { group: "School districts before FY2005", files: [
     { file: "dese_day_program_fy1990_2006.csv", holds: "DESE's older, narrower day-program spending per pupil, by program and in total, for every district, FY1990 to FY2006",
       source: "DESE, Per Pupil Expenditures reports and workbooks, the same request", url: `${REPO_DATA}dese_archive/README.md`, retrieved: "Oct 28, 2026" },
     { file: "dese_archive/README.md", holds: "The 25 files DESE sent, as received, and how the scanned reports were read and checked",
@@ -43,7 +43,7 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
       source: "Division of Local Services, Average Single Family Tax Bill", url: "https://dls-gw.dor.state.ma.us/reports/rdPage.aspx?rdReport=AverageSingleTaxBill.SingleFamTaxBill_wRange", retrieved: "Oct 21, 2026" },
     { file: "dls_levy_capacity.csv", holds: "Proposition 2½ levy limit, levy, excess capacity and ceiling, FY2007 on",
       source: "Division of Local Services, Excess Levy Capacity and Overrides", url: "https://dls-gw.dor.state.ma.us/reports/rdPage.aspx?rdReport=Prop2.5.ExcessLevyCapandOverride_10_pres", retrieved: "Oct 21, 2026" },
-    { file: "census_town_population.csv", holds: "Population on July 1 at the start of each fiscal year, FY2009 on",
+    { file: "census_town_population.csv", holds: "Population on July 1 at the start of each fiscal year, FY2005 on",
       source: "Census Bureau, subcounty population estimates", url: "https://www.census.gov/programs-surveys/popest.html", retrieved: "Oct 21, 2026" },
     { file: "census_town_households.csv", holds: "Households, each five-year release from 2005–2009 on",
       source: "Census Bureau, American Community Survey, table B11001", url: "https://www.census.gov/programs-surveys/acs", retrieved: "Oct 21, 2026" },
@@ -59,10 +59,10 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
 
 <Layout
   title="Massachusetts school spending explorer - Tim Shores"
-  description="Per-pupil spending, enrollment, Chapter 70 aid, and revenue for every Massachusetts school district, and the general fund budgets of all 351 cities and towns, FY2009 to FY2025"
+  description="Per-pupil spending, enrollment, Chapter 70 aid, and revenue for every Massachusetts school district, and the general fund budgets of all 351 cities and towns, FY2005 to FY2025"
 >
   <section id="explorer" class="explorer is-loading">
-    <p class="eyebrow">Massachusetts · FY2009–FY<span data-latest>2025</span></p>
+    <p class="eyebrow">Massachusetts</p>
     <h1>School spending explorer</h1>
     <details class="intro" id="intro" data-remember="intro">
     <summary>About this explorer</summary>
@@ -176,14 +176,14 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
             <div class="years-fill"></div>
             <!-- With Since 1990 on: where the explorer's own measure begins, FY2005 -->
             <span class="years-mark" id="years-mark" hidden><span class="years-mark-label" data-detail>Measure changes</span></span>
-            <input type="range" id="year-from" min="0" max="16" step="1" value="0" aria-label="First year shown" />
-            <input type="range" id="year-to" min="0" max="16" step="1" value="16" aria-label="Last year shown" />
+            <input type="range" id="year-from" min="0" max="20" step="1" value="0" aria-label="First year shown" />
+            <input type="range" id="year-to" min="0" max="20" step="1" value="20" aria-label="Last year shown" />
           </div>
-          <output id="years-out">FY2009–FY2025</output>
+          <output id="years-out">FY2005–FY2025</output>
         </div>
-        <div class="years-ends" aria-hidden="true"><span>FY<span id="years-first">2009</span></span><span>FY<span data-latest>2025</span></span></div>
+        <div class="years-ends" aria-hidden="true"><span>FY<span id="years-first">2005</span></span><span>FY<span data-latest>2025</span></span></div>
       </div>
-      <!-- The earlier years, FY1990 to FY2008, from DESE's archive -->
+      <!-- The earlier years, FY1990 to FY2004, from DESE's archive -->
       <div class="control hist-control" data-view-only="districts">
         <span class="hist-head"><span id="hist-label">Since 1990</span></span>
         <button type="button" class="detail-dial hist-dial" id="hist-switch" role="switch" aria-checked="false" aria-labelledby="hist-label">
@@ -534,7 +534,10 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
         (DESE) <a href="https://educationtocareer.data.mass.gov/d/er3w-dyti">per-pupil expenditure</a>
         (<a href="/mass-school-spending/data/districts-spending-per-pupil.csv" download>CSV</a>) from each district's end-of-year report, divided by in-district FTE and grouped
         into the report's nine categories; its Other combines DESE's professional development and instructional
-        materials, equipment, and technology. It leaves out tuition for pupils educated elsewhere, because, as DESE puts
+        materials, equipment, and technology. FY2005 to FY2008 come from DESE's workbooks for those years, which its
+        Public Records Center provided in October 2026 in answer to public records request P004939-101625
+        (<a href="https://github.com/timshores/schools/blob/main/ppe_report/data/dese_archive/README.md">the files, and
+        how they were read</a>). It leaves out tuition for pupils educated elsewhere, because, as DESE puts
         it, those costs "vary greatly depending on the reason for going out of district." The panel
         <strong>Pupils educated elsewhere</strong> shows them on their own, per out-of-district FTE pupil. DESE's data
         has no separate figure for them from FY2009, so the explorer works it out from DESE's totals: total spending
@@ -560,17 +563,15 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
         of apples in the morning compared with a picture of apples in the evening. Both dollar charts share one scale.
       </p>
       <p>
-        <strong>Since 1990</strong> adds DESE's per-pupil reports from FY1990 to FY2008, which its Public Records Center
-        provided in October 2026 in answer to public records request P004939-101625
-        (<a href="https://github.com/timshores/schools/blob/main/ppe_report/data/dese_archive/README.md">the files, and
-        how they were read</a>). FY2005 to FY2008 are the explorer's own measure and extend its columns. FY1990 to
-        FY2006 also have DESE's older, narrower measure, which it called day-program spending: what a district spent
-        running its own schools, mainly from its school committee budget and the town's indirect costs for them,
-        divided by the pupils enrolled there. It leaves out pupils sent to other schools and what is paid for them, so
-        it usually runs below the columns. In FY2005, which DESE's workbook sets out both ways, Abington's was $6,766
-        per pupil against $7,463 in the columns. The explorer draws it as a dashed line, never joined to the columns,
-        and keeps trends and growth rates on one side of the change. Its averages weight each district by DESE's
-        average membership from FY1997. DESE's reports give no pupils for FY1990 to FY1996, so those years use the fall
+        <strong>Since 1990</strong> adds FY1990 to FY2004, from DESE's per-pupil reports in the same public records
+        request. For those years DESE measured only what it called day-program spending, an older, narrower measure:
+        what a district spent running its own schools, mainly from its school committee budget and the town's indirect
+        costs for them, divided by the pupils enrolled there. It leaves out pupils sent to other schools and what is
+        paid for them, so it usually runs below the columns. It continues to FY2006, so the two measures overlap for
+        two years: in FY2005, which DESE's workbook sets out both ways, Abington's was $6,766 per pupil against $7,463
+        in the columns. The explorer draws it as a separate dashed line, and each measure
+        has its own trend and growth rate. The older measure's averages weight each district by DESE's average
+        membership from FY1997. DESE's reports give no pupils for FY1990 to FY1996, so those years use the fall
         enrollment the National Center for Education Statistics counts
         (<a href="https://educationdata.urban.org/">Common Core of Data</a>), a head count from a different agency; in
         FY1997 and FY1998, when both exist, nine districts in ten differ by less than 9%. Chapter 70 figures reach back
@@ -3517,7 +3518,8 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
     position: absolute;
     top: calc(100% + 6px);
     left: 50%;
-    transform: translateX(-50%);
+    /* --tip-dx keeps it inside the window (explorer.ts, placeTip) */
+    transform: translateX(calc(-50% + var(--tip-dx, 0px)));
     z-index: 5;
     width: 16rem;
     padding: 0.5rem 0.65rem;
@@ -3543,7 +3545,7 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
   .explorer :global(.cw-help.wide:hover::after),
   .explorer :global(.cw-help.wide:focus::after) {
     left: 0;
-    transform: none;
+    transform: translateX(var(--tip-dx, 0px));
     width: min(28rem, 80vw);
     white-space: pre-line;
   }
