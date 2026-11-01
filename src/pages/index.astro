@@ -44,7 +44,11 @@ import LiveSash from "../components/LiveSash.astro";
 
   <h2>About</h2>
   <div class="about-card">
-    {profile.summary.map((paragraph) => <p>{paragraph}</p>)}
+    <p>{profile.summary[0]}</p>
+    <details class="more">
+      <summary>Cisco, earlier work, civic roles, and how I work</summary>
+      {profile.summary.slice(1).map((paragraph) => <p>{paragraph}</p>)}
+    </details>
   </div>
 
   <h2>Core Focus</h2>
@@ -238,6 +242,16 @@ import LiveSash from "../components/LiveSash.astro";
   .about-card ul {
     margin-left: 1rem;
     color: var(--ink-soft);
+  }
+
+  .more summary {
+    cursor: pointer;
+    color: var(--accent);
+    font-weight: 500;
+  }
+
+  .more[open] summary {
+    margin-bottom: 0.9rem;
   }
 
   .focus-groups {
