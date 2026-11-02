@@ -7,11 +7,11 @@
 // rather than fetched, the data ships as hashed JavaScript chunks, which the host
 // compresses (it sends .json uncompressed).
 
-import { compact, lines, niceTicks, niceTicksRange, stackedColumns, svgEl, type Panel, type Series, type Val } from "./charts";
+import { compact, lines, niceTicks, niceTicksRange, signFor, stackedColumns, svgEl, type Panel, type Series, type Val } from "./charts";
 import { closeEnlarged, enlargeButton } from "./enlarge";
 import type { CapData } from "./cap";
 import type { CwData } from "./commonwealth";
-import type { MapData } from "./map";
+import type { MapData, MapSeries } from "./map";
 import { groupedPicker, type Picker } from "./picker";
 
 type Values = Val[];
@@ -376,14 +376,21 @@ function shade(delta: number | null, bins: number[]) {
   return delta > 0 ? ABOVE_SHADES[idx] : BELOW_SHADES[idx];
 }
 
-const usd = (v: number) => `${v < 0 ? "−" : ""}$${Math.abs(Math.round(v)).toLocaleString("en-US")}`;
+// Signs follow the figure as printed: one that rounds to zero has none (charts.ts signFor)
+const usd = (v: number) => {
+  const s = Math.abs(Math.round(v)).toLocaleString("en-US");
+  return `${signFor(v, s)}$${s}`;
+};
 const fte = (v: number) => (v >= 100 ? Math.round(v).toLocaleString("en-US") : v.toFixed(1));
-const pct = (v: number) => `${v >= 0 ? "+" : "−"}${Math.abs(v * 100).toFixed(1)}%`;
+const pct = (v: number) => {
+  const s = Math.abs(v * 100).toFixed(1);
+  return `${signFor(v, s, true)}${s}%`;
+};
 const millions = (v: number) => `$${(v / 1e6).toFixed(v >= 1e8 ? 0 : 1)} million`;
 /** "$423 million", "$4.2 billion" */
 const amount = (v: number) => (v >= 1e9 ? `$${(v / 1e9).toFixed(1)} billion` : millions(v));
 /** A total: "$4.2 million", or whole dollars under a million, "−$310,250" */
-const whole$ = (v: number) => (Math.abs(v) >= 1e6 ? `${v < 0 ? "−" : ""}${amount(Math.abs(v))}` : usd(v));
+const whole$ = (v: number) => (Math.abs(v) >= 1e6 ? `${signFor(v, amount(Math.abs(v)))}${amount(Math.abs(v))}` : usd(v));
 const sentence = (s: string) => s.charAt(0) + s.slice(1).toLowerCase();
 const capital = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
@@ -441,8 +448,8 @@ function trendRate(trend: Values) {
 }
 
 /** A change, signed, in the panel's own format: +$521, −12 */
-const signed = (v: number, fmt: (v: number) => string) => `${v < 0 ? "−" : "+"}${fmt(Math.abs(v))}`;
-const signedPct = (v: number) => `${v < 0 ? "−" : "+"}${Math.abs(v * 100).toFixed(1)}%`;
+const signed = (v: number, fmt: (v: number) => string) => `${signFor(v, fmt(Math.abs(v)), true)}${fmt(Math.abs(v))}`;
+const signedPct = (v: number) => pct(v);
 
 export async function startExplorer() {
   const root = $("explorer");
@@ -1023,7 +1030,7 @@ export async function startExplorer() {
 
   // The Commonwealth tab's gallery and data, loaded the first time it opens
   let cw: { openFromUrl(): void; close(): void } | null = null;
-  let map: { refresh(): void } | null = null;
+  let map: { refresh(): void; setSeries(s: MapSeries): void } | null = null;
   async function loadCommonwealth() {
     if (cw) return;
     const [mod, json, mapMod, mapJson] = await Promise.all([import("./commonwealth"), import("../../data/massppe/commonwealth.json"),
@@ -1035,6 +1042,9 @@ export async function startExplorer() {
       real: () => state.usd !== "nominal",
       setReal: (real) => update({ usd: real ? String(meta.latest) : "nominal" }),
     });
+    // The measures year by year come after: the map draws without them, and its year controls appear when they arrive
+    const m = map;
+    import("../../data/massppe/map-years.json").then((y) => m.setSeries(y.default as unknown as MapSeries)).catch(() => {});
     cw = mod.startCommonwealth($("cw-root"), json.default as unknown as CwData, {
       openDistrict: (id) => update({ view: "districts", d: id }),
     });
@@ -1045,7 +1055,7 @@ export async function startExplorer() {
   // Pointing at either of these tabs starts its download, so it's usually ready by the click
   const warm: Record<string, () => void> = {
     commonwealth: () => void Promise.all([import("./commonwealth"), import("../../data/massppe/commonwealth.json"), import("./map"),
-      import("../../data/massppe/map.json")]).catch(() => {}),
+      import("../../data/massppe/map.json"), import("../../data/massppe/map-years.json")]).catch(() => {}),
     cap: () => void Promise.all([import("./cap"), import("../../data/massppe/cap.json")]).catch(() => {}),
   };
   for (const tab of tabs) {
@@ -1703,7 +1713,7 @@ export async function startExplorer() {
       if (v != null && b != null && b > 0 && cName) {
         const rel = (v - b) / b;
         const bg = shade(rel, SHADE_BINS_REL);
-        td.title = `${cName}: ${fmt(b)} (${rel >= 0 ? "+" : "−"}${Math.abs(rel * 100).toFixed(0)}%)`;
+        td.title = `${cName}: ${fmt(b)} (${signFor(rel, Math.abs(rel * 100).toFixed(0), true)}${Math.abs(rel * 100).toFixed(0)}%)`;
         if (bg) {
           td.style.background = bg;
           td.append(sr(rel > 0));
@@ -1718,7 +1728,7 @@ export async function startExplorer() {
       if (g != null && gb != null && cName) {
         const delta = g - gb;
         const bg = shade(delta, SHADE_BINS_PP);
-        td.title = `${cName}: ${pct(gb)} (${delta >= 0 ? "+" : "−"}${Math.abs(delta * 100).toFixed(1)} pp)`;
+        td.title = `${cName}: ${pct(gb)} (${signFor(delta, Math.abs(delta * 100).toFixed(1), true)}${Math.abs(delta * 100).toFixed(1)} pp)`;
         if (bg) {
           td.style.background = bg;
           td.append(sr(delta > 0));

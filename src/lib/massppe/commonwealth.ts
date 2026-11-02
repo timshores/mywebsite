@@ -3,6 +3,7 @@
 // and the factors are ranked by how closely they line up with the vertical measure.
 // Data: src/data/massppe/commonwealth.json (export_explorer_data.commonwealth_data).
 
+import { signFor } from "./charts";
 import { loess, pearson, scatter, spearman, type Group, type Point } from "./scatter";
 
 type Values = (number | null)[];
@@ -189,7 +190,7 @@ const PRESETS: Preset[] = [
   },
 ];
 
-const pct = (v: number) => `${Math.round(v * 100)}%`;
+const pct = (v: number) => `${signFor(v, String(Math.abs(Math.round(v * 100))))}${Math.abs(Math.round(v * 100))}%`;
 /** A measure's name, bold wherever text describes it */
 const vn = (s: string) => el("strong", "cw-var", s);
 /** Text with its *starred* measure names in bold */
@@ -208,7 +209,7 @@ const axisFmt = (u: Unit) => (v: number) => {
   return `${p}${short(v, 0)}`;
 };
 const capital = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
-const rho = (r: number) => `${r < 0 ? "−" : ""}${Math.abs(r).toFixed(2)}`;
+const rho = (r: number) => `${signFor(r, Math.abs(r).toFixed(2))}${Math.abs(r).toFixed(2)}`;
 function el<K extends keyof HTMLElementTagNameMap>(tag: K, cls?: string, text?: string): HTMLElementTagNameMap[K] {
   const n = document.createElement(tag);
   if (cls) n.className = cls;
