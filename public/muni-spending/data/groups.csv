@@ -1,280 +1,566 @@
 view,group_id,group,scope,members,member_id,member
-school districts,statewide,Statewide average,state,276,abington,Abington
-school districts,statewide,Statewide average,state,276,acton-boxborough,Acton-Boxborough
-school districts,statewide,Statewide average,state,276,acushnet,Acushnet
-school districts,statewide,Statewide average,state,276,agawam,Agawam
-school districts,statewide,Statewide average,state,276,amesbury,Amesbury
-school districts,statewide,Statewide average,state,276,amherst,Amherst
-school districts,statewide,Statewide average,state,276,amherst-pelham,Amherst-Pelham
-school districts,statewide,Statewide average,state,276,andover,Andover
-school districts,statewide,Statewide average,state,276,arlington,Arlington
-school districts,statewide,Statewide average,state,276,ashburnham-westminster,Ashburnham-Westminster
-school districts,statewide,Statewide average,state,276,ashland,Ashland
-school districts,statewide,Statewide average,state,276,athol-royalston,Athol-Royalston
-school districts,statewide,Statewide average,state,276,attleboro,Attleboro
-school districts,statewide,Statewide average,state,276,auburn,Auburn
-school districts,statewide,Statewide average,state,276,avon,Avon
-school districts,statewide,Statewide average,state,276,ayer-shirley-school-district,Ayer Shirley School District
-school districts,statewide,Statewide average,state,276,barnstable,Barnstable
-school districts,statewide,Statewide average,state,276,bedford,Bedford
-school districts,statewide,Statewide average,state,276,belchertown,Belchertown
-school districts,statewide,Statewide average,state,276,bellingham,Bellingham
-school districts,statewide,Statewide average,state,276,belmont,Belmont
-school districts,statewide,Statewide average,state,276,berkley,Berkley
-school districts,statewide,Statewide average,state,276,berkshire-hills,Berkshire Hills
-school districts,statewide,Statewide average,state,276,berlin-boylston,Berlin-Boylston
-school districts,statewide,Statewide average,state,276,beverly,Beverly
-school districts,statewide,Statewide average,state,276,billerica,Billerica
-school districts,statewide,Statewide average,state,276,blackstone-millville,Blackstone-Millville
-school districts,statewide,Statewide average,state,276,bourne,Bourne
-school districts,statewide,Statewide average,state,276,boxford,Boxford
-school districts,statewide,Statewide average,state,276,braintree,Braintree
-school districts,statewide,Statewide average,state,276,brewster,Brewster
-school districts,statewide,Statewide average,state,276,bridgewater-raynham,Bridgewater-Raynham
-school districts,statewide,Statewide average,state,276,brimfield,Brimfield
-school districts,statewide,Statewide average,state,276,brookfield,Brookfield
-school districts,statewide,Statewide average,state,276,brookline,Brookline
-school districts,statewide,Statewide average,state,276,burlington,Burlington
-school districts,statewide,Statewide average,state,276,cambridge,Cambridge
-school districts,statewide,Statewide average,state,276,canton,Canton
-school districts,statewide,Statewide average,state,276,carlisle,Carlisle
-school districts,statewide,Statewide average,state,276,carver,Carver
-school districts,statewide,Statewide average,state,276,central-berkshire,Central Berkshire
-school districts,statewide,Statewide average,state,276,chelmsford,Chelmsford
-school districts,statewide,Statewide average,state,276,chelsea,Chelsea
-school districts,statewide,Statewide average,state,276,chesterfield-goshen,Chesterfield-Goshen
-school districts,statewide,Statewide average,state,276,chicopee,Chicopee
-school districts,statewide,Statewide average,state,276,clarksburg,Clarksburg
-school districts,statewide,Statewide average,state,276,clinton,Clinton
-school districts,statewide,Statewide average,state,276,cohasset,Cohasset
-school districts,statewide,Statewide average,state,276,concord,Concord
-school districts,statewide,Statewide average,state,276,concord-carlisle,Concord-Carlisle
-school districts,statewide,Statewide average,state,276,conway,Conway
-school districts,statewide,Statewide average,state,276,danvers,Danvers
-school districts,statewide,Statewide average,state,276,dartmouth,Dartmouth
-school districts,statewide,Statewide average,state,276,dedham,Dedham
-school districts,statewide,Statewide average,state,276,deerfield,Deerfield
-school districts,statewide,Statewide average,state,276,dennis-yarmouth,Dennis-Yarmouth
-school districts,statewide,Statewide average,state,276,dighton-rehoboth,Dighton-Rehoboth
-school districts,statewide,Statewide average,state,276,douglas,Douglas
-school districts,statewide,Statewide average,state,276,dover,Dover
-school districts,statewide,Statewide average,state,276,dover-sherborn,Dover-Sherborn
-school districts,statewide,Statewide average,state,276,dracut,Dracut
-school districts,statewide,Statewide average,state,276,dudley-charlton-reg,Dudley-Charlton Reg
-school districts,statewide,Statewide average,state,276,duxbury,Duxbury
-school districts,statewide,Statewide average,state,276,east-bridgewater,East Bridgewater
-school districts,statewide,Statewide average,state,276,east-longmeadow,East Longmeadow
-school districts,statewide,Statewide average,state,276,eastham,Eastham
-school districts,statewide,Statewide average,state,276,easthampton,Easthampton
-school districts,statewide,Statewide average,state,276,easton,Easton
-school districts,statewide,Statewide average,state,276,edgartown,Edgartown
-school districts,statewide,Statewide average,state,276,erving,Erving
-school districts,statewide,Statewide average,state,276,everett,Everett
-school districts,statewide,Statewide average,state,276,fairhaven,Fairhaven
-school districts,statewide,Statewide average,state,276,falmouth,Falmouth
-school districts,statewide,Statewide average,state,276,farmington-river-reg,Farmington River Reg
-school districts,statewide,Statewide average,state,276,fitchburg,Fitchburg
-school districts,statewide,Statewide average,state,276,florida,Florida
-school districts,statewide,Statewide average,state,276,foxborough,Foxborough
-school districts,statewide,Statewide average,state,276,framingham,Framingham
-school districts,statewide,Statewide average,state,276,franklin,Franklin
-school districts,statewide,Statewide average,state,276,freetown-lakeville,Freetown-Lakeville
-school districts,statewide,Statewide average,state,276,frontier,Frontier
-school districts,statewide,Statewide average,state,276,gardner,Gardner
-school districts,statewide,Statewide average,state,276,gateway,Gateway
-school districts,statewide,Statewide average,state,276,georgetown,Georgetown
-school districts,statewide,Statewide average,state,276,gill-montague,Gill-Montague
-school districts,statewide,Statewide average,state,276,gloucester,Gloucester
-school districts,statewide,Statewide average,state,276,grafton,Grafton
-school districts,statewide,Statewide average,state,276,granby,Granby
-school districts,statewide,Statewide average,state,276,greenfield,Greenfield
-school districts,statewide,Statewide average,state,276,groton-dunstable,Groton-Dunstable
-school districts,statewide,Statewide average,state,276,hadley,Hadley
-school districts,statewide,Statewide average,state,276,hamilton-wenham,Hamilton-Wenham
-school districts,statewide,Statewide average,state,276,hampden-wilbraham,Hampden-Wilbraham
-school districts,statewide,Statewide average,state,276,hancock,Hancock
-school districts,statewide,Statewide average,state,276,hanover,Hanover
-school districts,statewide,Statewide average,state,276,harvard,Harvard
-school districts,statewide,Statewide average,state,276,hatfield,Hatfield
-school districts,statewide,Statewide average,state,276,haverhill,Haverhill
-school districts,statewide,Statewide average,state,276,hawlemont,Hawlemont
-school districts,statewide,Statewide average,state,276,hingham,Hingham
-school districts,statewide,Statewide average,state,276,holbrook,Holbrook
-school districts,statewide,Statewide average,state,276,holland,Holland
-school districts,statewide,Statewide average,state,276,holliston,Holliston
-school districts,statewide,Statewide average,state,276,holyoke,Holyoke
-school districts,statewide,Statewide average,state,276,hoosac-valley-regional,Hoosac Valley Regional
-school districts,statewide,Statewide average,state,276,hopedale,Hopedale
-school districts,statewide,Statewide average,state,276,hopkinton,Hopkinton
-school districts,statewide,Statewide average,state,276,hudson,Hudson
-school districts,statewide,Statewide average,state,276,hull,Hull
-school districts,statewide,Statewide average,state,276,ipswich,Ipswich
-school districts,statewide,Statewide average,state,276,king-philip,King Philip
-school districts,statewide,Statewide average,state,276,lee,Lee
-school districts,statewide,Statewide average,state,276,leicester,Leicester
-school districts,statewide,Statewide average,state,276,lenox,Lenox
-school districts,statewide,Statewide average,state,276,leominster,Leominster
-school districts,statewide,Statewide average,state,276,leverett,Leverett
-school districts,statewide,Statewide average,state,276,lexington,Lexington
-school districts,statewide,Statewide average,state,276,lincoln,Lincoln
-school districts,statewide,Statewide average,state,276,lincoln-sudbury,Lincoln-Sudbury
-school districts,statewide,Statewide average,state,276,littleton,Littleton
-school districts,statewide,Statewide average,state,276,longmeadow,Longmeadow
-school districts,statewide,Statewide average,state,276,ludlow,Ludlow
-school districts,statewide,Statewide average,state,276,lunenburg,Lunenburg
-school districts,statewide,Statewide average,state,276,lynnfield,Lynnfield
-school districts,statewide,Statewide average,state,276,malden,Malden
-school districts,statewide,Statewide average,state,276,manchester-essex-regional,Manchester Essex Regional
-school districts,statewide,Statewide average,state,276,mansfield,Mansfield
-school districts,statewide,Statewide average,state,276,marblehead,Marblehead
-school districts,statewide,Statewide average,state,276,marion,Marion
-school districts,statewide,Statewide average,state,276,marlborough,Marlborough
-school districts,statewide,Statewide average,state,276,marshfield,Marshfield
-school districts,statewide,Statewide average,state,276,martha-s-vineyard,Martha's Vineyard
-school districts,statewide,Statewide average,state,276,masconomet,Masconomet
-school districts,statewide,Statewide average,state,276,mashpee,Mashpee
-school districts,statewide,Statewide average,state,276,mattapoisett,Mattapoisett
-school districts,statewide,Statewide average,state,276,maynard,Maynard
-school districts,statewide,Statewide average,state,276,medfield,Medfield
-school districts,statewide,Statewide average,state,276,medford,Medford
-school districts,statewide,Statewide average,state,276,medway,Medway
-school districts,statewide,Statewide average,state,276,melrose,Melrose
-school districts,statewide,Statewide average,state,276,mendon-upton,Mendon-Upton
-school districts,statewide,Statewide average,state,276,methuen,Methuen
-school districts,statewide,Statewide average,state,276,middleborough,Middleborough
-school districts,statewide,Statewide average,state,276,middleton,Middleton
-school districts,statewide,Statewide average,state,276,milford,Milford
-school districts,statewide,Statewide average,state,276,millbury,Millbury
-school districts,statewide,Statewide average,state,276,millis,Millis
-school districts,statewide,Statewide average,state,276,milton,Milton
-school districts,statewide,Statewide average,state,276,mohawk-trail,Mohawk Trail
-school districts,statewide,Statewide average,state,276,monomoy-regional-school-district,Monomoy Regional School District
-school districts,statewide,Statewide average,state,276,monson,Monson
-school districts,statewide,Statewide average,state,276,mount-greylock,Mount Greylock
-school districts,statewide,Statewide average,state,276,nahant,Nahant
-school districts,statewide,Statewide average,state,276,nantucket,Nantucket
-school districts,statewide,Statewide average,state,276,narragansett,Narragansett
-school districts,statewide,Statewide average,state,276,nashoba,Nashoba
-school districts,statewide,Statewide average,state,276,natick,Natick
-school districts,statewide,Statewide average,state,276,nauset,Nauset
-school districts,statewide,Statewide average,state,276,needham,Needham
-school districts,statewide,Statewide average,state,276,new-salem-wendell,New Salem-Wendell
-school districts,statewide,Statewide average,state,276,newburyport,Newburyport
-school districts,statewide,Statewide average,state,276,norfolk,Norfolk
-school districts,statewide,Statewide average,state,276,north-adams,North Adams
-school districts,statewide,Statewide average,state,276,north-andover,North Andover
-school districts,statewide,Statewide average,state,276,north-attleborough,North Attleborough
-school districts,statewide,Statewide average,state,276,north-brookfield,North Brookfield
-school districts,statewide,Statewide average,state,276,north-middlesex,North Middlesex
-school districts,statewide,Statewide average,state,276,north-reading,North Reading
-school districts,statewide,Statewide average,state,276,northampton,Northampton
-school districts,statewide,Statewide average,state,276,northboro-southboro,Northboro-Southboro
-school districts,statewide,Statewide average,state,276,northborough,Northborough
-school districts,statewide,Statewide average,state,276,northbridge,Northbridge
-school districts,statewide,Statewide average,state,276,norton,Norton
-school districts,statewide,Statewide average,state,276,norwell,Norwell
-school districts,statewide,Statewide average,state,276,norwood,Norwood
-school districts,statewide,Statewide average,state,276,oak-bluffs,Oak Bluffs
-school districts,statewide,Statewide average,state,276,old-rochester,Old Rochester
-school districts,statewide,Statewide average,state,276,orange,Orange
-school districts,statewide,Statewide average,state,276,orleans,Orleans
-school districts,statewide,Statewide average,state,276,oxford,Oxford
-school districts,statewide,Statewide average,state,276,palmer,Palmer
-school districts,statewide,Statewide average,state,276,peabody,Peabody
-school districts,statewide,Statewide average,state,276,pelham,Pelham
-school districts,statewide,Statewide average,state,276,pembroke,Pembroke
-school districts,statewide,Statewide average,state,276,pentucket,Pentucket
-school districts,statewide,Statewide average,state,276,petersham,Petersham
-school districts,statewide,Statewide average,state,276,pioneer-valley,Pioneer Valley
-school districts,statewide,Statewide average,state,276,pittsfield,Pittsfield
-school districts,statewide,Statewide average,state,276,plainville,Plainville
-school districts,statewide,Statewide average,state,276,plymouth,Plymouth
-school districts,statewide,Statewide average,state,276,provincetown,Provincetown
-school districts,statewide,Statewide average,state,276,quabbin,Quabbin
-school districts,statewide,Statewide average,state,276,quaboag-regional,Quaboag Regional
-school districts,statewide,Statewide average,state,276,quincy,Quincy
-school districts,statewide,Statewide average,state,276,ralph-c-mahar,Ralph C Mahar
-school districts,statewide,Statewide average,state,276,randolph,Randolph
-school districts,statewide,Statewide average,state,276,reading,Reading
-school districts,statewide,Statewide average,state,276,revere,Revere
-school districts,statewide,Statewide average,state,276,richmond,Richmond
-school districts,statewide,Statewide average,state,276,rochester,Rochester
-school districts,statewide,Statewide average,state,276,rockland,Rockland
-school districts,statewide,Statewide average,state,276,rockport,Rockport
-school districts,statewide,Statewide average,state,276,rowe,Rowe
-school districts,statewide,Statewide average,state,276,salem,Salem
-school districts,statewide,Statewide average,state,276,sandwich,Sandwich
-school districts,statewide,Statewide average,state,276,saugus,Saugus
-school districts,statewide,Statewide average,state,276,savoy,Savoy
-school districts,statewide,Statewide average,state,276,scituate,Scituate
-school districts,statewide,Statewide average,state,276,seekonk,Seekonk
-school districts,statewide,Statewide average,state,276,sharon,Sharon
-school districts,statewide,Statewide average,state,276,sherborn,Sherborn
-school districts,statewide,Statewide average,state,276,shrewsbury,Shrewsbury
-school districts,statewide,Statewide average,state,276,shutesbury,Shutesbury
-school districts,statewide,Statewide average,state,276,silver-lake,Silver Lake
-school districts,statewide,Statewide average,state,276,somerset,Somerset
-school districts,statewide,Statewide average,state,276,somerset-berkley-regional-school-district,Somerset Berkley Regional School District
-school districts,statewide,Statewide average,state,276,somerville,Somerville
-school districts,statewide,Statewide average,state,276,south-hadley,South Hadley
-school districts,statewide,Statewide average,state,276,southampton,Southampton
-school districts,statewide,Statewide average,state,276,southborough,Southborough
-school districts,statewide,Statewide average,state,276,southbridge,Southbridge
-school districts,statewide,Statewide average,state,276,southern-berkshire,Southern Berkshire
-school districts,statewide,Statewide average,state,276,southwick-tolland-granville-regional-school-district,Southwick-Tolland-Granville Regional School District
-school districts,statewide,Statewide average,state,276,spencer-e-brookfield,Spencer-E Brookfield
-school districts,statewide,Statewide average,state,276,stoneham,Stoneham
-school districts,statewide,Statewide average,state,276,stoughton,Stoughton
-school districts,statewide,Statewide average,state,276,sturbridge,Sturbridge
-school districts,statewide,Statewide average,state,276,sudbury,Sudbury
-school districts,statewide,Statewide average,state,276,sunderland,Sunderland
-school districts,statewide,Statewide average,state,276,sutton,Sutton
-school districts,statewide,Statewide average,state,276,swampscott,Swampscott
-school districts,statewide,Statewide average,state,276,swansea,Swansea
-school districts,statewide,Statewide average,state,276,tantasqua,Tantasqua
-school districts,statewide,Statewide average,state,276,taunton,Taunton
-school districts,statewide,Statewide average,state,276,tewksbury,Tewksbury
-school districts,statewide,Statewide average,state,276,tisbury,Tisbury
-school districts,statewide,Statewide average,state,276,topsfield,Topsfield
-school districts,statewide,Statewide average,state,276,triton,Triton
-school districts,statewide,Statewide average,state,276,truro,Truro
-school districts,statewide,Statewide average,state,276,tyngsborough,Tyngsborough
-school districts,statewide,Statewide average,state,276,up-island-regional,Up-Island Regional
-school districts,statewide,Statewide average,state,276,uxbridge,Uxbridge
-school districts,statewide,Statewide average,state,276,wachusett,Wachusett
-school districts,statewide,Statewide average,state,276,wakefield,Wakefield
-school districts,statewide,Statewide average,state,276,wales,Wales
-school districts,statewide,Statewide average,state,276,walpole,Walpole
-school districts,statewide,Statewide average,state,276,waltham,Waltham
-school districts,statewide,Statewide average,state,276,ware,Ware
-school districts,statewide,Statewide average,state,276,wareham,Wareham
-school districts,statewide,Statewide average,state,276,warwick,Warwick
-school districts,statewide,Statewide average,state,276,watertown,Watertown
-school districts,statewide,Statewide average,state,276,wayland,Wayland
-school districts,statewide,Statewide average,state,276,webster,Webster
-school districts,statewide,Statewide average,state,276,wellesley,Wellesley
-school districts,statewide,Statewide average,state,276,wellfleet,Wellfleet
-school districts,statewide,Statewide average,state,276,west-boylston,West Boylston
-school districts,statewide,Statewide average,state,276,west-bridgewater,West Bridgewater
-school districts,statewide,Statewide average,state,276,west-springfield,West Springfield
-school districts,statewide,Statewide average,state,276,westborough,Westborough
-school districts,statewide,Statewide average,state,276,westfield,Westfield
-school districts,statewide,Statewide average,state,276,westford,Westford
-school districts,statewide,Statewide average,state,276,westhampton,Westhampton
-school districts,statewide,Statewide average,state,276,weston,Weston
-school districts,statewide,Statewide average,state,276,westport,Westport
-school districts,statewide,Statewide average,state,276,westwood,Westwood
-school districts,statewide,Statewide average,state,276,weymouth,Weymouth
-school districts,statewide,Statewide average,state,276,whately,Whately
-school districts,statewide,Statewide average,state,276,whitman-hanson,Whitman-Hanson
-school districts,statewide,Statewide average,state,276,williamsburg,Williamsburg
-school districts,statewide,Statewide average,state,276,wilmington,Wilmington
-school districts,statewide,Statewide average,state,276,winchendon,Winchendon
-school districts,statewide,Statewide average,state,276,winchester,Winchester
-school districts,statewide,Statewide average,state,276,winthrop,Winthrop
-school districts,statewide,Statewide average,state,276,woburn,Woburn
-school districts,statewide,Statewide average,state,276,worthington,Worthington
-school districts,statewide,Statewide average,state,276,wrentham,Wrentham
+school districts,statewide,"Statewide average, without the 10 largest",state,276,abington,Abington
+school districts,statewide,"Statewide average, without the 10 largest",state,276,acton-boxborough,Acton-Boxborough
+school districts,statewide,"Statewide average, without the 10 largest",state,276,acushnet,Acushnet
+school districts,statewide,"Statewide average, without the 10 largest",state,276,agawam,Agawam
+school districts,statewide,"Statewide average, without the 10 largest",state,276,amesbury,Amesbury
+school districts,statewide,"Statewide average, without the 10 largest",state,276,amherst,Amherst
+school districts,statewide,"Statewide average, without the 10 largest",state,276,amherst-pelham,Amherst-Pelham
+school districts,statewide,"Statewide average, without the 10 largest",state,276,andover,Andover
+school districts,statewide,"Statewide average, without the 10 largest",state,276,arlington,Arlington
+school districts,statewide,"Statewide average, without the 10 largest",state,276,ashburnham-westminster,Ashburnham-Westminster
+school districts,statewide,"Statewide average, without the 10 largest",state,276,ashland,Ashland
+school districts,statewide,"Statewide average, without the 10 largest",state,276,athol-royalston,Athol-Royalston
+school districts,statewide,"Statewide average, without the 10 largest",state,276,attleboro,Attleboro
+school districts,statewide,"Statewide average, without the 10 largest",state,276,auburn,Auburn
+school districts,statewide,"Statewide average, without the 10 largest",state,276,avon,Avon
+school districts,statewide,"Statewide average, without the 10 largest",state,276,ayer-shirley-school-district,Ayer Shirley School District
+school districts,statewide,"Statewide average, without the 10 largest",state,276,barnstable,Barnstable
+school districts,statewide,"Statewide average, without the 10 largest",state,276,bedford,Bedford
+school districts,statewide,"Statewide average, without the 10 largest",state,276,belchertown,Belchertown
+school districts,statewide,"Statewide average, without the 10 largest",state,276,bellingham,Bellingham
+school districts,statewide,"Statewide average, without the 10 largest",state,276,belmont,Belmont
+school districts,statewide,"Statewide average, without the 10 largest",state,276,berkley,Berkley
+school districts,statewide,"Statewide average, without the 10 largest",state,276,berkshire-hills,Berkshire Hills
+school districts,statewide,"Statewide average, without the 10 largest",state,276,berlin-boylston,Berlin-Boylston
+school districts,statewide,"Statewide average, without the 10 largest",state,276,beverly,Beverly
+school districts,statewide,"Statewide average, without the 10 largest",state,276,billerica,Billerica
+school districts,statewide,"Statewide average, without the 10 largest",state,276,blackstone-millville,Blackstone-Millville
+school districts,statewide,"Statewide average, without the 10 largest",state,276,bourne,Bourne
+school districts,statewide,"Statewide average, without the 10 largest",state,276,boxford,Boxford
+school districts,statewide,"Statewide average, without the 10 largest",state,276,braintree,Braintree
+school districts,statewide,"Statewide average, without the 10 largest",state,276,brewster,Brewster
+school districts,statewide,"Statewide average, without the 10 largest",state,276,bridgewater-raynham,Bridgewater-Raynham
+school districts,statewide,"Statewide average, without the 10 largest",state,276,brimfield,Brimfield
+school districts,statewide,"Statewide average, without the 10 largest",state,276,brookfield,Brookfield
+school districts,statewide,"Statewide average, without the 10 largest",state,276,brookline,Brookline
+school districts,statewide,"Statewide average, without the 10 largest",state,276,burlington,Burlington
+school districts,statewide,"Statewide average, without the 10 largest",state,276,cambridge,Cambridge
+school districts,statewide,"Statewide average, without the 10 largest",state,276,canton,Canton
+school districts,statewide,"Statewide average, without the 10 largest",state,276,carlisle,Carlisle
+school districts,statewide,"Statewide average, without the 10 largest",state,276,carver,Carver
+school districts,statewide,"Statewide average, without the 10 largest",state,276,central-berkshire,Central Berkshire
+school districts,statewide,"Statewide average, without the 10 largest",state,276,chelmsford,Chelmsford
+school districts,statewide,"Statewide average, without the 10 largest",state,276,chelsea,Chelsea
+school districts,statewide,"Statewide average, without the 10 largest",state,276,chesterfield-goshen,Chesterfield-Goshen
+school districts,statewide,"Statewide average, without the 10 largest",state,276,chicopee,Chicopee
+school districts,statewide,"Statewide average, without the 10 largest",state,276,clarksburg,Clarksburg
+school districts,statewide,"Statewide average, without the 10 largest",state,276,clinton,Clinton
+school districts,statewide,"Statewide average, without the 10 largest",state,276,cohasset,Cohasset
+school districts,statewide,"Statewide average, without the 10 largest",state,276,concord,Concord
+school districts,statewide,"Statewide average, without the 10 largest",state,276,concord-carlisle,Concord-Carlisle
+school districts,statewide,"Statewide average, without the 10 largest",state,276,conway,Conway
+school districts,statewide,"Statewide average, without the 10 largest",state,276,danvers,Danvers
+school districts,statewide,"Statewide average, without the 10 largest",state,276,dartmouth,Dartmouth
+school districts,statewide,"Statewide average, without the 10 largest",state,276,dedham,Dedham
+school districts,statewide,"Statewide average, without the 10 largest",state,276,deerfield,Deerfield
+school districts,statewide,"Statewide average, without the 10 largest",state,276,dennis-yarmouth,Dennis-Yarmouth
+school districts,statewide,"Statewide average, without the 10 largest",state,276,dighton-rehoboth,Dighton-Rehoboth
+school districts,statewide,"Statewide average, without the 10 largest",state,276,douglas,Douglas
+school districts,statewide,"Statewide average, without the 10 largest",state,276,dover,Dover
+school districts,statewide,"Statewide average, without the 10 largest",state,276,dover-sherborn,Dover-Sherborn
+school districts,statewide,"Statewide average, without the 10 largest",state,276,dracut,Dracut
+school districts,statewide,"Statewide average, without the 10 largest",state,276,dudley-charlton-reg,Dudley-Charlton Reg
+school districts,statewide,"Statewide average, without the 10 largest",state,276,duxbury,Duxbury
+school districts,statewide,"Statewide average, without the 10 largest",state,276,east-bridgewater,East Bridgewater
+school districts,statewide,"Statewide average, without the 10 largest",state,276,east-longmeadow,East Longmeadow
+school districts,statewide,"Statewide average, without the 10 largest",state,276,eastham,Eastham
+school districts,statewide,"Statewide average, without the 10 largest",state,276,easthampton,Easthampton
+school districts,statewide,"Statewide average, without the 10 largest",state,276,easton,Easton
+school districts,statewide,"Statewide average, without the 10 largest",state,276,edgartown,Edgartown
+school districts,statewide,"Statewide average, without the 10 largest",state,276,erving,Erving
+school districts,statewide,"Statewide average, without the 10 largest",state,276,everett,Everett
+school districts,statewide,"Statewide average, without the 10 largest",state,276,fairhaven,Fairhaven
+school districts,statewide,"Statewide average, without the 10 largest",state,276,falmouth,Falmouth
+school districts,statewide,"Statewide average, without the 10 largest",state,276,farmington-river-reg,Farmington River Reg
+school districts,statewide,"Statewide average, without the 10 largest",state,276,fitchburg,Fitchburg
+school districts,statewide,"Statewide average, without the 10 largest",state,276,florida,Florida
+school districts,statewide,"Statewide average, without the 10 largest",state,276,foxborough,Foxborough
+school districts,statewide,"Statewide average, without the 10 largest",state,276,framingham,Framingham
+school districts,statewide,"Statewide average, without the 10 largest",state,276,franklin,Franklin
+school districts,statewide,"Statewide average, without the 10 largest",state,276,freetown-lakeville,Freetown-Lakeville
+school districts,statewide,"Statewide average, without the 10 largest",state,276,frontier,Frontier
+school districts,statewide,"Statewide average, without the 10 largest",state,276,gardner,Gardner
+school districts,statewide,"Statewide average, without the 10 largest",state,276,gateway,Gateway
+school districts,statewide,"Statewide average, without the 10 largest",state,276,georgetown,Georgetown
+school districts,statewide,"Statewide average, without the 10 largest",state,276,gill-montague,Gill-Montague
+school districts,statewide,"Statewide average, without the 10 largest",state,276,gloucester,Gloucester
+school districts,statewide,"Statewide average, without the 10 largest",state,276,grafton,Grafton
+school districts,statewide,"Statewide average, without the 10 largest",state,276,granby,Granby
+school districts,statewide,"Statewide average, without the 10 largest",state,276,greenfield,Greenfield
+school districts,statewide,"Statewide average, without the 10 largest",state,276,groton-dunstable,Groton-Dunstable
+school districts,statewide,"Statewide average, without the 10 largest",state,276,hadley,Hadley
+school districts,statewide,"Statewide average, without the 10 largest",state,276,hamilton-wenham,Hamilton-Wenham
+school districts,statewide,"Statewide average, without the 10 largest",state,276,hampden-wilbraham,Hampden-Wilbraham
+school districts,statewide,"Statewide average, without the 10 largest",state,276,hancock,Hancock
+school districts,statewide,"Statewide average, without the 10 largest",state,276,hanover,Hanover
+school districts,statewide,"Statewide average, without the 10 largest",state,276,harvard,Harvard
+school districts,statewide,"Statewide average, without the 10 largest",state,276,hatfield,Hatfield
+school districts,statewide,"Statewide average, without the 10 largest",state,276,haverhill,Haverhill
+school districts,statewide,"Statewide average, without the 10 largest",state,276,hawlemont,Hawlemont
+school districts,statewide,"Statewide average, without the 10 largest",state,276,hingham,Hingham
+school districts,statewide,"Statewide average, without the 10 largest",state,276,holbrook,Holbrook
+school districts,statewide,"Statewide average, without the 10 largest",state,276,holland,Holland
+school districts,statewide,"Statewide average, without the 10 largest",state,276,holliston,Holliston
+school districts,statewide,"Statewide average, without the 10 largest",state,276,holyoke,Holyoke
+school districts,statewide,"Statewide average, without the 10 largest",state,276,hoosac-valley-regional,Hoosac Valley Regional
+school districts,statewide,"Statewide average, without the 10 largest",state,276,hopedale,Hopedale
+school districts,statewide,"Statewide average, without the 10 largest",state,276,hopkinton,Hopkinton
+school districts,statewide,"Statewide average, without the 10 largest",state,276,hudson,Hudson
+school districts,statewide,"Statewide average, without the 10 largest",state,276,hull,Hull
+school districts,statewide,"Statewide average, without the 10 largest",state,276,ipswich,Ipswich
+school districts,statewide,"Statewide average, without the 10 largest",state,276,king-philip,King Philip
+school districts,statewide,"Statewide average, without the 10 largest",state,276,lee,Lee
+school districts,statewide,"Statewide average, without the 10 largest",state,276,leicester,Leicester
+school districts,statewide,"Statewide average, without the 10 largest",state,276,lenox,Lenox
+school districts,statewide,"Statewide average, without the 10 largest",state,276,leominster,Leominster
+school districts,statewide,"Statewide average, without the 10 largest",state,276,leverett,Leverett
+school districts,statewide,"Statewide average, without the 10 largest",state,276,lexington,Lexington
+school districts,statewide,"Statewide average, without the 10 largest",state,276,lincoln,Lincoln
+school districts,statewide,"Statewide average, without the 10 largest",state,276,lincoln-sudbury,Lincoln-Sudbury
+school districts,statewide,"Statewide average, without the 10 largest",state,276,littleton,Littleton
+school districts,statewide,"Statewide average, without the 10 largest",state,276,longmeadow,Longmeadow
+school districts,statewide,"Statewide average, without the 10 largest",state,276,ludlow,Ludlow
+school districts,statewide,"Statewide average, without the 10 largest",state,276,lunenburg,Lunenburg
+school districts,statewide,"Statewide average, without the 10 largest",state,276,lynnfield,Lynnfield
+school districts,statewide,"Statewide average, without the 10 largest",state,276,malden,Malden
+school districts,statewide,"Statewide average, without the 10 largest",state,276,manchester-essex-regional,Manchester Essex Regional
+school districts,statewide,"Statewide average, without the 10 largest",state,276,mansfield,Mansfield
+school districts,statewide,"Statewide average, without the 10 largest",state,276,marblehead,Marblehead
+school districts,statewide,"Statewide average, without the 10 largest",state,276,marion,Marion
+school districts,statewide,"Statewide average, without the 10 largest",state,276,marlborough,Marlborough
+school districts,statewide,"Statewide average, without the 10 largest",state,276,marshfield,Marshfield
+school districts,statewide,"Statewide average, without the 10 largest",state,276,martha-s-vineyard,Martha's Vineyard
+school districts,statewide,"Statewide average, without the 10 largest",state,276,masconomet,Masconomet
+school districts,statewide,"Statewide average, without the 10 largest",state,276,mashpee,Mashpee
+school districts,statewide,"Statewide average, without the 10 largest",state,276,mattapoisett,Mattapoisett
+school districts,statewide,"Statewide average, without the 10 largest",state,276,maynard,Maynard
+school districts,statewide,"Statewide average, without the 10 largest",state,276,medfield,Medfield
+school districts,statewide,"Statewide average, without the 10 largest",state,276,medford,Medford
+school districts,statewide,"Statewide average, without the 10 largest",state,276,medway,Medway
+school districts,statewide,"Statewide average, without the 10 largest",state,276,melrose,Melrose
+school districts,statewide,"Statewide average, without the 10 largest",state,276,mendon-upton,Mendon-Upton
+school districts,statewide,"Statewide average, without the 10 largest",state,276,methuen,Methuen
+school districts,statewide,"Statewide average, without the 10 largest",state,276,middleborough,Middleborough
+school districts,statewide,"Statewide average, without the 10 largest",state,276,middleton,Middleton
+school districts,statewide,"Statewide average, without the 10 largest",state,276,milford,Milford
+school districts,statewide,"Statewide average, without the 10 largest",state,276,millbury,Millbury
+school districts,statewide,"Statewide average, without the 10 largest",state,276,millis,Millis
+school districts,statewide,"Statewide average, without the 10 largest",state,276,milton,Milton
+school districts,statewide,"Statewide average, without the 10 largest",state,276,mohawk-trail,Mohawk Trail
+school districts,statewide,"Statewide average, without the 10 largest",state,276,monomoy-regional-school-district,Monomoy Regional School District
+school districts,statewide,"Statewide average, without the 10 largest",state,276,monson,Monson
+school districts,statewide,"Statewide average, without the 10 largest",state,276,mount-greylock,Mount Greylock
+school districts,statewide,"Statewide average, without the 10 largest",state,276,nahant,Nahant
+school districts,statewide,"Statewide average, without the 10 largest",state,276,nantucket,Nantucket
+school districts,statewide,"Statewide average, without the 10 largest",state,276,narragansett,Narragansett
+school districts,statewide,"Statewide average, without the 10 largest",state,276,nashoba,Nashoba
+school districts,statewide,"Statewide average, without the 10 largest",state,276,natick,Natick
+school districts,statewide,"Statewide average, without the 10 largest",state,276,nauset,Nauset
+school districts,statewide,"Statewide average, without the 10 largest",state,276,needham,Needham
+school districts,statewide,"Statewide average, without the 10 largest",state,276,new-salem-wendell,New Salem-Wendell
+school districts,statewide,"Statewide average, without the 10 largest",state,276,newburyport,Newburyport
+school districts,statewide,"Statewide average, without the 10 largest",state,276,norfolk,Norfolk
+school districts,statewide,"Statewide average, without the 10 largest",state,276,north-adams,North Adams
+school districts,statewide,"Statewide average, without the 10 largest",state,276,north-andover,North Andover
+school districts,statewide,"Statewide average, without the 10 largest",state,276,north-attleborough,North Attleborough
+school districts,statewide,"Statewide average, without the 10 largest",state,276,north-brookfield,North Brookfield
+school districts,statewide,"Statewide average, without the 10 largest",state,276,north-middlesex,North Middlesex
+school districts,statewide,"Statewide average, without the 10 largest",state,276,north-reading,North Reading
+school districts,statewide,"Statewide average, without the 10 largest",state,276,northampton,Northampton
+school districts,statewide,"Statewide average, without the 10 largest",state,276,northboro-southboro,Northboro-Southboro
+school districts,statewide,"Statewide average, without the 10 largest",state,276,northborough,Northborough
+school districts,statewide,"Statewide average, without the 10 largest",state,276,northbridge,Northbridge
+school districts,statewide,"Statewide average, without the 10 largest",state,276,norton,Norton
+school districts,statewide,"Statewide average, without the 10 largest",state,276,norwell,Norwell
+school districts,statewide,"Statewide average, without the 10 largest",state,276,norwood,Norwood
+school districts,statewide,"Statewide average, without the 10 largest",state,276,oak-bluffs,Oak Bluffs
+school districts,statewide,"Statewide average, without the 10 largest",state,276,old-rochester,Old Rochester
+school districts,statewide,"Statewide average, without the 10 largest",state,276,orange,Orange
+school districts,statewide,"Statewide average, without the 10 largest",state,276,orleans,Orleans
+school districts,statewide,"Statewide average, without the 10 largest",state,276,oxford,Oxford
+school districts,statewide,"Statewide average, without the 10 largest",state,276,palmer,Palmer
+school districts,statewide,"Statewide average, without the 10 largest",state,276,peabody,Peabody
+school districts,statewide,"Statewide average, without the 10 largest",state,276,pelham,Pelham
+school districts,statewide,"Statewide average, without the 10 largest",state,276,pembroke,Pembroke
+school districts,statewide,"Statewide average, without the 10 largest",state,276,pentucket,Pentucket
+school districts,statewide,"Statewide average, without the 10 largest",state,276,petersham,Petersham
+school districts,statewide,"Statewide average, without the 10 largest",state,276,pioneer-valley,Pioneer Valley
+school districts,statewide,"Statewide average, without the 10 largest",state,276,pittsfield,Pittsfield
+school districts,statewide,"Statewide average, without the 10 largest",state,276,plainville,Plainville
+school districts,statewide,"Statewide average, without the 10 largest",state,276,plymouth,Plymouth
+school districts,statewide,"Statewide average, without the 10 largest",state,276,provincetown,Provincetown
+school districts,statewide,"Statewide average, without the 10 largest",state,276,quabbin,Quabbin
+school districts,statewide,"Statewide average, without the 10 largest",state,276,quaboag-regional,Quaboag Regional
+school districts,statewide,"Statewide average, without the 10 largest",state,276,quincy,Quincy
+school districts,statewide,"Statewide average, without the 10 largest",state,276,ralph-c-mahar,Ralph C Mahar
+school districts,statewide,"Statewide average, without the 10 largest",state,276,randolph,Randolph
+school districts,statewide,"Statewide average, without the 10 largest",state,276,reading,Reading
+school districts,statewide,"Statewide average, without the 10 largest",state,276,revere,Revere
+school districts,statewide,"Statewide average, without the 10 largest",state,276,richmond,Richmond
+school districts,statewide,"Statewide average, without the 10 largest",state,276,rochester,Rochester
+school districts,statewide,"Statewide average, without the 10 largest",state,276,rockland,Rockland
+school districts,statewide,"Statewide average, without the 10 largest",state,276,rockport,Rockport
+school districts,statewide,"Statewide average, without the 10 largest",state,276,rowe,Rowe
+school districts,statewide,"Statewide average, without the 10 largest",state,276,salem,Salem
+school districts,statewide,"Statewide average, without the 10 largest",state,276,sandwich,Sandwich
+school districts,statewide,"Statewide average, without the 10 largest",state,276,saugus,Saugus
+school districts,statewide,"Statewide average, without the 10 largest",state,276,savoy,Savoy
+school districts,statewide,"Statewide average, without the 10 largest",state,276,scituate,Scituate
+school districts,statewide,"Statewide average, without the 10 largest",state,276,seekonk,Seekonk
+school districts,statewide,"Statewide average, without the 10 largest",state,276,sharon,Sharon
+school districts,statewide,"Statewide average, without the 10 largest",state,276,sherborn,Sherborn
+school districts,statewide,"Statewide average, without the 10 largest",state,276,shrewsbury,Shrewsbury
+school districts,statewide,"Statewide average, without the 10 largest",state,276,shutesbury,Shutesbury
+school districts,statewide,"Statewide average, without the 10 largest",state,276,silver-lake,Silver Lake
+school districts,statewide,"Statewide average, without the 10 largest",state,276,somerset,Somerset
+school districts,statewide,"Statewide average, without the 10 largest",state,276,somerset-berkley-regional-school-district,Somerset Berkley Regional School District
+school districts,statewide,"Statewide average, without the 10 largest",state,276,somerville,Somerville
+school districts,statewide,"Statewide average, without the 10 largest",state,276,south-hadley,South Hadley
+school districts,statewide,"Statewide average, without the 10 largest",state,276,southampton,Southampton
+school districts,statewide,"Statewide average, without the 10 largest",state,276,southborough,Southborough
+school districts,statewide,"Statewide average, without the 10 largest",state,276,southbridge,Southbridge
+school districts,statewide,"Statewide average, without the 10 largest",state,276,southern-berkshire,Southern Berkshire
+school districts,statewide,"Statewide average, without the 10 largest",state,276,southwick-tolland-granville-regional-school-district,Southwick-Tolland-Granville Regional School District
+school districts,statewide,"Statewide average, without the 10 largest",state,276,spencer-e-brookfield,Spencer-E Brookfield
+school districts,statewide,"Statewide average, without the 10 largest",state,276,stoneham,Stoneham
+school districts,statewide,"Statewide average, without the 10 largest",state,276,stoughton,Stoughton
+school districts,statewide,"Statewide average, without the 10 largest",state,276,sturbridge,Sturbridge
+school districts,statewide,"Statewide average, without the 10 largest",state,276,sudbury,Sudbury
+school districts,statewide,"Statewide average, without the 10 largest",state,276,sunderland,Sunderland
+school districts,statewide,"Statewide average, without the 10 largest",state,276,sutton,Sutton
+school districts,statewide,"Statewide average, without the 10 largest",state,276,swampscott,Swampscott
+school districts,statewide,"Statewide average, without the 10 largest",state,276,swansea,Swansea
+school districts,statewide,"Statewide average, without the 10 largest",state,276,tantasqua,Tantasqua
+school districts,statewide,"Statewide average, without the 10 largest",state,276,taunton,Taunton
+school districts,statewide,"Statewide average, without the 10 largest",state,276,tewksbury,Tewksbury
+school districts,statewide,"Statewide average, without the 10 largest",state,276,tisbury,Tisbury
+school districts,statewide,"Statewide average, without the 10 largest",state,276,topsfield,Topsfield
+school districts,statewide,"Statewide average, without the 10 largest",state,276,triton,Triton
+school districts,statewide,"Statewide average, without the 10 largest",state,276,truro,Truro
+school districts,statewide,"Statewide average, without the 10 largest",state,276,tyngsborough,Tyngsborough
+school districts,statewide,"Statewide average, without the 10 largest",state,276,up-island-regional,Up-Island Regional
+school districts,statewide,"Statewide average, without the 10 largest",state,276,uxbridge,Uxbridge
+school districts,statewide,"Statewide average, without the 10 largest",state,276,wachusett,Wachusett
+school districts,statewide,"Statewide average, without the 10 largest",state,276,wakefield,Wakefield
+school districts,statewide,"Statewide average, without the 10 largest",state,276,wales,Wales
+school districts,statewide,"Statewide average, without the 10 largest",state,276,walpole,Walpole
+school districts,statewide,"Statewide average, without the 10 largest",state,276,waltham,Waltham
+school districts,statewide,"Statewide average, without the 10 largest",state,276,ware,Ware
+school districts,statewide,"Statewide average, without the 10 largest",state,276,wareham,Wareham
+school districts,statewide,"Statewide average, without the 10 largest",state,276,warwick,Warwick
+school districts,statewide,"Statewide average, without the 10 largest",state,276,watertown,Watertown
+school districts,statewide,"Statewide average, without the 10 largest",state,276,wayland,Wayland
+school districts,statewide,"Statewide average, without the 10 largest",state,276,webster,Webster
+school districts,statewide,"Statewide average, without the 10 largest",state,276,wellesley,Wellesley
+school districts,statewide,"Statewide average, without the 10 largest",state,276,wellfleet,Wellfleet
+school districts,statewide,"Statewide average, without the 10 largest",state,276,west-boylston,West Boylston
+school districts,statewide,"Statewide average, without the 10 largest",state,276,west-bridgewater,West Bridgewater
+school districts,statewide,"Statewide average, without the 10 largest",state,276,west-springfield,West Springfield
+school districts,statewide,"Statewide average, without the 10 largest",state,276,westborough,Westborough
+school districts,statewide,"Statewide average, without the 10 largest",state,276,westfield,Westfield
+school districts,statewide,"Statewide average, without the 10 largest",state,276,westford,Westford
+school districts,statewide,"Statewide average, without the 10 largest",state,276,westhampton,Westhampton
+school districts,statewide,"Statewide average, without the 10 largest",state,276,weston,Weston
+school districts,statewide,"Statewide average, without the 10 largest",state,276,westport,Westport
+school districts,statewide,"Statewide average, without the 10 largest",state,276,westwood,Westwood
+school districts,statewide,"Statewide average, without the 10 largest",state,276,weymouth,Weymouth
+school districts,statewide,"Statewide average, without the 10 largest",state,276,whately,Whately
+school districts,statewide,"Statewide average, without the 10 largest",state,276,whitman-hanson,Whitman-Hanson
+school districts,statewide,"Statewide average, without the 10 largest",state,276,williamsburg,Williamsburg
+school districts,statewide,"Statewide average, without the 10 largest",state,276,wilmington,Wilmington
+school districts,statewide,"Statewide average, without the 10 largest",state,276,winchendon,Winchendon
+school districts,statewide,"Statewide average, without the 10 largest",state,276,winchester,Winchester
+school districts,statewide,"Statewide average, without the 10 largest",state,276,winthrop,Winthrop
+school districts,statewide,"Statewide average, without the 10 largest",state,276,woburn,Woburn
+school districts,statewide,"Statewide average, without the 10 largest",state,276,worthington,Worthington
+school districts,statewide,"Statewide average, without the 10 largest",state,276,wrentham,Wrentham
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,abington,Abington
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,acton-boxborough,Acton-Boxborough
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,acushnet,Acushnet
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,agawam,Agawam
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,amesbury,Amesbury
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,amherst,Amherst
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,amherst-pelham,Amherst-Pelham
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,andover,Andover
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,arlington,Arlington
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,ashburnham-westminster,Ashburnham-Westminster
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,ashland,Ashland
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,athol-royalston,Athol-Royalston
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,attleboro,Attleboro
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,auburn,Auburn
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,avon,Avon
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,ayer-shirley-school-district,Ayer Shirley School District
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,barnstable,Barnstable
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,bedford,Bedford
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,belchertown,Belchertown
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,bellingham,Bellingham
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,belmont,Belmont
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,berkley,Berkley
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,berkshire-hills,Berkshire Hills
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,berlin-boylston,Berlin-Boylston
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,beverly,Beverly
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,billerica,Billerica
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,blackstone-millville,Blackstone-Millville
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,boston,Boston
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,bourne,Bourne
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,boxford,Boxford
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,braintree,Braintree
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,brewster,Brewster
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,bridgewater-raynham,Bridgewater-Raynham
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,brimfield,Brimfield
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,brockton,Brockton
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,brookfield,Brookfield
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,brookline,Brookline
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,burlington,Burlington
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,cambridge,Cambridge
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,canton,Canton
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,carlisle,Carlisle
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,carver,Carver
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,central-berkshire,Central Berkshire
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,chelmsford,Chelmsford
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,chelsea,Chelsea
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,chesterfield-goshen,Chesterfield-Goshen
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,chicopee,Chicopee
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,clarksburg,Clarksburg
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,clinton,Clinton
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,cohasset,Cohasset
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,concord,Concord
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,concord-carlisle,Concord-Carlisle
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,conway,Conway
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,danvers,Danvers
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,dartmouth,Dartmouth
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,dedham,Dedham
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,deerfield,Deerfield
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,dennis-yarmouth,Dennis-Yarmouth
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,dighton-rehoboth,Dighton-Rehoboth
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,douglas,Douglas
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,dover,Dover
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,dover-sherborn,Dover-Sherborn
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,dracut,Dracut
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,dudley-charlton-reg,Dudley-Charlton Reg
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,duxbury,Duxbury
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,east-bridgewater,East Bridgewater
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,east-longmeadow,East Longmeadow
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,eastham,Eastham
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,easthampton,Easthampton
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,easton,Easton
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,edgartown,Edgartown
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,erving,Erving
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,everett,Everett
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,fairhaven,Fairhaven
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,fall-river,Fall River
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,falmouth,Falmouth
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,farmington-river-reg,Farmington River Reg
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,fitchburg,Fitchburg
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,florida,Florida
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,foxborough,Foxborough
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,framingham,Framingham
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,franklin,Franklin
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,freetown-lakeville,Freetown-Lakeville
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,frontier,Frontier
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,gardner,Gardner
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,gateway,Gateway
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,georgetown,Georgetown
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,gill-montague,Gill-Montague
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,gloucester,Gloucester
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,grafton,Grafton
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,granby,Granby
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,greenfield,Greenfield
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,groton-dunstable,Groton-Dunstable
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,hadley,Hadley
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,hamilton-wenham,Hamilton-Wenham
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,hampden-wilbraham,Hampden-Wilbraham
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,hancock,Hancock
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,hanover,Hanover
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,harvard,Harvard
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,hatfield,Hatfield
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,haverhill,Haverhill
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,hawlemont,Hawlemont
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,hingham,Hingham
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,holbrook,Holbrook
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,holland,Holland
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,holliston,Holliston
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,holyoke,Holyoke
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,hoosac-valley-regional,Hoosac Valley Regional
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,hopedale,Hopedale
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,hopkinton,Hopkinton
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,hudson,Hudson
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,hull,Hull
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,ipswich,Ipswich
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,king-philip,King Philip
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,lawrence,Lawrence
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,lee,Lee
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,leicester,Leicester
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,lenox,Lenox
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,leominster,Leominster
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,leverett,Leverett
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,lexington,Lexington
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,lincoln,Lincoln
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,lincoln-sudbury,Lincoln-Sudbury
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,littleton,Littleton
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,longmeadow,Longmeadow
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,lowell,Lowell
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,ludlow,Ludlow
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,lunenburg,Lunenburg
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,lynn,Lynn
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,lynnfield,Lynnfield
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,malden,Malden
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,manchester-essex-regional,Manchester Essex Regional
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,mansfield,Mansfield
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,marblehead,Marblehead
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,marion,Marion
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,marlborough,Marlborough
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,marshfield,Marshfield
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,martha-s-vineyard,Martha's Vineyard
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,masconomet,Masconomet
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,mashpee,Mashpee
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,mattapoisett,Mattapoisett
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,maynard,Maynard
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,medfield,Medfield
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,medford,Medford
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,medway,Medway
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,melrose,Melrose
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,mendon-upton,Mendon-Upton
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,methuen,Methuen
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,middleborough,Middleborough
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,middleton,Middleton
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,milford,Milford
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,millbury,Millbury
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,millis,Millis
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,milton,Milton
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,mohawk-trail,Mohawk Trail
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,monomoy-regional-school-district,Monomoy Regional School District
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,monson,Monson
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,mount-greylock,Mount Greylock
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,nahant,Nahant
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,nantucket,Nantucket
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,narragansett,Narragansett
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,nashoba,Nashoba
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,natick,Natick
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,nauset,Nauset
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,needham,Needham
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,new-bedford,New Bedford
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,new-salem-wendell,New Salem-Wendell
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,newburyport,Newburyport
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,newton,Newton
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,norfolk,Norfolk
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,north-adams,North Adams
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,north-andover,North Andover
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,north-attleborough,North Attleborough
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,north-brookfield,North Brookfield
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,north-middlesex,North Middlesex
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,north-reading,North Reading
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,northampton,Northampton
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,northboro-southboro,Northboro-Southboro
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,northborough,Northborough
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,northbridge,Northbridge
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,norton,Norton
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,norwell,Norwell
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,norwood,Norwood
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,oak-bluffs,Oak Bluffs
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,old-rochester,Old Rochester
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,orange,Orange
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,orleans,Orleans
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,oxford,Oxford
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,palmer,Palmer
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,peabody,Peabody
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,pelham,Pelham
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,pembroke,Pembroke
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,pentucket,Pentucket
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,petersham,Petersham
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,pioneer-valley,Pioneer Valley
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,pittsfield,Pittsfield
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,plainville,Plainville
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,plymouth,Plymouth
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,provincetown,Provincetown
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,quabbin,Quabbin
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,quaboag-regional,Quaboag Regional
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,quincy,Quincy
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,ralph-c-mahar,Ralph C Mahar
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,randolph,Randolph
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,reading,Reading
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,revere,Revere
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,richmond,Richmond
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,rochester,Rochester
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,rockland,Rockland
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,rockport,Rockport
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,rowe,Rowe
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,salem,Salem
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,sandwich,Sandwich
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,saugus,Saugus
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,savoy,Savoy
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,scituate,Scituate
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,seekonk,Seekonk
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,sharon,Sharon
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,sherborn,Sherborn
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,shrewsbury,Shrewsbury
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,shutesbury,Shutesbury
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,silver-lake,Silver Lake
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,somerset,Somerset
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,somerset-berkley-regional-school-district,Somerset Berkley Regional School District
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,somerville,Somerville
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,south-hadley,South Hadley
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,southampton,Southampton
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,southborough,Southborough
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,southbridge,Southbridge
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,southern-berkshire,Southern Berkshire
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,southwick-tolland-granville-regional-school-district,Southwick-Tolland-Granville Regional School District
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,spencer-e-brookfield,Spencer-E Brookfield
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,springfield,Springfield
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,stoneham,Stoneham
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,stoughton,Stoughton
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,sturbridge,Sturbridge
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,sudbury,Sudbury
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,sunderland,Sunderland
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,sutton,Sutton
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,swampscott,Swampscott
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,swansea,Swansea
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,tantasqua,Tantasqua
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,taunton,Taunton
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,tewksbury,Tewksbury
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,tisbury,Tisbury
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,topsfield,Topsfield
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,triton,Triton
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,truro,Truro
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,tyngsborough,Tyngsborough
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,up-island-regional,Up-Island Regional
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,uxbridge,Uxbridge
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,wachusett,Wachusett
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,wakefield,Wakefield
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,wales,Wales
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,walpole,Walpole
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,waltham,Waltham
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,ware,Ware
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,wareham,Wareham
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,warwick,Warwick
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,watertown,Watertown
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,wayland,Wayland
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,webster,Webster
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,wellesley,Wellesley
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,wellfleet,Wellfleet
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,west-boylston,West Boylston
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,west-bridgewater,West Bridgewater
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,west-springfield,West Springfield
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,westborough,Westborough
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,westfield,Westfield
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,westford,Westford
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,westhampton,Westhampton
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,weston,Weston
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,westport,Westport
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,westwood,Westwood
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,weymouth,Weymouth
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,whately,Whately
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,whitman-hanson,Whitman-Hanson
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,williamsburg,Williamsburg
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,wilmington,Wilmington
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,winchendon,Winchendon
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,winchester,Winchester
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,winthrop,Winthrop
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,woburn,Woburn
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,worcester,Worcester
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,worthington,Worthington
+school districts,statewide-all,"Statewide average, all traditional districts",state,286,wrentham,Wrentham
 school districts,region-western,Western MA average,region,64,agawam,Agawam
 school districts,region-western,Western MA average,region,64,amherst,Amherst
 school districts,region-western,Western MA average,region,64,amherst-pelham,Amherst-Pelham
@@ -1889,347 +2175,698 @@ school districts,type-rural-3,"Rural districts, over 21 to 35 students per squar
 school districts,type-rural-3,"Rural districts, over 21 to 35 students per square mile, average",type,18,sturbridge,Sturbridge
 school districts,type-rural-3,"Rural districts, over 21 to 35 students per square mile, average",type,18,westport,Westport
 school districts,type-rural-3,"Rural districts, over 21 to 35 students per square mile, average",type,18,winchendon,Winchendon
-towns,towns-statewide,Statewide towns average,state,341,abington,Abington
-towns,towns-statewide,Statewide towns average,state,341,acton,Acton
-towns,towns-statewide,Statewide towns average,state,341,acushnet,Acushnet
-towns,towns-statewide,Statewide towns average,state,341,adams,Adams
-towns,towns-statewide,Statewide towns average,state,341,agawam,Agawam
-towns,towns-statewide,Statewide towns average,state,341,alford,Alford
-towns,towns-statewide,Statewide towns average,state,341,amesbury,Amesbury
-towns,towns-statewide,Statewide towns average,state,341,amherst,Amherst
-towns,towns-statewide,Statewide towns average,state,341,andover,Andover
-towns,towns-statewide,Statewide towns average,state,341,aquinnah,Aquinnah
-towns,towns-statewide,Statewide towns average,state,341,arlington,Arlington
-towns,towns-statewide,Statewide towns average,state,341,ashburnham,Ashburnham
-towns,towns-statewide,Statewide towns average,state,341,ashby,Ashby
-towns,towns-statewide,Statewide towns average,state,341,ashfield,Ashfield
-towns,towns-statewide,Statewide towns average,state,341,ashland,Ashland
-towns,towns-statewide,Statewide towns average,state,341,athol,Athol
-towns,towns-statewide,Statewide towns average,state,341,attleboro,Attleboro
-towns,towns-statewide,Statewide towns average,state,341,auburn,Auburn
-towns,towns-statewide,Statewide towns average,state,341,avon,Avon
-towns,towns-statewide,Statewide towns average,state,341,ayer,Ayer
-towns,towns-statewide,Statewide towns average,state,341,barnstable,Barnstable
-towns,towns-statewide,Statewide towns average,state,341,barre,Barre
-towns,towns-statewide,Statewide towns average,state,341,becket,Becket
-towns,towns-statewide,Statewide towns average,state,341,bedford,Bedford
-towns,towns-statewide,Statewide towns average,state,341,belchertown,Belchertown
-towns,towns-statewide,Statewide towns average,state,341,bellingham,Bellingham
-towns,towns-statewide,Statewide towns average,state,341,belmont,Belmont
-towns,towns-statewide,Statewide towns average,state,341,berkley,Berkley
-towns,towns-statewide,Statewide towns average,state,341,berlin,Berlin
-towns,towns-statewide,Statewide towns average,state,341,bernardston,Bernardston
-towns,towns-statewide,Statewide towns average,state,341,beverly,Beverly
-towns,towns-statewide,Statewide towns average,state,341,billerica,Billerica
-towns,towns-statewide,Statewide towns average,state,341,blackstone,Blackstone
-towns,towns-statewide,Statewide towns average,state,341,blandford,Blandford
-towns,towns-statewide,Statewide towns average,state,341,bolton,Bolton
-towns,towns-statewide,Statewide towns average,state,341,bourne,Bourne
-towns,towns-statewide,Statewide towns average,state,341,boxborough,Boxborough
-towns,towns-statewide,Statewide towns average,state,341,boxford,Boxford
-towns,towns-statewide,Statewide towns average,state,341,boylston,Boylston
-towns,towns-statewide,Statewide towns average,state,341,braintree,Braintree
-towns,towns-statewide,Statewide towns average,state,341,brewster,Brewster
-towns,towns-statewide,Statewide towns average,state,341,bridgewater,Bridgewater
-towns,towns-statewide,Statewide towns average,state,341,brimfield,Brimfield
-towns,towns-statewide,Statewide towns average,state,341,brookfield,Brookfield
-towns,towns-statewide,Statewide towns average,state,341,brookline,Brookline
-towns,towns-statewide,Statewide towns average,state,341,buckland,Buckland
-towns,towns-statewide,Statewide towns average,state,341,burlington,Burlington
-towns,towns-statewide,Statewide towns average,state,341,cambridge,Cambridge
-towns,towns-statewide,Statewide towns average,state,341,canton,Canton
-towns,towns-statewide,Statewide towns average,state,341,carlisle,Carlisle
-towns,towns-statewide,Statewide towns average,state,341,carver,Carver
-towns,towns-statewide,Statewide towns average,state,341,charlemont,Charlemont
-towns,towns-statewide,Statewide towns average,state,341,charlton,Charlton
-towns,towns-statewide,Statewide towns average,state,341,chatham,Chatham
-towns,towns-statewide,Statewide towns average,state,341,chelmsford,Chelmsford
-towns,towns-statewide,Statewide towns average,state,341,chelsea,Chelsea
-towns,towns-statewide,Statewide towns average,state,341,cheshire,Cheshire
-towns,towns-statewide,Statewide towns average,state,341,chester,Chester
-towns,towns-statewide,Statewide towns average,state,341,chesterfield,Chesterfield
-towns,towns-statewide,Statewide towns average,state,341,chicopee,Chicopee
-towns,towns-statewide,Statewide towns average,state,341,chilmark,Chilmark
-towns,towns-statewide,Statewide towns average,state,341,clarksburg,Clarksburg
-towns,towns-statewide,Statewide towns average,state,341,clinton,Clinton
-towns,towns-statewide,Statewide towns average,state,341,cohasset,Cohasset
-towns,towns-statewide,Statewide towns average,state,341,colrain,Colrain
-towns,towns-statewide,Statewide towns average,state,341,concord,Concord
-towns,towns-statewide,Statewide towns average,state,341,conway,Conway
-towns,towns-statewide,Statewide towns average,state,341,cummington,Cummington
-towns,towns-statewide,Statewide towns average,state,341,dalton,Dalton
-towns,towns-statewide,Statewide towns average,state,341,danvers,Danvers
-towns,towns-statewide,Statewide towns average,state,341,dartmouth,Dartmouth
-towns,towns-statewide,Statewide towns average,state,341,dedham,Dedham
-towns,towns-statewide,Statewide towns average,state,341,deerfield,Deerfield
-towns,towns-statewide,Statewide towns average,state,341,dennis,Dennis
-towns,towns-statewide,Statewide towns average,state,341,dighton,Dighton
-towns,towns-statewide,Statewide towns average,state,341,douglas,Douglas
-towns,towns-statewide,Statewide towns average,state,341,dover,Dover
-towns,towns-statewide,Statewide towns average,state,341,dracut,Dracut
-towns,towns-statewide,Statewide towns average,state,341,dudley,Dudley
-towns,towns-statewide,Statewide towns average,state,341,dunstable,Dunstable
-towns,towns-statewide,Statewide towns average,state,341,duxbury,Duxbury
-towns,towns-statewide,Statewide towns average,state,341,east-bridgewater,East Bridgewater
-towns,towns-statewide,Statewide towns average,state,341,east-brookfield,East Brookfield
-towns,towns-statewide,Statewide towns average,state,341,east-longmeadow,East Longmeadow
-towns,towns-statewide,Statewide towns average,state,341,eastham,Eastham
-towns,towns-statewide,Statewide towns average,state,341,easthampton,Easthampton
-towns,towns-statewide,Statewide towns average,state,341,easton,Easton
-towns,towns-statewide,Statewide towns average,state,341,edgartown,Edgartown
-towns,towns-statewide,Statewide towns average,state,341,egremont,Egremont
-towns,towns-statewide,Statewide towns average,state,341,erving,Erving
-towns,towns-statewide,Statewide towns average,state,341,essex,Essex
-towns,towns-statewide,Statewide towns average,state,341,everett,Everett
-towns,towns-statewide,Statewide towns average,state,341,fairhaven,Fairhaven
-towns,towns-statewide,Statewide towns average,state,341,falmouth,Falmouth
-towns,towns-statewide,Statewide towns average,state,341,fitchburg,Fitchburg
-towns,towns-statewide,Statewide towns average,state,341,florida,Florida
-towns,towns-statewide,Statewide towns average,state,341,foxborough,Foxborough
-towns,towns-statewide,Statewide towns average,state,341,framingham,Framingham
-towns,towns-statewide,Statewide towns average,state,341,franklin,Franklin
-towns,towns-statewide,Statewide towns average,state,341,freetown,Freetown
-towns,towns-statewide,Statewide towns average,state,341,gardner,Gardner
-towns,towns-statewide,Statewide towns average,state,341,georgetown,Georgetown
-towns,towns-statewide,Statewide towns average,state,341,gill,Gill
-towns,towns-statewide,Statewide towns average,state,341,gloucester,Gloucester
-towns,towns-statewide,Statewide towns average,state,341,goshen,Goshen
-towns,towns-statewide,Statewide towns average,state,341,gosnold,Gosnold
-towns,towns-statewide,Statewide towns average,state,341,grafton,Grafton
-towns,towns-statewide,Statewide towns average,state,341,granby,Granby
-towns,towns-statewide,Statewide towns average,state,341,granville,Granville
-towns,towns-statewide,Statewide towns average,state,341,great-barrington,Great Barrington
-towns,towns-statewide,Statewide towns average,state,341,greenfield,Greenfield
-towns,towns-statewide,Statewide towns average,state,341,groton,Groton
-towns,towns-statewide,Statewide towns average,state,341,groveland,Groveland
-towns,towns-statewide,Statewide towns average,state,341,hadley,Hadley
-towns,towns-statewide,Statewide towns average,state,341,halifax,Halifax
-towns,towns-statewide,Statewide towns average,state,341,hamilton,Hamilton
-towns,towns-statewide,Statewide towns average,state,341,hampden,Hampden
-towns,towns-statewide,Statewide towns average,state,341,hancock,Hancock
-towns,towns-statewide,Statewide towns average,state,341,hanover,Hanover
-towns,towns-statewide,Statewide towns average,state,341,hanson,Hanson
-towns,towns-statewide,Statewide towns average,state,341,hardwick,Hardwick
-towns,towns-statewide,Statewide towns average,state,341,harvard,Harvard
-towns,towns-statewide,Statewide towns average,state,341,harwich,Harwich
-towns,towns-statewide,Statewide towns average,state,341,hatfield,Hatfield
-towns,towns-statewide,Statewide towns average,state,341,haverhill,Haverhill
-towns,towns-statewide,Statewide towns average,state,341,hawley,Hawley
-towns,towns-statewide,Statewide towns average,state,341,heath,Heath
-towns,towns-statewide,Statewide towns average,state,341,hingham,Hingham
-towns,towns-statewide,Statewide towns average,state,341,hinsdale,Hinsdale
-towns,towns-statewide,Statewide towns average,state,341,holbrook,Holbrook
-towns,towns-statewide,Statewide towns average,state,341,holden,Holden
-towns,towns-statewide,Statewide towns average,state,341,holland,Holland
-towns,towns-statewide,Statewide towns average,state,341,holliston,Holliston
-towns,towns-statewide,Statewide towns average,state,341,holyoke,Holyoke
-towns,towns-statewide,Statewide towns average,state,341,hopedale,Hopedale
-towns,towns-statewide,Statewide towns average,state,341,hopkinton,Hopkinton
-towns,towns-statewide,Statewide towns average,state,341,hubbardston,Hubbardston
-towns,towns-statewide,Statewide towns average,state,341,hudson,Hudson
-towns,towns-statewide,Statewide towns average,state,341,hull,Hull
-towns,towns-statewide,Statewide towns average,state,341,huntington,Huntington
-towns,towns-statewide,Statewide towns average,state,341,ipswich,Ipswich
-towns,towns-statewide,Statewide towns average,state,341,kingston,Kingston
-towns,towns-statewide,Statewide towns average,state,341,lakeville,Lakeville
-towns,towns-statewide,Statewide towns average,state,341,lancaster,Lancaster
-towns,towns-statewide,Statewide towns average,state,341,lanesborough,Lanesborough
-towns,towns-statewide,Statewide towns average,state,341,lee,Lee
-towns,towns-statewide,Statewide towns average,state,341,leicester,Leicester
-towns,towns-statewide,Statewide towns average,state,341,lenox,Lenox
-towns,towns-statewide,Statewide towns average,state,341,leominster,Leominster
-towns,towns-statewide,Statewide towns average,state,341,leverett,Leverett
-towns,towns-statewide,Statewide towns average,state,341,lexington,Lexington
-towns,towns-statewide,Statewide towns average,state,341,leyden,Leyden
-towns,towns-statewide,Statewide towns average,state,341,lincoln,Lincoln
-towns,towns-statewide,Statewide towns average,state,341,littleton,Littleton
-towns,towns-statewide,Statewide towns average,state,341,longmeadow,Longmeadow
-towns,towns-statewide,Statewide towns average,state,341,ludlow,Ludlow
-towns,towns-statewide,Statewide towns average,state,341,lunenburg,Lunenburg
-towns,towns-statewide,Statewide towns average,state,341,lynnfield,Lynnfield
-towns,towns-statewide,Statewide towns average,state,341,malden,Malden
-towns,towns-statewide,Statewide towns average,state,341,manchester-by-the-sea,Manchester By The Sea
-towns,towns-statewide,Statewide towns average,state,341,mansfield,Mansfield
-towns,towns-statewide,Statewide towns average,state,341,marblehead,Marblehead
-towns,towns-statewide,Statewide towns average,state,341,marion,Marion
-towns,towns-statewide,Statewide towns average,state,341,marlborough,Marlborough
-towns,towns-statewide,Statewide towns average,state,341,marshfield,Marshfield
-towns,towns-statewide,Statewide towns average,state,341,mashpee,Mashpee
-towns,towns-statewide,Statewide towns average,state,341,mattapoisett,Mattapoisett
-towns,towns-statewide,Statewide towns average,state,341,maynard,Maynard
-towns,towns-statewide,Statewide towns average,state,341,medfield,Medfield
-towns,towns-statewide,Statewide towns average,state,341,medford,Medford
-towns,towns-statewide,Statewide towns average,state,341,medway,Medway
-towns,towns-statewide,Statewide towns average,state,341,melrose,Melrose
-towns,towns-statewide,Statewide towns average,state,341,mendon,Mendon
-towns,towns-statewide,Statewide towns average,state,341,merrimac,Merrimac
-towns,towns-statewide,Statewide towns average,state,341,methuen,Methuen
-towns,towns-statewide,Statewide towns average,state,341,middleborough,Middleborough
-towns,towns-statewide,Statewide towns average,state,341,middlefield,Middlefield
-towns,towns-statewide,Statewide towns average,state,341,middleton,Middleton
-towns,towns-statewide,Statewide towns average,state,341,milford,Milford
-towns,towns-statewide,Statewide towns average,state,341,millbury,Millbury
-towns,towns-statewide,Statewide towns average,state,341,millis,Millis
-towns,towns-statewide,Statewide towns average,state,341,millville,Millville
-towns,towns-statewide,Statewide towns average,state,341,milton,Milton
-towns,towns-statewide,Statewide towns average,state,341,monroe,Monroe
-towns,towns-statewide,Statewide towns average,state,341,monson,Monson
-towns,towns-statewide,Statewide towns average,state,341,montague,Montague
-towns,towns-statewide,Statewide towns average,state,341,monterey,Monterey
-towns,towns-statewide,Statewide towns average,state,341,montgomery,Montgomery
-towns,towns-statewide,Statewide towns average,state,341,mount-washington,Mount Washington
-towns,towns-statewide,Statewide towns average,state,341,nahant,Nahant
-towns,towns-statewide,Statewide towns average,state,341,nantucket,Nantucket
-towns,towns-statewide,Statewide towns average,state,341,natick,Natick
-towns,towns-statewide,Statewide towns average,state,341,needham,Needham
-towns,towns-statewide,Statewide towns average,state,341,new-ashford,New Ashford
-towns,towns-statewide,Statewide towns average,state,341,new-braintree,New Braintree
-towns,towns-statewide,Statewide towns average,state,341,new-marlborough,New Marlborough
-towns,towns-statewide,Statewide towns average,state,341,new-salem,New Salem
-towns,towns-statewide,Statewide towns average,state,341,newbury,Newbury
-towns,towns-statewide,Statewide towns average,state,341,newburyport,Newburyport
-towns,towns-statewide,Statewide towns average,state,341,norfolk,Norfolk
-towns,towns-statewide,Statewide towns average,state,341,north-adams,North Adams
-towns,towns-statewide,Statewide towns average,state,341,north-andover,North Andover
-towns,towns-statewide,Statewide towns average,state,341,north-attleborough,North Attleborough
-towns,towns-statewide,Statewide towns average,state,341,north-brookfield,North Brookfield
-towns,towns-statewide,Statewide towns average,state,341,north-reading,North Reading
-towns,towns-statewide,Statewide towns average,state,341,northampton,Northampton
-towns,towns-statewide,Statewide towns average,state,341,northborough,Northborough
-towns,towns-statewide,Statewide towns average,state,341,northbridge,Northbridge
-towns,towns-statewide,Statewide towns average,state,341,northfield,Northfield
-towns,towns-statewide,Statewide towns average,state,341,norton,Norton
-towns,towns-statewide,Statewide towns average,state,341,norwell,Norwell
-towns,towns-statewide,Statewide towns average,state,341,norwood,Norwood
-towns,towns-statewide,Statewide towns average,state,341,oak-bluffs,Oak Bluffs
-towns,towns-statewide,Statewide towns average,state,341,oakham,Oakham
-towns,towns-statewide,Statewide towns average,state,341,orange,Orange
-towns,towns-statewide,Statewide towns average,state,341,orleans,Orleans
-towns,towns-statewide,Statewide towns average,state,341,otis,Otis
-towns,towns-statewide,Statewide towns average,state,341,oxford,Oxford
-towns,towns-statewide,Statewide towns average,state,341,palmer,Palmer
-towns,towns-statewide,Statewide towns average,state,341,paxton,Paxton
-towns,towns-statewide,Statewide towns average,state,341,peabody,Peabody
-towns,towns-statewide,Statewide towns average,state,341,pelham,Pelham
-towns,towns-statewide,Statewide towns average,state,341,pembroke,Pembroke
-towns,towns-statewide,Statewide towns average,state,341,pepperell,Pepperell
-towns,towns-statewide,Statewide towns average,state,341,peru,Peru
-towns,towns-statewide,Statewide towns average,state,341,petersham,Petersham
-towns,towns-statewide,Statewide towns average,state,341,phillipston,Phillipston
-towns,towns-statewide,Statewide towns average,state,341,pittsfield,Pittsfield
-towns,towns-statewide,Statewide towns average,state,341,plainfield,Plainfield
-towns,towns-statewide,Statewide towns average,state,341,plainville,Plainville
-towns,towns-statewide,Statewide towns average,state,341,plymouth,Plymouth
-towns,towns-statewide,Statewide towns average,state,341,plympton,Plympton
-towns,towns-statewide,Statewide towns average,state,341,princeton,Princeton
-towns,towns-statewide,Statewide towns average,state,341,provincetown,Provincetown
-towns,towns-statewide,Statewide towns average,state,341,quincy,Quincy
-towns,towns-statewide,Statewide towns average,state,341,randolph,Randolph
-towns,towns-statewide,Statewide towns average,state,341,raynham,Raynham
-towns,towns-statewide,Statewide towns average,state,341,reading,Reading
-towns,towns-statewide,Statewide towns average,state,341,rehoboth,Rehoboth
-towns,towns-statewide,Statewide towns average,state,341,revere,Revere
-towns,towns-statewide,Statewide towns average,state,341,richmond,Richmond
-towns,towns-statewide,Statewide towns average,state,341,rochester,Rochester
-towns,towns-statewide,Statewide towns average,state,341,rockland,Rockland
-towns,towns-statewide,Statewide towns average,state,341,rockport,Rockport
-towns,towns-statewide,Statewide towns average,state,341,rowe,Rowe
-towns,towns-statewide,Statewide towns average,state,341,rowley,Rowley
-towns,towns-statewide,Statewide towns average,state,341,royalston,Royalston
-towns,towns-statewide,Statewide towns average,state,341,russell,Russell
-towns,towns-statewide,Statewide towns average,state,341,rutland,Rutland
-towns,towns-statewide,Statewide towns average,state,341,salem,Salem
-towns,towns-statewide,Statewide towns average,state,341,salisbury,Salisbury
-towns,towns-statewide,Statewide towns average,state,341,sandisfield,Sandisfield
-towns,towns-statewide,Statewide towns average,state,341,sandwich,Sandwich
-towns,towns-statewide,Statewide towns average,state,341,saugus,Saugus
-towns,towns-statewide,Statewide towns average,state,341,savoy,Savoy
-towns,towns-statewide,Statewide towns average,state,341,scituate,Scituate
-towns,towns-statewide,Statewide towns average,state,341,seekonk,Seekonk
-towns,towns-statewide,Statewide towns average,state,341,sharon,Sharon
-towns,towns-statewide,Statewide towns average,state,341,sheffield,Sheffield
-towns,towns-statewide,Statewide towns average,state,341,shelburne,Shelburne
-towns,towns-statewide,Statewide towns average,state,341,sherborn,Sherborn
-towns,towns-statewide,Statewide towns average,state,341,shirley,Shirley
-towns,towns-statewide,Statewide towns average,state,341,shrewsbury,Shrewsbury
-towns,towns-statewide,Statewide towns average,state,341,shutesbury,Shutesbury
-towns,towns-statewide,Statewide towns average,state,341,somerset,Somerset
-towns,towns-statewide,Statewide towns average,state,341,somerville,Somerville
-towns,towns-statewide,Statewide towns average,state,341,south-hadley,South Hadley
-towns,towns-statewide,Statewide towns average,state,341,southampton,Southampton
-towns,towns-statewide,Statewide towns average,state,341,southborough,Southborough
-towns,towns-statewide,Statewide towns average,state,341,southbridge,Southbridge
-towns,towns-statewide,Statewide towns average,state,341,southwick,Southwick
-towns,towns-statewide,Statewide towns average,state,341,spencer,Spencer
-towns,towns-statewide,Statewide towns average,state,341,sterling,Sterling
-towns,towns-statewide,Statewide towns average,state,341,stockbridge,Stockbridge
-towns,towns-statewide,Statewide towns average,state,341,stoneham,Stoneham
-towns,towns-statewide,Statewide towns average,state,341,stoughton,Stoughton
-towns,towns-statewide,Statewide towns average,state,341,stow,Stow
-towns,towns-statewide,Statewide towns average,state,341,sturbridge,Sturbridge
-towns,towns-statewide,Statewide towns average,state,341,sudbury,Sudbury
-towns,towns-statewide,Statewide towns average,state,341,sunderland,Sunderland
-towns,towns-statewide,Statewide towns average,state,341,sutton,Sutton
-towns,towns-statewide,Statewide towns average,state,341,swampscott,Swampscott
-towns,towns-statewide,Statewide towns average,state,341,swansea,Swansea
-towns,towns-statewide,Statewide towns average,state,341,taunton,Taunton
-towns,towns-statewide,Statewide towns average,state,341,templeton,Templeton
-towns,towns-statewide,Statewide towns average,state,341,tewksbury,Tewksbury
-towns,towns-statewide,Statewide towns average,state,341,tisbury,Tisbury
-towns,towns-statewide,Statewide towns average,state,341,tolland,Tolland
-towns,towns-statewide,Statewide towns average,state,341,topsfield,Topsfield
-towns,towns-statewide,Statewide towns average,state,341,townsend,Townsend
-towns,towns-statewide,Statewide towns average,state,341,truro,Truro
-towns,towns-statewide,Statewide towns average,state,341,tyngsborough,Tyngsborough
-towns,towns-statewide,Statewide towns average,state,341,tyringham,Tyringham
-towns,towns-statewide,Statewide towns average,state,341,upton,Upton
-towns,towns-statewide,Statewide towns average,state,341,uxbridge,Uxbridge
-towns,towns-statewide,Statewide towns average,state,341,wakefield,Wakefield
-towns,towns-statewide,Statewide towns average,state,341,wales,Wales
-towns,towns-statewide,Statewide towns average,state,341,walpole,Walpole
-towns,towns-statewide,Statewide towns average,state,341,waltham,Waltham
-towns,towns-statewide,Statewide towns average,state,341,ware,Ware
-towns,towns-statewide,Statewide towns average,state,341,wareham,Wareham
-towns,towns-statewide,Statewide towns average,state,341,warren,Warren
-towns,towns-statewide,Statewide towns average,state,341,warwick,Warwick
-towns,towns-statewide,Statewide towns average,state,341,washington,Washington
-towns,towns-statewide,Statewide towns average,state,341,watertown,Watertown
-towns,towns-statewide,Statewide towns average,state,341,wayland,Wayland
-towns,towns-statewide,Statewide towns average,state,341,webster,Webster
-towns,towns-statewide,Statewide towns average,state,341,wellesley,Wellesley
-towns,towns-statewide,Statewide towns average,state,341,wellfleet,Wellfleet
-towns,towns-statewide,Statewide towns average,state,341,wendell,Wendell
-towns,towns-statewide,Statewide towns average,state,341,wenham,Wenham
-towns,towns-statewide,Statewide towns average,state,341,west-boylston,West Boylston
-towns,towns-statewide,Statewide towns average,state,341,west-bridgewater,West Bridgewater
-towns,towns-statewide,Statewide towns average,state,341,west-brookfield,West Brookfield
-towns,towns-statewide,Statewide towns average,state,341,west-newbury,West Newbury
-towns,towns-statewide,Statewide towns average,state,341,west-springfield,West Springfield
-towns,towns-statewide,Statewide towns average,state,341,west-stockbridge,West Stockbridge
-towns,towns-statewide,Statewide towns average,state,341,west-tisbury,West Tisbury
-towns,towns-statewide,Statewide towns average,state,341,westborough,Westborough
-towns,towns-statewide,Statewide towns average,state,341,westfield,Westfield
-towns,towns-statewide,Statewide towns average,state,341,westford,Westford
-towns,towns-statewide,Statewide towns average,state,341,westhampton,Westhampton
-towns,towns-statewide,Statewide towns average,state,341,westminster,Westminster
-towns,towns-statewide,Statewide towns average,state,341,weston,Weston
-towns,towns-statewide,Statewide towns average,state,341,westport,Westport
-towns,towns-statewide,Statewide towns average,state,341,westwood,Westwood
-towns,towns-statewide,Statewide towns average,state,341,weymouth,Weymouth
-towns,towns-statewide,Statewide towns average,state,341,whately,Whately
-towns,towns-statewide,Statewide towns average,state,341,whitman,Whitman
-towns,towns-statewide,Statewide towns average,state,341,wilbraham,Wilbraham
-towns,towns-statewide,Statewide towns average,state,341,williamsburg,Williamsburg
-towns,towns-statewide,Statewide towns average,state,341,williamstown,Williamstown
-towns,towns-statewide,Statewide towns average,state,341,wilmington,Wilmington
-towns,towns-statewide,Statewide towns average,state,341,winchendon,Winchendon
-towns,towns-statewide,Statewide towns average,state,341,winchester,Winchester
-towns,towns-statewide,Statewide towns average,state,341,windsor,Windsor
-towns,towns-statewide,Statewide towns average,state,341,winthrop,Winthrop
-towns,towns-statewide,Statewide towns average,state,341,woburn,Woburn
-towns,towns-statewide,Statewide towns average,state,341,worthington,Worthington
-towns,towns-statewide,Statewide towns average,state,341,wrentham,Wrentham
-towns,towns-statewide,Statewide towns average,state,341,yarmouth,Yarmouth
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,abington,Abington
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,acton,Acton
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,acushnet,Acushnet
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,adams,Adams
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,agawam,Agawam
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,alford,Alford
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,amesbury,Amesbury
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,amherst,Amherst
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,andover,Andover
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,aquinnah,Aquinnah
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,arlington,Arlington
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,ashburnham,Ashburnham
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,ashby,Ashby
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,ashfield,Ashfield
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,ashland,Ashland
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,athol,Athol
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,attleboro,Attleboro
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,auburn,Auburn
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,avon,Avon
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,ayer,Ayer
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,barnstable,Barnstable
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,barre,Barre
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,becket,Becket
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,bedford,Bedford
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,belchertown,Belchertown
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,bellingham,Bellingham
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,belmont,Belmont
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,berkley,Berkley
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,berlin,Berlin
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,bernardston,Bernardston
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,beverly,Beverly
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,billerica,Billerica
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,blackstone,Blackstone
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,blandford,Blandford
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,bolton,Bolton
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,bourne,Bourne
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,boxborough,Boxborough
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,boxford,Boxford
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,boylston,Boylston
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,braintree,Braintree
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,brewster,Brewster
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,bridgewater,Bridgewater
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,brimfield,Brimfield
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,brookfield,Brookfield
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,brookline,Brookline
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,buckland,Buckland
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,burlington,Burlington
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,cambridge,Cambridge
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,canton,Canton
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,carlisle,Carlisle
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,carver,Carver
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,charlemont,Charlemont
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,charlton,Charlton
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,chatham,Chatham
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,chelmsford,Chelmsford
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,chelsea,Chelsea
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,cheshire,Cheshire
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,chester,Chester
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,chesterfield,Chesterfield
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,chicopee,Chicopee
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,chilmark,Chilmark
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,clarksburg,Clarksburg
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,clinton,Clinton
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,cohasset,Cohasset
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,colrain,Colrain
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,concord,Concord
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,conway,Conway
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,cummington,Cummington
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,dalton,Dalton
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,danvers,Danvers
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,dartmouth,Dartmouth
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,dedham,Dedham
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,deerfield,Deerfield
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,dennis,Dennis
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,dighton,Dighton
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,douglas,Douglas
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,dover,Dover
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,dracut,Dracut
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,dudley,Dudley
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,dunstable,Dunstable
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,duxbury,Duxbury
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,east-bridgewater,East Bridgewater
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,east-brookfield,East Brookfield
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,east-longmeadow,East Longmeadow
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,eastham,Eastham
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,easthampton,Easthampton
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,easton,Easton
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,edgartown,Edgartown
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,egremont,Egremont
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,erving,Erving
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,essex,Essex
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,everett,Everett
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,fairhaven,Fairhaven
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,falmouth,Falmouth
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,fitchburg,Fitchburg
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,florida,Florida
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,foxborough,Foxborough
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,framingham,Framingham
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,franklin,Franklin
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,freetown,Freetown
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,gardner,Gardner
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,georgetown,Georgetown
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,gill,Gill
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,gloucester,Gloucester
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,goshen,Goshen
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,gosnold,Gosnold
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,grafton,Grafton
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,granby,Granby
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,granville,Granville
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,great-barrington,Great Barrington
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,greenfield,Greenfield
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,groton,Groton
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,groveland,Groveland
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,hadley,Hadley
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,halifax,Halifax
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,hamilton,Hamilton
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,hampden,Hampden
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,hancock,Hancock
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,hanover,Hanover
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,hanson,Hanson
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,hardwick,Hardwick
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,harvard,Harvard
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,harwich,Harwich
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,hatfield,Hatfield
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,haverhill,Haverhill
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,hawley,Hawley
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,heath,Heath
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,hingham,Hingham
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,hinsdale,Hinsdale
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,holbrook,Holbrook
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,holden,Holden
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,holland,Holland
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,holliston,Holliston
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,holyoke,Holyoke
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,hopedale,Hopedale
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,hopkinton,Hopkinton
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,hubbardston,Hubbardston
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,hudson,Hudson
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,hull,Hull
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,huntington,Huntington
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,ipswich,Ipswich
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,kingston,Kingston
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,lakeville,Lakeville
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,lancaster,Lancaster
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,lanesborough,Lanesborough
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,lee,Lee
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,leicester,Leicester
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,lenox,Lenox
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,leominster,Leominster
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,leverett,Leverett
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,lexington,Lexington
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,leyden,Leyden
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,lincoln,Lincoln
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,littleton,Littleton
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,longmeadow,Longmeadow
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,ludlow,Ludlow
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,lunenburg,Lunenburg
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,lynnfield,Lynnfield
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,malden,Malden
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,manchester-by-the-sea,Manchester By The Sea
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,mansfield,Mansfield
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,marblehead,Marblehead
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,marion,Marion
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,marlborough,Marlborough
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,marshfield,Marshfield
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,mashpee,Mashpee
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,mattapoisett,Mattapoisett
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,maynard,Maynard
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,medfield,Medfield
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,medford,Medford
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,medway,Medway
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,melrose,Melrose
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,mendon,Mendon
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,merrimac,Merrimac
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,methuen,Methuen
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,middleborough,Middleborough
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,middlefield,Middlefield
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,middleton,Middleton
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,milford,Milford
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,millbury,Millbury
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,millis,Millis
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,millville,Millville
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,milton,Milton
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,monroe,Monroe
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,monson,Monson
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,montague,Montague
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,monterey,Monterey
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,montgomery,Montgomery
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,mount-washington,Mount Washington
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,nahant,Nahant
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,nantucket,Nantucket
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,natick,Natick
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,needham,Needham
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,new-ashford,New Ashford
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,new-braintree,New Braintree
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,new-marlborough,New Marlborough
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,new-salem,New Salem
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,newbury,Newbury
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,newburyport,Newburyport
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,norfolk,Norfolk
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,north-adams,North Adams
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,north-andover,North Andover
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,north-attleborough,North Attleborough
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,north-brookfield,North Brookfield
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,north-reading,North Reading
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,northampton,Northampton
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,northborough,Northborough
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,northbridge,Northbridge
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,northfield,Northfield
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,norton,Norton
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,norwell,Norwell
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,norwood,Norwood
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,oak-bluffs,Oak Bluffs
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,oakham,Oakham
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,orange,Orange
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,orleans,Orleans
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,otis,Otis
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,oxford,Oxford
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,palmer,Palmer
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,paxton,Paxton
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,peabody,Peabody
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,pelham,Pelham
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,pembroke,Pembroke
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,pepperell,Pepperell
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,peru,Peru
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,petersham,Petersham
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,phillipston,Phillipston
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,pittsfield,Pittsfield
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,plainfield,Plainfield
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,plainville,Plainville
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,plymouth,Plymouth
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,plympton,Plympton
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,princeton,Princeton
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,provincetown,Provincetown
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,quincy,Quincy
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,randolph,Randolph
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,raynham,Raynham
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,reading,Reading
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,rehoboth,Rehoboth
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,revere,Revere
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,richmond,Richmond
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,rochester,Rochester
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,rockland,Rockland
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,rockport,Rockport
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,rowe,Rowe
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,rowley,Rowley
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,royalston,Royalston
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,russell,Russell
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,rutland,Rutland
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,salem,Salem
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,salisbury,Salisbury
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,sandisfield,Sandisfield
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,sandwich,Sandwich
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,saugus,Saugus
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,savoy,Savoy
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,scituate,Scituate
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,seekonk,Seekonk
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,sharon,Sharon
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,sheffield,Sheffield
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,shelburne,Shelburne
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,sherborn,Sherborn
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,shirley,Shirley
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,shrewsbury,Shrewsbury
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,shutesbury,Shutesbury
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,somerset,Somerset
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,somerville,Somerville
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,south-hadley,South Hadley
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,southampton,Southampton
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,southborough,Southborough
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,southbridge,Southbridge
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,southwick,Southwick
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,spencer,Spencer
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,sterling,Sterling
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,stockbridge,Stockbridge
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,stoneham,Stoneham
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,stoughton,Stoughton
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,stow,Stow
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,sturbridge,Sturbridge
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,sudbury,Sudbury
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,sunderland,Sunderland
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,sutton,Sutton
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,swampscott,Swampscott
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,swansea,Swansea
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,taunton,Taunton
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,templeton,Templeton
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,tewksbury,Tewksbury
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,tisbury,Tisbury
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,tolland,Tolland
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,topsfield,Topsfield
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,townsend,Townsend
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,truro,Truro
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,tyngsborough,Tyngsborough
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,tyringham,Tyringham
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,upton,Upton
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,uxbridge,Uxbridge
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,wakefield,Wakefield
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,wales,Wales
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,walpole,Walpole
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,waltham,Waltham
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,ware,Ware
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,wareham,Wareham
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,warren,Warren
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,warwick,Warwick
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,washington,Washington
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,watertown,Watertown
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,wayland,Wayland
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,webster,Webster
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,wellesley,Wellesley
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,wellfleet,Wellfleet
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,wendell,Wendell
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,wenham,Wenham
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,west-boylston,West Boylston
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,west-bridgewater,West Bridgewater
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,west-brookfield,West Brookfield
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,west-newbury,West Newbury
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,west-springfield,West Springfield
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,west-stockbridge,West Stockbridge
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,west-tisbury,West Tisbury
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,westborough,Westborough
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,westfield,Westfield
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,westford,Westford
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,westhampton,Westhampton
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,westminster,Westminster
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,weston,Weston
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,westport,Westport
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,westwood,Westwood
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,weymouth,Weymouth
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,whately,Whately
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,whitman,Whitman
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,wilbraham,Wilbraham
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,williamsburg,Williamsburg
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,williamstown,Williamstown
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,wilmington,Wilmington
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,winchendon,Winchendon
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,winchester,Winchester
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,windsor,Windsor
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,winthrop,Winthrop
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,woburn,Woburn
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,worthington,Worthington
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,wrentham,Wrentham
+towns,towns-statewide,"Statewide towns average, without the 10 largest cities",state,341,yarmouth,Yarmouth
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,abington,Abington
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,acton,Acton
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,acushnet,Acushnet
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,adams,Adams
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,agawam,Agawam
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,alford,Alford
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,amesbury,Amesbury
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,amherst,Amherst
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,andover,Andover
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,aquinnah,Aquinnah
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,arlington,Arlington
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,ashburnham,Ashburnham
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,ashby,Ashby
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,ashfield,Ashfield
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,ashland,Ashland
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,athol,Athol
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,attleboro,Attleboro
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,auburn,Auburn
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,avon,Avon
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,ayer,Ayer
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,barnstable,Barnstable
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,barre,Barre
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,becket,Becket
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,bedford,Bedford
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,belchertown,Belchertown
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,bellingham,Bellingham
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,belmont,Belmont
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,berkley,Berkley
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,berlin,Berlin
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,bernardston,Bernardston
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,beverly,Beverly
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,billerica,Billerica
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,blackstone,Blackstone
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,blandford,Blandford
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,bolton,Bolton
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,boston,Boston
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,bourne,Bourne
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,boxborough,Boxborough
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,boxford,Boxford
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,boylston,Boylston
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,braintree,Braintree
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,brewster,Brewster
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,bridgewater,Bridgewater
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,brimfield,Brimfield
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,brockton,Brockton
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,brookfield,Brookfield
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,brookline,Brookline
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,buckland,Buckland
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,burlington,Burlington
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,cambridge,Cambridge
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,canton,Canton
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,carlisle,Carlisle
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,carver,Carver
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,charlemont,Charlemont
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,charlton,Charlton
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,chatham,Chatham
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,chelmsford,Chelmsford
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,chelsea,Chelsea
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,cheshire,Cheshire
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,chester,Chester
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,chesterfield,Chesterfield
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,chicopee,Chicopee
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,chilmark,Chilmark
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,clarksburg,Clarksburg
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,clinton,Clinton
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,cohasset,Cohasset
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,colrain,Colrain
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,concord,Concord
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,conway,Conway
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,cummington,Cummington
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,dalton,Dalton
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,danvers,Danvers
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,dartmouth,Dartmouth
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,dedham,Dedham
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,deerfield,Deerfield
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,dennis,Dennis
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,dighton,Dighton
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,douglas,Douglas
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,dover,Dover
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,dracut,Dracut
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,dudley,Dudley
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,dunstable,Dunstable
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,duxbury,Duxbury
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,east-bridgewater,East Bridgewater
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,east-brookfield,East Brookfield
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,east-longmeadow,East Longmeadow
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,eastham,Eastham
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,easthampton,Easthampton
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,easton,Easton
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,edgartown,Edgartown
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,egremont,Egremont
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,erving,Erving
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,essex,Essex
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,everett,Everett
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,fairhaven,Fairhaven
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,fall-river,Fall River
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,falmouth,Falmouth
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,fitchburg,Fitchburg
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,florida,Florida
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,foxborough,Foxborough
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,framingham,Framingham
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,franklin,Franklin
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,freetown,Freetown
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,gardner,Gardner
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,georgetown,Georgetown
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,gill,Gill
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,gloucester,Gloucester
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,goshen,Goshen
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,gosnold,Gosnold
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,grafton,Grafton
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,granby,Granby
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,granville,Granville
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,great-barrington,Great Barrington
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,greenfield,Greenfield
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,groton,Groton
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,groveland,Groveland
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,hadley,Hadley
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,halifax,Halifax
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,hamilton,Hamilton
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,hampden,Hampden
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,hancock,Hancock
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,hanover,Hanover
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,hanson,Hanson
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,hardwick,Hardwick
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,harvard,Harvard
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,harwich,Harwich
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,hatfield,Hatfield
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,haverhill,Haverhill
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,hawley,Hawley
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,heath,Heath
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,hingham,Hingham
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,hinsdale,Hinsdale
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,holbrook,Holbrook
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,holden,Holden
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,holland,Holland
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,holliston,Holliston
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,holyoke,Holyoke
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,hopedale,Hopedale
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,hopkinton,Hopkinton
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,hubbardston,Hubbardston
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,hudson,Hudson
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,hull,Hull
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,huntington,Huntington
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,ipswich,Ipswich
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,kingston,Kingston
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,lakeville,Lakeville
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,lancaster,Lancaster
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,lanesborough,Lanesborough
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,lawrence,Lawrence
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,lee,Lee
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,leicester,Leicester
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,lenox,Lenox
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,leominster,Leominster
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,leverett,Leverett
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,lexington,Lexington
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,leyden,Leyden
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,lincoln,Lincoln
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,littleton,Littleton
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,longmeadow,Longmeadow
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,lowell,Lowell
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,ludlow,Ludlow
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,lunenburg,Lunenburg
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,lynn,Lynn
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,lynnfield,Lynnfield
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,malden,Malden
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,manchester-by-the-sea,Manchester By The Sea
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,mansfield,Mansfield
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,marblehead,Marblehead
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,marion,Marion
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,marlborough,Marlborough
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,marshfield,Marshfield
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,mashpee,Mashpee
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,mattapoisett,Mattapoisett
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,maynard,Maynard
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,medfield,Medfield
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,medford,Medford
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,medway,Medway
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,melrose,Melrose
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,mendon,Mendon
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,merrimac,Merrimac
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,methuen,Methuen
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,middleborough,Middleborough
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,middlefield,Middlefield
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,middleton,Middleton
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,milford,Milford
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,millbury,Millbury
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,millis,Millis
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,millville,Millville
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,milton,Milton
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,monroe,Monroe
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,monson,Monson
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,montague,Montague
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,monterey,Monterey
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,montgomery,Montgomery
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,mount-washington,Mount Washington
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,nahant,Nahant
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,nantucket,Nantucket
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,natick,Natick
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,needham,Needham
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,new-ashford,New Ashford
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,new-bedford,New Bedford
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,new-braintree,New Braintree
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,new-marlborough,New Marlborough
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,new-salem,New Salem
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,newbury,Newbury
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,newburyport,Newburyport
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,newton,Newton
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,norfolk,Norfolk
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,north-adams,North Adams
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,north-andover,North Andover
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,north-attleborough,North Attleborough
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,north-brookfield,North Brookfield
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,north-reading,North Reading
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,northampton,Northampton
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,northborough,Northborough
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,northbridge,Northbridge
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,northfield,Northfield
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,norton,Norton
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,norwell,Norwell
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,norwood,Norwood
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,oak-bluffs,Oak Bluffs
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,oakham,Oakham
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,orange,Orange
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,orleans,Orleans
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,otis,Otis
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,oxford,Oxford
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,palmer,Palmer
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,paxton,Paxton
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,peabody,Peabody
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,pelham,Pelham
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,pembroke,Pembroke
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,pepperell,Pepperell
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,peru,Peru
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,petersham,Petersham
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,phillipston,Phillipston
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,pittsfield,Pittsfield
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,plainfield,Plainfield
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,plainville,Plainville
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,plymouth,Plymouth
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,plympton,Plympton
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,princeton,Princeton
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,provincetown,Provincetown
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,quincy,Quincy
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,randolph,Randolph
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,raynham,Raynham
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,reading,Reading
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,rehoboth,Rehoboth
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,revere,Revere
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,richmond,Richmond
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,rochester,Rochester
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,rockland,Rockland
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,rockport,Rockport
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,rowe,Rowe
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,rowley,Rowley
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,royalston,Royalston
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,russell,Russell
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,rutland,Rutland
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,salem,Salem
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,salisbury,Salisbury
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,sandisfield,Sandisfield
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,sandwich,Sandwich
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,saugus,Saugus
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,savoy,Savoy
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,scituate,Scituate
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,seekonk,Seekonk
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,sharon,Sharon
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,sheffield,Sheffield
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,shelburne,Shelburne
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,sherborn,Sherborn
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,shirley,Shirley
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,shrewsbury,Shrewsbury
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,shutesbury,Shutesbury
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,somerset,Somerset
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,somerville,Somerville
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,south-hadley,South Hadley
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,southampton,Southampton
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,southborough,Southborough
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,southbridge,Southbridge
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,southwick,Southwick
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,spencer,Spencer
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,springfield,Springfield
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,sterling,Sterling
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,stockbridge,Stockbridge
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,stoneham,Stoneham
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,stoughton,Stoughton
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,stow,Stow
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,sturbridge,Sturbridge
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,sudbury,Sudbury
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,sunderland,Sunderland
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,sutton,Sutton
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,swampscott,Swampscott
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,swansea,Swansea
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,taunton,Taunton
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,templeton,Templeton
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,tewksbury,Tewksbury
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,tisbury,Tisbury
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,tolland,Tolland
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,topsfield,Topsfield
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,townsend,Townsend
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,truro,Truro
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,tyngsborough,Tyngsborough
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,tyringham,Tyringham
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,upton,Upton
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,uxbridge,Uxbridge
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,wakefield,Wakefield
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,wales,Wales
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,walpole,Walpole
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,waltham,Waltham
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,ware,Ware
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,wareham,Wareham
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,warren,Warren
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,warwick,Warwick
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,washington,Washington
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,watertown,Watertown
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,wayland,Wayland
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,webster,Webster
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,wellesley,Wellesley
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,wellfleet,Wellfleet
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,wendell,Wendell
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,wenham,Wenham
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,west-boylston,West Boylston
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,west-bridgewater,West Bridgewater
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,west-brookfield,West Brookfield
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,west-newbury,West Newbury
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,west-springfield,West Springfield
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,west-stockbridge,West Stockbridge
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,west-tisbury,West Tisbury
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,westborough,Westborough
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,westfield,Westfield
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,westford,Westford
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,westhampton,Westhampton
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,westminster,Westminster
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,weston,Weston
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,westport,Westport
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,westwood,Westwood
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,weymouth,Weymouth
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,whately,Whately
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,whitman,Whitman
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,wilbraham,Wilbraham
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,williamsburg,Williamsburg
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,williamstown,Williamstown
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,wilmington,Wilmington
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,winchendon,Winchendon
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,winchester,Winchester
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,windsor,Windsor
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,winthrop,Winthrop
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,woburn,Woburn
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,worcester,Worcester
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,worthington,Worthington
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,wrentham,Wrentham
+towns,towns-statewide-all,"Statewide towns average, all 351 cities and towns",state,351,yarmouth,Yarmouth
 towns,towns-under-1000,"Towns under 1,000 average",peer,26,alford,Alford
 towns,towns-under-1000,"Towns under 1,000 average",peer,26,aquinnah,Aquinnah
 towns,towns-under-1000,"Towns under 1,000 average",peer,26,cummington,Cummington

@@ -17,8 +17,8 @@ import { groupedPicker, type Picker } from "./picker";
 type Values = Val[];
 
 /** Ids to compare with, one per "Compare with" choice; null where there is none */
-type CmpIds = Partial<Record<"cohort" | "cohort_state" | "region" | "state" | "gateway" | "type" | "fifth", string | null>>;
-type TownCmpIds = Partial<Record<"peer" | "peer_state" | "region" | "state" | "gateway" | "type" | "fifth", string | null>>;
+type CmpIds = Partial<Record<"cohort" | "cohort_state" | "region" | "state" | "state_all" | "gateway" | "type" | "fifth", string | null>>;
+type TownCmpIds = Partial<Record<"peer" | "peer_state" | "region" | "state" | "state_all" | "gateway" | "type" | "fifth", string | null>>;
 /** Which fifth of the state a town, or a district's towns together, falls in by income per resident (1 lowest) */
 interface IncomeFifth { fifth: number; income_pc: number; year: number }
 /** The Inner Core (Boston and its densest neighbors), the other Gateway Cities, rural, or suburban and
@@ -197,8 +197,8 @@ interface Data {
   former?: Listed[];
 }
 
-type Compare = "none" | "cohort" | "cohort-state" | "region" | "state" | "gateway" | "type" | "fifth" | "other";
-type TownCompare = "none" | "peer" | "peer-state" | "region" | "state" | "gateway" | "type" | "fifth" | "other";
+type Compare = "none" | "cohort" | "cohort-state" | "region" | "state" | "state-all" | "gateway" | "type" | "fifth" | "other";
+type TownCompare = "none" | "peer" | "peer-state" | "region" | "state" | "state-all" | "gateway" | "type" | "fifth" | "other";
 /** "nominal", or the fiscal year whose dollars every year is restated in ("2018") */
 type Dollars = string;
 /** What the town view's dollars are divided by, or "total" for the town's whole dollars */
@@ -221,17 +221,20 @@ const LINES: Line[] = ["trend", "cmp", "day", "cday"];
 // Each comparison choice, as the ids to try in order: "Its cohort in its region" falls
 // back to the statewide cohort where a region has too few districts of that size
 const CHAIN = {
-  cohort: ["cohort", "cohort_state"], "cohort-state": ["cohort_state"], region: ["region"], state: ["state"], gateway: ["gateway"],
+  // Two statewide averages: without the very large (state), and with them (state-all)
+  cohort: ["cohort", "cohort_state"], "cohort-state": ["cohort_state"], region: ["region"], state: ["state"],
+  "state-all": ["state_all"], gateway: ["gateway"],
   type: ["type"], fifth: ["fifth"],
 } as const;
 const TOWN_CHAIN = {
-  peer: ["peer", "peer_state"], "peer-state": ["peer_state"], region: ["region"], state: ["state"], gateway: ["gateway"],
+  peer: ["peer", "peer_state"], "peer-state": ["peer_state"], region: ["region"], state: ["state"],
+  "state-all": ["state_all"], gateway: ["gateway"],
   type: ["type"], fifth: ["fifth"],
 } as const;
 /** The Compare with choices that stand for a group relative to the district or town, named under the menu */
 const RELATIVE_COMPARES = new Set<string>(["cohort", "cohort-state", "peer", "peer-state", "region", "type", "fifth"]);
-const COMPARES: Compare[] = ["none", "cohort", "cohort-state", "region", "state", "gateway", "type", "fifth", "other"];
-const TOWN_COMPARES: TownCompare[] = ["none", "peer", "peer-state", "region", "state", "gateway", "type", "fifth", "other"];
+const COMPARES: Compare[] = ["none", "cohort", "cohort-state", "region", "state", "state-all", "gateway", "type", "fifth", "other"];
+const TOWN_COMPARES: TownCompare[] = ["none", "peer", "peer-state", "region", "state", "state-all", "gateway", "type", "fifth", "other"];
 const FIFTH_NAMES = ["", "Lowest", "Second", "Middle", "Fourth", "Highest"];
 /** "Middle income fifth: $47,294 per resident, 2023", for a district's or town's heading */
 function incomeText(i: IncomeFifth | undefined, district: boolean) {

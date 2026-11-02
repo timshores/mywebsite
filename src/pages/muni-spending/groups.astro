@@ -40,9 +40,28 @@ const sizes = SIZES.map((k) => {
   const name = c.label.split(" (")[0];
   return `${name} ${lo === 0 ? `up to ${num(hi!)}` : hi == null ? `over ${num(lo! - 1)}` : `${num(lo!)}–${num(hi)}`}`;
 }).join(", ");
-const veryLarge = (explorer.districts as { cohort: string | null }[]).filter((d) => d.cohort === "XLARGE").length;
+const and = (xs: string[]) => (xs.length < 2 ? xs.join("") : `${xs.slice(0, -1).join(", ")} and ${xs[xs.length - 1]}`);
+const pct = (x: number) => `${Math.round(x * 100)}%`;
+// The very large districts, largest first, and their share of the pupils in traditional districts
+type ListedDistrict = { id: string; name: string; type: string; cohort: string | null; region: string | null; fte: number };
+const traditional = (explorer.districts as ListedDistrict[]).filter((d) => d.type === "traditional");
+const big = traditional.filter((d) => d.cohort === "XLARGE").sort((x, y) => y.fte - x.fte);
+const pupils = traditional.reduce((n, d) => n + d.fte, 0);
+const bigShare = pct(big.reduce((n, d) => n + d.fte, 0) / pupils);
+const largestShare = pct(big[0].fte / pupils);
+const pooledN = traditional.length - big.length;
+const regionNames = meta.regions as Record<string, string>;
+// Which of them each region leaves out, in the explorer's order of regions
+const byRegion = Object.entries(regionNames).map(([rk, rl]) => [rl, big.filter((d) => d.region === rk).map((d) => d.name)] as const)
+  .filter(([, names]) => names.length).map(([rl, names]) => `${and(names)} in ${rl === "Boston area" ? "the Boston area" : rl}`).join("; ");
+// The cities set apart on the Towns tab, and their share of the state's residents
 const apart = towns.meta.apart as string[];
-const apartList = `${apart.slice(0, -1).join(", ")} and ${apart[apart.length - 1]}`;
+const townFiles = import.meta.glob<{ default: { towns: { kind: string; name: string; pop: (number | null)[] }[] } }>(
+  "../../data/massppe/towns/*.json", { eager: true });
+const latestPop = Object.values(townFiles).flatMap((f) => f.default.towns).filter((t) => t.kind === "town")
+  .map((t) => ({ name: t.name, pop: t.pop[t.pop.length - 1] ?? 0 }));
+const residents = latestPop.reduce((n, t) => n + t.pop, 0);
+const apartShare = pct(latestPop.filter((t) => apart.includes(t.name)).reduce((n, t) => n + t.pop, 0) / residents);
 const peers = (towns.meta.peers as { label: string }[]).map((p) => p.label.replace(/ residents$/, "")).join("; ");
 const fifths = mapData.meta.fifths as { towns: number[]; districts: number[]; year: number };
 const fifthText = (c: number[]) => `lowest, under ${usd(c[0])}; second, ${usd(c[0])}–${usd(c[1] - 1)}; middle, ` +
@@ -60,14 +79,23 @@ const gatewayN = all.districts.find((g) => g.scope === "group")?.members.length 
 // a kind not named here still shows
 const KINDS: Record<"districts" | "towns", [string, string, string][]> = {
   districts: [
-    ["state", "Statewide", `Every traditional district except the ${veryLarge} very large ones, over 10,000 in-district ` +
-      `pupils, which are a cohort of their own. Spending averages weight each district by its in-district FTE pupils; ` +
-      `Chapter 70 averages, by foundation enrollment. From ${HUB} and DESE's ${C70}.`],
-    ["region", "Regions", "The state's six Executive Office of Health and Human Services (EOHHS) regions, as DESE assigns " +
-      `districts to them in its ${E2C}: traditional districts, less the very large.`],
-    ["cohort", "Cohorts", `Traditional districts by FY${latest} in-district FTE pupils: ${sizes}. The boundaries are those ` +
+    ["state", "Statewide", `Two statewide averages of the traditional districts, those run by a city or town, or by ` +
+      `several towns together, rather than vocational schools or charter schools: one without the ${big.length} very ` +
+      `large ones, those with more than 10,000 in-district pupils, and one with them. The ${big.length} are ` +
+      `${and(big.map((d) => d.name))}. Together they teach ${bigShare} of the pupils in traditional districts, so in an ` +
+      `average weighted by pupils they carry ${bigShare} of its weight between them, ${big[0].name} ${largestShare} on ` +
+      `its own. The average without them, the explorer's usual comparison, follows ${REPORT}, which left Springfield ` +
+      `out of its Western MA average; it covers the other ${pooledN}. The average with them covers all ` +
+      `${traditional.length}. The ${big.length} also have an average of their own: Very large, under Cohorts. ` +
+      `Spending averages weight each district by its in-district pupils (full-time ` +
+      `equivalents); Chapter 70 averages, by foundation enrollment. From ${HUB} and DESE's ${C70}.`],
+    ["region", "Regions", "The six regions of the state's Executive Office of Health and Human Services (EOHHS), each " +
+      `district in the one DESE assigns it in its ${E2C}. Each region's average covers its traditional districts but ` +
+      "not its very large ones, those with more than 10,000 pupils, which would weigh heavily in an average weighted by " +
+      `pupils: ${byRegion}.`],
+    ["cohort", "Cohorts", `Traditional districts by FY${latest} in-district pupils: ${sizes}. The boundaries are those ` +
       `${REPORT} set from FY2024 Western MA enrollment. Vocational and technical districts and charter schools are ` +
-      `cohorts of their own. Enrollment from ${HUB}.`],
+      `cohorts of their own. Very large is the ${big.length} named under Statewide. Enrollment from ${HUB}.`],
     ["region-cohort", "Cohorts by region", "Each cohort within each region, where at least three districts share both. " +
       "Where they don't, “Its cohort in its region” compares with the cohort statewide."],
     ["group", "Gateway Cities", `The ${gatewayN} cities on ${GATEWAY} of Gateway Cities, from 2014. State law (M.G.L. ` +
@@ -85,15 +113,23 @@ const KINDS: Record<"districts" | "towns", [string, string, string][]> = {
       `${POP.replace("estimates", "estimate")} for July ${fifths.year}.`],
   ],
   towns: [
-    ["state", "Statewide", `Every city and town except the ${apart.length} whose own school districts are very large: ` +
-      `${apartList}. Each average pools its towns: their combined dollars over their combined residents. Budgets from ` +
-      `the Division of Local Services' ${DLS}; population from the Census Bureau's ${POP}.`],
-    ["region", "Regions", `The same six EOHHS regions, less the ${apart.length} cities set apart.`],
+    ["state", "Statewide", `Two statewide averages: one without the ${apart.length} cities whose school districts have ` +
+      `more than 10,000 pupils, and one with them. The ${apart.length} are ${and(apart)}. They're home to ` +
+      `${apartShare} of the state's residents, so in an average that pools dollars and residents they carry ` +
+      `${apartShare} of its weight. The average without them, the explorer's usual comparison, covers the other ` +
+      `${latestPop.length - apart.length}; the average with them, all ${latestPop.length}. Each average pools its towns: their ` +
+      `combined dollars over their combined residents. Budgets from the Division of Local Services' ${DLS}; population ` +
+      `from the Census Bureau's ${POP}.`],
+    ["region", "Regions", "The same six EOHHS regions: a town's region is its school district's, or, for the few towns " +
+      "without one, its county's. Each region's average leaves out its cities whose school districts have more than " +
+      `10,000 pupils: ${byRegion}.`],
     ["peer", "Peer groups by population", `Towns by the Census Bureau's estimate of their population on July 1, ` +
-      `${towns.meta.peer_year}: ${peers}. The ${apart.length} cities set apart are in none.`],
+      `${towns.meta.peer_year}: ${peers}. The ${apart.length} cities whose school districts have more than 10,000 ` +
+      "pupils are in none."],
     ["region-peer", "Peer groups by population and region", "Each peer group within each region, where at least three " +
       "towns share both. Where they don't, “Its peer group in its region” compares with the peer group statewide."],
-    ["group", "Gateway Cities", `The same ${gatewayN} cities, the very large ones included.`],
+    ["group", "Gateway Cities", `The same ${gatewayN} cities, all of them, including those whose school districts have ` +
+      "more than 10,000 pupils."],
     ["type", "Community types", `Rural: under 500 residents per square mile, the line in the ${RURAL_PLAN} for the ` +
       "Commonwealth's Rural Policy Advisory Commission. Inner Core, Gateway Cities outside it, and suburban and other, " +
       `as for districts. Land areas from the Census Bureau's ${LAND}.`],
@@ -124,9 +160,17 @@ const sections = VIEWS.map((v) => {
     The explorer's <a href="/muni-spending/?view=data">Data tab</a> has the rest of its sources. The groups and
     their members in one file: <a href="/muni-spending/data/groups.csv" download>CSV</a>.
   </p>
-  <nav class="jump" aria-label="Sections">
-    {sections.map((v) => <a href={`#${v.key}`}>{v.title}</a>)}
-  </nav>
+  <!-- Stays at the top as the page scrolls: the sections, and the dial that hides the explanations -->
+  <div class="bar">
+    <nav class="jump" aria-label="Sections">
+      {sections.map((v) => <a href={`#${v.key}`}>{v.title}</a>)}
+    </nav>
+    <button type="button" class="dial" id="notes-dial" role="switch" aria-checked="true">
+      <span class="dial-label">Explanations</span>
+      <span class="dial-face" aria-hidden="true"><span class="dial-pointer"></span></span>
+      <span class="dial-state" aria-hidden="true">On</span>
+    </button>
+  </div>
 
   {sections.map((v) => (
     <section id={v.key} class="view">
@@ -164,6 +208,15 @@ const sections = VIEWS.map((v) => {
   };
   openTarget();
   window.addEventListener("hashchange", openTarget);
+
+  // Explanations on or off: off leaves the headings and the groups
+  const dial = document.getElementById("notes-dial");
+  dial.addEventListener("click", () => {
+    const on = dial.getAttribute("aria-checked") !== "true";
+    dial.setAttribute("aria-checked", String(on));
+    dial.querySelector(".dial-state").textContent = on ? "On" : "Off";
+    document.body.classList.toggle("notes-off", !on);
+  });
 </script>
 
 <style>
@@ -177,18 +230,106 @@ const sections = VIEWS.map((v) => {
   }
 
   .lede {
-    max-width: 62ch;
+    max-width: none;
+  }
+
+  /* The bar: section links at the left, the dial at the right, held at the top of the screen */
+  .bar {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem 1.25rem;
+    margin: 0.4rem 0 0.5rem;
+    padding: 0.5rem 0;
+    background: var(--paper);
+    border-bottom: 1px solid var(--line);
   }
 
   .jump {
     display: flex;
     gap: 1.25rem;
-    margin: 0.4rem 0 0.5rem;
     font-size: 0.95rem;
   }
 
-  .view {
-    scroll-margin-top: 1rem;
+  /* The dial: a knob turned right for on, left for off, as on the explorer's Detail dial */
+  .dial {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    font: inherit;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--ink-soft);
+    background: none;
+    border: 0;
+    padding: 0.25rem 0.35rem;
+    cursor: pointer;
+  }
+
+  .dial:hover {
+    color: var(--ink);
+  }
+
+  .dial:focus-visible {
+    outline: 2px dashed var(--accent);
+    outline-offset: 2px;
+    border-radius: 6px;
+  }
+
+  .dial-face {
+    position: relative;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    border: 1.5px solid var(--ink-soft);
+    background: radial-gradient(circle at 40% 35%, #fff 0%, #efe8dc 75%);
+    box-shadow: 0 1px 2px rgba(31, 31, 28, 0.25);
+    transform: rotate(50deg);
+    transition: transform 0.25s ease;
+  }
+
+  .dial-pointer {
+    position: absolute;
+    top: 2px;
+    left: 50%;
+    width: 3px;
+    height: 9px;
+    border-radius: 2px;
+    background: var(--accent);
+    transform: translateX(-50%);
+  }
+
+  .dial[aria-checked="false"] .dial-face {
+    transform: rotate(-50deg);
+  }
+
+  .dial[aria-checked="false"] .dial-pointer {
+    background: var(--ink-soft);
+  }
+
+  .dial-state {
+    min-width: 1.6em;
+    text-align: left;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .dial-face {
+      transition: none;
+    }
+  }
+
+  :global(body.notes-off) .note {
+    display: none;
+  }
+
+  /* Headings jumped to land below the bar, which wraps to two lines on a phone */
+  .view,
+  details {
+    scroll-margin-top: 6rem;
   }
 
   h3 {
@@ -197,16 +338,15 @@ const sections = VIEWS.map((v) => {
     color: var(--ink-soft);
   }
 
-  /* How each kind is drawn: the body's own type, a little smaller, above its groups */
+  /* How each kind is drawn: the body's own type, a little smaller, above its groups, the page's full width */
   .note {
-    max-width: 72ch;
+    max-width: none;
     font-size: 0.92rem;
     margin-bottom: 0.6rem;
   }
 
   details {
     border-top: 1px solid var(--line);
-    scroll-margin-top: 1rem;
   }
 
   details:last-of-type {
