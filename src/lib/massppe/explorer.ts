@@ -1786,8 +1786,11 @@ export async function startExplorer() {
       val.classList.add("has-pie");
       val.append(pie(share.v, share.title));
     }
-    div.append(text("div", label, "tile-label"), val);
-    details.filter(Boolean).forEach((d) => div.append(text("div", d, "tile-detail")));
+    // Three rows, label, value, details, that line up with the tiles beside it (the page's subgrid)
+    const more = document.createElement("div");
+    more.className = "tile-details";
+    details.filter(Boolean).forEach((d) => more.append(text("div", d, "tile-detail")));
+    div.append(text("div", label, "tile-label"), val, more);
     return div;
   }
 

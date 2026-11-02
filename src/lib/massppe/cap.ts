@@ -934,8 +934,10 @@ export function startCap(root: HTMLElement, data: CapData, opts: { town: string 
 
   function tile(label: string, value: string, details: string[]) {
     const d = el("div", "tile");
-    d.append(el("div", "tile-label", label), el("div", "tile-value", value));
-    details.forEach((x) => d.append(el("div", "tile-detail", x)));
+    // Label, value, details: three rows that line up across the tiles (the page's subgrid)
+    const more = el("div", "tile-details");
+    details.forEach((x) => more.append(el("div", "tile-detail", x)));
+    d.append(el("div", "tile-label", label), el("div", "tile-value", value), more);
     return d;
   }
 

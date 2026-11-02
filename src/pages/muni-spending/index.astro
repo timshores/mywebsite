@@ -244,8 +244,9 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
 
     <section id="cap-view" class="cap-view" data-view-only="cap" hidden>
       <h2 class="cap-title">The 82.5% cap</h2>
-      <!-- The campaign's credit, in one line, wherever the intro that names it isn't showing -->
-      <p class="cap-credit">Campaign: MASS Promise to Invest, <a href="https://masspromise2invest.org/">masspromise2invest.org</a></p>
+      <!-- A hat tip to the campaign, in one line, wherever the intro that names it isn't showing; worded so it
+           doesn't read as Tim's own campaign (#183) -->
+      <p class="cap-credit">Hat tip to the folks behind the MASS Promise to Invest campaign, <a href="https://masspromise2invest.org/">masspromise2invest.org</a></p>
       <details class="intro" id="cap-intro" data-remember="cap-intro">
       <summary>About this tab</summary>
       <p class="cap-lede">
@@ -1981,7 +1982,14 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
     margin-bottom: 1.8rem;
   }
 
+  /* Each tile takes three of the row's tracks, label, value, details, so the values and their pies line up
+     card to card however many lines a label wraps to (#182) */
   .tiles :global(.tile) {
+    display: grid;
+    grid-row: span 3;
+    grid-template-rows: subgrid;
+    row-gap: 0;
+    align-content: start;
     border: 1px solid var(--line);
     border-radius: 12px;
     padding: 0.8rem 0.9rem;
@@ -4143,7 +4151,12 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
     gap: 0.75rem;
   }
 
+  /* As the explorer's tiles: label, value, and details line up across a row (#182) */
   .explorer :global(.cap-tiles .tile) {
+    display: grid;
+    grid-row: span 3;
+    grid-template-rows: subgrid;
+    row-gap: 0;
     border: 1px solid var(--line);
     border-radius: 12px;
     padding: 0.8rem 0.9rem;
