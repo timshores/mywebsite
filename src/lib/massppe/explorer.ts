@@ -7,7 +7,7 @@
 // rather than fetched, the data ships as hashed JavaScript chunks, which the host
 // compresses (it sends .json uncompressed).
 
-import { compact, lines, niceTicks, niceTicksRange, stackedColumns, type Panel, type Series, type Val } from "./charts";
+import { compact, lines, niceTicks, niceTicksRange, stackedColumns, svgEl, type Panel, type Series, type Val } from "./charts";
 import { closeEnlarged, enlargeButton } from "./enlarge";
 import type { CapData } from "./cap";
 import type { CwData } from "./commonwealth";
@@ -1777,12 +1777,36 @@ export async function startExplorer() {
   }
 
   // ---- Stat tiles ----
-  function tile(label: string, value: string, details: string[]) {
+  /** A headline tile; with a share, a small pie of it beside the value */
+  function tile(label: string, value: string, details: string[], share?: { v: number; title: string } | null) {
     const div = document.createElement("div");
     div.className = "tile";
-    div.append(text("div", label, "tile-label"), text("div", value, "tile-value"));
+    const val = text("div", value, "tile-value");
+    if (share) {
+      val.classList.add("has-pie");
+      val.append(pie(share.v, share.title));
+    }
+    div.append(text("div", label, "tile-label"), val);
     details.filter(Boolean).forEach((d) => div.append(text("div", d, "tile-detail")));
     return div;
+  }
+
+  /** A tile's pie: one share of a whole, clockwise from twelve o'clock. The tile's text carries the figure, so
+   *  screen readers skip it; the hover title says what it shows. Ringed, so the whole reads against the page. */
+  function pie(f: number, title: string) {
+    const R = 15;
+    const svg = svgEl("svg", { viewBox: "-16 -16 32 32", class: "tile-pie", "aria-hidden": "true" });
+    svgEl("title", {}, svg).textContent = title;
+    svgEl("circle", { r: R, class: "tile-pie-rest" }, svg);
+    const v = Math.max(0, Math.min(1, f));
+    if (v >= 0.999) svgEl("circle", { r: R, class: "tile-pie-share" }, svg);
+    else if (v > 0.001) {
+      const a = v * 2 * Math.PI;
+      const x = (R * Math.sin(a)).toFixed(2), y = (-R * Math.cos(a)).toFixed(2);
+      svgEl("path", { d: `M0 0V${-R}A${R} ${R} 0 ${v > 0.5 ? 1 : 0} 1 ${x} ${y}Z`, class: "tile-pie-share" }, svg);
+    }
+    svgEl("circle", { r: R, class: "tile-pie-ring" }, svg);
+    return svg;
   }
 
   // ---- Chart helpers shared by both views ----
@@ -2046,7 +2070,7 @@ export async function startExplorer() {
       tile(`Chapter 70 aid${whole ? "" : " per foundation pupil"}, FY${years[tl]}`, aid != null ? money(aid) : "–", [
         aidShare != null ? `${Math.round(aidShare * 100)}% of actual net school spending` : "",
         cNss && cNss[0].values[tl] != null ? `${cName}: ${money(cNss[0].values[tl]!)}` : "",
-      ]),
+      ], aidShare != null ? { v: aidShare, title: `Chapter 70 aid: ${Math.round(aidShare * 100)}% of actual net school spending` } : null),
       tile(`Local contribution above required, FY${years[tl]}`, above != null ? money(above) : aid != null ? "Not reported" : "–", [
         above == null ? (aid != null ? `DESE has not reported FY${years[tl]} actual spending` : "")
           : !whole ? "Per foundation pupil" : e.kind === "district" ? "In total" : "For the average district",
@@ -2657,7 +2681,8 @@ export async function startExplorer() {
       tile(`Average single-family tax bill, FY${years[bIdx]}`, t.sf_bill![bIdx] != null ? usd(deflate(t.sf_bill!)[bIdx]!) : "–", [
         t.sf_bill_income?.[bIdx] != null ? `${percent(t.sf_bill_income[bIdx]!)} of income per capita` : "",
         c?.sf_bill?.[bIdx] != null ? `${c.name}: ${usd(deflate(c.sf_bill)[bIdx]!)}` : "",
-      ]),
+      ], t.sf_bill_income?.[bIdx] != null
+        ? { v: t.sf_bill_income[bIdx]!, title: `The tax bill: ${percent(t.sf_bill_income[bIdx]!)} of income per capita` } : null),
     ];
     $("tiles").replaceChildren(
       tile(`General fund spending${perP}, FY${fy}`, spendTotal[end] != null ? money(spendTotal[end]!) : "–", [
@@ -2670,11 +2695,11 @@ export async function startExplorer() {
       tile(`Education's share of spending, FY${fy}`, eduShare != null ? percent(eduShare) : "–", [
         spend[0].values[end] != null ? `${money(spend[0].values[end]!)}${perP}` : "",
         c && cEduShare != null ? `${c.name}: ${percent(cEduShare)}` : "",
-      ]),
+      ], eduShare != null ? { v: eduShare, title: `Education: ${percent(eduShare)} of general fund spending` } : null),
       tile(`Taxes' share of revenue, FY${fy}`, taxShare != null ? percent(taxShare) : "–", [
         rev[0].values[end] != null ? `${money(rev[0].values[end]!)}${perP}` : "",
         c && cTaxShare != null ? `${c.name}: ${percent(cTaxShare)}` : "",
-      ]),
+      ], taxShare != null ? { v: taxShare, title: `Taxes: ${percent(taxShare)} of general fund revenue` } : null),
       tile(`${t.kind === "town" ? "Population" : "Combined population"}, July ${years[last] - 1}`, popNow != null ? count(popNow) : "–", [
         popChange != null ? `${pct(popChange)} since July ${years[0] - 1}` : "",
         t.kind === "average" ? "Census Bureau estimates" : peerLabel ? `Peer group: towns with ${peerLabel}` : "Not in a peer group",

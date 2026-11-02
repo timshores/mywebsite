@@ -861,7 +861,6 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
 
   .lede {
     font-size: 1.05rem;
-    max-width: 68ch;
   }
 
   /* The introduction folds away; it starts open */
@@ -1111,7 +1110,6 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
 
   .controls-note {
     flex-basis: 100%;
-    max-width: 92ch;
     margin: 0.1rem 0 0;
     font-size: 0.82rem;
     line-height: 1.5;
@@ -1538,7 +1536,6 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
   }
 
   .entity-note {
-    max-width: 46rem;
     margin: 0.4rem 0 0;
     padding: 0.55rem 0.75rem;
     border-left: 3px solid var(--line);
@@ -2009,6 +2006,35 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
     line-height: 1.35;
   }
 
+  /* A small pie of the share a tile names, sized to the value's line so the tile doesn't grow (#181).
+     One muted hue: the share 4.5:1 against the rest, 5.6:1 against the page; the ring outlines the whole */
+  .tiles :global(.tile-value.has-pie) {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+  }
+
+  .tiles :global(.tile-pie) {
+    width: 1em;
+    height: 1em;
+    flex: none;
+  }
+
+  .tiles :global(.tile-pie-rest) {
+    fill: #dbe6e4;
+  }
+
+  .tiles :global(.tile-pie-share) {
+    fill: #3f6e73;
+  }
+
+  .tiles :global(.tile-pie-ring) {
+    fill: none;
+    stroke: #3f6e73;
+    stroke-width: 1;
+  }
+
   /* Panels */
   .panels {
     display: grid;
@@ -2037,7 +2063,6 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
   /* In place of a chart the entity has no data for */
   .panel-none {
     font-size: 0.92rem;
-    max-width: 72ch;
     padding: 0.8rem 1rem;
     border: 1px dashed var(--line);
     border-radius: 12px;
@@ -2557,7 +2582,6 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
     font-size: 0.8rem;
     color: var(--muted);
     margin: 0.35rem 0 0;
-    max-width: none;
   }
 
   /* Above and Below, at the table's right edge, under the columns they shade most */
@@ -2750,7 +2774,6 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
     font-size: 0.82rem;
     color: var(--muted);
     margin: 0;
-    max-width: none;
   }
 
   .notes p {
@@ -2850,7 +2873,6 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
 
   /* Commonwealth tab: a gallery of plots, each opening full screen */
   .cw-intro {
-    max-width: 68ch;
     color: var(--ink-soft);
     margin: 0.4rem 0 1.2rem;
   }
@@ -2936,7 +2958,6 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
   }
 
   .explorer :global(.map-about) {
-    max-width: 80ch;
     line-height: 1.6;
     margin: 0.3rem 0 0.7rem;
   }
@@ -3797,10 +3818,6 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
   }
 
   /* Enlarged, text runs a little wider, leaving the chart more of the height */
-  .explorer :global(.enlarge-body .is-enlarged p) {
-    max-width: 100ch;
-  }
-
   .explorer :global(.enlarge-close) {
     position: absolute;
     top: 0.45rem;
@@ -4059,7 +4076,6 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
 
   .cap-lede,
   .cap-method {
-    max-width: 72ch;
     line-height: 1.6;
   }
 
@@ -4069,7 +4085,6 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
   }
 
   .cap-questions ul {
-    max-width: 72ch;
     padding-left: 1.2rem;
     line-height: 1.55;
   }
@@ -4088,7 +4103,6 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
   }
 
   .explorer :global(.cap-section p) {
-    max-width: 72ch;
     line-height: 1.6;
   }
 
@@ -4502,7 +4516,6 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
 
   /* The answer the table builds to, in the cap's own purple */
   .explorer :global(.cap-verdict) {
-    max-width: 52rem;
     margin: 1rem 0 0.4rem;
     padding: 0.85rem 1.1rem;
     font-size: 1.05rem;

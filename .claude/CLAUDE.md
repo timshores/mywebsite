@@ -28,6 +28,7 @@ This is Tim Shores' professional/personal website showcasing work as a Data Stor
 - **Navigation**: Sticky folder-tab style with `clip-path` for distinctive shape
 - **Cards**: plain content panels. A card is not a control; only the links inside it act (design voice, 2026-11-01: the click-to-pop stepped shadow announced every card as a button and swallowed Enter on the links inside)
 - **Left Margin**: Decorative red line accent
+- **Copy width**: prose runs the full width of its column, as a rule (Tim, 2026-11-02). No `max-width` on paragraphs, lists, notes, or intros; tooltips, controls, tables, and dialog headings keep theirs
 - **Responsive**: Mobile breakpoint at 768px
 - **Transitions**: Smooth hover animations and fade-in effects
 
