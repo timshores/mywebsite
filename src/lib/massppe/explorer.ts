@@ -326,7 +326,7 @@ const ENROLL_SERIES = [
   { key: "out_of_district", label: "Out-of-district FTE", color: "#1baf7a" },
 ] as const;
 const COMPARE_COLOR = "#524f45";
-// Pupils educated elsewhere: the out-of-district color from the enrollment chart
+// Spending on out-of-district FTE: the out-of-district color from the enrollment chart
 const OOD_COLOR = "#1baf7a";
 // The older measure: a color of its own and dashed, so it never reads as part of the columns
 const DAY_COLOR = "#0f6f78";
@@ -349,7 +349,7 @@ const WEIGHT_NOTE = "An average weights each district's figure by its pupils. Fr
   "membership: full-time equivalents over the year. DESE's reports for FY1990 to FY1996 give no pupils, so those " +
   "years use the fall enrollment the National Center for Education Statistics counts (Common Core of Data), a head " +
   "count from a different agency. In FY1997 and FY1998, when both exist, nine districts in ten differ by less than 9%.";
-const MEASURE_NOTE = "In FY2005 DESE began measuring spending per pupil by function, from all funds: the measure the " +
+const MEASURE_NOTE = "In FY2005 the state's Department of Elementary and Secondary Education (DESE) began measuring spending per pupil by function, from all funds: the measure the " +
   "columns show. Before then the dashed line shows DESE's older, narrower day-program figure. The two measure " +
   "different things, so the explorer doesn't connect them. Each has its own trend and growth rate.";
 const HIST_NOTE = "Before FY2005, DESE measured only spending in a district's own schools, mostly from its school " +
@@ -1402,7 +1402,8 @@ export async function startExplorer() {
       btn.dataset.key = key;
       btn.setAttribute("aria-pressed", String(set.has(key)));
       if (set.size && !set.has(key)) btn.classList.add("is-off");
-      btn.title = set.has(key) ? "Click to stop isolating" : "Click to show only the selected";
+      btn.title = !set.has(key) ? `Click to show ${set.size ? `${it.label} too` : `only ${it.label}`}`
+        : set.size === 1 ? "Click to show everything again" : `Click to hide ${it.label}`;
       btn.append(swatch(it), text("span", it.label));
       btn.addEventListener("click", () => {
         if (set.has(key)) set.delete(key);
@@ -2036,7 +2037,9 @@ export async function startExplorer() {
       spendTile,
       earlyPupils
         ? tile(`Enrollment, FY${years[tl]}`, fte(earlyPupils.v), [capital(earlyPupils.src), e.kind === "district" ? "" : "Average per district"])
-        : tile(`In-district enrollment, FY${years[tl]}`, e.enroll.in_district[tl] != null ? `${fte(e.enroll.in_district[tl]!)} FTE` : "–", [
+        : tile(`In-district enrollment, FY${years[tl]}`, e.enroll.in_district[tl] != null ? `${fte(e.enroll.in_district[tl]!)} pupils` : "–", [
+          // The first FTE a visitor meets; the charts below use the abbreviation
+          "Full-time equivalents (FTE)",
           enrollChange != null ? `${pct(enrollChange)} since FY${years[enrollFirst]}` : "",
           e.kind === "district" ? "" : "Average per district",
         ]),
@@ -2124,12 +2127,12 @@ export async function startExplorer() {
       ...(cDayAll && hasLine(cDayAll) ? [{ label: cDayAll.label, values: cDayAll.values, fmt: usd }] : []),
     ] };
 
-    // Pupils educated elsewhere: what the district pays to educate its own pupils in other schools, per
+    // Spending on out-of-district FTE: what the district pays to educate its own pupils in other schools, per
     // out-of-district FTE pupil, or with Totals on, in dollars. DESE's totals give it (export: ood_series).
     const oodOf = (x: Entity): Series => {
       const v = x.ood ?? nulls(years.length);
       const n = x.enroll.out_of_district;
-      return { key: "ood", label: whole ? "Payments to out-of-district schools" : "Per pupil educated elsewhere", color: OOD_COLOR,
+      return { key: "ood", label: whole ? "Payments to out-of-district schools" : "Per out-of-district FTE", color: OOD_COLOR,
         values: deflate(whole ? v.map((y, i) => (y == null || n[i] == null ? null : y * n[i]!)) : v) };
     };
     const ood = oodOf(e);
@@ -2139,16 +2142,16 @@ export async function startExplorer() {
     const oodOverlay = drawn("ood", "cmp", oodOverlayAll);
     const oodTrend = drawn("ood", "trend", oodTrendAll);
     $("ood-sub").replaceChildren(
-      `${dollarsNote}${whole ? `, in total${perDistrict}` : " per out-of-district FTE pupil"}: tuition and other payments for the ` +
-      "district's own pupils educated elsewhere, such as charter schools, other districts, and special education schools. " +
-      "With only a few pupils placed out, one placement moves the figure a lot. ", helpTip(
+      `${dollarsNote}${whole ? `, in total${perDistrict}` : " per out-of-district FTE pupil"}: tuition and other payments for its ` +
+      "out-of-district FTE, the district's own pupils educated elsewhere, such as charter schools, other districts, and " +
+      "special education schools. With few out-of-district FTE, one placement moves the figure a lot. ", helpTip(
         "DESE's data reports no separate figure for these payments from FY2009. The explorer works them out from DESE's " +
         "totals: total spending per pupil times all FTE pupils, less in-district spending per pupil times in-district " +
         "pupils, over out-of-district pupils. For FY2005 to FY2008, where DESE printed the figure, the two agree to within " +
         "0.7%. An average pools its districts' payments over their out-of-district pupils."));
     let oodMax = 0;
     years.forEach((_, i) => (oodMax = Math.max(oodMax, ood.values[i] ?? 0, oodOverlay?.values[i] ?? 0)));
-    const p5 = stackedColumns($("svg-ood") as unknown as SVGSVGElement, frame(width < 520 ? 220 : 260, whole ? "Payments" : "Per pupil placed out", "Per pupil"),
+    const p5 = stackedColumns($("svg-ood") as unknown as SVGSVGElement, frame(width < 520 ? 220 : 260, whole ? "Payments" : "Per out-of-district FTE", "Per pupil"),
       [ood], oodOverlay, niceTicks(oodMax * 1.04), fmtUsd, setHover, { value: ood.values[last], text: usd }, [], oodTrend);
     legend($("legend-ood"), [{ label: ood.label, color: OOD_COLOR, mark: "rect" as const, spot: ood.key }, ...lineLegend(oodTrendAll, oodOverlayAll)], "ood");
     const oodCaption = `Payments to out-of-district schools${whole ? "" : " per out-of-district FTE pupil"}, ${e.name} (${dollarsNote.toLowerCase()})`;
@@ -2204,9 +2207,9 @@ export async function startExplorer() {
     const nssShownTotal = nssSel ? strictTotals(nssShown) : nssTotal;
     const cNssShownTotal = cNss ? (nssSel ? strictTotals(visible(cNss, "nss")) : cNssTotal) : null;
     const nssOverlayAll = c
-      ? { key: "cmp", label: `${cName}, ${nssSel ?? "actual NSS"}`, color: COMPARE_COLOR, values: cNssShownTotal! }
+      ? { key: "cmp", label: `${cName}, ${nssSel ?? "actual net school spending"}`, color: COMPARE_COLOR, values: cNssShownTotal! }
       : null;
-    const nssTrendAll = trendOf(e.name, nssSel ?? "actual NSS", nssShownTotal);
+    const nssTrendAll = trendOf(e.name, nssSel ?? "actual net school spending", nssShownTotal);
     const nssOverlay = drawn("nss", "cmp", nssOverlayAll);
     const nssTrend = drawn("nss", "trend", nssTrendAll);
     const unreported = showsAbove ? years.filter((_, i) => nss[2].values[i] == null && nss[0].values[i] != null) : [];
@@ -2229,8 +2232,8 @@ export async function startExplorer() {
       cmpRows(nssShown, cNss, nssSel, nssTotal, cNssTotal, nssShownTotal, cNssShownTotal, "Actual net school spending"), "usd", c, tableOpts);
     fullTables.nss = { caption: `Chapter 70 aid and net school spending${whole ? "" : " per foundation pupil"}, ${e.name} (${dollarsNote.toLowerCase()})`, cols: [
       ...nss.map((s) => ({ label: s.label, values: s.values, fmt: usd })),
-      { label: "Actual NSS", values: nssTotal, fmt: usd },
-      ...(c ? [{ label: `${cName}, actual NSS`, values: cNssTotal!, fmt: usd }] : []),
+      { label: "Actual net school spending", values: nssTotal, fmt: usd },
+      ...(c ? [{ label: `${cName}, actual net school spending`, values: cNssTotal!, fmt: usd }] : []),
     ] };
 
     // Panel 4: revenue by source, from Census figures that end a year or more
@@ -2789,8 +2792,9 @@ export async function startExplorer() {
       $("teqv-sub").textContent = `${dollarsNote}${perP}. Every two years the state sets each town's equalized ` +
         "valuation, its estimate of what all the town's taxable property would sell for on January 1; each is shown at the " +
         "fiscal year whose assessments share that date." +
-        (k && base != null ? ` For FY${k.fy}, Chapter 70 set ${t.name}'s target local contribution at ${k.property_pct}% of ` +
-          `its January ${k.eqv_year} EQV (${usd(base * k.property_pct / 100)}) plus ${k.income_pct}% of its residents' ` +
+        (k && base != null ? ` For FY${k.fy}, Chapter 70 set ${t.name}'s target local contribution at ` +
+          `${usd(base * k.property_pct / 100)} from property, ${k.property_pct}% of its January ${k.eqv_year} equalized ` +
+          `valuation, plus ${k.income_pct}% of its residents' ` +
           `${k.income_year} income, up to ${k.cap}% of its foundation budget.` : "");
       fullTables.teqv = { caption: `Equalized valuation, ${t.name} (${dollarsNote.toLowerCase()})`, cols: [
         { label: inTotal ? (t.kind === "town" ? "Total" : "Average town") : `Per ${perWord}`, values: deflate(per(t.eqv!, kT)), fmt: usd },

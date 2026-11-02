@@ -1,0 +1,121 @@
+---
+import Layout from "../../layouts/Layout.astro";
+// What "the same fiscal effort" means, worked through for two towns with one house each and a school they
+// share. It was a window on the cap tab, whose "?" beside "fiscal effort" links here (cap.ts, helpLink).
+// Fixed numbers, so the page is built whole; Tim will revise it.
+const house = 400_000;
+const incomes = [100_000, 1_000_000];
+const school = 10_000;
+// Chapter 70 sets its two percentages so that property and income each yield half the total
+const pEx = school / 2 / (2 * house);
+const iEx = school / 2 / (incomes[0] + incomes[1]);
+const cey = incomes.map((inc) => house * pEx + inc * iEx);
+
+// As the cap tab formats them (cap.ts)
+const usd = (v: number) => `${v < 0 ? "−" : ""}$${Math.abs(Math.round(v)).toLocaleString("en-US")}`;
+const pct = (v: number, d = 0) => `${(v * 100).toFixed(d)}%`;
+const rate = (v: number) => `${(v * 100).toFixed(3)}%`;
+
+const rows: { label: string; cells: string[]; total?: boolean }[] = [
+  { label: "House, assessed", cells: [usd(house), usd(house)] },
+  { label: "Family income", cells: incomes.map(usd) },
+  { label: `From property, ${rate(pEx)}`, cells: [usd(house * pEx), usd(house * pEx)] },
+  { label: `From income, ${rate(iEx)}`, cells: incomes.map((inc) => usd(inc * iEx)) },
+  { label: "Combined effort yield", cells: cey.map(usd), total: true },
+  { label: "Share of family income", cells: cey.map((c, k) => pct(c / incomes[k], 1)) },
+  { label: "Property tax rate to raise it", cells: cey.map((c) => `$${((c / house) * 1000).toFixed(2)} per $1,000`) },
+];
+---
+
+<Layout title="Same fiscal effort, two towns - Tim Shores"
+  description="What the same fiscal effort means in Chapter 70, worked through for two towns">
+  <p class="back"><a href="/muni-spending/?view=cap">The 82.5% cap</a></p>
+  <h1>Same fiscal effort, two towns</h1>
+
+  <p>
+    Picture two towns, each with one house assessed at {usd(house)}. In Town A, the family earns {usd(incomes[0])} a
+    year. In Town B, the family earns {usd(incomes[1])}. The two towns share a school that costs {usd(school)} a year.
+    What should each town pay?
+  </p>
+  <p>
+    Chapter 70 sets its two percentages so that property and income each yield half the total. Here that's
+    {usd(school / 2)} from {usd(2 * house)} of property, or {rate(pEx)}, and {usd(school / 2)} from
+    {usd(incomes[0] + incomes[1])} of income, or {rate(iEx)}. Both towns pay those same two percentages: the same
+    fiscal effort.
+  </p>
+
+  <table>
+    <thead>
+      <tr><th></th><th class="num">Town A</th><th class="num">Town B</th></tr>
+    </thead>
+    <tbody>
+      {rows.map((r) => (
+        <tr class={r.total ? "total" : undefined}>
+          <th scope="row">{r.label}</th>
+          {r.cells.map((c) => <td class="num">{c}</td>)}
+        </tr>
+      ))}
+    </tbody>
+  </table>
+
+  <p>
+    Town B pays more because its family earns ten times as much. But the same fiscal effort isn't the same share of
+    each family's income. The property half falls on both houses equally, so Town A's family pays
+    {pct(cey[0] / incomes[0], 1)} of its income and Town B's pays {pct(cey[1] / incomes[1], 1)}.
+  </p>
+  <p>
+    Chapter 70 doesn't say how a town raises its share, but Massachusetts towns can't tax income. Raising it with the
+    property tax, Town B would tax an identical house at more than twice Town A's rate. The formula expects the town
+    with more income to tax the same house harder.
+  </p>
+  <p>
+    If the formula counted property alone, both houses would owe {usd(school / 2)}: {pct(school / 2 / incomes[0], 1)}
+    of Town A's family income and {pct(school / 2 / incomes[1], 1)} of Town B's. Counting income moves
+    {usd(school / 2 - cey[0])} of the bill from Town A to Town B.
+  </p>
+</Layout>
+
+<style>
+  .back {
+    font-size: 0.9rem;
+    margin-bottom: 0.4rem;
+  }
+
+  .back a::before {
+    content: "← ";
+  }
+
+  table {
+    border-collapse: collapse;
+    margin: 0.4rem 0 1.2rem;
+    font-size: 0.92rem;
+    font-variant-numeric: tabular-nums;
+  }
+
+  th,
+  td {
+    padding: 0.3rem 0.8rem;
+    border-bottom: 1px solid var(--line);
+    text-align: left;
+    font-weight: 400;
+  }
+
+  thead th {
+    font-weight: 600;
+    color: var(--ink-soft);
+  }
+
+  tbody th {
+    color: var(--ink-soft);
+  }
+
+  .num {
+    text-align: right;
+  }
+
+  .total th,
+  .total td {
+    font-weight: 600;
+    color: var(--ink);
+  }
+</style>

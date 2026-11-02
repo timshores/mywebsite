@@ -15,7 +15,7 @@ const all = groups as Record<"districts" | "towns", Group[]>;
 
 // Sources, linked where a note names them
 const a = (href: string, text: string) => `<a href="${href}">${text}</a>`;
-const HUB = a("https://educationtocareer.data.mass.gov/d/er3w-dyti", "DESE's District Expenditures by Spending Category");
+const HUB = a("https://educationtocareer.data.mass.gov/d/er3w-dyti", "District Expenditures by Spending Category");
 const E2C = a("https://educationtocareer.data.mass.gov/", "Education-to-Career data");
 const C70 = a("https://www.doe.mass.edu/finance/chapter70/default.html", "Chapter 70 district profiles");
 const REPORT = a("/artifacts/western-ma-ppe-report-fy2025.pdf", "the Western MA per-pupil expenditure report");
@@ -88,14 +88,15 @@ const KINDS: Record<"districts" | "towns", [string, string, string][]> = {
       `out of its Western MA average; it covers the other ${pooledN}. The average with them covers all ` +
       `${traditional.length}. The ${big.length} also have an average of their own: Very large, under Cohorts. ` +
       `Spending averages weight each district by its in-district pupils (full-time ` +
-      `equivalents); Chapter 70 averages, by foundation enrollment. From ${HUB} and DESE's ${C70}.`],
+      `equivalents); Chapter 70 averages, by foundation enrollment. The figures come from the state's Department of ` +
+      `Elementary and Secondary Education (DESE): its ${HUB} and its ${C70}.`],
     ["region", "Regions", "The six regions of the state's Executive Office of Health and Human Services (EOHHS), each " +
       `district in the one DESE assigns it in its ${E2C}. Each region's average covers its traditional districts but ` +
       "not its very large ones, those with more than 10,000 pupils, which would weigh heavily in an average weighted by " +
       `pupils: ${byRegion}.`],
     ["cohort", "Cohorts", `Traditional districts by FY${latest} in-district pupils: ${sizes}. The boundaries are those ` +
       `${REPORT} set from FY2024 Western MA enrollment. Vocational and technical districts and charter schools are ` +
-      `cohorts of their own. Very large is the ${big.length} named under Statewide. Enrollment from ${HUB}.`],
+      `cohorts of their own. Very large is the ${big.length} named under Statewide. Enrollment comes from DESE's ${HUB}.`],
     ["region-cohort", "Cohorts by region", "Each cohort within each region, where at least three districts share both. " +
       "Where they don't, “Its cohort in its region” compares with the cohort statewide."],
     ["group", "Gateway Cities", `The ${gatewayN} cities on ${GATEWAY} of Gateway Cities, from 2014. State law (M.G.L. ` +
@@ -106,7 +107,7 @@ const KINDS: Record<"districts" | "towns", [string, string, string][]> = {
       "state average), and DESE splits it in three tiers: 11 or fewer, over 11 to 21, and over 21 to 35. Inner Core: " +
       "Boston and its densest neighbors, the Metropolitan Area Planning Council's Metropolitan Core Communities and " +
       `Streetcar Suburbs in its ${MAPC}. Gateway Cities outside the Inner Core: the other 22. Suburban and other: the ` +
-      `rest, which the state doesn't name. Land areas from the Census Bureau's ${LAND}.`],
+      `rest, which the state doesn't name. Land areas come from the Census Bureau's ${LAND}.`],
     ["fifth", "Income fifths", `The ${dFifth.total} traditional districts ranked by their towns' combined income per ` +
       `resident, ${dFifth.per} to a fifth: ${fifthText(fifths.districts)}. Income per resident is the residents' ` +
       `income the ${FORMULA} uses, from ${fifths.year} state tax returns, divided by the Census Bureau's ` +
@@ -118,8 +119,8 @@ const KINDS: Record<"districts" | "towns", [string, string, string][]> = {
       `${apartShare} of the state's residents, so in an average that pools dollars and residents they carry ` +
       `${apartShare} of its weight. The average without them, the explorer's usual comparison, covers the other ` +
       `${latestPop.length - apart.length}; the average with them, all ${latestPop.length}. Each average pools its towns: their ` +
-      `combined dollars over their combined residents. Budgets from the Division of Local Services' ${DLS}; population ` +
-      `from the Census Bureau's ${POP}.`],
+      `combined dollars over their combined residents. Budgets come from the Division of Local Services' ${DLS}, and ` +
+      `population from the Census Bureau's ${POP}.`],
     ["region", "Regions", "The same six EOHHS regions: a town's region is its school district's, or, for the few towns " +
       "without one, its county's. Each region's average leaves out its cities whose school districts have more than " +
       `10,000 pupils: ${byRegion}.`],
@@ -128,13 +129,13 @@ const KINDS: Record<"districts" | "towns", [string, string, string][]> = {
       "pupils are in none."],
     ["region-peer", "Peer groups by population and region", "Each peer group within each region, where at least three " +
       "towns share both. Where they don't, “Its peer group in its region” compares with the peer group statewide."],
-    ["group", "Gateway Cities", `The same ${gatewayN} cities, all of them, including those whose school districts have ` +
+    ["group", "Gateway Cities", `The same ${gatewayN} cities, including those whose school districts have ` +
       "more than 10,000 pupils."],
     ["type", "Community types", `Rural: under 500 residents per square mile, the line in the ${RURAL_PLAN} for the ` +
-      "Commonwealth's Rural Policy Advisory Commission. Inner Core, Gateway Cities outside it, and suburban and other, " +
-      `as for districts. Land areas from the Census Bureau's ${LAND}.`],
+      "Commonwealth's Rural Policy Advisory Commission. Inner Core, Gateway Cities outside the Inner Core, and Suburban " +
+      `and other are defined as they are for districts, above. Land areas come from the Census Bureau's ${LAND}.`],
     ["fifth", "Income fifths", `All ${tFifth.total} cities and towns ranked by income per resident, ${tFifth.per} to a ` +
-      `fifth: ${fifthText(fifths.towns)}. Income and population as for districts.`],
+      `fifth: ${fifthText(fifths.towns)}. Income per resident is figured as it is for districts, above.`],
   ],
 };
 const VIEWS = [
@@ -156,9 +157,9 @@ const sections = VIEWS.map((v) => {
   <p class="back"><a href="/muni-spending/">Municipal spending explorer</a></p>
   <h1>Groups and their members</h1>
   <p class="lede">
-    The averages the explorer compares with: how each kind is drawn, from what, and the districts and towns in each.
-    The explorer's <a href="/muni-spending/?view=data">Data tab</a> has the rest of its sources. The groups and
-    their members in one file: <a href="/muni-spending/data/groups.csv" download>CSV</a>.
+    This page lists the averages the explorer compares with: how each kind is drawn, from which sources, and the
+    districts and towns in each. The explorer's <a href="/muni-spending/?view=data">Data tab</a> has the rest of its
+    sources. All the groups and their members are in one <a href="/muni-spending/data/groups.csv" download>CSV file</a>.
   </p>
   <!-- Stays at the top as the page scrolls: the sections, and the dial that hides the explanations -->
   <div class="bar">
