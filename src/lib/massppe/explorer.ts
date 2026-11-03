@@ -1353,6 +1353,42 @@ export async function startExplorer() {
   };
   let refocus: { panel: StackPanel; key: string } | null = null;
 
+  // A legend row runs the chart's full width (#185): a line's long entry that would drop to a new row starts in
+  // the room left on this one instead, its words wrapping there, when that room is at least FIT_MIN wide. Refit
+  // whenever a legend's width changes (the window, Enlarge, a tab coming into view) and when the web fonts
+  // arrive, since an entry's width changes with its font while the legend's own width doesn't.
+  const FIT_MIN = 192;
+  const legendWidth = new WeakMap<HTMLElement, number>();
+  const legends = new Set<HTMLElement>();
+  document.fonts?.ready.then(() => legends.forEach(fitLegend));
+  document.fonts?.addEventListener?.("loadingdone", () => legends.forEach(fitLegend));
+  const legendFit = new ResizeObserver((entries) => {
+    for (const e of entries) {
+      const list = e.target as HTMLElement;
+      if (Math.round(e.contentRect.width) !== legendWidth.get(list)) fitLegend(list);
+    }
+  });
+  function fitLegend(list: HTMLElement) {
+    const items = [...list.children] as HTMLElement[];
+    for (const li of items) li.style.flexBasis = "";
+    const width = list.clientWidth;
+    legendWidth.set(list, Math.round(list.getBoundingClientRect().width));
+    if (!width) return;
+    const gap = parseFloat(getComputedStyle(list).columnGap) || 0;
+    const right = list.getBoundingClientRect().left + width;
+    for (let i = 1; i < items.length; i++) {
+      const li = items[i];
+      if (!li.querySelector(".legend-line")) continue;
+      const prev = items[i - 1].getBoundingClientRect();
+      if (li.getBoundingClientRect().top <= prev.top + 1) continue;  // already on the row
+      // The trend's figure stays whole, so the room has to hold it, its swatch and the "?" beside it
+      const detail = li.querySelector<HTMLElement>(".legend-detail");
+      const need = Math.max(FIT_MIN, detail ? detail.getBoundingClientRect().width + 48 : 0);
+      const room = right - prev.right - gap;
+      if (room >= need) li.style.flexBasis = `${Math.floor(room)}px`;
+    }
+  }
+
   function legend(list: HTMLElement, items: LegendItem[], panel?: StackPanel) {
     const set = panel ? isolated[panel] : null;
     const toggles = items.filter((it) => it.key);
@@ -1440,6 +1476,9 @@ export async function startExplorer() {
       nodes.push(li);
     }
     list.replaceChildren(...nodes);
+    fitLegend(list);
+    legendFit.observe(list);
+    legends.add(list);
   }
 
   // A legend entry, hovered or focused from the keyboard, spotlights its marks in its chart: they stay,

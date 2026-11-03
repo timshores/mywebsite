@@ -2088,6 +2088,7 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
     color: var(--ink);
     font-weight: 600;
     font-variant-numeric: tabular-nums;
+    white-space: nowrap;
   }
 
   .legend {
@@ -2104,6 +2105,24 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
     display: flex;
     align-items: center;
     gap: 0.4rem;
+  }
+
+  /* A line's entry (its trend, or a comparison) can run long. Where one would drop to a new row, the explorer
+     starts it in the room left on this one (explorer.ts, fitLegend), and its name and figure flow as text there,
+     a word at a time, so a row runs the chart's full width before the next begins (#185) */
+  .legend :global(li:has(.legend-line)) {
+    min-width: 0;
+  }
+
+  .legend :global(.legend-btn.legend-line) {
+    display: block;
+    min-width: 0;
+    text-align: left;
+  }
+
+  .legend :global(.legend-line .key) {
+    margin-right: 0.4rem;
+    vertical-align: middle;
   }
 
   /* Stacked-chart legends are toggle buttons that isolate segments */
