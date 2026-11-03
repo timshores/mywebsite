@@ -2091,12 +2091,16 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
     white-space: nowrap;
   }
 
+  /* A size down from the charts' other text (0.82rem), so more of each legend fits on its first row. It clears
+     Collapse and Enlarge, which float at the panel's top right: with Detail off there's no subtitle between, and
+     a legend beside the float lost the buttons' width on every row (#186) */
   .legend {
+    clear: right;
     list-style: none;
     display: flex;
     flex-wrap: wrap;
     gap: 0.25rem 1rem;
-    font-size: 0.82rem;
+    font-size: 0.76rem;
     color: var(--ink-soft);
     margin-bottom: 0.4rem;
   }
