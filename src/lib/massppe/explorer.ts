@@ -1381,12 +1381,23 @@ export async function startExplorer() {
       if (!li.querySelector(".legend-line")) continue;
       const prev = items[i - 1].getBoundingClientRect();
       if (li.getBoundingClientRect().top <= prev.top + 1) continue;  // already on the row
-      // The trend's figure stays whole, so the room has to hold it, its swatch and the "?" beside it
-      const detail = li.querySelector<HTMLElement>(".legend-detail");
-      const need = Math.max(FIT_MIN, detail ? detail.getBoundingClientRect().width + 48 : 0);
+      // The trend's name and its figure each stay whole, so the room has to hold the wider of them, with the
+      // swatch and the "?" beside it
+      const whole = [...li.querySelectorAll<HTMLElement>(".legend-detail, .legend-keep")].map((e) => e.getBoundingClientRect().width);
+      const need = Math.max(FIT_MIN, ...whole.map((w) => w + 48));
       const room = right - prev.right - gap;
       if (room >= need) li.style.flexBasis = `${Math.floor(room)}px`;
     }
+  }
+
+  /** A line's legend name: "Leverett trend" never breaks between its words (#187); a qualifier after it
+   * (", actual net school spending") can wrap, and so can the figure after that */
+  function lineLabel(label: string) {
+    const m = /^(.*?\btrend)(,.*)?$/.exec(label);
+    if (!m) return text("span", label);
+    const span = document.createElement("span");
+    span.append(text("span", m[1], "legend-keep"), m[2] ?? "");
+    return span;
   }
 
   function legend(list: HTMLElement, items: LegendItem[], panel?: StackPanel) {
@@ -1424,7 +1435,7 @@ export async function startExplorer() {
         btn.dataset.key = `line:${line}`;
         btn.setAttribute("aria-pressed", String(!off));
         btn.title = off ? "Show this line" : "Hide this line";
-        btn.append(swatch(it), text("span", it.label), ...(it.detail ? [text("span", it.detail, "legend-detail")] : []));
+        btn.append(swatch(it), lineLabel(it.label), ...(it.detail ? [text("span", it.detail, "legend-detail")] : []));
         btn.addEventListener("click", () => {
           if (off) hiddenLines[panel].delete(line);
           else hiddenLines[panel].add(line);

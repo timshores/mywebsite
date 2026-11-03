@@ -2129,6 +2129,11 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
     vertical-align: middle;
   }
 
+  /* A trend's name, "Leverett trend", stays on one line (#187) */
+  .legend :global(.legend-keep) {
+    white-space: nowrap;
+  }
+
   /* Stacked-chart legends are toggle buttons that isolate segments */
   .legend :global(.legend-btn),
   .legend :global(.legend-reset) {
