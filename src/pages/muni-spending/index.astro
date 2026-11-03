@@ -2084,7 +2084,7 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
 
   /* The trend's yearly rise, beside its legend entry */
   .legend :global(.legend-detail) {
-    margin-left: 0.35rem;
+    margin-left: 0.1rem;
     color: var(--ink);
     font-weight: 600;
     font-variant-numeric: tabular-nums;
@@ -2129,9 +2129,20 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
     vertical-align: middle;
   }
 
-  /* A trend's name, "Leverett trend", stays on one line (#187) */
+  /* A trend's name stays on one line with its swatch, "-- Leverett trend" (#187) */
   .legend :global(.legend-keep) {
     white-space: nowrap;
+  }
+
+  /* On a phone the figure may break once, between the amount and "a year", each half whole */
+  .legend :global(.legend-whole) {
+    white-space: nowrap;
+  }
+
+  @media (max-width: 520px) {
+    .legend :global(.legend-detail) {
+      white-space: normal;
+    }
   }
 
   /* Stacked-chart legends are toggle buttons that isolate segments */

@@ -1381,23 +1381,43 @@ export async function startExplorer() {
       if (!li.querySelector(".legend-line")) continue;
       const prev = items[i - 1].getBoundingClientRect();
       if (li.getBoundingClientRect().top <= prev.top + 1) continue;  // already on the row
-      // The trend's name and its figure each stay whole, so the room has to hold the wider of them, with the
-      // swatch and the "?" beside it
+      // The swatch with the name, and the figure, each stay whole, so the room has to hold the wider of them
+      // beside whatever else the entry carries (its "?"), measured while the entry still has its own width
+      const btn = li.querySelector<HTMLElement>(".legend-line")!;
+      const beside = li.getBoundingClientRect().width - btn.getBoundingClientRect().width;
+      const cs = getComputedStyle(btn);
+      const pad = ["paddingLeft", "paddingRight", "borderLeftWidth", "borderRightWidth"]
+        .reduce((s, k) => s + parseFloat(cs[k as "paddingLeft"]), 0) + 12;
       const whole = [...li.querySelectorAll<HTMLElement>(".legend-detail, .legend-keep")].map((e) => e.getBoundingClientRect().width);
-      const need = Math.max(FIT_MIN, ...whole.map((w) => w + 48));
+      const need = Math.max(FIT_MIN, ...whole.map((w) => w + beside + pad));
       const room = right - prev.right - gap;
       if (room >= need) li.style.flexBasis = `${Math.floor(room)}px`;
     }
   }
 
-  /** A line's legend name: "Leverett trend" never breaks between its words (#187); a qualifier after it
-   * (", actual net school spending") can wrap, and so can the figure after that */
-  function lineLabel(label: string) {
-    const m = /^(.*?\btrend)(,.*)?$/.exec(label);
-    if (!m) return text("span", label);
+  /** A line's legend name, its swatch held to it: "-- Leverett trend" never breaks, nor a comparison's swatch
+   * from its first word (#187); a qualifier after the name (", actual net school spending") can wrap, and the
+   * figure after that moves to the next line whole */
+  function lineLabel(key: HTMLElement, label: string) {
+    const m = /^(.*?\btrend)(,.*)?$/.exec(label) ?? /^(\S+)(.*)$/.exec(label);
+    const head = m ? m[1] : label;
+    const keep = document.createElement("span");
+    keep.className = "legend-keep";
+    keep.append(key, head);
     const span = document.createElement("span");
-    span.append(text("span", m[1], "legend-keep"), m[2] ?? "");
+    span.append(keep, m?.[2] ?? "");
     return span;
+  }
+
+  /** A trend's figure, "+$550 (+3.2%) a year, before inflation": whole on one line, except on a phone, where
+   * it may break once, between the amount and "a year" */
+  function lineDetail(detail: string) {
+    const d = document.createElement("span");
+    d.className = "legend-detail";
+    const k = detail.indexOf(" a year");
+    if (k < 0) d.textContent = detail;
+    else d.append(text("span", detail.slice(0, k), "legend-whole"), " ", text("span", detail.slice(k + 1), "legend-whole"));
+    return d;
   }
 
   function legend(list: HTMLElement, items: LegendItem[], panel?: StackPanel) {
@@ -1435,7 +1455,8 @@ export async function startExplorer() {
         btn.dataset.key = `line:${line}`;
         btn.setAttribute("aria-pressed", String(!off));
         btn.title = off ? "Show this line" : "Hide this line";
-        btn.append(swatch(it), lineLabel(it.label), ...(it.detail ? [text("span", it.detail, "legend-detail")] : []));
+        // The space is where the figure may move to the next line, after the name, never inside it
+        btn.append(lineLabel(swatch(it), it.label), ...(it.detail ? [" ", lineDetail(it.detail)] : []));
         btn.addEventListener("click", () => {
           if (off) hiddenLines[panel].delete(line);
           else hiddenLines[panel].add(line);
