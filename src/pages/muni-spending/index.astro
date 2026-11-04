@@ -15,6 +15,10 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
       source: "DESE, FY2025 Chapter 70 regional district summary", url: "https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025.html", retrieved: "Oct 21, 2026" },
     { file: "census_f33_ma.csv", holds: "Revenue by source for every Massachusetts school system, FY2009 to FY2024",
       source: "Census Bureau, Annual Survey of School System Finances", url: "https://www.census.gov/programs-surveys/school-finances.html", retrieved: "Oct 21, 2026" },
+    { file: "dese_sped_expenditures.csv", holds: "Special education spending in eight categories, and all spending, for every district, FY2008 on",
+      source: "DESE, Special Education Direct Expenditure Trends (RADAR)", url: "https://www.doe.mass.edu/research/radar/", retrieved: "Nov 3, 2026" },
+    { file: "dese_circuit_breaker.csv", holds: "Circuit Breaker payments to every district, with the students and costs it claimed, FY2006 on",
+      source: "DESE, Special Education Circuit Breaker Reimbursements", url: "https://educationtocareer.data.mass.gov/d/ab34-d3ma", retrieved: "Nov 3, 2026" },
     { file: "nces_ma_districts.csv", holds: "The crosswalk from federal district IDs to DESE's district codes",
       source: "NCES Common Core of Data, through the Urban Institute's Education Data Portal", url: "https://educationdata.urban.org/", retrieved: "Oct 21, 2026" },
   ] },
@@ -346,19 +350,22 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
         </button>
       </figure>
 
-      <figure id="fig-ood" class="panel">
-        <h3>Spending on out-of-district FTE</h3>
-        <p class="panel-sub" id="ood-sub"></p>
-        <ul class="legend" id="legend-ood"></ul>
-        <svg id="svg-ood" tabindex="0" role="img" aria-label="Columns of what the district pays to educate its pupils elsewhere, for each fiscal year. Use the arrow keys to read each year; the data table below has every value."></svg>
-        <div class="tooltip" role="status" hidden></div>
-        <details class="table-view compare-view">
-          <summary>Comparison table</summary>
-          <div class="table-scroll" id="cmp-ood"></div>
-        </details>
-        <button type="button" class="table-open" data-table="ood" aria-haspopup="dialog">
-          <span class="table-open-icon" aria-hidden="true">⤢</span> Full data table
-        </button>
+      <figure id="fig-sped" class="panel">
+        <h3>Special education spending<span data-dper> per pupil</span> by category</h3>
+        <p class="panel-sub" id="sped-sub"></p>
+        <p class="panel-none" id="sped-none" hidden></p>
+        <div id="sped-body">
+          <ul class="legend" id="legend-sped" aria-label="Special education spending categories. Select one or more to show only those."></ul>
+          <svg id="svg-sped" tabindex="0" role="img" data-aria-dper="Stacked columns of special education spending{dper} by category for each fiscal year. Use the arrow keys to read each year; the data table below has every value." aria-label="Stacked columns of special education spending per pupil by category for each fiscal year. Use the arrow keys to read each year; the data table below has every value."></svg>
+          <div class="tooltip" role="status" hidden></div>
+          <details class="table-view compare-view">
+            <summary>Comparison table</summary>
+            <div class="table-scroll" id="cmp-sped"></div>
+          </details>
+          <button type="button" class="table-open" data-table="sped" aria-haspopup="dialog">
+            <span class="table-open-icon" aria-hidden="true">⤢</span> Full data table
+          </button>
+        </div>
       </figure>
 
       <figure id="fig-enroll" class="panel">
@@ -372,6 +379,21 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
           <div class="table-scroll" id="cmp-enroll"></div>
         </details>
         <button type="button" class="table-open" data-table="enroll" aria-haspopup="dialog">
+          <span class="table-open-icon" aria-hidden="true">⤢</span> Full data table
+        </button>
+      </figure>
+
+      <figure id="fig-ood" class="panel">
+        <h3>Spending on out-of-district FTE</h3>
+        <p class="panel-sub" id="ood-sub"></p>
+        <ul class="legend" id="legend-ood"></ul>
+        <svg id="svg-ood" tabindex="0" role="img" aria-label="Columns of what the district pays to educate its pupils elsewhere, for each fiscal year. Use the arrow keys to read each year; the data table below has every value."></svg>
+        <div class="tooltip" role="status" hidden></div>
+        <details class="table-view compare-view">
+          <summary>Comparison table</summary>
+          <div class="table-scroll" id="cmp-ood"></div>
+        </details>
+        <button type="button" class="table-open" data-table="ood" aria-haspopup="dialog">
           <span class="table-open-icon" aria-hidden="true">⤢</span> Full data table
         </button>
       </figure>
@@ -659,6 +681,21 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
         aid can arrive in one large payment. In FY2009 the state paid $412 million of Chapter 70 aid with federal
         stimulus money, so Census counts about a tenth of that year's Chapter 70 aid as federal. Census publishes
         each year's figures more than a year after it ends.
+      </p>
+      <p>
+        <strong>Special education</strong> spending comes from DESE's
+        <a href="https://www.doe.mass.edu/research/radar/">Special Education Direct Expenditure Trends</a>
+        (<a href="/muni-spending/data/districts-special-education.csv" download>CSV</a>, in dollars, with each district's
+        spending in all), from the year-end financial reports behind its RADAR tools. It counts direct costs only: teaching, other
+        instructional services, and transportation in the district's own schools; tuition at other public schools,
+        collaboratives, private and out-of-state schools, and transportation to them; health services for pupils in
+        private schools; and what grants and revolving funds paid. Per pupil divides by every FTE pupil the district is
+        responsible for, in district and out, as DESE does for total spending per pupil. The state's payments back come
+        from DESE's <a href="https://educationtocareer.data.mass.gov/d/ab34-d3ma">Circuit Breaker reimbursements</a>
+        (<a href="/muni-spending/data/districts-circuit-breaker.csv" download>CSV</a>, by the year paid, as DESE gives
+        it). The chart puts each payment with the year of the costs it repays: a year's claim is paid the next year, in
+        quarterly payments and any supplement, and extraordinary relief in the same year. An average pools its
+        districts' dollars over their pupils, and a district with no claim counts as repaid nothing.
       </p>
       <p>
         <strong>Town budgets</strong> come from each town's <a href="https://dls-gw.dor.state.ma.us/reports/rdPage.aspx?rdReport=ScheduleA.GenFund_MAIN">Schedule A</a>

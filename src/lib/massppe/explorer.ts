@@ -75,6 +75,15 @@ interface Entity {
   note?: { text: string; source: string | null };
   /** Payments to out-of-district schools per out-of-district FTE pupil (an average's pooled) */
   ood?: Values;
+  /** Special education spending by category per FTE pupil, in district and out (an average's pooled), from RADAR */
+  sped?: Record<SpedKey, Values>;
+  /** Special education's share of all the district's spending, in percent */
+  sped_share?: Values;
+  /** The pupils the special education figures divide by, for Totals (an average's average district's) */
+  sped_fte?: Values;
+  /** Circuit Breaker, by the year the state paid: what it paid, the costs claimed, and those above the threshold,
+   * per FTE pupil (an average's pooled); the students claimed (an average's per district); the pupils, for Totals */
+  cb?: { paid: Values; claimed: Values; above: Values; students: Values; fte: Values };
 }
 
 type DayKey = "total" | "regular" | "special" | "bilingual" | "occupational";
@@ -212,11 +221,11 @@ const MIN_SPAN = 2;
 const PER_WORD: Record<Per, string> = { resident: "resident", household: "household", parcel: "taxable property", total: "town" };
 type View = "districts" | "towns" | "commonwealth" | "cap" | "data";
 const VIEWS: View[] = ["districts", "towns", "commonwealth", "cap", "data"];
-type StackPanel = "ppe" | "ood" | "nss" | "rev" | "tspend" | "trev" | "tval" | "tpar" | "tlevy";
+type StackPanel = "ppe" | "ood" | "nss" | "rev" | "sped" | "tspend" | "trev" | "tval" | "tpar" | "tlevy";
 /** The lines a stacked chart can draw over its columns: its trend, the comparison, and, with Since 1990
  * on, the older measure's line and the comparison's */
-type Line = "trend" | "cmp" | "day" | "cday";
-const LINES: Line[] = ["trend", "cmp", "day", "cday"];
+type Line = "trend" | "cmp" | "day" | "cday" | "cb";
+const LINES: Line[] = ["trend", "cmp", "day", "cday", "cb"];
 
 // Each comparison choice, as the ids to try in order: "Its cohort in its region" falls
 // back to the statewide cohort where a region has too few districts of that size
@@ -275,6 +284,22 @@ const REV_SERIES = [
   { key: "other_local", label: "Other local", color: "#e87ba4" },
   { key: "building", label: "School building aid", color: "#8f8a7f" },
 ] as const;
+// Special education, bottom to top as the export orders them (SPED): in the district's own schools, out of
+// district, then what grants and revolving funds paid. Teaching keeps the teachers' blue; the order passes the
+// dataviz palette check's adjacent-pair tests on the page's manila
+const SPED_SERIES = [
+  { key: "teaching", label: "Teaching", color: "#2a78d6" },
+  { key: "other_instructional", label: "Other instructional services", color: "#eda100" },
+  { key: "in_transport", label: "Transportation in the district", color: "#e34948" },
+  { key: "ma_public", label: "Public schools and collaboratives elsewhere", color: "#1baf7a" },
+  { key: "private", label: "Private and out-of-state schools", color: "#eb6834" },
+  { key: "ood_transport", label: "Transportation out of the district", color: "#6250d6" },
+  { key: "health", label: "Health services in private schools", color: "#008300" },
+  { key: "grants", label: "Paid from grants and revolving funds", color: "#e87ba4" },
+] as const;
+type SpedKey = (typeof SPED_SERIES)[number]["key"];
+// The Circuit Breaker's line: the state's green, darker than the health services' columns
+const CB_COLOR = "#00602f";
 // Town view: Schedule A functions and grouped revenue sources, bottom to top as
 // the export orders them (TOWN_SPEND, TOWN_REV). Education sits at the bottom so
 // its share is easy to follow; taxes and state aid keep the local and state colors.
@@ -547,6 +572,9 @@ export async function startExplorer() {
         ood: [...(h.ood ?? nulls(nH)), ...(base.ood ?? nulls(nM))],
         ...(base.rev ? { rev: join(undefined, base.rev) } : {}),
         ...(base.rev_fte ? { rev_fte: [...nulls(nH), ...base.rev_fte] } : {}),
+        ...(base.sped ? { sped: join(undefined, base.sped), sped_share: [...nulls(nH), ...base.sped_share!],
+          sped_fte: [...nulls(nH), ...base.sped_fte!] } : {}),
+        ...(base.cb ? { cb: join(undefined, base.cb) } : {}),
         ...dayJoin(h),
       };
     }
@@ -616,13 +644,15 @@ export async function startExplorer() {
   // one category can be followed from district to district.
   const isolated: Record<StackPanel, Set<string>> = {
     ppe: new Set(saved?.isolated?.ppe), ood: new Set(), nss: new Set(saved?.isolated?.nss), rev: new Set(saved?.isolated?.rev),
+    sped: new Set(saved?.isolated?.sped),
     tspend: new Set(saved?.isolated?.tspend), trev: new Set(saved?.isolated?.trev),
     tval: new Set(saved?.isolated?.tval), tpar: new Set(saved?.isolated?.tpar), tlevy: new Set(saved?.isolated?.tlevy),
   };
   // Lines hidden from each chart's legend; both show until clicked off
   const hidden = (k: string) => new Set((saved?.hidden?.[k] ?? []).filter((l): l is Line => LINES.includes(l as Line)));
   const hiddenLines: Record<StackPanel, Set<Line>> = {
-    ppe: hidden("ppe"), ood: hidden("ood"), nss: hidden("nss"), rev: hidden("rev"), tspend: hidden("tspend"), trev: hidden("trev"),
+    ppe: hidden("ppe"), ood: hidden("ood"), nss: hidden("nss"), rev: hidden("rev"), sped: hidden("sped"),
+    tspend: hidden("tspend"), trev: hidden("trev"),
     tval: hidden("tval"), tpar: hidden("tpar"), tlevy: hidden("tlevy"),
   };
 
@@ -884,6 +914,7 @@ export async function startExplorer() {
   dial.addEventListener("click", () => {
     update({ detail: state.detail === "on" ? "off" : "on" });
     showDetail();
+    legends.forEach(fitLegend);  // Detail hides each trend's "?", which changes what its entry needs
   });
   const dperInputs = document.querySelectorAll<HTMLInputElement>('input[name="dper"]');
   dperInputs.forEach((r) => (r.checked = r.value === state.dper));
@@ -1151,9 +1182,13 @@ export async function startExplorer() {
   /** Per pupil, or with Totals on, back to dollars: each year's figure times the pupils it was
    * divided by. An average's figures are pooled per pupil and its enrollment is per district, so its
    * totals are its average district's. */
-  const pupilsOf = (e: Entity, by: "in_district" | "foundation" | "rev"): Values =>
-    by === "rev" ? e.rev_fte ?? e.enroll.in_district : e.enroll[by];
-  const inDollars = (values: Values, e: Entity, by: "in_district" | "foundation" | "rev"): Values => {
+  type PupilsBy = "in_district" | "foundation" | "rev" | "sped" | "cb";
+  const pupilsOf = (e: Entity, by: PupilsBy): Values =>
+    by === "rev" ? e.rev_fte ?? e.enroll.in_district
+      : by === "sped" ? e.sped_fte ?? nulls(years.length)
+      : by === "cb" ? e.cb?.fte ?? nulls(years.length)
+      : e.enroll[by];
+  const inDollars = (values: Values, e: Entity, by: PupilsBy): Values => {
     if (state.dper !== "total") return values;
     const n = pupilsOf(e, by);
     return values.map((v, i) => (v == null || n[i] == null ? null : v * n[i]!));
@@ -1180,6 +1215,8 @@ export async function startExplorer() {
   let showPrograms = false;
   const revSeries = (e: Entity): Series[] | null =>
     e.rev ? REV_SERIES.map((s) => ({ ...s, values: deflate(inDollars(e.rev![s.key], e, "rev")) })) : null;
+  const spedSeries = (e: Entity): Series[] | null =>
+    e.sped ? SPED_SERIES.map((s) => ({ ...s, values: deflate(inDollars(e.sped![s.key], e, "sped")) })) : null;
   /** Revenue averages cover only their regional districts, and say so. */
   const revName = (c: Entity) => (c.kind === "district" ? c.name : `${c.name} (regional districts)`);
   const totals = (series: Series[]): Values => years.map((_, i) => sumAt(series.map((s) => s.values), i));
@@ -1376,22 +1413,40 @@ export async function startExplorer() {
     if (!width) return;
     const gap = parseFloat(getComputedStyle(list).columnGap) || 0;
     const right = list.getBoundingClientRect().left + width;
-    for (let i = 1; i < items.length; i++) {
+    for (let i = 0; i < items.length; i++) {
       const li = items[i];
-      if (!li.querySelector(".legend-line")) continue;
-      const prev = items[i - 1].getBoundingClientRect();
-      if (li.getBoundingClientRect().top <= prev.top + 1) continue;  // already on the row
-      // The swatch with the name, and the figure, each stay whole, so the room has to hold the wider of them
-      // beside whatever else the entry carries (its "?"), measured while the entry still has its own width
-      const btn = li.querySelector<HTMLElement>(".legend-line")!;
-      const beside = li.getBoundingClientRect().width - btn.getBoundingClientRect().width;
-      const cs = getComputedStyle(btn);
-      const pad = ["paddingLeft", "paddingRight", "borderLeftWidth", "borderRightWidth"]
-        .reduce((s, k) => s + parseFloat(cs[k as "paddingLeft"]), 0) + 12;
-      const whole = [...li.querySelectorAll<HTMLElement>(".legend-detail, .legend-keep")].map((e) => e.getBoundingClientRect().width);
-      const need = Math.max(FIT_MIN, ...whole.map((w) => w + beside + pad));
-      const room = right - prev.right - gap;
-      if (room >= need) li.style.flexBasis = `${Math.floor(room)}px`;
+      const btn = li.querySelector<HTMLElement>(".legend-line");
+      if (!btn) continue;
+      const prev = i ? items[i - 1].getBoundingClientRect() : null;
+      if (prev && li.getBoundingClientRect().top > prev.top + 1) {  // dropped to a new row
+        // The swatch with the name, and the figure, each stay whole, so the room has to hold the wider of them
+        // beside whatever else the entry carries (its "?"), measured while the entry still has its own width
+        const beside = li.getBoundingClientRect().width - btn.getBoundingClientRect().width;
+        const cs = getComputedStyle(btn);
+        const pad = ["paddingLeft", "paddingRight", "borderLeftWidth", "borderRightWidth"]
+          .reduce((s, k) => s + parseFloat(cs[k as "paddingLeft"]), 0) + 12;
+        const whole = [...li.querySelectorAll<HTMLElement>(".legend-detail, .legend-keep")].map((e) => e.getBoundingClientRect().width);
+        const need = Math.max(FIT_MIN, ...whole.map((w) => w + beside + pad));
+        const room = right - prev.right - gap;
+        if (room >= need) li.style.flexBasis = `${Math.floor(room)}px`;
+      }
+      hug(li, btn);
+    }
+  }
+
+  /** A wrapped entry ends where its longest line does, not at the edge of the room it was given, so the pill
+   * its button shows on hover, and its "?", sit at the end of the words (#189) */
+  function hug(li: HTMLElement, btn: HTMLElement) {
+    const range = document.createRange();
+    range.selectNodeContents(btn);
+    if (!range.getClientRects().length) return;
+    const cs = getComputedStyle(btn);
+    // A few passes: a line's end can move as the entry narrows (a space at the break stops counting)
+    for (let pass = 0; pass < 3; pass++) {
+      const inner = btn.getBoundingClientRect().right - parseFloat(cs.paddingRight) - parseFloat(cs.borderRightWidth);
+      const slack = inner - Math.max(...[...range.getClientRects()].map((r) => r.right));
+      if (slack <= 1) return;
+      li.style.flexBasis = `${Math.ceil(li.getBoundingClientRect().width - slack) + 1}px`;
     }
   }
 
@@ -2405,6 +2460,108 @@ export async function startExplorer() {
         : stackTip(i, revShown, revSel, revShownTotal, revTotal, revOverlay, revTrend, `Total revenue${pp}`, "sources");
     }
 
+    // Special education, from DESE's RADAR spreadsheet, per FTE pupil in district and out (the pupils DESE divides
+    // all spending by, since its costs include out-of-district tuition), with a line for what the state paid back
+    // through the Circuit Breaker for each year's costs. The export pools an average's districts (sped_fields).
+    const perAll = whole ? "" : " per FTE pupil";
+    const sped = spedSeries(e);
+    $("sped-body").hidden = !sped;
+    $("sped-none").hidden = !!sped;
+    let p6: Panel | null = null;
+    let spedTip: ((i: number) => TipContent) | null = null;
+    if (!sped) {
+      $("sped-sub").textContent = "";
+      $("sped-none").textContent = e.type === "charter"
+        ? "DESE's special education spending and Circuit Breaker figures don't include charter schools."
+        : `DESE publishes no special education figures for ${e.name}.`;
+      delete fullTables.sped;
+    } else {
+      const cSped = c ? spedSeries(c) : null;
+      const spedTotal = totals(sped);
+      const cSpedTotal = cSped ? totals(cSped) : null;
+      const spedShown = visible(sped, "sped");
+      const spedSel = selectionName(spedShown, sped, "categories");
+      const spedShownTotal = totals(spedShown);
+      const cSpedShownTotal = cSped ? totals(visible(cSped, "sped")) : null;
+      const spedOverlayAll = cSped ? { key: "cmp", label: `${cName}, ${spedSel ?? "total"}`, color: COMPARE_COLOR, values: cSpedShownTotal! } : null;
+      const spedTrendAll = trendOf(e.name, spedSel, spedShownTotal);
+      const spedOverlay = drawn("sped", "cmp", spedOverlayAll);
+      const spedTrend = drawn("sped", "trend", spedTrendAll);
+      const ecb = e.cb;
+      const cbAll: Series | null = ecb
+        ? { key: "cb", label: "Paid back by the state", color: CB_COLOR, values: deflate(inDollars(ecb.paid, e, "cb")) } : null;
+      const cbLine = drawn("sped", "cb", cbAll);
+      const claimed = ecb ? deflate(inDollars(ecb.claimed, e, "cb")) : null;
+      const above = ecb ? deflate(inDollars(ecb.above, e, "cb")) : null;
+      const studentsLabel = e.kind === "district" ? "Students claimed" : "Students claimed, per district";
+      const students = (v: number) => (e.kind === "district" ? Math.round(v).toLocaleString("en-US") : v.toFixed(1));
+      const share = e.sped_share!;
+      const shareAt = lastAt(share);
+      $("sped-sub").replaceChildren(
+        (whole
+          ? `${dollarsNote}, in total: each year's figure per FTE pupil times its pupils, in the district's schools and out.`
+          : `${dollarsNote} per FTE pupil, in the district's schools and out.`) +
+        (shareAt >= 0 ? ` Special education was ${share[shareAt]!.toFixed(1)}% of ${e.kind === "district" ? `${e.name}'s spending` : "its districts' spending"} in FY${years[shareAt]}. ` : " "),
+        helpTip(
+          "DESE's direct special education spending: what each district reports spending on special education in its " +
+          "own schools (teaching, other instructional services, and transportation), on " +
+          "tuition at public schools and collaboratives elsewhere in Massachusetts and at private and out-of-state " +
+          "schools, on transportation to them, and on health services for pupils in private schools. The last category " +
+          "is what grants and revolving funds paid, such as federal special education grants.\n\nPer pupil divides " +
+          "by every FTE pupil the district is responsible " +
+          "for, in its own schools and out, as DESE does for total spending per pupil, so it is the cost of special " +
+          "education spread over all pupils, not the cost per student with a disability."),
+        ...(cbAll ? [" The green line is what the state paid back for each year's costs."] : []),
+        ...(spedSel ? [" Scale fitted to the selection."] : []));
+      let spedMax = 0;
+      years.forEach((_, i) => (spedMax = Math.max(spedMax, stackTop(sped, i), cSpedTotal?.[i] ?? 0, cbLine?.values[i] ?? 0)));
+      // A selection's scale holds the lines drawn over it, the payback's too
+      const lineTops = years.map((_, i) => Math.max(spedOverlay?.values[i] ?? 0, cbLine?.values[i] ?? 0));
+      p6 = stackedColumns($("svg-sped") as unknown as SVGSVGElement, frame(tall, `Special education${pp}`, `Per pupil`), spedShown, spedOverlay,
+        spedSel ? fitTicks(spedShown, lineTops) : niceTicks(spedMax * 1.04), fmtUsd, setHover,
+        { value: spedShownTotal[last], text: usd }, [], spedTrend, cbLine ? [cbLine] : []);
+      legend($("legend-sped"), [
+        ...sped.map((s) => ({ key: s.key, label: s.label, color: s.color, mark: "rect" as const })),
+        ...lineLegend(spedTrendAll, spedOverlayAll),
+        ...(cbAll && hasLine(cbAll) ? [{ label: "Paid back by the state (Circuit Breaker)", color: CB_COLOR, mark: "line" as const, line: "cb" as const,
+          help: "The state's Circuit Breaker reimburses part of what a district spends on a student whose special " +
+            "education costs more than a threshold, four times the state's average foundation budget per pupil. The " +
+            "district claims a year's costs after the year ends, and the state repays a share of the costs above the " +
+            "threshold, 75% when the budget allows, in quarterly payments the next year. Transportation to " +
+            "out-of-district schools has counted since the FY2022 payments. Extraordinary relief pays in the same year " +
+            "when a district's instruction and tuition costs rise by more than a quarter over the year before.\n\nThe " +
+            "line puts each payment with the year of the costs it repays, so it lines up with the columns: FY2024's " +
+            "point is what the state paid in FY2025 for FY2024's claim, and any extraordinary relief paid in FY2024." }] : []),
+      ], "sped");
+      const spedCaption = `Special education spending${perAll}${spedSel ? `, ${spedSel}` : ""}, ${e.name} (${dollarsNote.toLowerCase()})`;
+      compareTable($("cmp-sped"), spedCaption, "Category",
+        cmpRows(spedShown, cSped, spedSel, spedTotal, cSpedTotal, spedShownTotal, cSpedShownTotal, "Total"),
+        "usd", cSped ? c : null, { ...tableOpts, noCmpNote: c && !cSped ? `${capital(refName(c))} has no special education figures to shade this table against.` : undefined });
+      fullTables.sped = { caption: `Special education spending${perAll} by category, and the Circuit Breaker, ${e.name} (${dollarsNote.toLowerCase()})`, cols: [
+        ...sped.map((s) => ({ label: s.label, values: s.values, fmt: usd })),
+        { label: "Total", values: spedTotal, fmt: usd },
+        { label: "Share of all spending", values: share, fmt: (v: number) => `${v.toFixed(1)}%` },
+        ...(cSped ? [{ label: `${cName}, total`, values: cSpedTotal!, fmt: usd }] : []),
+        ...(ecb && cbAll ? [
+          { label: "Paid back by the state, for the year's costs", values: cbAll.values, fmt: usd },
+          { label: "Costs claimed", values: claimed!, fmt: usd },
+          { label: "Costs above the threshold", values: above!, fmt: usd },
+          { label: studentsLabel, values: ecb.students, fmt: students },
+        ] : []),
+      ] };
+      spedTip = (i) => {
+        const t = stackTip(i, spedShown, spedSel, spedShownTotal, spedTotal, spedOverlay, spedTrend, `Special education${pp}`, "categories");
+        const rows = [...t.rows,
+          ...(share[i] != null ? [{ value: `${share[i]!.toFixed(1)}%`, label: "Share of all spending" }] : []),
+          ...(cbLine && cbLine.values[i] != null ? [
+            { value: usd(cbLine.values[i]!), label: `Paid back by the state${pp}`, color: CB_COLOR, mark: "line" as const },
+            ...(ecb!.students[i] != null ? [{ value: students(ecb!.students[i]!), label: studentsLabel }] : []),
+            ...(claimed?.[i] != null ? [{ value: usd(claimed[i]!), label: `Costs claimed${pp}` }] : []),
+          ] : [])];
+        return { ...t, rows };
+      };
+    }
+
     // Tooltips
     panels = [
       {
@@ -2454,6 +2611,7 @@ export async function startExplorer() {
       },
       ...(p4 && revTip ? [{ panel: p4, figure: $("fig-rev"), tip: revTip }] : []),
       { panel: p5, figure: $("fig-ood"), tip: oodTip },
+      ...(p6 && spedTip ? [{ panel: p6, figure: $("fig-sped"), tip: spedTip }] : []),
     ];
     if (hovered != null) setHover(null, null);
 
