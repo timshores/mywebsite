@@ -126,6 +126,11 @@ const TOWN_MEASURES: Measure[] = [
     about: (m, real, y) => `How much each town's population changed from July ${y.from - 1} to July ${y.to - 1}.`,
   },
   {
+    key: "unemp", label: "Unemployment rate", kind: "level", fmt: share, short: share, years: "year",
+    about: (m, real, y) => `The share of each town's labor force out of work in ${y.to - 1}, the state's average for the year. ` +
+      "The figures end with 2022, which the map shows at FY2023.",
+  },
+  {
     key: "eqv", label: "Property value per resident, yearly growth", kind: "change", fmt: yearly, short: yearlyShort, dollars: true,
     subject: "property value per resident", years: "range",
     about: (m, real, y) => "How fast each town's equalized property value per resident grew each year on trend, from " +
@@ -140,6 +145,21 @@ const TOWN_MEASURES: Measure[] = [
     key: "levy_room", label: "Room under the levy limit", kind: "level", fmt: share, short: share, years: "year",
     about: (m, real, y) => `Each town's unused levy capacity in FY${y.to}, as a share of its Proposition 2½ levy limit. The ` +
       "lightest towns are taxing at or near their limit.",
+  },
+  {
+    key: "override", label: "Override capacity", kind: "level", fmt: share, short: share, years: "year",
+    about: (m, real, y) => `Each town's override capacity in FY${y.to}: the room between its Proposition 2½ levy limit and its ` +
+      "levy ceiling, 2½% of its assessed value, as a share of the ceiling. The darkest towns could raise the most with an override.",
+  },
+  {
+    key: "reserves", label: "Reserves as a share of the budget", kind: "level", fmt: share, short: share, years: "year",
+    about: (m, real, y) => `Each town's free cash and stabilization funds at the end of FY${y.to}, as a share of its operating ` +
+      "budget: the revenue its budget raises, without enterprise or Community Preservation Act funds.",
+  },
+  {
+    key: "debt_service", label: "Debt service as a share of the budget", kind: "level", fmt: share, short: share, years: "year",
+    about: (m, real, y) => `What each town's general fund paid in FY${y.to} on its long-term debt, principal and interest, as a ` +
+      "share of its operating budget.",
   },
   {
     key: "bill_income", label: "Single-family tax bill as a share of income", kind: "level", fmt: share, short: share, years: "year",

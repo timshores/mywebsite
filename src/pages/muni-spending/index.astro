@@ -47,8 +47,26 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
       source: "Division of Local Services, Average Single Family Tax Bill", url: "https://dls-gw.dor.state.ma.us/reports/rdPage.aspx?rdReport=AverageSingleTaxBill.SingleFamTaxBill_wRange", retrieved: "Oct 21, 2026" },
     { file: "dls_levy_capacity.csv", holds: "Proposition 2½ levy limit, levy, excess capacity and ceiling, FY2007 on",
       source: "Division of Local Services, Excess Levy Capacity and Overrides", url: "https://dls-gw.dor.state.ma.us/reports/rdPage.aspx?rdReport=Prop2.5.ExcessLevyCapandOverride_10_pres", retrieved: "Oct 21, 2026" },
+    { file: "dls_free_cash.csv", holds: "Free cash certified as of July 1, and the prior year's operating budget, FY2002 on",
+      source: "Division of Local Services, Certified Free Cash as a % of Budget", url: "https://dls-gw.dor.state.ma.us/reports/rdPage.aspx?rdReport=Dashboard.Cat_1_Reports.CertifiedFreeCashBudget351", retrieved: "Nov 3, 2026" },
+    { file: "dls_stabilization.csv", holds: "Stabilization and special-purpose stabilization fund balances at June 30, and the operating budget, FY2002 on",
+      source: "Division of Local Services, Stabilization Funds as a % of Budget", url: "https://dls-gw.dor.state.ma.us/reports/rdPage.aspx?rdReport=Dashboard.Cat_1_Reports.StablPerBudget351", retrieved: "Nov 3, 2026" },
+    { file: "dls_long_term_debt.csv", holds: "Long-term debt outstanding, general fund debt service, and the budget, FY2003 on",
+      source: "Division of Local Services, Long-Term Debt", url: "https://dls-gw.dor.state.ma.us/reports/rdPage.aspx?rdReport=Dashboard.Cat_6_Reports.LongTermDebt351", retrieved: "Nov 3, 2026" },
+    { file: "dls_authorized_debt.csv", holds: "Debt authorized, issued, retired or rescinded, and not yet issued, FY2003 on",
+      source: "Division of Local Services, Total Authorized and Unissued Debt", url: "https://dls-gw.dor.state.ma.us/reports/rdPage.aspx?rdReport=Dashboard.Cat_6_Reports.TotalAuthUnisDebt351", retrieved: "Nov 3, 2026" },
+    { file: "dls_bond_ratings.csv", holds: "Moody's and S&P ratings of each town's bonds, 2001 on",
+      source: "Division of Local Services, Bond Ratings", url: "https://dls-gw.dor.state.ma.us/reports/rdPage.aspx?rdReport=DLS_Bond_Ratings", retrieved: "Nov 3, 2026" },
+    { file: "dls_prop25_votes.csv", holds: "Every override, underride, debt and capital exclusion, and stabilization fund vote the state records, with results and amounts",
+      source: "Division of Local Services, Proposition 2½ votes", url: "https://dls-gw.dor.state.ma.us/reports/rdPage.aspx?rdReport=Votes.Prop2_5.OverrideUnderride", retrieved: "Nov 3, 2026" },
+    { file: "dls_capital_projects.csv", holds: "Capital projects fund revenue and spending by purpose, FY2002 on",
+      source: "Division of Local Services, Schedule A Part 4", url: "https://dls-gw.dor.state.ma.us/reports/rdPage.aspx?rdReport=ScheduleA.CapitalProjects.CapitalProjects", retrieved: "Nov 3, 2026" },
+    { file: "dls_labor_force.csv", holds: "Labor force, employed, unemployed, and the unemployment rate, 1990 to 2022",
+      source: "Division of Local Services, Labor Force", url: "https://dls-gw.dor.state.ma.us/reports/rdPage.aspx?rdReport=Dashboard.TrendAnalysisReports.LaborForce", retrieved: "Nov 3, 2026" },
     { file: "census_town_population.csv", holds: "Population on July 1 at the start of each fiscal year, FY2005 on",
       source: "Census Bureau, subcounty population estimates", url: "https://www.census.gov/programs-surveys/popest.html", retrieved: "Oct 21, 2026" },
+    { file: "census_town_demographics.csv", holds: "Residents by sex, age, race and Hispanic or Latino origin, and disability, in the five-year releases that don't overlap: 2005–2009, 2010–2014, 2015–2019, 2020–2024",
+      source: "Census Bureau, American Community Survey, tables B01001, B03002 and B18101", url: "https://www.census.gov/programs-surveys/acs", retrieved: "Nov 3, 2026" },
     { file: "census_town_households.csv", holds: "Households, each five-year release from 2005–2009 on",
       source: "Census Bureau, American Community Survey, table B11001", url: "https://www.census.gov/programs-surveys/acs", retrieved: "Oct 21, 2026" },
     { file: "town_boundaries.json", holds: "Town outlines for the map, and each town's land area",
@@ -463,6 +481,21 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
         </button>
       </figure>
 
+      <figure id="fig-tres" class="panel">
+        <h3>Reserves<span data-per> per resident</span></h3>
+        <p class="panel-sub" id="tres-sub"></p>
+        <ul class="legend" id="legend-tres" aria-label="Reserves. Select one or more to show only those."></ul>
+        <svg id="svg-tres" tabindex="0" role="img" data-aria-per="Stacked columns of stabilization funds and free cash{per} at each fiscal year's end. Use the arrow keys to read each year; the data table below has every value." aria-label="Stacked columns of stabilization funds and free cash per resident at each fiscal year's end. Use the arrow keys to read each year; the data table below has every value."></svg>
+        <div class="tooltip" role="status" hidden></div>
+        <details class="table-view compare-view">
+          <summary>Comparison table</summary>
+          <div class="table-scroll" id="cmp-tres"></div>
+        </details>
+        <button type="button" class="table-open" data-table="tres" aria-haspopup="dialog">
+          <span class="table-open-icon" aria-hidden="true">⤢</span> Full data table
+        </button>
+      </figure>
+
       <figure id="fig-tlevy" class="panel">
         <h3>Property tax levy and its limit<span data-per> per resident</span></h3>
         <p class="panel-sub" id="tlevy-sub"></p>
@@ -476,6 +509,10 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
         <button type="button" class="table-open" data-table="tlevy" aria-haspopup="dialog">
           <span class="table-open-icon" aria-hidden="true">⤢</span> Full data table
         </button>
+        <details class="table-view votes-view" id="tvotes">
+          <summary>Proposition 2½ votes</summary>
+          <div class="table-scroll" id="tvotes-table"></div>
+        </details>
       </figure>
 
       <figure id="fig-tbill" class="panel">
@@ -485,6 +522,36 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
         <svg id="svg-tbill" tabindex="0" role="img" aria-label="Line of the average single-family tax bill for each fiscal year. Use the arrow keys to read each year; the data table below has every value."></svg>
         <div class="tooltip" role="status" hidden></div>
         <button type="button" class="table-open" data-table="tbill" aria-haspopup="dialog">
+          <span class="table-open-icon" aria-hidden="true">⤢</span> Full data table
+        </button>
+      </figure>
+
+      <figure id="fig-tdebt" class="panel">
+        <h3>Long-term debt<span data-per> per resident</span></h3>
+        <p class="panel-sub" id="tdebt-sub"></p>
+        <ul class="legend" id="legend-tdebt" aria-label="Debt outstanding and authorized. Select one to show only it."></ul>
+        <svg id="svg-tdebt" tabindex="0" role="img" data-aria-per="Stacked columns of long-term debt outstanding and debt authorized but not yet borrowed{per} at each fiscal year's end. Use the arrow keys to read each year; the data table below has every value." aria-label="Stacked columns of long-term debt outstanding and debt authorized but not yet borrowed per resident at each fiscal year's end. Use the arrow keys to read each year; the data table below has every value."></svg>
+        <div class="tooltip" role="status" hidden></div>
+        <details class="table-view compare-view">
+          <summary>Comparison table</summary>
+          <div class="table-scroll" id="cmp-tdebt"></div>
+        </details>
+        <button type="button" class="table-open" data-table="tdebt" aria-haspopup="dialog">
+          <span class="table-open-icon" aria-hidden="true">⤢</span> Full data table
+        </button>
+      </figure>
+
+      <figure id="fig-tcap" class="panel">
+        <h3>Capital projects spending<span data-per> per resident</span> by purpose</h3>
+        <p class="panel-sub" id="tcap-sub"></p>
+        <ul class="legend" id="legend-tcap" aria-label="Capital project purposes. Select one or more to show only those."></ul>
+        <svg id="svg-tcap" tabindex="0" role="img" data-aria-per="Stacked columns of capital projects fund spending{per} by purpose for each fiscal year. Use the arrow keys to read each year; the data table below has every value." aria-label="Stacked columns of capital projects fund spending per resident by purpose for each fiscal year. Use the arrow keys to read each year; the data table below has every value."></svg>
+        <div class="tooltip" role="status" hidden></div>
+        <details class="table-view compare-view">
+          <summary>Comparison table</summary>
+          <div class="table-scroll" id="cmp-tcap"></div>
+        </details>
+        <button type="button" class="table-open" data-table="tcap" aria-haspopup="dialog">
           <span class="table-open-icon" aria-hidden="true">⤢</span> Full data table
         </button>
       </figure>
@@ -531,12 +598,34 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
       </figure>
 
       <figure id="fig-tpop" class="panel">
-        <h3>Population</h3>
+        <h3>Population and labor force</h3>
         <p class="panel-sub" id="tpop-sub"></p>
         <ul class="legend" id="legend-tpop"></ul>
-        <svg id="svg-tpop" tabindex="0" role="img" aria-label="Line of population for each fiscal year. Use the arrow keys to read each year; the data table below has every value."></svg>
+        <svg id="svg-tpop" tabindex="0" role="img" aria-label="Lines of population, labor force, and employment for each fiscal year. Use the arrow keys to read each year; the data table below has every value."></svg>
         <div class="tooltip" role="status" hidden></div>
         <button type="button" class="table-open" data-table="tpop" aria-haspopup="dialog">
+          <span class="table-open-icon" aria-hidden="true">⤢</span> Full data table
+        </button>
+      </figure>
+
+      <figure id="fig-tage" class="panel">
+        <h3>Residents by age</h3>
+        <p class="panel-sub" id="tage-sub"></p>
+        <ul class="legend" id="legend-tage" aria-label="Age groups. Select one or more to show only those."></ul>
+        <svg id="svg-tage" tabindex="0" role="img" aria-label="Stacked columns of residents' shares by age for each of the Census Bureau's five-year estimates. Use the arrow keys to read each year; the data table below has every value."></svg>
+        <div class="tooltip" role="status" hidden></div>
+        <button type="button" class="table-open" data-table="tage" aria-haspopup="dialog">
+          <span class="table-open-icon" aria-hidden="true">⤢</span> Full data table
+        </button>
+      </figure>
+
+      <figure id="fig-trace" class="panel">
+        <h3>Residents by race and ethnicity</h3>
+        <p class="panel-sub" id="trace-sub"></p>
+        <ul class="legend" id="legend-trace" aria-label="Race and ethnicity groups. Select one or more to show only those."></ul>
+        <svg id="svg-trace" tabindex="0" role="img" aria-label="Stacked columns of residents' shares by race and Hispanic or Latino origin for each of the Census Bureau's five-year estimates. Use the arrow keys to read each year; the data table below has every value."></svg>
+        <div class="tooltip" role="status" hidden></div>
+        <button type="button" class="table-open" data-table="trace" aria-haspopup="dialog">
           <span class="table-open-icon" aria-hidden="true">⤢</span> Full data table
         </button>
       </figure>
@@ -742,7 +831,41 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
         town's assessed value, though excluded debt can. Unused levy capacity is the gap between the limit and the levy a town sets: money it could
         raise without asking voters, and chooses not to. It can be read as tax relief, as careful budgeting, or as
         austerity. The tax rate here is the single-family bill over the home's value, which is the residential rate
-        except where a town gives a residential exemption.
+        except where a town gives a residential exemption. The ceiling line and override capacity come from the same
+        report: override capacity is the ceiling less the limit before debt exclusions, how much more an override could
+        raise. The levy chart's list of <strong>Proposition 2½ votes</strong> comes from DLS's records of override,
+        underride, debt exclusion, capital exclusion, and stabilization fund votes
+        (<a href="/muni-spending/data/towns-prop25-votes.csv" download>CSV</a>), with the result and, where DLS has
+        them, the amount and the count.
+      </p>
+      <p>
+        <strong>Reserves</strong> are each town's stabilization fund balances at June 30
+        (<a href="https://dls-gw.dor.state.ma.us/reports/rdPage.aspx?rdReport=Dashboard.Cat_1_Reports.StablPerBudget351">DLS</a>,
+        <a href="/muni-spending/data/towns-stabilization.csv" download>CSV</a>) and the free cash the state certified from
+        that day's balance sheet (<a href="https://dls-gw.dor.state.ma.us/reports/rdPage.aspx?rdReport=Dashboard.Cat_1_Reports.CertifiedFreeCashBudget351">DLS</a>,
+        <a href="/muni-spending/data/towns-free-cash.csv" download>CSV</a>), shown at the fiscal year that ended: the free
+        cash certified as of July 1, 2026 is FY2026's. Their share of the budget divides by DLS's operating budget, the
+        revenue the tax rate recap raises without enterprise or Community Preservation Act funds. A statewide comparison
+        of each budget with what was spent isn't shown: Schedule A's spending leaves out transfers to stabilization and
+        capital funds, which the budget includes, so the gap would count savings as money left unspent.
+        <strong>Long-term debt</strong> is the debt outstanding at each year's end, with general fund debt service
+        (<a href="https://dls-gw.dor.state.ma.us/reports/rdPage.aspx?rdReport=Dashboard.Cat_6_Reports.LongTermDebt351">DLS</a>,
+        <a href="/muni-spending/data/towns-debt.csv" download>CSV</a>), and debt authorized but not yet borrowed
+        (<a href="https://dls-gw.dor.state.ma.us/reports/rdPage.aspx?rdReport=Dashboard.Cat_6_Reports.TotalAuthUnisDebt351">DLS</a>,
+        <a href="/muni-spending/data/towns-authorized-debt.csv" download>CSV</a>); bond ratings are Moody's and S&amp;P's,
+        as DLS lists them (<a href="/muni-spending/data/towns-bond-ratings.csv" download>CSV</a>).
+        <strong>Capital projects</strong> spending comes from Schedule A Part 4
+        (<a href="/muni-spending/data/towns-capital-projects.csv" download>CSV</a>, with the funds' revenue), and the
+        <strong>labor force</strong> from DLS's yearly figures (<a href="/muni-spending/data/towns-labor-force.csv" download>CSV</a>),
+        which end with 2022.
+      </p>
+      <p>
+        <strong>Residents by age, race and ethnicity</strong> come from the Census Bureau's
+        <a href="https://www.census.gov/programs-surveys/acs">American Community Survey</a> five-year estimates, tables
+        B01001, B03002 and B18101 (<a href="/muni-spending/data/towns-demographics.csv" download>CSV</a>, in counts), read
+        from the Bureau's summary files. Estimates whose years overlap shouldn't be compared, so the charts use the four
+        that don't, 2005–2009 through 2020–2024, each at the fiscal year after it ends. Eleven towns the Bureau has since
+        given new codes have no 2005–2009 figures. Disability counts begin with 2008–2012.
       </p>
       <p>
         <strong>Equalized valuation (EQV)</strong> is the state's estimate of the full and fair cash value of all
@@ -2740,6 +2863,21 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
   .table-scroll :global(tbody th) {
     text-align: left;
     font-weight: 500;
+  }
+
+  /* The levy chart's Proposition 2½ votes: purposes wrap; the result is said in words */
+  .votes-view :global(td),
+  .votes-view :global(thead th) {
+    text-align: left;
+  }
+
+  .votes-view :global(td.vote-what) {
+    white-space: normal;
+    min-width: 14rem;
+  }
+
+  .votes-view :global(td.vote-lost) {
+    color: var(--ink-soft);
   }
 
   /* Asks once, after the first change, whether to remember choices; never blocks the page */

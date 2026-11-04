@@ -156,7 +156,39 @@ interface Town {
   levy?: { raised: Values; unused: Values };
   levy_total?: Values;
   levy_max?: Values;
+  /** Override capacity, the room between the levy limit and the ceiling, as a percent of the ceiling; the
+   * ceiling per resident; and the newest year's dollars (FY2026, past the axis) */
+  override_pct?: Values;
+  levy_ceiling_pr?: Values;
+  override_latest?: { fy: number; capacity: number; ceiling: number } | null;
+  /** Reserves at each fiscal year's end, per resident: June 30's stabilization balances and the free cash
+   * certified from that balance sheet; the operating budget per resident; the newest year-end's dollars */
+  reserves?: { stab: Values; sp_stab: Values; free_cash: Values };
+  budget?: Values;
+  reserves_latest?: { fy: number; stab: number; sp_stab: number; free_cash: number; budget: number } | null;
+  /** Long-term debt outstanding and authorized but unissued, per resident; general fund debt service as a
+   * percent of the budget, outstanding debt as a percent of EQV; the newest year's dollars */
+  debt?: { outstanding: Values; unissued: Values };
+  debt_service?: Values;
+  debt_eqv?: Values;
+  debt_latest?: { fy: number; outstanding: number; service: number; budget: number } | null;
+  /** Capital projects fund spending by purpose (Schedule A Part 4), per resident */
+  capital?: Record<CapitalKey, Values>;
+  /** The labor force and the employed (an average's towns' combined), and the unemployment rate in percent,
+   * each calendar year's at the next fiscal year, as the population is */
+  labor?: { force: Values; employed: Values; rate: Values };
+  labor_latest?: number | null;
+  /** Prop 2 1/2 votes since the explorer's first year, [held, won], by kind */
+  votes?: Record<"override" | "debt" | "capital" | "stabilization", [number, number]>;
+  /** Towns: bond ratings by agency, [year, rating] for each year DLS lists one */
+  ratings?: { moodys?: [number, string][]; sp?: [number, string][] };
+  /** Residents by sex, age, race and Hispanic origin, and disability (an average's towns' combined): the Census
+   * Bureau's five-year estimates that don't overlap, each at the fiscal year after its five years end */
+  demo?: Record<DemoKey, Values>;
 }
+
+type DemoKey = "population" | "male" | "female" | "age_under_18" | "age_18_24" | "age_25_44" | "age_45_64" | "age_65_up" |
+  "white" | "black" | "asian" | "other_race" | "hispanic" | "disability_universe" | "disability";
 
 interface ListedTown {
   id: string; name: string; chunk: string; region: string | null; county?: string | null; peer?: string | null;
@@ -221,11 +253,12 @@ const MIN_SPAN = 2;
 const PER_WORD: Record<Per, string> = { resident: "resident", household: "household", parcel: "taxable property", total: "town" };
 type View = "districts" | "towns" | "commonwealth" | "cap" | "data";
 const VIEWS: View[] = ["districts", "towns", "commonwealth", "cap", "data"];
-type StackPanel = "ppe" | "ood" | "nss" | "rev" | "sped" | "tspend" | "trev" | "tval" | "tpar" | "tlevy";
+type StackPanel = "ppe" | "ood" | "nss" | "rev" | "sped" | "tspend" | "trev" | "tval" | "tpar" | "tlevy" | "tres" | "tdebt" | "tcap" |
+  "tage" | "trace";
 /** The lines a stacked chart can draw over its columns: its trend, the comparison, and, with Since 1990
  * on, the older measure's line and the comparison's */
-type Line = "trend" | "cmp" | "day" | "cday" | "cb";
-const LINES: Line[] = ["trend", "cmp", "day", "cday", "cb"];
+type Line = "trend" | "cmp" | "day" | "cday" | "cb" | "ceiling";
+const LINES: Line[] = ["trend", "cmp", "day", "cday", "cb", "ceiling"];
 
 // Each comparison choice, as the ids to try in order: "Its cohort in its region" falls
 // back to the statewide cohort where a region has too few districts of that size
@@ -344,6 +377,51 @@ const LEVY_SERIES = [
   { key: "unused", label: "Unused levy capacity", color: "#f3d9a4" },
 ] as const;
 const RESIDENTIAL = new Set(["single", "condo", "multi", "other_res"]);
+// Reserves, bottom to top: the general stabilization fund, special-purpose ones, then free cash
+const RESERVE_SERIES = [
+  { key: "stab", label: "Stabilization fund", color: "#2a78d6" },
+  { key: "sp_stab", label: "Special-purpose stabilization funds", color: "#eda100" },
+  { key: "free_cash", label: "Free cash", color: "#1baf7a" },
+] as const;
+// Debt borrowed, and in a pale version debt voters or the council authorized but the town hasn't yet borrowed
+const DEBT_SERIES = [
+  { key: "outstanding", label: "Debt outstanding", color: "#6250d6" },
+  { key: "unissued", label: "Authorized, not yet borrowed", color: "#b3a8ee" },
+] as const;
+// Schedule A Part 4's purposes, bottom to top as the export orders them (CAPITAL)
+const CAPITAL_SERIES = [
+  { key: "schools", label: "Schools", color: "#2a78d6" },
+  { key: "buildings", label: "Municipal buildings", color: "#eda100" },
+  { key: "highways", label: "Highways (Chapter 90)", color: "#e34948" },
+  { key: "water", label: "Water", color: "#1baf7a" },
+  { key: "sewer", label: "Sewer", color: "#eb6834" },
+  { key: "landfill", label: "Landfill", color: "#6250d6" },
+  { key: "other", label: "Other", color: "#008300" },
+] as const;
+type CapitalKey = (typeof CAPITAL_SERIES)[number]["key"];
+// The levy ceiling: dotted, in the levy's own amber, darker, so it reads apart from the comparison's solid ink
+const CEILING_COLOR = "#a86f00";
+// Age is ordered, so one blue, light to dark from the youngest; the ramp passes the palette check's ordinal tests
+const AGE_SERIES = [
+  { key: "age_under_18", label: "Under 18", color: "#7fa9e2" },
+  { key: "age_18_24", label: "18 to 24", color: "#4f8ad9" },
+  { key: "age_25_44", label: "25 to 44", color: "#2a6ec2" },
+  { key: "age_45_64", label: "45 to 64", color: "#1d529a" },
+  { key: "age_65_up", label: "65 and older", color: "#123a6e" },
+] as const;
+// Race and ethnicity: colors with no customary tie to any group, in an order whose neighbors pass the palette check
+const RACE_SERIES = [
+  { key: "white", label: "White", color: "#6250d6" },
+  { key: "black", label: "Black", color: "#eb6834" },
+  { key: "asian", label: "Asian", color: "#1baf7a" },
+  { key: "other_race", label: "Another race, or more than one", color: "#e87ba4" },
+  { key: "hispanic", label: "Hispanic or Latino, any race", color: "#2a78d6" },
+] as const;
+const LABOR_COLOR = "#e34948";
+const EMPLOYED_COLOR = "#1baf7a";
+const VOTE_WORDS: Record<string, string> = {
+  override: "Override", underride: "Underride", debt: "Debt exclusion", capital: "Capital exclusion", stabilization: "Stabilization fund",
+};
 const POP_COLOR = "#2a78d6";
 const ENROLL_SERIES = [
   { key: "in_district", label: "In-district FTE", color: "#2a78d6" },
@@ -647,13 +725,16 @@ export async function startExplorer() {
     sped: new Set(saved?.isolated?.sped),
     tspend: new Set(saved?.isolated?.tspend), trev: new Set(saved?.isolated?.trev),
     tval: new Set(saved?.isolated?.tval), tpar: new Set(saved?.isolated?.tpar), tlevy: new Set(saved?.isolated?.tlevy),
+    tres: new Set(saved?.isolated?.tres), tdebt: new Set(saved?.isolated?.tdebt), tcap: new Set(saved?.isolated?.tcap),
+    tage: new Set(saved?.isolated?.tage), trace: new Set(saved?.isolated?.trace),
   };
   // Lines hidden from each chart's legend; both show until clicked off
   const hidden = (k: string) => new Set((saved?.hidden?.[k] ?? []).filter((l): l is Line => LINES.includes(l as Line)));
   const hiddenLines: Record<StackPanel, Set<Line>> = {
     ppe: hidden("ppe"), ood: hidden("ood"), nss: hidden("nss"), rev: hidden("rev"), sped: hidden("sped"),
     tspend: hidden("tspend"), trev: hidden("trev"),
-    tval: hidden("tval"), tpar: hidden("tpar"), tlevy: hidden("tlevy"),
+    tval: hidden("tval"), tpar: hidden("tpar"), tlevy: hidden("tlevy"), tres: hidden("tres"), tdebt: hidden("tdebt"), tcap: hidden("tcap"),
+    tage: hidden("tage"), trace: hidden("trace"),
   };
 
   function remember() {
@@ -2717,7 +2798,7 @@ export async function startExplorer() {
   };
 
   interface TownStack {
-    key: "tspend" | "trev" | "tval" | "tpar" | "tlevy";
+    key: "tspend" | "trev" | "tval" | "tpar" | "tlevy" | "tres" | "tdebt" | "tcap";
     name: string;
     series: Series[];
     cSeries: Series[] | null;
@@ -2738,6 +2819,12 @@ export async function startExplorer() {
     noCmpNote?: string;
     /** The tooltip for a year the town didn't report */
     missing?: string;
+    /** A line of another measure over the columns, with its legend entry; the scale holds it */
+    extra?: { series: Series; line: Line; legend: string; help?: string };
+    /** Rows the tooltip adds under the stack's, for a year */
+    tipRows?: (i: number) => TipRow[];
+    /** A note behind a "?" after the subtitle */
+    help?: string;
   }
 
   /** A stacked town panel (spending, revenue, property): chart, legend, tables; returns it with its tooltip. */
@@ -2754,17 +2841,23 @@ export async function startExplorer() {
     const trendAll = trendOf(s.name, sel, shownTotal);
     const overlay = drawn(s.key, "cmp", overlayAll);
     const trend = drawn(s.key, "trend", trendAll);
-    $(`${s.key}-sub`).textContent = s.sub + (sel ? " Scale fitted to the selection." : "");
+    $(`${s.key}-sub`).replaceChildren(s.sub + (sel ? " Scale fitted to the selection." : "") + (s.help ? " " : ""),
+      ...(s.help ? [helpTip(s.help)] : []));
+    const extra = s.extra ? drawn(s.key, s.extra.line, s.extra.series) : null;
     let max = 0;
-    years.forEach((_, i) => (max = Math.max(max, stackTop(s.series, i), cTotal?.[i] ?? 0)));
+    years.forEach((_, i) => (max = Math.max(max, stackTop(s.series, i), cTotal?.[i] ?? 0, extra?.values[i] ?? 0)));
     const fmt = s.fmt ?? usd;
+    const lineTops = years.map((_, i) => Math.max(overlay?.values[i] ?? 0, extra?.values[i] ?? 0));
     const panel = stackedColumns($(`svg-${s.key}`) as unknown as SVGSVGElement,
       { width: s.width, height: s.width < 520 ? 260 : 320, years, yTitle: s.caption, yTitleShort: s.yShort }, shown, overlay,
-      sel ? fitTicks(shown, overlay?.values ?? null) : niceTicks(max * 1.04), s.axis ?? fmtUsd, setHover,
-      { value: shownTotal[s.end], text: fmt, index: s.end }, [], trend);
+      sel ? fitTicks(shown, lineTops) : niceTicks(max * 1.04), s.axis ?? fmtUsd, setHover,
+      { value: shownTotal[s.end], text: fmt, index: s.end }, [], trend, extra ? [extra] : []);
     legend($(`legend-${s.key}`), [
       ...s.series.map((x) => ({ key: x.key, label: x.label, color: x.color, mark: "rect" as const })),
       ...lineLegend(trendAll, overlayAll, fmt),
+      ...(s.extra && hasLine(s.extra.series)
+        ? [{ label: s.extra.legend, color: s.extra.series.color, mark: s.extra.series.dash ? "dash" as const : "line" as const, line: s.extra.line,
+          help: s.extra.help }] : []),
     ], s.key);
     const units = s.kind === "count" ? "" : ` (${dollarsNote.toLowerCase()})`;
     compareTable($(`cmp-${s.key}`), `${s.caption}${sel ? `, ${sel}` : ""}, ${s.name}${units}`, s.rowLabel,
@@ -2775,10 +2868,89 @@ export async function startExplorer() {
       { label: "Total", values: total, fmt },
       ...(s.cmp && cTotal ? [{ label: `${s.cmp.name}, total`, values: cTotal, fmt }] : []),
     ] };
-    const tip = (i: number): TipContent => total[i] == null
-      ? { title: `FY${years[i]}`, rows: [{ value: "–", label: s.missing ?? "Not filed with the state" }] }
-      : stackTip(i, shown, sel, shownTotal, total, overlay, trend, s.totalLabel, s.noun, fmt);
+    const tip = (i: number): TipContent => {
+      if (total[i] == null) return { title: `FY${years[i]}`, rows: [{ value: "–", label: s.missing ?? "Not filed with the state" }] };
+      const t = stackTip(i, shown, sel, shownTotal, total, overlay, trend, s.totalLabel, s.noun, fmt);
+      const more = [
+        ...(extra && extra.values[i] != null ? [{ value: fmt(extra.values[i]!), label: extra.label, color: extra.color, mark: "line" as const }] : []),
+        ...(s.tipRows?.(i) ?? []),
+      ];
+      return more.length ? { ...t, rows: [...t.rows, ...more] } : t;
+    };
     return { panel, tip, total, cTotal };
+  }
+
+  /** Reserves against the budget, override capacity against the ceiling, and the bond rating: each its newest year,
+   * which DLS publishes a year past the explorer's axis */
+  const reservePct = (r: Town["reserves_latest"]) => (r && r.budget ? (r.stab + r.sp_stab + r.free_cash) / r.budget : null);
+  const overridePct = (o: Town["override_latest"]) => (o && o.ceiling ? o.capacity / o.ceiling : null);
+  const newest = (xs?: [number, string][]) => (xs?.length ? xs[xs.length - 1] : null);
+  function fiscalTiles(t: Town, c: Town | null): HTMLElement[] {
+    const out: HTMLElement[] = [];
+    const r = t.reserves_latest;
+    const rp = reservePct(r);
+    if (r && rp != null) {
+      out.push(tile(`Reserves, end of FY${r.fy}`, percent(rp), [
+        `${whole$(r.stab + r.sp_stab + r.free_cash)}${t.kind === "town" ? "" : " combined"}: free cash and stabilization funds`,
+        `Share of the FY${r.fy} operating budget`,
+        c && reservePct(c.reserves_latest) != null ? `${c.name}: ${percent(reservePct(c.reserves_latest)!)}` : "",
+      ], { v: Math.min(rp, 1), title: `Reserves: ${percent(rp)} of the operating budget` }));
+    }
+    const o = t.override_latest;
+    const op = overridePct(o);
+    if (o && op != null) {
+      out.push(tile(`Override capacity, FY${o.fy}`, percent(op), [
+        `${whole$(o.capacity)} between the levy limit and the ceiling`,
+        c && overridePct(c.override_latest) != null ? `${c.name}: ${percent(overridePct(c.override_latest)!)}` : "",
+      ], { v: op, title: `Override capacity: ${percent(op)} of the levy ceiling` }));
+    }
+    const sp = newest(t.ratings?.sp);
+    const md = newest(t.ratings?.moodys);
+    const lead = sp ?? md;
+    if (lead) {
+      out.push(tile("Bond rating", lead[1], [
+        `${sp ? "S&P" : "Moody's"}, ${lead[0]}`,
+        sp && md ? `Moody's: ${md[1]}, ${md[0]}` : "",
+      ]));
+    }
+    return out;
+  }
+
+  // Prop 2 1/2 votes, as votes.json lists them: FY, date, kind, department, purpose, amount, won, yes, no
+  type VoteRow = [number, string | null, string, string | null, string | null, number | null, boolean, number | null, number | null];
+  let votesData: Record<string, VoteRow[]> | null = null;
+  async function showVotes(t: Town) {
+    const box = $<HTMLDetailsElement>("tvotes");
+    const holder = $("tvotes-table");
+    box.hidden = t.kind !== "town";
+    if (t.kind !== "town") return;
+    if (!box.open) {
+      holder.replaceChildren();
+      box.ontoggle = () => box.open && showVotes(t);
+      return;
+    }
+    votesData ??= (await import("../../data/massppe/votes.json")).default as unknown as Record<string, VoteRow[]>;
+    if (state.t !== t.id) return;
+    const rows = votesData[t.id] ?? [];
+    if (!rows.length) {
+      holder.replaceChildren(text("p", `The state lists no Proposition 2½ votes for ${t.name}.`, "panel-none"));
+      return;
+    }
+    const table = document.createElement("table");
+    table.append(text("caption", `Proposition 2½ votes, ${t.name}, newest first`));
+    const head = document.createElement("tr");
+    for (const h of ["Fiscal year", "Date", "Vote", "Purpose", "Amount", "Result"]) head.append(text("th", h));
+    table.createTHead().append(head);
+    const body = table.createTBody();
+    for (const [fy, date, kind, dept, what, amt, won, yes, no] of rows) {
+      const tr = document.createElement("tr");
+      const result = `${won ? "Passed" : "Failed"}${yes != null && no != null ? `, ${count(yes)} to ${count(no)}` : ""}`;
+      tr.append(text("th", `FY${fy}`), text("td", date ?? "–"), text("td", VOTE_WORDS[kind] ?? kind),
+        text("td", [dept, what].filter(Boolean).join(": ") || "–", "vote-what"), text("td", amt != null ? usd(amt) : "–"),
+        text("td", result, won ? "vote-won" : "vote-lost"));
+      body.append(tr);
+    }
+    holder.replaceChildren(table);
   }
 
   function renderTowns() {
@@ -2946,6 +3118,7 @@ export async function startExplorer() {
         popChange != null ? `${pct(popChange)} since July ${years[0] - 1}` : "",
         t.kind === "average" ? "Census Bureau estimates" : peerLabel ? `Peer group: towns with ${peerLabel}` : "Not in a peer group",
       ]),
+      ...fiscalTiles(t, c),
       ...propTiles,
     );
 
@@ -2967,6 +3140,78 @@ export async function startExplorer() {
       sub: `${dollarsNote}${perP}.${filed}`,
     }, dollarsNote);
 
+    // Reserves at each year's end, debt, and capital projects (DLS)
+    const hasFiscal = !!t.reserves;
+    for (const id of ["fig-tres", "fig-tdebt", "fig-tcap"]) $(id).hidden = !hasFiscal;
+    const fiscalPanels: typeof panels = [];
+    const debtPanels: typeof panels = [];
+    const who = t.kind === "town" ? t.name : "these towns";
+    if (hasFiscal) {
+      const resOf = (x: Town, k: Values): Series[] => RESERVE_SERIES.map((q) => ({ ...q, values: deflate(per(x.reserves![q.key], k)) }));
+      const res = resOf(t, kT);
+      const cRes = c?.reserves ? resOf(c, kC!) : null;
+      const resShare = (x: Town, i: number) => share(sumAt(RESERVE_SERIES.map((q) => x.reserves![q.key]), i), x.budget?.[i] ?? null);
+      const r = t.reserves_latest;
+      const rp = reservePct(r);
+      const p9 = townStack({
+        key: "tres", name: t.name, series: res, cSeries: cRes, cmp: cRes ? c : null, noun: "reserves", rowLabel: "Reserve",
+        caption: `Reserves${perP}`, yShort: `Reserves${perP}`, totalLabel: `Total${perP}`, end: lastWith(totals(res)), width,
+        sub: `${dollarsNote}${perP}, at each fiscal year's end.` + (r && rp != null
+          ? ` At the end of FY${r.fy}, ${who} held ${whole$(r.free_cash)} in free cash and ${whole$(r.stab + r.sp_stab)} in ` +
+            `stabilization funds, ${percent(rp)} of ${t.kind === "town" ? "its" : "their"} operating budget${t.kind === "town" ? "" : "s"}.` : ""),
+        help: "Free cash is what a town's general fund had left at the end of a fiscal year, from revenue above its estimates " +
+          "and appropriations it didn't spend, less what it is still owed, such as unpaid property taxes. The state certifies it " +
+          "from the June 30 balance sheet, and town meeting or the council can then spend it.\n\nStabilization funds are " +
+          "savings: a majority vote adds to them and a two-thirds vote spends them. A special-purpose fund is saved for one " +
+          "use, such as capital projects or school costs.\n\nThe operating budget is DLS's: the revenue the budget raises, " +
+          "without water, sewer, and other enterprise funds or Community Preservation Act funds.",
+        missing: "Not reported to the state",
+        tipRows: (i) => {
+          const s = resShare(t, i);
+          return s != null ? [{ value: percent(s), label: "Of the operating budget" }] : [];
+        },
+      }, dollarsNote);
+      fiscalPanels.push({ panel: p9.panel, figure: $("fig-tres"), tip: p9.tip });
+
+      const debtOf = (x: Town, k: Values): Series[] => DEBT_SERIES.map((q) => ({ ...q, values: deflate(per(x.debt![q.key], k)) }));
+      const debt = debtOf(t, kT);
+      const cDebt = c?.debt ? debtOf(c, kC!) : null;
+      const dl = t.debt_latest;
+      const sp = newest(t.ratings?.sp);
+      const md = newest(t.ratings?.moodys);
+      const p10 = townStack({
+        key: "tdebt", name: t.name, series: debt, cSeries: cDebt, cmp: cDebt ? c : null, noun: "parts", rowLabel: "Debt",
+        caption: `Long-term debt${perP}`, yShort: `Debt${perP}`, totalLabel: `Total${perP}`, end: lastWith(totals(debt)), width,
+        sub: `${dollarsNote}${perP}, at each fiscal year's end.` +
+          (dl && dl.budget ? ` In FY${dl.fy}, ${who} owed ${whole$(dl.outstanding)}, and general fund debt service was ` +
+            `${(dl.service / dl.budget * 100).toFixed(1)}% of the operating budget.` : "") +
+          (sp || md ? ` ${t.name}'s bonds: ${[sp ? `S&P ${sp[1]} (${sp[0]})` : "", md ? `Moody's ${md[1]} (${md[0]})` : ""].filter(Boolean).join(", ")}.` : ""),
+        help: "Debt outstanding is what the town owes on its long-term bonds at the fiscal year's end, from Schedule A. " +
+          "Authorized, not yet borrowed, is debt that town meeting or the council has voted to borrow but the town " +
+          "hasn't yet issued.\n\nDebt service is what the general fund paid that year in principal and interest; DLS " +
+          "sets it against the operating budget. The tooltip also gives the debt as a share of the town's equalized " +
+          "valuation, the state's estimate of what all its taxable property is worth.",
+        missing: "Not reported to the state",
+        tipRows: (i) => [
+          ...(t.debt_service?.[i] != null ? [{ value: `${t.debt_service[i]!.toFixed(1)}%`, label: "Debt service, share of the budget" }] : []),
+          ...(t.debt_eqv?.[i] != null ? [{ value: `${t.debt_eqv[i]!.toFixed(2)}%`, label: "Debt, share of equalized value" }] : []),
+        ],
+      }, dollarsNote);
+      const capOf = (x: Town, k: Values): Series[] => CAPITAL_SERIES.map((q) => ({ ...q, values: deflate(per(x.capital![q.key], k)) }));
+      const cap = capOf(t, kT);
+      const cCap = c?.capital ? capOf(c, kC!) : null;
+      const p11 = townStack({
+        key: "tcap", name: t.name, series: cap, cSeries: cCap, cmp: cCap ? c : null, noun: "purposes", rowLabel: "Purpose",
+        caption: `Capital projects spending${perP}`, yShort: `Capital${perP}`, totalLabel: `Total${perP}`, end: lastWith(totals(cap)), width,
+        sub: `${dollarsNote}${perP}, from capital projects funds.`,
+        help: "Spending from a town's capital projects funds, by purpose, from Schedule A Part 4: the funds that hold borrowing, " +
+          "grants, and transfers for building, buying, and repairing, kept apart from the general fund. Chapter 90 is the " +
+          "state's aid for local roads. A large project shows in the years its bills are paid.",
+        missing: "Not reported to the state",
+      }, dollarsNote);
+      debtPanels.push({ panel: p10.panel, figure: $("fig-tdebt"), tip: p10.tip }, { panel: p11.panel, figure: $("fig-tcap"), tip: p11.tip });
+    }
+
     // The property tax: the levy against its Prop 2 1/2 limit, and the single-family bill
     const hasLevy = hasProp && !!t.levy;
     for (const id of ["fig-tlevy", "fig-tbill"]) $(id).hidden = !hasLevy;
@@ -2980,11 +3225,29 @@ export async function startExplorer() {
       const used = raised != null && max ? `In FY${years[lEnd]}, ${t.kind === "town" ? t.name : "these towns"} raised ` +
         `${amount(raised)} of a ${amount(max)} limit, leaving ${max - raised >= 1e6 ? amount(max - raised) : usd(max - raised)} ` +
         `(${percent((max - raised) / max)}) unused.` : "";
+      const o = t.override_latest;
+      const op = overridePct(o);
+      const v = t.votes;
+      const held = (k: "override" | "debt" | "capital" | "stabilization", one: string, many: string) =>
+        v && v[k][0] ? `${count(v[k][1])} of ${count(v[k][0])} ${v[k][0] === 1 ? one : many}` : "";
+      const voteBits = [held("override", "override or underride vote", "override and underride votes"),
+        held("debt", "debt exclusion", "debt exclusions"), held("capital", "capital exclusion", "capital exclusions")].filter(Boolean);
       const p7 = townStack({
         key: "tlevy", name: t.name, series: levy, cSeries: cLevy, cmp: cLevy ? c : null, noun: "parts", rowLabel: "Levy",
         caption: `Property tax levy and its limit${perP}`, yShort: `Levy${perP}`, totalLabel: `Levy limit${perP}`, end: lEnd, width,
         sub: `${dollarsNote}${perP}. Proposition 2½ limits each town's levy; the stack's full height is the limit, ` +
-          `with voter-approved debt exclusions. ${used}`,
+          `with voter-approved debt exclusions. ${used}` +
+          (o && op != null ? ` Override capacity, the room between the limit and the ceiling, was ${percent(op)} of the ceiling in FY${o.fy}.` : "") +
+          (voteBits.length ? ` Since FY${years[0]}, ${t.kind === "town" ? `${t.name}'s voters` : "voters in these towns"} passed ${voteBits.join(", ")}.` : ""),
+        extra: t.levy_ceiling_pr ? {
+          series: { key: "ceiling", label: "Levy ceiling", color: CEILING_COLOR, dash: "2 4", values: deflate(per(t.levy_ceiling_pr, kT)) },
+          line: "ceiling", legend: "Levy ceiling, 2½% of value",
+          help: "The levy ceiling is 2½% of the town's total assessed value; no levy may exceed it, even with an override, " +
+            "though a debt exclusion can take the levy above it. The levy limit grows 2½% a year plus new growth, and an " +
+            "override raises it for good. Override capacity is the room between the limit, before debt exclusions, and " +
+            "the ceiling: how much more an override could raise, a measure of how much room a town has left.",
+        } : undefined,
+        tipRows: (i) => t.override_pct?.[i] != null ? [{ value: `${t.override_pct[i]!.toFixed(1)}%`, label: "Override capacity, share of the ceiling" }] : [],
       }, dollarsNote);
       // The single-family bill, with its rate and its share of income in the tooltip
       const bills: Series[] = [
@@ -3008,6 +3271,7 @@ export async function startExplorer() {
         { label: "Share of income per capita", values: t.sf_bill_income ?? [], fmt: (v) => `${(v * 100).toFixed(1)}%` },
         ...(c?.sf_bill ? [{ label: `${c.name}, bill`, values: deflate(c.sf_bill), fmt: usd }] : []),
       ] };
+      void showVotes(t);
       taxPanels.push(
         { panel: p7.panel, figure: $("fig-tlevy"), tip: p7.tip },
         {
@@ -3086,34 +3350,134 @@ export async function startExplorer() {
 
     // Population, the denominator of the dollar panels
     const popLabel = t.kind === "town" ? "Residents" : "Combined residents";
-    const pop: Series[] = [{ key: "pop", label: popLabel, color: POP_COLOR, values: t.pop }];
-    $("tpop-sub").textContent = (t.kind === "town"
+    const lab = t.labor;
+    const pop: Series[] = [
+      { key: "pop", label: popLabel, color: POP_COLOR, values: t.pop },
+      ...(lab ? [{ key: "labor", label: "Labor force", color: LABOR_COLOR, values: lab.force },
+        { key: "employed", label: "Employed", color: EMPLOYED_COLOR, values: lab.employed }] : []),
+    ];
+    const lAt = lab ? lastAt(lab.rate) : -1;
+    $("tpop-sub").replaceChildren((t.kind === "town"
       ? "Census Bureau estimates, July 1 at the start of each fiscal year."
       : `All ${t.members} towns combined.`) +
-      (state.per === "resident" ? ` Per-resident figures above divide each year's dollars by this population.` : "");
+      (state.per === "resident" ? ` Per-resident figures above divide each year's dollars by this population.` : "") +
+      (lab && lAt >= 0 ? ` In ${years[lAt] - 1}, ${lab.rate[lAt]!.toFixed(1)}% of ${t.kind === "town" ? `${t.name}'s` : "their"} labor force was out of work. ` : ""),
+      ...(lab ? [helpTip("The labor force is the residents 16 and older who are working or looking for work, and the employed " +
+        "those working, wherever their jobs are: the state's annual averages for each calendar year, from the Bureau of Labor " +
+        "Statistics' local area estimates, through the latest year DLS publishes. Each year sits at the fiscal year whose " +
+        "July 1 population estimate falls in its middle: 2022 at FY2023. The unemployment rate in the tooltip is the share " +
+        "of the labor force out of work.")] : []));
     const popMax = Math.max(...t.pop.map((v) => v ?? 0));
-    const p3 = lines($("svg-tpop") as unknown as SVGSVGElement, { width, height: width < 520 ? 200 : 230, years, yTitle: "Population" }, pop,
+    const p3 = lines($("svg-tpop") as unknown as SVGSVGElement, { width, height: width < 520 ? 200 : 230, years, yTitle: "People" }, pop,
       niceTicks(popMax * 1.04, 4), (v) => compact(v), count, setHover);
-    legend($("legend-tpop"), [{ label: popLabel, color: POP_COLOR, mark: "line", spot: "pop" }]);
-    fullTables.tpop = { caption: `Population, ${t.name}`, cols: [
+    legend($("legend-tpop"), pop.map((x) => ({ label: x.label, color: x.color, mark: "line" as const, spot: x.key })));
+    fullTables.tpop = { caption: `Population and labor force, ${t.name}`, cols: [
       { label: popLabel, values: t.pop, fmt: count },
+      ...(lab ? [{ label: "Labor force (calendar year before)", values: lab.force, fmt: count },
+        { label: "Employed", values: lab.employed, fmt: count },
+        { label: "Unemployment rate", values: lab.rate, fmt: (x: number) => `${x.toFixed(1)}%` }] : []),
       ...(c ? [{ label: c.kind === "town" ? c.name : `${c.name}, combined`, values: c.pop, fmt: count }] : []),
     ] };
+
+    // Who lives here: the Census Bureau's five-year estimates that don't overlap, each group's share of residents.
+    // A share's growth means little over four releases, so these have no trend line or comparison table; the
+    // comparison draws once a group is chosen.
+    const demoPanels: typeof panels = [];
+    const dm = t.demo;
+    for (const id of ["fig-tage", "fig-trace"]) $(id).hidden = !dm;
+    if (dm) {
+      const pctFmt = (v: number) => `${v < 10 ? v.toFixed(1) : Math.round(v)}%`;
+      const releases = years.filter((_, i) => dm.population[i] != null);
+      const span = (i: number) => `${years[i] - 5}–${years[i] - 1}`;
+      const dAt = lastAt(dm.population);
+      const residents = t.kind === "town" ? "Residents" : "Residents, combined";
+      const women = (x: Town, i: number) => share(x.demo?.female[i] ?? null, x.demo?.population[i] ?? null);
+      const disabled = (x: Town, i: number) => share(x.demo?.disability[i] ?? null, x.demo?.disability_universe[i] ?? null);
+      const demoStack = (key: "tage" | "trace", defs: readonly { key: DemoKey; label: string; color: string }[], caption: string,
+        sub: string, help: string, more?: (i: number) => TipRow[]) => {
+        const seriesOf = (x: Town): Series[] | null => x.demo ? defs.map((q) => ({ key: q.key, label: q.label, color: q.color,
+          values: x.demo!.population.map((n, i) => (n && x.demo![q.key][i] != null ? x.demo![q.key][i]! / n * 100 : null)) })) : null;
+        const series = seriesOf(t)!;
+        const cSeries = c ? seriesOf(c) : null;
+        const shown = visible(series, key);
+        // The groups' names keep their capitals mid-sentence ("Hispanic or Latino")
+        const sel = shown.length === series.length ? null : shown.length === 1 ? shown[0].label : `${shown.length} selected groups`;
+        const shownTotal = totals(shown);
+        const overlayAll = c && cSeries && sel ? { key: "cmp", label: `${c.name}, ${sel}`, color: COMPARE_COLOR, values: totals(visible(cSeries, key)) } : null;
+        const overlay = drawn(key, "cmp", overlayAll);
+        $(`${key}-sub`).replaceChildren(sub + (sel ? " Scale fitted to the selection." : "") + " ", helpTip(help));
+        const panel = stackedColumns($(`svg-${key}`) as unknown as SVGSVGElement,
+          { width, height: width < 520 ? 240 : 280, years, yTitle: caption, yTitleShort: "Share" }, shown, overlay,
+          sel ? fitTicks(shown, overlay?.values ?? null) : [0, 25, 50, 75, 100], (v) => `${v}%`, setHover,
+          { value: dAt >= 0 ? shownTotal[dAt] : null, text: pctFmt, index: dAt }, [], null);
+        legend($(`legend-${key}`), [
+          ...series.map((x) => ({ key: x.key, label: x.label, color: x.color, mark: "rect" as const })),
+          ...(overlayAll ? [{ label: overlayAll.label, color: COMPARE_COLOR, mark: "line" as const, line: "cmp" as const }] : []),
+        ], key);
+        fullTables[key] = { caption: `${caption}, ${t.name}: the Census Bureau's five-year estimates, at the fiscal year after each`, cols: [
+          ...series.map((x) => ({ label: x.label, values: x.values, fmt: pctFmt })),
+          { label: residents, values: dm.population, fmt: count },
+          ...(c && cSeries ? cSeries.map((x) => ({ label: `${c.name}, ${x.label}`, values: x.values, fmt: pctFmt })) : []),
+        ] };
+        const tip = (i: number): TipContent => dm.population[i] == null
+          ? { title: `FY${years[i]}`, rows: [{ value: "–", label: `The estimates sit at FY${releases.join(", FY")}` }] }
+          : { title: `${span(i)}, at FY${years[i]}`, rows: [
+            ...shown.filter((x) => x.values[i] != null).reverse()
+              .map((x) => ({ value: pctFmt(x.values[i]!), label: x.label, color: x.color, mark: "rect" as const })),
+            { value: count(dm.population[i]!), label: residents },
+            ...(overlay && overlay.values[i] != null ? [{ value: pctFmt(overlay.values[i]!), label: overlay.label, color: COMPARE_COLOR, mark: "line" as const }] : []),
+            ...(more?.(i) ?? []),
+          ] };
+        return { panel, tip };
+      };
+      const acsHelp = "The Census Bureau's American Community Survey asks a sample of households each year; its five-year " +
+        "estimates pool five years of answers, which small towns need. Estimates whose years overlap shouldn't be compared, " +
+        "so these are the four that don't: 2005–2009, 2010–2014, 2015–2019, and 2020–2024, each at the fiscal year after it " +
+        "ends, as the household counts are. A small town's shares can carry margins of error of several points.";
+      const w = dAt >= 0 ? women(t, dAt) : null;
+      const dis = dAt >= 0 ? disabled(t, dAt) : null;
+      const pAge = demoStack("tage", AGE_SERIES, "Residents by age",
+        `Shares of ${t.kind === "town" ? `${t.name}'s` : "these towns'"} residents.` +
+          (dAt >= 0 && w != null ? ` In ${span(dAt)}, ${percent(w)} were women` +
+            (dis != null ? `, and ${(dis * 100).toFixed(1)}% of those not living in institutions such as nursing homes had a disability.` : ".") : ""),
+        acsHelp + "\n\nA disability here is serious difficulty with hearing, seeing, concentrating or remembering, walking or " +
+          "climbing stairs, dressing or bathing, or, for those 15 and older, doing errands alone. The survey counts it for " +
+          "civilians not living in institutions such as nursing homes and prisons, from 2008–2012 on, so 2005–2009 has none.",
+        (i) => [
+          ...(women(t, i) != null ? [{ value: percent(women(t, i)!), label: "Women" }] : []),
+          ...(disabled(t, i) != null ? [{ value: `${(disabled(t, i)! * 100).toFixed(1)}%`, label: "With a disability" }] : []),
+        ]);
+      const pRace = demoStack("trace", RACE_SERIES, "Residents by race and ethnicity",
+        `Shares of ${t.kind === "town" ? `${t.name}'s` : "these towns'"} residents. Hispanic or Latino residents may be of any ` +
+          "race; each race counts residents who aren't Hispanic or Latino.",
+        acsHelp + "\n\nRace and Hispanic or Latino origin are as residents report them. Another race, or more than one, " +
+          "includes American Indian and Alaska Native, Native Hawaiian and Pacific Islander, and residents who name some " +
+          "other race or two or more races.");
+      demoPanels.push({ panel: pAge.panel, figure: $("fig-tage"), tip: pAge.tip }, { panel: pRace.panel, figure: $("fig-trace"), tip: pRace.tip });
+    }
 
     panels = [
       { panel: p1.panel, figure: $("fig-tspend"), tip: p1.tip },
       { panel: p2.panel, figure: $("fig-trev"), tip: p2.tip },
+      ...fiscalPanels,
       ...taxPanels,
+      ...debtPanels,
       ...propPanels,
       {
         panel: p3, figure: $("fig-tpop"),
         // FY2021 uses the April 2020 estimates base (update_census_data.py)
         tip: (i) => ({
           title: `FY${years[i]}`,
-          rows: [{ value: t.pop[i] != null ? count(t.pop[i]!) : "–", label: popLabel, color: POP_COLOR, mark: "line" }],
+          rows: [{ value: t.pop[i] != null ? count(t.pop[i]!) : "–", label: popLabel, color: POP_COLOR, mark: "line" },
+            ...(lab && lab.force[i] != null ? [
+              { value: count(lab.force[i]!), label: `Labor force, ${years[i] - 1}`, color: LABOR_COLOR, mark: "line" as const },
+              { value: count(lab.employed[i]!), label: "Employed", color: EMPLOYED_COLOR, mark: "line" as const },
+              { value: `${lab.rate[i]!.toFixed(1)}%`, label: "Unemployment rate" },
+            ] : [])],
           note: years[i] === 2021 ? "April 1, 2020 estimate" : `July 1, ${years[i] - 1} estimate`,
         }),
       },
+      ...demoPanels,
     ];
     if (hovered != null) setHover(null, null);
   }
@@ -3139,8 +3503,8 @@ export async function startExplorer() {
     dockClose();
     return controlsForm;
   })));
-  ["svg-ppe", "svg-enroll", "svg-nss", "svg-rev", "svg-tspend", "svg-trev", "svg-tlevy", "svg-tbill", "svg-tval", "svg-tpar",
-    "svg-teqv", "svg-tpop"]
+  ["svg-ppe", "svg-sped", "svg-enroll", "svg-ood", "svg-nss", "svg-rev", "svg-tspend", "svg-trev", "svg-tres", "svg-tlevy", "svg-tbill",
+    "svg-tdebt", "svg-tcap", "svg-tval", "svg-tpar", "svg-teqv", "svg-tpop", "svg-tage", "svg-trace"]
     .forEach((id) => keyboard($(id) as unknown as SVGSVGElement));
   root.classList.remove("is-loading");
 
