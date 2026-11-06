@@ -59,7 +59,7 @@ const VARS: Var[] = [
   { key: "rlc_pfe", label: "Required local contribution per foundation pupil", short: "required local contribution per pupil", unit: "usd", role: "outcome", src: ["c70"] },
   { key: "ood_pp", label: "Spending per out-of-district pupil", short: "spending per out-of-district pupil", unit: "usd", role: "outcome", src: ["ppe"], log: true },
   { key: "sped_share", label: "Special education's share of spending", short: "special education's share", unit: "pct", role: "outcome", src: ["sped"] },
-  { key: "gap", label: "Actual net school spending against the budget", short: "spending against budget", unit: "pct", role: "outcome", src: ["budgets"] },
+  { key: "gap", label: "Actual vs. budget, net school spending", short: "actual vs. budget", unit: "pct", role: "outcome", src: ["budgets"] },
   { key: "fe", label: "Foundation enrollment", short: "foundation enrollment", unit: "count", role: "factor", src: ["c70"], log: true },
   { key: "fte", label: "In-district FTE pupils", short: "in-district pupils", unit: "count", role: "factor", src: ["ppe"], log: true },
   { key: "eqv_res", label: "Equalized property value per resident of its towns", short: "property value per resident (EQV)", unit: "usd", role: "factor", src: ["eqv", "pop"], log: true },

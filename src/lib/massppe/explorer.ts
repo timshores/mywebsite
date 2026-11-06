@@ -1613,12 +1613,29 @@ export async function startExplorer() {
     if (over > 0) tip.style.top = `${Math.max(box.top - over, area.top + 8) - figBox.top}px`;
   }
 
+  // The charts of columns in categories, whose hover cards list the categories under the total
+  const STACKED = new Set<string>(["ppe", "ood", "nss", "rev", "sped", "srace", "tspend", "trev", "tval", "tpar", "tlevy", "tres",
+    "tdebt", "tcap", "tfc", "tage", "trace", "tsex", "tdis"]);
+  /** With only the trends shown, a chart of columns has no categories to point to: its hover card gives the year's
+   * total and the trend's figure, the town's or district's, then the comparison's while Comps is on (#225, #226) */
+  function trendsOnlyTip(figure: HTMLElement, i: number, content: TipContent): TipContent {
+    const key = figure.id.replace(/^fig-/, "") as StackPanel;
+    if (!STACKED.has(key) || !trendsAlone.has(key) || !hasTrends.get(key)) return content;
+    const total = content.rows.find((r) => r.strong);
+    if (!total) return content;
+    const own = content.rows.find((r) => r.mark === "dash" && r.color === TREND_COLOR);
+    const cmp = content.rows.find((r) => r !== total && r.color === COMPARE_COLOR && r.mark !== "dash");
+    const ct = cmpTrends.get(key);
+    const cmpTrend = cmp && ct?.trend ? trendRow(ct.trend, i, ct.value, ct.step).map((r) => ({ ...r, color: COMPARE_COLOR })) : [];
+    return { ...content, rows: [total, ...(own ? [own] : []), ...(cmp ? [cmp] : []), ...cmpTrend] };
+  }
+
   function setHover(i: number | null, source: SVGSVGElement | null) {
     hovered = i;
     for (const p of panels) {
       p.panel.setHover(i);
       const tipEl = p.figure.querySelector<HTMLElement>(".tooltip")!;
-      if (i != null && p.panel.svg === source) showTip(p.figure, p.panel, i, p.tip(i));
+      if (i != null && p.panel.svg === source) showTip(p.figure, p.panel, i, trendsOnlyTip(p.figure, i, p.tip(i)));
       else tipEl.hidden = true;
     }
   }
@@ -1688,11 +1705,16 @@ export async function startExplorer() {
     const only = can && trendsAlone.has(panel);
     return { only, trends: [...own, ...(only && !hiddenLines[panel].has("cmp") ? cmp : [])].filter(hasLine) };
   };
+  /** Each chart's comparison trend as it last drew, with its units, for the hover card with only the trends shown */
+  const cmpTrends = new Map<StackPanel, { trend: Series | null; value: (v: number) => string; step: (v: number) => string }>();
   /** The same for one trend of the chart's own and one comparison; cmpName is whose comparison it is, fmt the
-   * chart's units for the trends' yearly figures */
-  const trendView = (panel: StackPanel, own: Series | null, cmp: Series | null, cmpName: string, fmt: (v: number) => string = usd) =>
-    trendsOf(panel, own ? [own] : [], cmp && hasLine(cmp) ? [((ct) => ({ ...ct, ...trendEnds(trendName(cmpName), "Comparison trend", ct.values, fmt) }))(cmpTrendOf(cmp))] : [],
-      hasLine(cmp));
+   * chart's units for the trends' yearly figures, valueFmt for their values where it differs (a share's points) */
+  const trendView = (panel: StackPanel, own: Series | null, cmp: Series | null, cmpName: string, fmt: (v: number) => string = usd,
+    valueFmt = fmt) => {
+    const ct = cmp && hasLine(cmp) ? ((t) => ({ ...t, ...trendEnds(trendName(cmpName), "Comparison trend", t.values, fmt) }))(cmpTrendOf(cmp)) : null;
+    cmpTrends.set(panel, { trend: ct, value: valueFmt, step: fmt });
+    return trendsOf(panel, own ? [own] : [], ct ? [ct] : [], hasLine(cmp));
+  };
   type Measure = Series & { what: string; trend?: false };
   /** A line chart of several measures, the district's or town's and the comparison's of each. The legend picks the
    * measures shown, and one picked alone draws as a single measure's chart does: its trend, and the comparison's line
@@ -1745,11 +1767,12 @@ export async function startExplorer() {
       detail: cmpDetail(overlay, fmt) }] : []),
   ];
   // The trend's value, and its step from the year before: the same in dollars each year, a shrinking share as it grows
-  const trendRow = (trend: Series | null, i: number, fmt: (v: number) => string = usd): TipRow[] => {
+  // (a share's step in points: stepFmt)
+  const trendRow = (trend: Series | null, i: number, fmt: (v: number) => string = usd, stepFmt = fmt): TipRow[] => {
     const v = trend?.values[i];
     if (!trend || v == null) return [];
     const prev = trend.values[i - 1];
-    const step = prev == null ? "" : `, ${signed(v - prev, fmt)}${prev > 0 ? ` (${signedPct((v - prev) / prev)})` : ""} on FY${years[i - 1]}`;
+    const step = prev == null ? "" : `, ${signed(v - prev, stepFmt)}${prev > 0 ? ` (${signedPct((v - prev) / prev)})` : ""} on FY${years[i - 1]}`;
     return [{ value: fmt(v), label: trend.label + step, color: TREND_COLOR, mark: "dash" }];
   };
   let refocus: { panel: StackPanel; key: string } | null = null;
@@ -2881,7 +2904,7 @@ export async function startExplorer() {
           : `${who}, FY${years[i]}: spent ${moreLess(v)} than budgeted`);
         gapColumns($("svg-nssb-gap") as unknown as SVGSVGElement, { width, height: width < 520 ? 110 : 124, years }, gap, null,
           ACTUAL_COLOR, COMPARE_COLOR, (i) => gapWords(e.name, gap[i], i));
-        $("svg-nssb-gap").setAttribute("aria-label", `Actual spending against the budget, ${e.name}, by year: ` +
+        $("svg-nssb-gap").setAttribute("aria-label", `Actual vs. budget, ${e.name}, by year: ` +
           years.flatMap((y, i) => (gap[i] == null ? [] : [`FY${y} ${signedPct(gap[i]! / 100)}`])).join(", "));
         // The strip's key: the district's columns and the comparison's dots
         const key = (mark: string, color: string, words: string) => {
@@ -2896,7 +2919,7 @@ export async function startExplorer() {
         $("nssb-gap-legend").replaceChildren(key("rect", ACTUAL_COLOR, e.name));
         fullTables.nssb = { caption: `Budgeted and actual net school spending${whole ? "" : " per foundation pupil"}, ${e.name} (${dollarsNote.toLowerCase()})`, cols: [
           ...bLines.map((x) => ({ label: x.label, values: x.values, fmt: usd })),
-          { label: "Actual against budget", values: gap, fmt: (v: number) => signedPct(v / 100) },
+          { label: "Actual vs. budget", values: gap, fmt: (v: number) => signedPct(v / 100) },
         ] };
         nssbTip = (i) => {
           const b = budget![i], a = nssTotal[i], bPrev = budget![i - 1], aPrev = nssTotal[i - 1];
@@ -2904,7 +2927,7 @@ export async function startExplorer() {
             ...bl.shown.filter((x) => x.values[i] != null).map((x) => ({ value: usd(x.values[i]!), label: x.label, color: x.color,
               mark: x.dash ? "dash" as const : "line" as const })),
             ...trendRow(bl.one ? bl.trend : null, i),
-            ...(gap[i] != null ? [{ value: signedPct(gap[i]! / 100), label: "Spent against budget", strong: true }] : []),
+            ...(gap[i] != null ? [{ value: signedPct(gap[i]! / 100), label: "Actual vs. budget", strong: true }] : []),
             ...(b != null && aPrev != null ? [{ value: signedPct(b / aPrev - 1), label: `Budget${pp} against FY${years[i - 1]}'s spending` }] : []),
             ...(b != null && bPrev != null ? [{ value: signedPct(b / bPrev - 1), label: `Budget${pp} against FY${years[i - 1]}'s budget` }] : []),
           ];
@@ -3111,7 +3134,7 @@ export async function startExplorer() {
         const overlay = drawn("srace", "cmp", overlayAll);
         const trendAll = sel ? trendOf(e.name, sel, shownTotal, points) : null;
         const trend = trendAll ? drawn("srace", "trend", trendAll) : null;
-        const tv = trendView("srace", trend, overlayAll, cName, points);
+        const tv = trendView("srace", trend, overlayAll, cName, points, pctFmt);
         $("srace-sub").replaceChildren(`Shares of ${whose} students, from DESE.` + (sel ? " Scale fitted to the selection." : "") + " ",
           helpTip("DESE counts each student once, by the race and ethnicity families report: Hispanic or Latino students " +
             "of any race, and each race of the students who aren't Hispanic or Latino. Another race, or more than one, " +
@@ -3130,7 +3153,13 @@ export async function startExplorer() {
           { label: studentsLabel, values: st.total, fmt: fte },
           ...(cRace ? cRace.map((x) => ({ label: `${cName}, ${x.label}`, values: x.values, fmt: pctFmt })) : []),
         ] };
-        sraceTip = (i) => st.total[i] == null ? { title: `FY${years[i]}`, rows: [{ value: "–", label: "No enrollment reported" }] } : {
+        sraceTip = (i) => st.total[i] == null ? { title: `FY${years[i]}`, rows: [{ value: "–", label: "No enrollment reported" }] }
+          // With only the trends shown, the groups picked together, and the comparison's (#225)
+          : tv.only && sel ? { title: `FY${years[i]}`, rows: [
+            { value: shownTotal[i] == null ? "–" : pctFmt(shownTotal[i]!), label: capital(sel), strong: true },
+            ...trendRow(trend, i, pctFmt, points),
+            ...(overlay && overlay.values[i] != null ? [{ value: pctFmt(overlay.values[i]!), label: overlay.label, color: COMPARE_COLOR, mark: "linedot" as const }] : []),
+          ], note: `October 1, ${years[i] - 1}` } : {
           title: `FY${years[i]}`,
           rows: [
             ...shown.filter((x) => x.values[i] != null).reverse()
@@ -3849,6 +3878,10 @@ export async function startExplorer() {
         const fcTrend = trendOf(t.name, fcSel, shownNet);
         const fcTrendPage: Series = { ...fcTrend, values: years.map((_, i) => (i < a || i > b ? null : fcTrend.values[i - a])) };
         const fcTv = trendView("tfc", drawn("tfc", "trend", fcTrend), overlayAll, c?.name ?? "");
+        // The comparison's trend too, for the hover card with only the trends shown
+        const fcCmp = cmpTrends.get("tfc");
+        if (fcCmp?.trend) cmpTrends.set("tfc", { ...fcCmp, trend: { ...fcCmp.trend,
+          values: years.map((_, i) => (i < a || i > b ? null : fcCmp.trend!.values[i - a])) } });
         const inner = stackedColumns($("svg-tfc") as unknown as SVGSVGElement,
           { width, height: width < 520 ? 260 : 300, years: fyears, yTitle: `Free cash${perP}`, yTitleShort: "Free cash", trendsOnly: fcTv.only },
           fcShown, overlay,
@@ -4214,7 +4247,7 @@ export async function startExplorer() {
         const trendAll = sel ? trendOf(t.name, sel, shownTotal, sharePoints) : null;
         const trend = trendAll ? drawn(key, "trend", trendAll) : null;
         $(`${key}-sub`).replaceChildren(sub + (sel && !single ? " Scale fitted to the selection." : "") + " ", helpTip(help));
-        const tv = trendView(key, trend, overlayAll, c?.name ?? "", sharePoints);
+        const tv = trendView(key, trend, overlayAll, c?.name ?? "", sharePoints, pctFmt);
         const panel = stackedColumns($(`svg-${key}`) as unknown as SVGSVGElement,
           { width, height: width < 520 ? 240 : 280, years, yTitle: caption, yTitleShort: "Share", sparse: true, trendsOnly: tv.only }, shown, overlay,
           sel ? fitTicks(shown, overlay?.values ?? null) : [0, 25, 50, 75, 100], (v) => `${v}%`, setHover,
@@ -4243,7 +4276,24 @@ export async function startExplorer() {
               label: `${x.label}, ${signed(x.values[p1]! - x.values[p0]!, (v) => `${v.toFixed(1)} points`)}` }));
           return { title: `${span(p0)} to ${span(p1)}`, rows: rows.length ? rows : [none] };
         };
-        const tip = (i: number): TipContent => dm.population[i] == null
+        // With only the trends shown, the groups picked together, and the comparison's (#225); between two
+        // releases, each at either end
+        const together = (i: number): TipContent => {
+          const ends = dm.population[i] == null
+            ? ((before, after) => (before == null || after == null ? null : [years.indexOf(before), years.indexOf(after)]))(
+              [...releases].reverse().find((fy) => fy < years[i]), releases.find((fy) => fy > years[i]))
+            : [i, i];
+          if (!ends) return between(i);
+          const [p0, p1] = ends;
+          const row = (v: Values, label: string, extra: Partial<TipRow>): TipRow[] => (v[p0] == null || v[p1] == null ? [] : [{
+            value: p0 === p1 ? pctFmt(v[p0]!) : `${pctFmt(v[p0]!)} → ${pctFmt(v[p1]!)}`,
+            label: p0 === p1 ? label : `${label}, ${signed(v[p1]! - v[p0]!, (x) => `${x.toFixed(1)} points`)}`, ...extra }]);
+          // The trends run through every year, so their figures are the hovered year's
+          const rows = [...row(shownTotal, capital(sel!), { strong: true }), ...trendRow(trend, i, pctFmt, sharePoints),
+            ...(overlay ? row(overlay.values, overlay.label, { color: COMPARE_COLOR, mark: "linedot" }) : [])];
+          return { title: p0 === p1 ? `${span(p0)}, at FY${years[p0]}` : `${span(p0)} to ${span(p1)}`, rows: rows.length ? rows : [none] };
+        };
+        const tip = (i: number): TipContent => tv.only && sel ? together(i) : dm.population[i] == null
           ? between(i)
           : base.of(dm)[i] == null ? { title: `${span(i)}, at FY${years[i]}`, rows: [none] }
           : { title: `${span(i)}, at FY${years[i]}`, rows: [

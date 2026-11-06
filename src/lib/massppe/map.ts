@@ -261,9 +261,13 @@ const DISTRICT_MEASURES: Measure[] = [
       "district's towns pay the rest.",
   },
   {
-    key: "gap", label: "Spent against budget", kind: "change", fmt: change, short: change, years: "year",
+    key: "gap", label: "Actual vs. budget", kind: "change", fmt: change, short: change, years: "year",
+    // Fixed cuts, the same every year, with a class past 5% either way (#223)
+    cuts: [-0.05, -0.02, -0.005, 0.005, 0.02, 0.05],
+    classes: ["Below −5%", "−5% to −2%", "−2% to −0.5%", "−0.5% to +0.5%", "+0.5% to +2%", "+2% to +5%", "+5% and up"],
     about: (m, real, y) => `How far each district's net school spending in FY${y.to} came from the budget it reported to DESE, ` +
-      "as a share of that budget: orange districts spent less than they budgeted, blue more. Budgets begin with FY2011.",
+      "as a share of that budget: orange districts spent less than they budgeted, blue more, and gray within half a " +
+      "percent either way. Budgets begin with FY2011.",
     split: (up, down, n) => `${up} of ${n} districts spent more than they budgeted, and ${down} spent less.`,
   },
   {
@@ -322,6 +326,9 @@ const GROUPS: Record<Layer, [string, string[]][]> = {
 // Five classes. Change: orange for down, gray near zero, blue for up, as elsewhere in the explorer.
 // Level: the palette's blue ramp, light to dark.
 const DIVERGING = ["#c2541f", "#f2a77f", "#e9e6df", "#86b6ef", "#1c5cab"];
+// Seven steps, for a change with fixed cuts and a class past each end (Actual vs. budget, #223): each half a
+// one-hue ramp that passes the dataviz validator's ordinal checks, neighbors ΔE 18 or more (16 under CVD)
+const DIVERGING7 = ["#7a2c0c", "#c2541f", "#ee9d70", "#e9e6df", "#86b6ef", "#3279d2", "#0c3266"];
 const SEQUENTIAL = ["#cde2fb", "#86b6ef", "#3987e5", "#1c5cab", "#0d366b"];
 // Six steps of the same blue, for a measure with a sixth class on its tail
 const SEQUENTIAL6 = ["#cde2fb", "#97c0f1", "#5f9de7", "#3279d2", "#1b55a0", "#0c3266"];
@@ -506,10 +513,12 @@ export function startMap(root: HTMLElement, data: MapData, opts: {
     inp.setAttribute("aria-label", name);
   }
   track.append(fill, fromIn, toIn);
+  // The first year at the track's left (#222): a span's, or the scale's for one year; the last, or the year, at its right
+  const yearFrom = el("output", "map-years-from");
   const yearOut = el("output", "map-years-out");
   const play = el("button", "map-play");
   play.type = "button";
-  yearBox.append(yearLabel, track, yearOut, play);
+  yearBox.append(yearLabel, yearFrom, track, yearOut, play);
   const groupWrap = el("label", "map-measure map-group");
   const groupSel = el("select");
   groupWrap.append(el("span", undefined, "Group by"), groupSel);
@@ -833,9 +842,11 @@ export function startMap(root: HTMLElement, data: MapData, opts: {
     if (single) {
       // One year only: income, from one year's tax returns
       yearLabel.textContent = "Year";
+      yearFrom.hidden = true;
       yearOut.textContent = m.fifths ? `${meta.fifths.year} tax returns` : "";
       return;
     }
+    yearFrom.hidden = ys.length < 2;
     const a = ys.indexOf(y!.from);
     const b = ys.indexOf(y!.to);
     yearLabel.textContent = m.years === "range" ? "Years" : "Year";
@@ -848,7 +859,9 @@ export function startMap(root: HTMLElement, data: MapData, opts: {
     const n = Math.max(1, ys.length - 1);
     track.style.setProperty("--a", String(m.years === "range" ? a / n : 0));
     track.style.setProperty("--b", String(b / n));
-    yearOut.textContent = m.years === "range" ? `FY${y!.from}–FY${y!.to}` : `FY${y!.to}`;
+    yearFrom.textContent = `FY${m.years === "range" ? y!.from : ys[0]}`;
+    yearFrom.classList.toggle("is-scale", m.years !== "range");
+    yearOut.textContent = `FY${y!.to}`;
     play.setAttribute("aria-label", `${timer ? "Pause" : "Play"} the years, FY${ys[0]} to FY${ys[ys.length - 1]}`);
   }
 
@@ -917,7 +930,9 @@ export function startMap(root: HTMLElement, data: MapData, opts: {
     const sizeGroups = within ? gs.find((g) => g.key === within.size) ?? null : null;
     const statewide = (id: string) => !!sizeGroups?.groups.includes(id);
     // A pin holds while the groups themselves show
-    if (key !== "group") pinned = null;
+    // A pin holds while the map shows what it was pinned on: the same layer, grouping and measure
+    view = `${layer}:${groupBy[layer]}:${key}`;
+    if (pinned && pinnedIn !== view) pinned = null;
     drawGroupTable(null);
     if (key === "group") {
       const sizes = within ? gs.find((g) => g.key === within.size) ?? null : null;
@@ -998,7 +1013,8 @@ export function startMap(root: HTMLElement, data: MapData, opts: {
     const tailCut = measure.tail ? Number(quantile(pooled, measure.tail).toPrecision(2)) : null;
     const c = tailCut != null && tailCut > base[base.length - 1] ? [...base, tailCut] : base;
     const classOfV = (v: number) => (measure.over ? c.filter((x) => v > x).length : classOf(v, c));
-    const colors = measure.dollars ? GROWTH : measure.kind === "change" ? DIVERGING : c.length === 5 ? SEQUENTIAL6 : SEQUENTIAL;
+    const colors = measure.dollars ? GROWTH : measure.kind === "change" ? (c.length === 6 ? DIVERGING7 : DIVERGING)
+      : c.length === 5 ? SEQUENTIAL6 : SEQUENTIAL;
     current = { measure, districtOf, value, c, combinedAt, groupOf, regionOf, statewide };
     let none = 0;
     for (const t of data.towns) {
@@ -1037,11 +1053,16 @@ export function startMap(root: HTMLElement, data: MapData, opts: {
       : measure.classes?.[k] ?? (k === 0 ? (measure.dollars ? "Down, below 0%" : `Below ${measure.short(c[0])}`) : k === top
       ? `${measure.short(c[top - 1])} and up` : `${measure.short(c[k - 1])} to ${measure.short(c[k])}`);
     legend.classList.remove("by-region");
+    // Each range points out its towns on the map, and pins them, as a group's entry does (#221)
     legend.replaceChildren(...colors.map((col, k) => {
-      const li = el("li");
+      const li = el("li", "map-group-key");
+      li.dataset.class = String(k);
+      li.dataset.fill = col;
+      li.tabIndex = 0;
       const sw = el("span", "map-swatch");
       sw.style.background = col;
       li.append(sw, el("span", undefined, label(k)));
+      pinnable(li, `class:${k}`, () => pointToClass(k));
       return li;
     }), ...(none ? [noneKey(onTowns && !grouping ? "No data" : grouping ? "No group, or no data" : "No district of its own, or no data")] : []));
     if (grouping) {
@@ -1125,10 +1146,11 @@ export function startMap(root: HTMLElement, data: MapData, opts: {
     // Within regions, a group that's the statewide one (its region had too few of its size) sorts last, in gray
     const statewide = (id: string) => !!regions && !!sizes?.groups.includes(id);
     const lineOf = (id: string) => (statewide(id) ? 999 : regionAt(id));
-    const shown = (regions
-      ? [...g.groups].sort((a, b) => lineOf(a) - lineOf(b) || sizeAt(a) - sizeAt(b))
-      : g.key === "type" ? [...g.groups].sort((a, b) => KINDS.indexOf(typeKind(a)!) - KINDS.indexOf(typeKind(b)!)) : g.groups)
-      .filter((id) => counts.has(id));
+    // Only the groups with a town on the map: a group of districts that teach no town's grades shown has none
+    const present = g.groups.filter((id) => counts.has(id));
+    const shown = regions
+      ? [...present].sort((a, b) => lineOf(a) - lineOf(b) || sizeAt(a) - sizeAt(b))
+      : g.key === "type" ? [...present].sort((a, b) => KINDS.indexOf(typeKind(a)!) - KINDS.indexOf(typeKind(b)!)) : present;
     const ramp = g.key === "type" ? PURPLES : g.key === "fifth" ? AMBERS : g.key === "schools" ? ROSES : GREENS;
     // A hatched group takes no step of the ramp
     const order = (g.key === "type" ? shown : g.groups.filter((id) => counts.has(id))).filter((id) => !HATCHED_GROUPS.has(id));
@@ -1152,8 +1174,8 @@ export function startMap(root: HTMLElement, data: MapData, opts: {
       `${onTowns ? "it" : "its district"}, and pick a measure to color each group by its figure.`);
     if (regions) about.append(" Each region has its own hue, light to dark from the smallest group to the largest; pointing " +
       "to a town outlines its group in black and its region in red. " + (shown.some((id) => data.groups?.[id]?.outlier)
-      ? "A region's group with fewer than three towns is marked as an outlier: the explorer compares those towns with " +
-        "the statewide group of their size."
+      ? `A region's group with fewer than three ${onTowns ? "towns" : "districts"} is marked as a regional outlier: the ` +
+        `explorer compares those ${onTowns ? "towns" : "districts"} with the statewide group of their size.`
       : `Where a region has too few ${onTowns ? "towns" : "districts"} of a size for a group of its own, they join the ` +
         "statewide group of that size, as the explorer's comparisons do, shown in gray."));
     if (!onTowns) about.append(" A town split between two districts takes the group of the one teaching more of its pupils.");
@@ -1165,7 +1187,16 @@ export function startMap(root: HTMLElement, data: MapData, opts: {
       li.setAttribute("aria-hidden", "true");
       return li;
     };
-    legend.replaceChildren(...shown.flatMap((id, k) => [...(regions && k && lineOf(id) !== lineOf(shown[k - 1]) ? [rule()] : []), (() => {
+    // Within regions, each line starts with its region's name, once, and its entries are the sizes alone
+    const regionName = (id: string) => (statewide(id) ? "Statewide"
+      : ((r) => (r ? shortGroup(data.groups?.[r]?.name ?? r) : ""))(regionOf?.(member.get(id)!) ?? null));
+    const sizeName = (id: string) => ((sz) => (sz ? shortGroup(data.groups?.[sz]?.name ?? sz) : null))(sizeOf?.(member.get(id)!) ?? null);
+    const head = (id: string) => {
+      const li = el("li", "map-legend-region", regionName(id));
+      return li;
+    };
+    legend.replaceChildren(...shown.flatMap((id, k) => [...(regions && k && lineOf(id) !== lineOf(shown[k - 1]) ? [rule()] : []),
+      ...(regions && (!k || lineOf(id) !== lineOf(shown[k - 1])) ? [head(id)] : []), (() => {
       const li = el("li", "map-group-key");
       li.dataset.group = id;
       li.tabIndex = 0;
@@ -1174,8 +1205,11 @@ export function startMap(root: HTMLElement, data: MapData, opts: {
       // The key leaves out "enrollment group" to save room; the tooltip and the table keep it
       const n = counts.get(id)!;
       // The key also leaves the income fifths' "Towns in the" off: "Lowest income fifth"
-      const words = groupName(data.groups?.[id]?.name ?? id).replace(/ enrollment group\b/, "").replace(/^(Towns|Districts) in the (\w)/, (_, _w, c: string) => c.toUpperCase());
-      li.append(sw, el("span", undefined, `${words} (${n} ${n === 1 ? "town" : "towns"}${data.groups?.[id]?.outlier ? ", outlier" : ""})`));
+      const words = (regions ? sizeName(id) : null) ?? groupName(data.groups?.[id]?.name ?? id).replace(/ enrollment group\b/, "")
+        .replace(/^(Towns|Districts) in the (\w)/, (_, _w, c: string) => c.toUpperCase());
+      li.append(sw, el("span", undefined, `${words} (${n} ${n === 1 ? "town" : "towns"})`));
+      li.setAttribute("aria-label", `${groupName(data.groups?.[id]?.name ?? id)}, ${n} ${n === 1 ? "town" : "towns"}` +
+        `${data.groups?.[id]?.outlier ? ", a regional outlier" : ""}`);
       pinnable(li, id, () => pointTo(id), () => (onTowns ? opts.openTown : opts.openDistrict)(id));
       return li;
     })()]), ...(data.towns.some((t) => !groupOf(t))
@@ -1273,7 +1307,7 @@ export function startMap(root: HTMLElement, data: MapData, opts: {
           const outlier = !!data.groups?.[c.id]?.outlier;
           td.classList.toggle("is-statewide", wide);
           if (wide) note[0] = "Gray: the statewide group, where a region has too few of a size.";
-          if (outlier) note[1] = "*An outlier: fewer than three towns of its size in its region.";
+          if (outlier) note[1] = `*Regional outlier: fewer than three ${layer === "towns" ? "towns" : "districts"} of its size in its region.`;
           td.title = wide ? `${name(c.id)}, statewide` : `${groupName(data.groups?.[c.id]?.name ?? c.id)}${outlier ? ", an outlier" : ""}`;
           lights(figureIn(td, value(c.id), measure.short), c.id, c.town);
           if (outlier && td.lastElementChild) td.lastElementChild.append("*");
@@ -1325,11 +1359,16 @@ export function startMap(root: HTMLElement, data: MapData, opts: {
     about.replaceChildren(measure.about(meta, false, { from: meta.latest, to: meta.latest }));
     if (!onTowns) about.append(gradeNote(measure));
     legend.classList.remove("by-region");
+    // Each type points out its towns on the map, and pins them, as a measure's ranges do (#222)
     legend.replaceChildren(...KINDS.map((k) => {
-      const li = el("li");
+      const li = el("li", "map-group-key");
+      li.dataset.class = k;
+      li.dataset.fill = KIND_COLOR[k];
+      li.tabIndex = 0;
       const sw = el("span", "map-swatch");
       sw.style.background = KIND_COLOR[k];
       li.append(sw, el("span", undefined, `${KIND_NAME[k]} (${count(k)})`));
+      pinnable(li, `class:${k}`, () => pointToClass(k));
       return li;
     }), ...(data.towns.some((t) => !kindOf(t)) ? [noneKey("No district of its own")] : []));
     svg.setAttribute("aria-label", `Map of Massachusetts's 351 cities and towns, colored by ${onTowns ? "their" : "their districts'"} ` +
@@ -1351,8 +1390,11 @@ export function startMap(root: HTMLElement, data: MapData, opts: {
 
   // ---- Hover: the town, or every town of its district, outlined, with its value beside the pointer ----
   let hovered: string | null = null;
-  /** The group a key entry keeps lit, "(none)" for the towns without one */
+  /** The group a key entry keeps lit, "(none)" for the towns without one, "class:2" for a measure's third range */
   let pinned: string | null = null;
+  /** What the map shows (layer, grouping, measure), and what it showed when the pin was set */
+  let view = "";
+  let pinnedIn = "";
   root.addEventListener("keydown", (ev) => {
     if (ev.key !== "Escape" || !pinned) return;
     pinned = null;
@@ -1374,6 +1416,7 @@ export function startMap(root: HTMLElement, data: MapData, opts: {
     if (pinned && hovered === pinned) return;
     clearLift();
     if (pinned === "(none)") pointToNone();
+    else if (pinned?.startsWith("class:")) pointToClass(pinned.slice(6));
     else if (pinned) pointTo(pinned);
   };
   /** The key's hatched entry ("No group", "No data"): pointing to it, or, grouped, to a town without a group, lifts
@@ -1405,8 +1448,10 @@ export function startMap(root: HTMLElement, data: MapData, opts: {
     }
     const toggle = () => {
       pinned = pinned === id ? null : id;
+      pinnedIn = view;
       draw();
-      legend.querySelector<HTMLElement>(id === "(none)" ? "[data-none]" : `[data-group="${CSS.escape(id)}"]`)?.focus();
+      legend.querySelector<HTMLElement>(id === "(none)" ? "[data-none]" : id.startsWith("class:") ? `[data-class="${id.slice(6)}"]`
+        : `[data-group="${CSS.escape(id)}"]`)?.focus();
     };
     li.addEventListener("click", toggle);
     li.addEventListener("keydown", (ev) => {
@@ -1419,6 +1464,15 @@ export function startMap(root: HTMLElement, data: MapData, opts: {
     li.addEventListener("focus", show);
     li.addEventListener("pointerleave", () => unlift());
     li.addEventListener("blur", () => unlift());
+  }
+  /** A range of the measure's key, or a community type: its towns drawn on top, the rest faded, its entry lit */
+  function pointToClass(k: number | string) {
+    clearLift();
+    hovered = `class:${k}`;
+    const li = legend.querySelector<HTMLElement>(`[data-class="${k}"]`);
+    for (const t of data.towns) if (paths.get(t.id)!.getAttribute("fill") === li?.dataset.fill) lift.append(paths.get(t.id)!);
+    svg.classList.add("is-pointing");
+    li?.classList.add("is-lit");
   }
   function pointToNone() {
     clearLift();
@@ -1458,6 +1512,8 @@ export function startMap(root: HTMLElement, data: MapData, opts: {
         unlift();
         hovered = key;
         for (const x of d ? data.towns.filter((y) => current!.districtOf(y) === d) : [t]) lift.append(paths.get(x.id)!);
+        // Its range in the key lights, as a group's entry does for a town of the group
+        legend.querySelector(`[data-fill="${paths.get(t.id)!.getAttribute("fill")}"]`)?.classList.add("is-lit");
       }
     }
     const v = current.value(t);
@@ -1466,8 +1522,8 @@ export function startMap(root: HTMLElement, data: MapData, opts: {
       tip.append(el("div", undefined, g ? groupName(data.groups?.[g]?.name ?? g) : "No group"));
       const r = g && !current.statewide?.(g) ? current.regionOf?.(t) : null;
       if (r) tip.append(el("div", "map-tip-region", `In ${groupName(data.groups?.[r]?.name ?? r)}, outlined in red`));
-      else if (g && current.statewide?.(g)) tip.append(el("div", "map-tip-region", "Statewide: too few of its size in its region"));
-      if (g && data.groups?.[g]?.outlier) tip.append(el("div", undefined, "An outlier: fewer than three towns of its size in its region"));
+      else if (g && current.statewide?.(g)) tip.append(el("div", "map-tip-region", "Statewide: no region of its own"));
+      if (g && data.groups?.[g]?.outlier) tip.append(el("div", undefined, "Regional outlier"));
       if (current.measure.key !== "group" && current.measure.kind !== "type") {
         tip.append(el("div", undefined, v ? `${current.measure.fmt(v[0])}, ${v.length > 2 ? `FY${v[1]}–FY${v[2]}` : `FY${v[1]}`}` : "No data"));
       }

@@ -484,13 +484,13 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
           <ul class="legend" id="legend-nssb"></ul>
           <svg id="svg-nssb" tabindex="0" role="img" data-aria-dper="Lines of budgeted, actual, and required net school spending{dper} for each fiscal year. Use the arrow keys to read each year; the data table below has every value." aria-label="Lines of budgeted, actual, and required net school spending per foundation pupil for each fiscal year. Use the arrow keys to read each year; the data table below has every value."></svg>
           <div class="tooltip" role="status" hidden></div>
-          <!-- Each year's spending against its budget, in percent, the comparison's as dots -->
+          <!-- Actual vs. budget: each year's spending against its budget, in percent, the comparison's as dots -->
           <div class="rating-box">
             <div class="rating-head">
-              <span class="rating-title">Spent against budget</span>
+              <span class="rating-title">Actual vs. budget</span>
               <ul class="legend rating-legend" id="nssb-gap-legend"></ul>
             </div>
-            <svg id="svg-nssb-gap" role="img" aria-label="Actual spending against the budget by year"></svg>
+            <svg id="svg-nssb-gap" role="img" aria-label="Actual vs. budget by year"></svg>
           </div>
           <button type="button" class="table-open" data-table="nssb" aria-haspopup="dialog">
             <span class="table-open-icon" aria-hidden="true">⤢</span> Full data table
@@ -932,7 +932,7 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
         FY2010, are the Internet Archive's copies of its site. The budget is the one approved, not the school
         committee's first proposal; level-services budgets, the cost of the year's programs and staff carried into
         the next, are each district's own figure, and the state doesn't collect them. Per pupil divides by
-        foundation enrollment, as the Chapter 70 chart does; spending against the budget compares dollars of the day.
+        foundation enrollment, as the Chapter 70 chart does; actual vs. budget compares dollars of the day.
         An average pools its districts' budgets over their pupils, and their spending over their budgets.
       </p>
       <p>
@@ -2705,7 +2705,7 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
     height: auto;
   }
 
-  /* Spent against budget: the zero line where spending met the budget, and the comparison's dots ringed */
+  /* Actual vs. budget: the zero line where spending met the budget, and the comparison's dots ringed */
   .panel :global(.gap-zero) {
     stroke: var(--ink-soft);
     stroke-width: 1.2;
@@ -3801,11 +3801,17 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
     outline-offset: 2px;
   }
 
-  .explorer :global(.map-years-out) {
-    min-width: 7.5rem;
+  /* The years at the track's ends: a span's first and last; for one year, the scale's first, muted, and the year */
+  .explorer :global(.map-years-out),
+  .explorer :global(.map-years-from) {
     font-weight: 600;
     color: var(--ink);
     font-variant-numeric: tabular-nums;
+  }
+
+  .explorer :global(.map-years-from.is-scale) {
+    font-weight: 400;
+    color: var(--muted);
   }
 
   .explorer :global(.map-play) {
@@ -3913,6 +3919,13 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
   .explorer :global(.map-legend.by-region li) {
     padding-top: 0.15rem;
     padding-bottom: 0.15rem;
+  }
+
+  /* Each region's name, once, at the start of its line, wide enough that the sizes after it start together */
+  .explorer :global(.map-legend-region) {
+    min-width: 6.5rem;
+    font-weight: 600;
+    color: var(--ink);
   }
 
   .explorer :global(.map-legend.by-region .map-legend-break) {
