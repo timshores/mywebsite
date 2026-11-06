@@ -76,6 +76,14 @@ by default (Tim's rule). A script in `src/layouts/Layout.astro` sets this for ev
 links added later by scripts; downloads, `mailto:` and links with their own `target` are left alone,
 and `data-same-tab` opts a link out. New pages should use `Layout` so they follow it.
 
+## Element index
+
+`npm run dev` (any `astro dev`) shows an "Elements" tab on the right of every page: a panel listing the page's
+elements by id, or its classes, with a filter. Hovering a row outlines the element; clicking copies its selector;
+Pick (Alt+Shift+P) copies the selector of whatever is clicked next, anchored at the nearest id. Alt+Shift+E opens
+and closes it. It's Tim's way to name an element in a request. `astro.config.mjs` injects
+`scripts/element-index-panel.js` in dev only; the build never sees it.
+
 ## Font Lab
 
 `npm run font-lab` runs the dev server with a floating panel for trying Google Fonts on every page
