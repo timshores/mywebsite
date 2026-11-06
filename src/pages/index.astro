@@ -2,11 +2,11 @@
 import Layout from "../layouts/Layout.astro";
 import { profile } from "../data/profile";
 import { resumeVariants } from "../data/resumeVariants";
-import LiveSash from "../components/LiveSash.astro";
+import LiveRibbon from "../components/LiveRibbon.astro";
 ---
 
 <Layout title={`${profile.name} - Portfolio`} description={profile.headline}>
-  <LiveSash />
+  <LiveRibbon at="top" />
   <section class="hero-section">
     <div class="hero-text">
       <h1>{profile.name}</h1>
@@ -40,6 +40,7 @@ import LiveSash from "../components/LiveSash.astro";
         data-live-src="/portrait-b.png"
       />
     </div>
+    <LiveRibbon at="portrait" />
   </section>
 
   <h2>About</h2>
@@ -126,8 +127,7 @@ import LiveSash from "../components/LiveSash.astro";
     margin-bottom: 2.2rem;
   }
 
-  /* Wide enough for the longest role on one line at full size; narrow enough that, where the hero is one
-     column, no line runs under the sash across the card's corner */
+  /* Wide enough for the longest role on one line at full size */
   .headline {
     font-size: clamp(1.1rem, 2.4vw, 1.45rem);
     color: var(--ink);
@@ -196,9 +196,11 @@ import LiveSash from "../components/LiveSash.astro";
     border-color: var(--line);
   }
 
+  /* At the foot of its row, so the ribbon in the row below sits just under it */
   .portrait-container {
     position: relative;
     justify-self: end;
+    align-self: end;
     width: min(320px, 100%);
     border-radius: 1.4rem;
     border: 1px solid var(--line);

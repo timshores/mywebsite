@@ -277,7 +277,7 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
 
     <section id="cw-view" class="cw-view" data-view-only="commonwealth" hidden>
       <div id="cw-map"></div>
-      <h3 class="cw-plots-title">Districts side by side</h3>
+      <h3 class="cw-plots-title" id="cw-plots">Districts side by side</h3>
       <p class="cw-intro">
         Each plot shows every Massachusetts school district on two measures. These pairs line up closely, with a
         correlation of 0.4 or more, and raise no caution but “Shared towns,” which comes with any measure of a
@@ -375,7 +375,7 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
     </section>
 
     <div id="panels" class="panels" data-view-only="districts">
-      <figure id="fig-ppe" class="panel">
+      <figure id="fig-ppe" class="panel" data-about="spending-per-pupil since-1990">
         <h3>Spending<span data-dper> per pupil</span> by category</h3>
         <p class="panel-sub" id="ppe-sub"></p>
         <ul class="legend" id="legend-ppe" aria-label="Spending categories. Select one or more to show only those."></ul>
@@ -391,7 +391,7 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
         </button>
       </figure>
 
-      <figure id="fig-sped" class="panel">
+      <figure id="fig-sped" class="panel" data-about="special-education">
         <h3>Special education spending<span data-dper> per pupil</span> by category</h3>
         <p class="panel-sub" id="sped-sub"></p>
         <p class="panel-none" id="sped-none" hidden></p>
@@ -409,7 +409,7 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
         </div>
       </figure>
 
-      <figure id="fig-enroll" class="panel">
+      <figure id="fig-enroll" class="panel" data-about="enrollment">
         <h3>Enrollment</h3>
         <p class="panel-sub" id="enroll-sub"></p>
         <ul class="legend" id="legend-enroll"></ul>
@@ -424,7 +424,7 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
         </button>
       </figure>
 
-      <figure id="fig-ood" class="panel">
+      <figure id="fig-ood" class="panel" data-about="spending-on-out-of-district-fte">
         <h3>Spending on out-of-district FTE</h3>
         <p class="panel-sub" id="ood-sub"></p>
         <ul class="legend" id="legend-ood"></ul>
@@ -439,7 +439,7 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
         </button>
       </figure>
 
-      <figure id="fig-srace" class="panel">
+      <figure id="fig-srace" class="panel" data-about="students">
         <h3>Students by race and ethnicity</h3>
         <p class="panel-sub" id="srace-sub"></p>
         <ul class="legend" id="legend-srace" aria-label="Race and ethnicity groups. Select one or more to show only those."></ul>
@@ -450,7 +450,7 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
         </button>
       </figure>
 
-      <figure id="fig-sgroups" class="panel">
+      <figure id="fig-sgroups" class="panel" data-about="students">
         <h3>Students in selected groups</h3>
         <p class="panel-sub" id="sgroups-sub"></p>
         <ul class="legend" id="legend-sgroups"></ul>
@@ -461,7 +461,7 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
         </button>
       </figure>
 
-      <figure id="fig-nss" class="panel">
+      <figure id="fig-nss" class="panel" data-about="chapter-70-aid-and-net-school-spending">
         <h3>Chapter 70 aid and net school spending</h3>
         <p class="panel-sub" id="nss-sub"></p>
         <ul class="legend" id="legend-nss" aria-label="Net school spending components. Select one or more to show only those."></ul>
@@ -476,7 +476,7 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
         </button>
       </figure>
 
-      <figure id="fig-nssb" class="panel">
+      <figure id="fig-nssb" class="panel" data-about="budgets">
         <h3>Budgeted and actual net school spending<span data-dper> per pupil</span></h3>
         <p class="panel-sub" id="nssb-sub"></p>
         <p class="panel-none" id="nssb-none" hidden></p>
@@ -498,7 +498,7 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
         </div>
       </figure>
 
-      <figure id="fig-rev" class="panel">
+      <figure id="fig-rev" class="panel" data-about="revenue-by-source">
         <h3>Revenue<span data-dper> per pupil</span> by source</h3>
         <p class="panel-sub" id="rev-sub"></p>
         <p class="panel-none" id="rev-none" hidden></p>
@@ -518,7 +518,7 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
     </div>
 
     <div id="town-panels" class="panels" data-view-only="towns" hidden>
-      <figure id="fig-tspend" class="panel">
+      <figure id="fig-tspend" class="panel" data-about="town-budgets town-and-school-budgets-overlap-without-lining-up">
         <h3>General fund spending<span data-per> per resident</span> by function</h3>
         <p class="panel-sub" id="tspend-sub"></p>
         <ul class="legend" id="legend-tspend" aria-label="Spending functions. Select one or more to show only those."></ul>
@@ -533,7 +533,7 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
         </button>
       </figure>
 
-      <figure id="fig-trev" class="panel">
+      <figure id="fig-trev" class="panel" data-about="town-budgets revenue-groups">
         <h3>General fund revenue<span data-per> per resident</span> by source</h3>
         <p class="panel-sub" id="trev-sub"></p>
         <ul class="legend" id="legend-trev" aria-label="Revenue sources. Select one or more to show only those."></ul>
@@ -548,7 +548,7 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
         </button>
       </figure>
 
-      <figure id="fig-tres" class="panel">
+      <figure id="fig-tres" class="panel" data-about="reserves">
         <h3>Reserves<span data-per> per resident</span></h3>
         <p class="panel-sub" id="tres-sub"></p>
         <ul class="legend" id="legend-tres" aria-label="Reserves. Select one or more to show only those."></ul>
@@ -563,7 +563,7 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
         </button>
       </figure>
 
-      <figure id="fig-tfc" class="panel">
+      <figure id="fig-tfc" class="panel" data-about="where-free-cash-comes-from">
         <h3>Where free cash comes from<span data-per> per resident</span></h3>
         <p class="panel-sub" id="tfc-sub"></p>
         <ul class="legend" id="legend-tfc"></ul>
@@ -574,7 +574,7 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
         </button>
       </figure>
 
-      <figure id="fig-tlevy" class="panel">
+      <figure id="fig-tlevy" class="panel" data-about="the-property-tax-levy proposition-2-votes">
         <h3>Property tax levy and its limit<span data-per> per resident</span></h3>
         <p class="panel-sub" id="tlevy-sub"></p>
         <ul class="legend" id="legend-tlevy" aria-label="Levy and unused capacity. Select one to show only it."></ul>
@@ -593,7 +593,7 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
         </details>
       </figure>
 
-      <figure id="fig-tbill" class="panel">
+      <figure id="fig-tbill" class="panel" data-about="property">
         <h3>Average single-family tax bill</h3>
         <p class="panel-sub" id="tbill-sub"></p>
         <ul class="legend" id="legend-tbill"></ul>
@@ -604,7 +604,7 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
         </button>
       </figure>
 
-      <figure id="fig-tdebt" class="panel">
+      <figure id="fig-tdebt" class="panel" data-about="long-term-debt">
         <h3>Long-term debt<span data-per> per resident</span></h3>
         <p class="panel-sub" id="tdebt-sub"></p>
         <ul class="legend" id="legend-tdebt" aria-label="Debt outstanding and authorized. Select one to show only it."></ul>
@@ -626,7 +626,7 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
         </button>
       </figure>
 
-      <figure id="fig-tcap" class="panel">
+      <figure id="fig-tcap" class="panel" data-about="capital-projects">
         <h3>Capital projects spending<span data-per> per resident</span> by purpose</h3>
         <p class="panel-sub" id="tcap-sub"></p>
         <ul class="legend" id="legend-tcap" aria-label="Capital project purposes. Select one or more to show only those."></ul>
@@ -641,7 +641,7 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
         </button>
       </figure>
 
-      <figure id="fig-tval" class="panel">
+      <figure id="fig-tval" class="panel" data-about="property">
         <h3>Assessed value<span data-per> per resident</span> by property type</h3>
         <p class="panel-sub" id="tval-sub"></p>
         <ul class="legend" id="legend-tval" aria-label="Property types. Select one or more to show only those."></ul>
@@ -656,7 +656,7 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
         </button>
       </figure>
 
-      <figure id="fig-tpar" class="panel">
+      <figure id="fig-tpar" class="panel" data-about="property">
         <h3>Parcels by property type</h3>
         <p class="panel-sub" id="tpar-sub"></p>
         <ul class="legend" id="legend-tpar" aria-label="Property types. Select one or more to show only those."></ul>
@@ -671,7 +671,7 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
         </button>
       </figure>
 
-      <figure id="fig-teqv" class="panel">
+      <figure id="fig-teqv" class="panel" data-about="equalized-valuation-eqv">
         <h3>Equalized valuation<span data-per> per resident</span></h3>
         <p class="panel-sub" id="teqv-sub"></p>
         <ul class="legend" id="legend-teqv"></ul>
@@ -682,7 +682,7 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
         </button>
       </figure>
 
-      <figure id="fig-tpop" class="panel">
+      <figure id="fig-tpop" class="panel" data-about="population-estimates labor-force">
         <h3>Population and labor force</h3>
         <p class="panel-sub" id="tpop-sub"></p>
         <!-- The unemployment rate first; the residents, labor force and employed behind it a click away -->
@@ -698,7 +698,7 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
         </button>
       </figure>
 
-      <figure id="fig-tage" class="panel">
+      <figure id="fig-tage" class="panel" data-about="population-by-age-race-and-ethnicity">
         <h3>Population by age</h3>
         <p class="panel-sub" id="tage-sub"></p>
         <ul class="legend" id="legend-tage" aria-label="Age groups. Select one or more to show only those."></ul>
@@ -709,7 +709,7 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
         </button>
       </figure>
 
-      <figure id="fig-trace" class="panel">
+      <figure id="fig-trace" class="panel" data-about="population-by-age-race-and-ethnicity">
         <h3>Population by race and ethnicity</h3>
         <p class="panel-sub" id="trace-sub"></p>
         <ul class="legend" id="legend-trace" aria-label="Race and ethnicity groups. Select one or more to show only those."></ul>
@@ -720,7 +720,7 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
         </button>
       </figure>
 
-      <figure id="fig-tsex" class="panel">
+      <figure id="fig-tsex" class="panel" data-about="population-by-age-race-and-ethnicity">
         <h3>Women in the population</h3>
         <p class="panel-sub" id="tsex-sub"></p>
         <ul class="legend" id="legend-tsex" aria-label="Women, with its trend and the comparison"></ul>
@@ -731,7 +731,7 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
         </button>
       </figure>
 
-      <figure id="fig-tdis" class="panel">
+      <figure id="fig-tdis" class="panel" data-about="population-by-age-race-and-ethnicity">
         <h3>Population with a disability</h3>
         <p class="panel-sub" id="tdis-sub"></p>
         <ul class="legend" id="legend-tdis" aria-label="Population with a disability, with the trend and the comparison"></ul>
@@ -787,10 +787,13 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
         (<a href="https://github.com/timshores/schools/blob/main/ppe_report/data/dese_archive/README.md">the files, and
         how they were read</a>). It leaves out tuition for out-of-district FTE, the district's own pupils educated
         elsewhere, because, as DESE puts
-        it, those costs "vary greatly depending on the reason for going out of district." The panel
-        <strong>Spending on out-of-district FTE</strong> shows them on their own, per out-of-district FTE pupil. DESE's data
-        has no separate figure for them from FY2009, so the explorer works it out from DESE's totals: total spending
-        less in-district spending. For FY2005 to FY2008, where DESE printed the figure, the two agree to within 0.7%.
+        it, those costs "vary greatly depending on the reason for going out of district."
+      </p>
+      <p class="notes-sub">
+        <strong>Spending on out-of-district FTE</strong> shows that tuition on its own, per out-of-district FTE pupil.
+        DESE's data has no separate figure for it from FY2009, so the explorer works it out from DESE's totals: total
+        spending less in-district spending. For FY2005 to FY2008, where DESE printed the figure, the two agree to within
+        0.7%.
       </p>
       <p>
         <strong>Enrollment</strong> comes in three measures. In-district FTE is full-year enrollment of students who
@@ -952,19 +955,22 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
         funds are not included. Each town's school districts and FY2025 required local contributions come from DESE's
         <a href="https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025.html">Chapter 70 tables</a>
         (<a href="/muni-spending/data/towns-school-districts.csv" download>CSV</a>), and each town takes the
-        region of its own school district, or of its regional district.
-        Population groups put each town with others its size, by the July 2024 population estimate: under 1,000
-        (26 towns), 1,000–2,499 (42), 2,500–9,999 (98), 10,000–24,999 (103), 25,000–49,999 (55), 50,000–99,999 (18),
-        and 100,000 or more (9). The ten cities whose school districts are very large, from Boston to Springfield, are
-        in their population groups but stand apart from the statewide and regional town averages, as their districts
-        do from the district averages. Each average pools its towns: their combined dollars over their combined residents, households, or
-        taxable properties. Dollars are per
-        resident, using the Census Bureau's <a href="https://www.census.gov/programs-surveys/popest.html">population estimate</a> for July 1 at the start of each fiscal year. They can also be shown per household, using the Census Bureau's
+        region of its own school district, or of its regional district. Dollars are per resident, by the population
+        estimates below. They can also be shown per household, using the Census Bureau's
         <a href="https://www.census.gov/programs-surveys/acs">American Community Survey</a> five-year estimates
         (<a href="/muni-spending/data/towns-households.csv" download>CSV</a>), or per taxable property, using the
-        parcels of taxable real estate the assessors report (see Property, below), or in total. For FY2021
-        the April 1, 2020 estimate stands in, because the July 2020 estimate drops by more than a quarter in Amherst
-        and recovers a year later.
+        parcels of taxable real estate the assessors report (see Property, below), or in total. Each average pools its
+        towns: their combined dollars over their combined residents, households, or taxable properties.
+      </p>
+      <p class="notes-sub">
+        <strong>Population estimates</strong> are the Census Bureau's
+        <a href="https://www.census.gov/programs-surveys/popest.html">estimates</a> for July 1 at the start of each fiscal
+        year. For FY2021 the April 1, 2020 estimate stands in, because the July 2020 estimate drops by more than a
+        quarter in Amherst and recovers a year later. Population groups put each town with others its size, by the July
+        2024 estimate: under 1,000 (26 towns), 1,000–2,499 (42), 2,500–9,999 (98), 10,000–24,999 (103), 25,000–49,999
+        (55), 50,000–99,999 (18), and 100,000 or more (9). The ten cities whose school districts are very large, from
+        Boston to Springfield, are in their population groups but stand apart from the statewide and regional town
+        averages, as their districts do from the district averages.
       </p>
       <p>
         <strong>Property</strong> comes from the state Division of Local Services. Parcels and assessed values are
@@ -993,7 +999,10 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
         austerity. The tax rate here is the single-family bill over the home's value, which is the residential rate
         except where a town gives a residential exemption. The ceiling line and override capacity come from the same
         report: override capacity is the ceiling less the limit before debt exclusions, how much more an override could
-        raise. The levy chart's list of <strong>Proposition 2½ votes</strong> comes from DLS's records of override,
+        raise.
+      </p>
+      <p class="notes-sub">
+        <strong>Proposition 2½ votes</strong>, listed under the levy chart, come from DLS's records of override,
         underride, debt exclusion, capital exclusion, and stabilization fund votes
         (<a href="/muni-spending/data/towns-prop25-votes.csv" download>CSV</a>), with the result and, where DLS has
         them, the amount and the count.
@@ -1004,7 +1013,10 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
         <a href="/muni-spending/data/towns-stabilization.csv" download>CSV</a>) and the free cash the state certified from
         the town's balance sheet that day (<a href="https://dls-gw.dor.state.ma.us/reports/rdPage.aspx?rdReport=Dashboard.Cat_1_Reports.CertifiedFreeCashBudget351">DLS</a>,
         <a href="/muni-spending/data/towns-free-cash.csv" download>CSV</a>), shown at the fiscal year that ended: the free
-        cash certified as of July 1, 2026 is FY2026's. <strong>Where free cash comes from</strong> is the Bureau of
+        cash certified as of July 1, 2026 is FY2026's.
+      </p>
+      <p class="notes-sub">
+        <strong>Where free cash comes from</strong> is the Bureau of
         Accounts' proof of each town's free cash (<a href="https://dls-gw.dor.state.ma.us/reports/rdPage.aspx?rdReport=BalanceSheet.FreecashProofComp">DLS</a>,
         <a href="/muni-spending/data/towns-free-cash-proof.csv" download>CSV</a>), FY2021 on: local receipts and state aid
         above or below their estimates, appropriations left unspent, and the year before's free cash not appropriated, less
@@ -1012,16 +1024,22 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
         revenue the tax rate recap raises without enterprise or Community Preservation Act funds. A statewide comparison
         of each budget with what was spent isn't shown: Schedule A's spending leaves out transfers to stabilization and
         capital funds, which the budget includes, so the gap would count savings as money left unspent.
+      </p>
+      <p>
         <strong>Long-term debt</strong> is the debt outstanding at each year's end, with general fund debt service
         (<a href="https://dls-gw.dor.state.ma.us/reports/rdPage.aspx?rdReport=Dashboard.Cat_6_Reports.LongTermDebt351">DLS</a>,
         <a href="/muni-spending/data/towns-debt.csv" download>CSV</a>), and debt authorized but not yet borrowed
         (<a href="https://dls-gw.dor.state.ma.us/reports/rdPage.aspx?rdReport=Dashboard.Cat_6_Reports.TotalAuthUnisDebt351">DLS</a>,
         <a href="/muni-spending/data/towns-authorized-debt.csv" download>CSV</a>); bond ratings are Moody's and S&amp;P's,
         as DLS lists them (<a href="/muni-spending/data/towns-bond-ratings.csv" download>CSV</a>).
+      </p>
+      <p>
         <strong>Capital projects</strong> spending comes from Schedule A Part 4
-        (<a href="/muni-spending/data/towns-capital-projects.csv" download>CSV</a>, with the funds' revenue), and the
-        <strong>labor force</strong> from DLS's yearly figures (<a href="/muni-spending/data/towns-labor-force.csv" download>CSV</a>),
-        which end with 2022.
+        (<a href="/muni-spending/data/towns-capital-projects.csv" download>CSV</a>, with the funds' revenue).
+      </p>
+      <p>
+        <strong>Labor force</strong>, employment and the unemployment rate come from DLS's yearly figures
+        (<a href="/muni-spending/data/towns-labor-force.csv" download>CSV</a>), which end with 2022.
       </p>
       <p>
         <strong>Population by age, race and ethnicity</strong>, and the shares who are women and who have a disability,
@@ -2088,7 +2106,7 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
   }
 
   /* Detail off: the controls, tiles, charts and legends stay; the explanations around them go */
-  .explorer.detail-off :global(:is(.intro, .panel-sub, .controls-note, .compare-view, .table-open, #entity-meta,
+  .explorer.detail-off :global(:is(.intro, .panel-sub, .controls-note, .compare-view, .table-open, .about-links, #entity-meta,
     .relations, .cw-help, .cw-intro, .map-about, .map-source, .map-table, .cap-note, .cap-table-head, .cap-steps,
     .cap-questions, [data-detail])) {
     display: none !important;
@@ -3016,6 +3034,65 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
     line-height: 1;
   }
 
+  /* Under a chart: Full data table, and the parts of About the data it draws on (#227) */
+  .explorer :global(.panel-foot) {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    column-gap: 1.5rem;
+  }
+
+  .explorer :global(.about-links) {
+    font-size: 0.85rem;
+    color: var(--muted);
+  }
+
+  .explorer :global(.panel-foot .about-links) {
+    margin-top: 0.35rem;
+  }
+
+  .explorer :global(.about-links a) {
+    color: var(--accent);
+    text-underline-offset: 2px;
+  }
+
+  .explorer :global(.about-links a:hover) {
+    color: var(--accent-2);
+  }
+
+  /* A chart, the map or the plots, arrived at from About the data: ringed for a moment */
+  .explorer :global(.is-arrived) {
+    animation: arrived 2s ease-out;
+    border-radius: 6px;
+  }
+
+  .explorer :global(.is-arrived:focus) {
+    outline: none;
+  }
+
+  @keyframes arrived {
+    0%,
+    35% {
+      box-shadow: 0 0 0 3px var(--paper), 0 0 0 5px var(--accent);
+    }
+
+    100% {
+      box-shadow: 0 0 0 3px var(--paper), 0 0 0 5px transparent;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .explorer :global(.is-arrived) {
+      animation: none;
+      box-shadow: 0 0 0 3px var(--paper), 0 0 0 5px var(--accent);
+    }
+  }
+
+  /* Where a link from About the data lands: clear of the tabs and the controls' summary under them */
+  .explorer :global(:is(figure.panel, .map-section, #cw-plots)) {
+    scroll-margin-top: calc(var(--tabs-h, 3rem) + 3.25rem);
+  }
+
   /* The overlay sizes to the table, past the page's central column, up to the
      viewport less a 16px margin; only very narrow screens still scroll */
   .table-dialog {
@@ -3515,6 +3592,34 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
 
   .notes strong {
     color: var(--ink);
+  }
+
+  /* A section within the one before it, set in a little, with its Shown in line (#228) */
+  .notes :global(.notes-sub) {
+    margin-left: 1.25rem;
+  }
+
+  /* Under a paragraph: the charts, map measures and tabs that draw on it (#227) */
+  .notes :global(.notes-uses) {
+    margin-top: -0.35rem;
+    font-size: 0.82rem;
+    color: var(--muted);
+  }
+
+  .notes :global(.notes-uses-label) {
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .notes :global(.notes-uses a) {
+    color: var(--accent);
+    text-underline-offset: 2px;
+  }
+
+  .notes :global(.notes-uses a:hover) {
+    color: var(--accent-2);
   }
 
   .source-files-title {

@@ -1,0 +1,120 @@
+---
+// A painted ribbon linking to the municipal spending explorer (the artwork is a watercolour, its lettering part
+// of the picture, so the link carries the words for a screen reader). Drawn twice, as the sash was:
+//
+// - "portrait": a row of its own in the hero, under the portrait and the name's column both, its right end at the
+//   portrait's edge (#228, #229).
+// - "top": on a narrower screen, where the portrait drops below the name, across the top of the card.
+//
+// Only the ribbon takes clicks: the link is clipped to its outline, not the picture's box.
+import { Image } from "astro:assets";
+import ribbon from "../assets/municipal-ribbon.webp";
+
+interface Props {
+  at: "portrait" | "top";
+}
+const { at } = Astro.props;
+const href = "/muni-spending/";
+const label = "Now live: Mass. Municipal Spending Explorer";
+---
+
+<div class={`live-ribbon is-${at}`}>
+  <a href={href}>
+    <!-- Lazy, so the copy hidden at this width never loads; the one in view loads as the page lays out -->
+    <Image
+      src={ribbon}
+      alt={label}
+      widths={[480, 720, 960, 1440]}
+      sizes={at === "portrait" ? "(max-width: 860px) 1px, 480px" : "(max-width: 860px) min(560px, 100vw), 1px"}
+      loading="lazy"
+      draggable="false"
+    />
+  </a>
+</div>
+
+<style>
+  .live-ribbon {
+    position: relative;
+    z-index: 3;
+    pointer-events: none;
+    /* A sticker's hard shadow, as the cards have, cast by the ribbon's outline */
+    filter: drop-shadow(3px 4px 0 rgba(59, 26, 16, 0.18));
+  }
+
+  .live-ribbon a {
+    display: block;
+    pointer-events: auto;
+    /* The ribbon's outline, traced from the picture's transparency with a little room */
+    clip-path: polygon(
+      0% 34%, 3.1% 31.5%, 5.2% 30.9%, 7.3% 15.4%, 9.4% 10.6%, 11.4% 7.9%, 13.5% 5.6%, 15.6% 4.6%, 17.7% 4%,
+      19.8% 3.8%, 21.9% 4%, 23.9% 4.8%, 26% 6.3%, 28.1% 8.8%, 30.2% 12.3%, 32.3% 15.7%, 34.3% 19.2%, 36.4% 22.3%,
+      38.5% 25.3%, 40.6% 27.8%, 42.7% 28.8%, 44.8% 28.4%, 46.9% 27.3%, 48.9% 25.3%, 51% 23.2%, 53.1% 21.1%,
+      55.2% 18.4%, 57.3% 15.7%, 59.4% 12.9%, 61.5% 10%, 63.5% 7.5%, 65.6% 5.6%, 67.7% 3.5%, 69.8% 1.9%, 71.8% 0.6%,
+      73.9% 0%, 82.3% 0.4%, 84.4% 1.7%, 86.4% 3.8%, 88.5% 6.7%, 90.6% 10.2%, 92.7% 16.9%, 94.8% 30.9%,
+      96.8% 31.1%, 100% 32.4%, 100% 96.2%, 96.8% 94.4%, 94.8% 91.6%, 92.7% 91.2%, 90.6% 93.5%, 88.5% 96.2%,
+      86.4% 98.5%, 84.4% 100%, 82.3% 100%, 80.2% 99.6%, 78.1% 69.5%, 76% 67.6%, 73.9% 66.4%, 71.8% 65.8%,
+      69.8% 65.8%, 67.7% 67%, 65.6% 68.9%, 63.5% 70.8%, 61.5% 73.1%, 59.4% 75.2%, 57.3% 77.5%, 55.2% 79.5%,
+      53.1% 81.6%, 51% 83.3%, 48.9% 85%, 46.9% 86.4%, 44.8% 87.5%, 42.7% 87.9%, 40.6% 88.3%, 36.4% 87.9%,
+      34.3% 87.5%, 32.3% 86.6%, 30.2% 85.4%, 28.1% 83.1%, 26% 81.2%, 23.9% 78.5%, 21.9% 76.4%, 19.8% 74.5%,
+      17.7% 72.7%, 15.6% 85%, 13.5% 93.1%, 11.4% 93.1%, 9.4% 92.5%, 7.3% 90%, 5.2% 91%, 3.1% 96.2%, 0% 98.1%
+    );
+  }
+
+  .live-ribbon img {
+    display: block;
+    width: 100%;
+    height: auto;
+    user-select: none;
+    transition: filter 0.18s ease, transform 0.18s ease;
+  }
+
+  .live-ribbon a:hover img {
+    filter: brightness(1.07) saturate(1.06);
+    transform: translateY(-2px);
+  }
+
+  /* The clip would cut a ring on the link, so the focus ring goes round the ribbon's box */
+  .live-ribbon a:focus {
+    outline: none;
+  }
+
+  .live-ribbon:has(a:focus-visible) {
+    outline: 2px dashed var(--accent);
+    outline-offset: 4px;
+    border-radius: 6px;
+  }
+
+  /* Half as wide again as the portrait, just under it (the hero's row gap less a rem). The hero makes room
+     for it, less what hangs into the line of the About heading, which runs only as far as the word */
+  .is-portrait {
+    grid-column: 1 / -1;
+    justify-self: end;
+    width: min(480px, 100%);
+    margin: -1rem 0 -3.75rem;
+  }
+
+  .is-top {
+    display: none;
+  }
+
+  @media (max-width: 860px) {
+    .is-portrait {
+      display: none;
+    }
+
+    .is-top {
+      display: block;
+      left: 50%;
+      /* Past the card's sides, as far as its padding and a little more */
+      width: min(560px, calc(100% + 2.4rem + 1rem));
+      margin: -0.6rem 0 0.8rem;
+      transform: translateX(-50%);
+    }
+  }
+
+  @media print {
+    .live-ribbon {
+      display: none;
+    }
+  }
+</style>

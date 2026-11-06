@@ -35,16 +35,20 @@ interface Var { key: string; label: string; short: string; unit: Unit; role: "ou
   students?: boolean }
 
 const GATEWAY = "https://dls-gw.dor.state.ma.us/reports/rdPage.aspx?rdReport=";
-const SOURCES = {
-  c70: { name: "DESE Chapter 70 district profiles", url: "https://www.doe.mass.edu/finance/chapter70/default.html" },
-  ppe: { name: "DESE per-pupil expenditures", url: "https://educationtocareer.data.mass.gov/d/er3w-dyti" },
-  eqv: { name: "DLS equalized valuations", url: `${GATEWAY}PropertyTaxInformation.EQV.EQV` },
-  la4: { name: "DLS LA-4 assessed values", url: `${GATEWAY}PropertyTaxInformation.LA4.Parcel_counts_vals` },
-  bill: { name: "DLS average single-family tax bill", url: `${GATEWAY}AverageSingleTaxBill.SingleFamTaxBill_wRange` },
-  pop: { name: "Census Bureau population estimates", url: "https://www.census.gov/programs-surveys/popest.html" },
-  students: { name: "DESE enrollment by selected populations", url: "https://educationtocareer.data.mass.gov/d/t8td-gens" },
-  sped: { name: "DESE special education spending (RADAR)", url: "https://www.doe.mass.edu/research/radar/" },
-  budgets: { name: "DESE net school spending compliance summaries", url: "https://www.doe.mass.edu/finance/chapter70/compliance.html" },
+// Each with the part of About the data that describes it, by id less "about-" (notes.ts)
+export const SOURCES = {
+  c70: { name: "DESE Chapter 70 district profiles", url: "https://www.doe.mass.edu/finance/chapter70/default.html",
+    note: "chapter-70-aid-and-net-school-spending" },
+  ppe: { name: "DESE per-pupil expenditures", url: "https://educationtocareer.data.mass.gov/d/er3w-dyti", note: "spending-per-pupil" },
+  eqv: { name: "DLS equalized valuations", url: `${GATEWAY}PropertyTaxInformation.EQV.EQV`, note: "equalized-valuation-eqv" },
+  la4: { name: "DLS LA-4 assessed values", url: `${GATEWAY}PropertyTaxInformation.LA4.Parcel_counts_vals`, note: "property" },
+  bill: { name: "DLS average single-family tax bill", url: `${GATEWAY}AverageSingleTaxBill.SingleFamTaxBill_wRange`, note: "property" },
+  pop: { name: "Census Bureau population estimates", url: "https://www.census.gov/programs-surveys/popest.html", note: "population-estimates" },
+  students: { name: "DESE enrollment by selected populations", url: "https://educationtocareer.data.mass.gov/d/t8td-gens",
+    note: "students" },
+  sped: { name: "DESE special education spending (RADAR)", url: "https://www.doe.mass.edu/research/radar/", note: "special-education" },
+  budgets: { name: "DESE net school spending compliance summaries", url: "https://www.doe.mass.edu/finance/chapter70/compliance.html",
+    note: "budgets" },
 };
 
 // School measures first (the usual vertical axis), then size and the towns' wealth
@@ -255,7 +259,11 @@ function withParts<T extends HTMLElement>(node: T, parts: Rich): T {
 
 interface View { preset: string | null; y: string; x: string; fy: number; log: boolean; all: boolean; hl: string; find: string | null }
 
-export function startCommonwealth(root: HTMLElement, data: CwData, opts: { openDistrict: (id: string) => void }) {
+export function startCommonwealth(root: HTMLElement, data: CwData, opts: {
+  openDistrict: (id: string) => void;
+  /** "About the data:" and the parts named, linked */
+  about: (parts: string[]) => HTMLElement | null;
+}) {
   const years = data.meta.years;
   const latest = data.meta.latest;
   const at = (fy: number) => years.indexOf(fy);
@@ -837,6 +845,8 @@ export function startCommonwealth(root: HTMLElement, data: CwData, opts: { openD
       caption.append(...(k ? [", ", a] : [a]));
     });
     caption.append(". Towns' figures pool each district's member towns.");
+    const about = opts.about([...new Set(srcs.map((s) => s.note))]);
+    if (about) caption.append(" ", about);
 
     // The table: every district drawn, highest first
     const t = el("table");

@@ -12,7 +12,7 @@ import { closeEnlarged, enlargeButton } from "./enlarge";
 import type { CapData } from "./cap";
 import type { CwData } from "./commonwealth";
 import type { MapData, MapSeries } from "./map";
-import { notesContents } from "./notes";
+import { notesContents, type NoteUse } from "./notes";
 import { groupedPicker, type Picker } from "./picker";
 
 type Values = Val[];
@@ -789,7 +789,8 @@ export async function startExplorer() {
   };
   if (state.cmp === "other" && !state.vs) state.cmp = "none";
   // About the data's contents, and the part or group a link goes to there
-  const notes = notesContents(() => state.view === "data");
+  const notes = notesContents(() => state.view === "data", () => update({ view: "data" }));
+  const aboutLine = (parts: string[]) => notes.links(parts, "span");
   /** The first year of the slider's scale, where a window starts by default */
   const firstYear = () => (state.hist === "on" ? fullYears[0] : meta.start);
   if (state.to - state.from < MIN_SPAN) [state.from, state.to] = [firstYear(), meta.latest];
@@ -1290,6 +1291,9 @@ export async function startExplorer() {
     }, FADE_MS);
   }
 
+  /** Where a link from About the data goes, once its tab is drawn (#227) */
+  let arrival: (() => void) | null = null;
+
   /** Load what the view needs (the entity, the comparison), then draw. A newer update wins. */
   let ticket = 0;
   async function refresh() {
@@ -1318,12 +1322,18 @@ export async function startExplorer() {
       if (mine === ticket) $("entity-meta").textContent = "Part of the explorer's data didn't load. Reload the page to try again.";
       return;
     }
-    if (mine === ticket) render();
+    if (mine !== ticket) return;
+    render();
+    if (arrival) {
+      const go = arrival;
+      arrival = null;
+      requestAnimationFrame(go);
+    }
   }
 
   // The Commonwealth tab's gallery and data, loaded the first time it opens
   let cw: { openFromUrl(): void; close(): void } | null = null;
-  let map: { refresh(): void; setSeries(s: MapSeries): void } | null = null;
+  let map: { refresh(): void; setSeries(s: MapSeries): void; show(layer: "towns" | "districts", key: string): void } | null = null;
   async function loadCommonwealth() {
     if (cw) return;
     const [mod, json, mapMod, mapJson] = await Promise.all([import("./commonwealth"), import("../../data/massppe/commonwealth.json"),
@@ -1334,12 +1344,14 @@ export async function startExplorer() {
       // The map shares the explorer's Dollars choice
       real: () => state.usd !== "nominal",
       setReal: (real) => update({ usd: real ? String(meta.latest) : "nominal" }),
+      about: aboutLine,
     });
     // The measures year by year come after: the map draws without them, and its year controls appear when they arrive
     const m = map;
     import("../../data/massppe/map-years.json").then((y) => m.setSeries(y.default as unknown as MapSeries)).catch(() => {});
     cw = mod.startCommonwealth($("cw-root"), json.default as unknown as CwData, {
       openDistrict: (id) => update({ view: "districts", d: id }),
+      about: aboutLine,
     });
     // A link to one plot opens it
     if (new URLSearchParams(location.search).has("y")) cw.openFromUrl();
@@ -2439,7 +2451,8 @@ export async function startExplorer() {
     });
     $("vs-control").hidden = onTowns || state.cmp !== "other";
     $("town-vs-control").hidden = !onTowns || state.tcmp !== "other";
-    if (state.view === "data") notes.show();
+    // The Data tab goes to the part its address names once the lines under the parts are in, as they move what's below
+    if (state.view === "data") void showUses().then(notes.show);
   }
 
   /** Draw the view; refresh() has loaded what it needs. */
@@ -3342,6 +3355,89 @@ export async function startExplorer() {
       notes.go(new URL(a.href).hash.slice(1));
       update({ view: "data" });
     });
+  }
+
+  // ---- The charts and About the data, linked both ways (#227) ----
+  // Under each chart, beside Full data table, the parts of About the data it draws on (its data-about)
+  const figures = [...document.querySelectorAll<HTMLElement>("figure.panel[data-about]")];
+  const partsOf = (f: HTMLElement) => f.dataset.about!.split(" ");
+  for (const f of figures) {
+    const line = aboutLine(partsOf(f));
+    if (!line) continue;
+    const table = f.querySelector(".table-open");
+    if (!table) {
+      f.append(line);
+      continue;
+    }
+    // One row under the chart, which wraps on a narrow screen
+    const foot = document.createElement("div");
+    foot.className = "panel-foot";
+    table.before(foot);
+    foot.append(table, line);
+  }
+  // And under the cap tab's sources
+  const capAbout = notes.links(["equalized-valuation-eqv", "income-fifths"]);
+  if (capAbout) document.querySelector(".cap-method")?.after(capAbout);
+
+  /** Bring a chart, the map or the plots into view, marked for a moment, with the keyboard's focus on it */
+  function arriveAt(box: HTMLElement) {
+    if (box.classList.contains("is-collapsed")) box.querySelector<HTMLButtonElement>(".collapse-toggle")?.click();
+    box.scrollIntoView({ block: "start" });
+    box.classList.remove("is-arrived");
+    void box.offsetWidth;
+    box.classList.add("is-arrived");
+    window.setTimeout(() => box.classList.remove("is-arrived"), 2000);
+    if (!box.hasAttribute("tabindex")) box.tabIndex = -1;
+    box.focus({ preventScroll: true });
+  }
+  /** What an address's #id names: a chart (#fig-ppe), a map measure (#map-towns-reserves), or the plots */
+  function arrivalFor(id: string): (() => void) | null {
+    const m = /^map-(towns|districts)-(\w+)$/.exec(id);
+    if (m) return () => {
+      map?.show(m[1] as "towns" | "districts", m[2]);
+      const box = document.querySelector<HTMLElement>(".map-section");
+      if (box) arriveAt(box);
+    };
+    const box = id.startsWith("fig-") || id === "cw-plots" ? document.getElementById(id) : null;
+    return box ? () => arriveAt(box) : null;
+  }
+  const goTo = (view: View, id: string) => {
+    arrival = arrivalFor(id);
+    update({ view });
+  };
+  // Opened from such a link in a tab of its own
+  if (state.view !== "data" && location.hash) arrival = arrivalFor(decodeURIComponent(location.hash.slice(1)));
+
+  // Under each part of About the data, the charts, map measures and tabs that draw on it: the charts' from their
+  // data-about, the map's and the plots' from their modules, loaded the first time the Data tab opens
+  const VIEW_NAMES = { districts: "School districts", towns: "Towns" } as const;
+  const LAYER_NAMES = { districts: "Commonwealth map, school districts", towns: "Commonwealth map, towns" } as const;
+  let uses: Promise<void> | null = null;
+  function showUses() {
+    uses ??= (async () => {
+      const list: NoteUse[] = figures.map((f) => {
+        const view = f.closest("[data-view-only]")!.getAttribute("data-view-only") as "districts" | "towns";
+        return { parts: partsOf(f), where: VIEW_NAMES[view], name: f.querySelector("h3")!.textContent!.trim(),
+          href: `/muni-spending/${view === "towns" ? "?view=towns" : ""}#${f.id}`, open: () => goTo(view, f.id) };
+      });
+      try {
+        const [m, c] = await Promise.all([import("./map"), import("./commonwealth")]);
+        for (const layer of ["towns", "districts"] as const) {
+          for (const x of m.MAP_MEASURES[layer]) {
+            if (!x.notes) continue;
+            const id = `map-${layer}-${x.key}`;
+            list.push({ parts: x.notes, where: LAYER_NAMES[layer], name: x.label,
+              href: `/muni-spending/?view=commonwealth#${id}`, open: () => goTo("commonwealth", id) });
+          }
+        }
+        list.push({ parts: [...new Set(Object.values(c.SOURCES).map((x) => x.note))], where: "Commonwealth",
+          name: "Districts side by side", href: "/muni-spending/?view=commonwealth#cw-plots", open: () => goTo("commonwealth", "cw-plots") });
+      } catch { /* the charts' lines still show */ }
+      list.push({ parts: ["equalized-valuation-eqv", "income-fifths"], where: "The 82.5% cap", name: "The 82.5% cap",
+        href: "/muni-spending/?view=cap", open: () => update({ view: "cap" }) });
+      notes.shownIn(list);
+    })();
+    return uses;
   }
 
   /** Swap beside Compare with: shown while there's a comparison, and active when the comparison can be the

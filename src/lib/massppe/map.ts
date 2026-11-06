@@ -68,6 +68,8 @@ interface Measure {
   short: (v: number) => string;
   /** What it measures, in a sentence or two, over the years shown, in nominal dollars or the latest year's */
   about: (m: MapData["meta"], real: boolean, y: Yrs) => string;
+  /** The parts of About the data it draws on, by id less "about-" (notes.ts) */
+  notes?: string[];
   /** For a change: what grew, in the sentence on how the towns or districts split ("spending per pupil") */
   subject?: string;
   /** For the cap: its own sentence on the split */
@@ -118,95 +120,113 @@ const acs = (y: Yrs) => `${y.to - 5}–${y.to - 1}`;
 const TOWN_MEASURES: Measure[] = [
   {
     key: "ct", label: "Community type", kind: "type", fmt: none, short: none,
+    notes: ["community-types"],
     about: () => "The Inner Core is Boston and 15 neighboring cities and towns, as the Metropolitan Area Planning " +
       "Council defines it. The Gateway Cities are the state's other 22 mid-size cities. A rural town has fewer than 500 " +
       "residents per square mile. Every other town counts as suburban and other.",
   },
   {
     key: "density", label: "Population per square mile", kind: "level", fmt: dense, short: denseShort, cuts: [250, 500, 1000, 2500],
+    notes: ["community-types"],
     unit: " residents per square mile", years: "year",
     about: (m, real, y) => `Each town's population in July ${y.to - 1}, divided by its land area. A town with fewer than 500 ` +
       "residents per square mile counts as rural.",
   },
   {
     key: "spend", label: "Spending per resident, yearly growth", kind: "change", fmt: yearly, short: yearlyShort, dollars: true,
+    notes: ["town-budgets"],
     subject: "spending per resident", years: "range",
     about: (m, real, y) => `How fast each town's general fund spending per resident grew each year on trend, from FY${y.from} ` +
       `to FY${y.to}, ${inDollars(m, real)}.`,
   },
   {
     key: "edu", label: "Education's share of spending", kind: "level", fmt: share, short: share, years: "year",
+    notes: ["town-budgets", "town-and-school-budgets-overlap-without-lining-up"],
     about: (m, real, y) => `The share of each town's general fund spending in FY${y.to} that went to education: its own ` +
       "school department and what it paid regional and vocational school districts.",
   },
   {
     key: "pop", label: "Population change", kind: "change", fmt: change, short: change, subject: "population", years: "range",
+    notes: ["population-estimates"],
     about: (m, real, y) => `How much each town's population changed from July ${y.from - 1} to July ${y.to - 1}.`,
   },
   {
     key: "unemp", label: "Unemployment rate", kind: "level", fmt: share, short: share, years: "year",
+    notes: ["labor-force"],
     about: (m, real, y) => `The share of each town's labor force out of work in ${y.to - 1}, the state's average for the year. ` +
       "The figures end with 2022, which the map shows at FY2023.",
   },
   {
     key: "eqv", label: "Property value per resident, yearly growth", kind: "change", fmt: yearly, short: yearlyShort, dollars: true,
+    notes: ["equalized-valuation-eqv"],
     subject: "property value per resident", years: "range",
     about: (m, real, y) => "How fast each town's equalized property value per resident grew each year on trend, from " +
       `FY${y.from} to FY${y.to}, ${inDollars(m, real)}. The state sets equalized values every other year.`,
   },
   {
     key: "income", label: "Income per resident", kind: "level", fmt: dollars, short: dollars, fifths: "towns",
+    notes: ["income-fifths"],
     about: (m) => `Each town's residents' income for the Chapter 70 formula, from ${m.fifths.year} state tax returns, ` +
       `divided by its population in July ${m.fifths.year}. The five colors are the income fifths, 70 or 71 towns each.`,
   },
   {
     key: "levy_room", label: "Room under the levy limit", kind: "level", fmt: share, short: share, years: "year",
+    notes: ["the-property-tax-levy"],
     about: (m, real, y) => `Each town's unused levy capacity in FY${y.to}, as a share of its Proposition 2½ levy limit. The ` +
       "lightest towns are taxing at or near their limit.",
   },
   {
     key: "override", label: "Override capacity", kind: "level", fmt: share, short: share, years: "year",
+    notes: ["the-property-tax-levy"],
     about: (m, real, y) => `Each town's override capacity in FY${y.to}: the room between its Proposition 2½ levy limit and its ` +
       "levy ceiling, 2½% of its assessed value, as a share of the ceiling. The darkest towns could raise the most with an override.",
   },
   {
     key: "reserves", label: "Reserves as a share of the budget", kind: "level", fmt: share, short: share, years: "year",
+    notes: ["reserves"],
     about: (m, real, y) => `Each town's free cash and stabilization funds at the end of FY${y.to}, as a share of its operating ` +
       "budget: the revenue its budget raises, without enterprise or Community Preservation Act funds.",
   },
   {
     key: "debt_service", label: "Debt service as a share of the budget", kind: "level", fmt: share, short: share, years: "year",
+    notes: ["long-term-debt"],
     about: (m, real, y) => `What each town's general fund paid in FY${y.to} on its long-term debt, principal and interest, as a ` +
       "share of its operating budget.",
   },
   {
     key: "bill_income", label: "Single-family tax bill as a share of income", kind: "level", fmt: share, short: share, years: "year",
+    notes: ["property"],
     tail: 0.95,
     about: (m, real, y) => `The average single-family tax bill in FY${y.to}, as a share of income per capita. College towns run ` +
       "high because their students count as residents but report little income.",
   },
   {
     key: "older", hold: true, label: "Population 65 and older", kind: "level", fmt: share, short: share, years: "year",
+    notes: ["population-by-age-race-and-ethnicity"],
     about: (m, real, y) => `The share of each town's residents 65 and older, in the Census Bureau's American Community Survey ` +
       `estimates for ${acs(y)}, shown at FY${y.to}.`,
   },
   {
     key: "poc", hold: true, label: "Population of color", kind: "level", fmt: share, short: share, years: "year",
+    notes: ["population-by-age-race-and-ethnicity"],
     about: (m, real, y) => "The share of each town's residents who are Hispanic or Latino, or of a race other than white, " +
       `in the Census Bureau's American Community Survey estimates for ${acs(y)}, shown at FY${y.to}.`,
   },
   {
     key: "disability", hold: true, label: "Population with a disability", kind: "level", fmt: share, short: share, years: "year",
+    notes: ["population-by-age-race-and-ethnicity"],
     about: (m, real, y) => "The share of each town's residents with a disability, of those not living in institutions such " +
       `as nursing homes, in the Census Bureau's American Community Survey estimates for ${acs(y)}, shown at FY${y.to}. The ` +
       "survey counts disability from 2008–2012 on.",
   },
   {
     key: "debt_pc", label: "Long-term debt per resident", kind: "level", fmt: dollars, short: dollars, years: "year", tail: 0.95,
+    notes: ["long-term-debt"],
     about: (m, real, y) => `Each town's long-term debt outstanding at the end of FY${y.to}, per resident, in nominal dollars.`,
   },
   {
     key: "overrides", label: "Prop 2½ overrides passed since FY2005", kind: "level", fmt: (v) => String(Math.round(v)),
+    notes: ["proposition-2-votes"],
     short: (v) => String(Math.round(v)), cuts: [0, 1, 3, 6], over: true,
     classes: ["None", "One", "Two or three", "Four to six", "Seven or more"],
     about: (m) => "How many Proposition 2½ overrides each town's voters passed from FY2005 on, as the Division of Local " +
@@ -214,6 +234,7 @@ const TOWN_MEASURES: Measure[] = [
   },
   {
     key: "cap_hh", label: "The 82.5% cap: change per household with no cap", kind: "change", fmt: money, short: money, years: "year",
+    notes: ["equalized-valuation-eqv"],
     about: (m, real, y) => `How much more or less each town would be asked to pay toward its schools in FY${y.to} with no cap, ` +
       "per household, keeping that year's statewide total. The cap saves the blue towns money and costs the orange towns money.",
     split: (up, down, n) => `With no cap, ${up} of ${n} towns would be asked for more and the other ${down} would be asked for less.`,
@@ -223,12 +244,14 @@ const TOWN_MEASURES: Measure[] = [
 const DISTRICT_MEASURES: Measure[] = [
   {
     key: "ct", label: "Community type", kind: "type", fmt: none, short: none,
+    notes: ["community-types"],
     about: () => "A district is rural if it has 35 or fewer students per square mile, the test DESE uses for rural school " +
       "aid. Inner Core districts are the school districts of Boston and its 15 neighbors. Gateway City districts are the " +
       "school districts of the other 22 Gateway Cities. Every other district counts as suburban and other.",
   },
   {
     key: "density", label: "Students per square mile", kind: "level", fmt: dense, short: denseShort, cuts: [11, 21, 35, 200],
+    notes: ["community-types"],
     over: true, classes: ["11 or fewer (rural, tier 1)", "Over 11 to 21 (rural, tier 2)", "Over 21 to 35 (rural, tier 3)",
       "Over 35 to 200", "Over 200"],
     unit: " students per square mile", years: "year",
@@ -237,31 +260,37 @@ const DISTRICT_MEASURES: Measure[] = [
   },
   {
     key: "ppe", label: "Spending per pupil, yearly growth", kind: "change", fmt: yearly, short: yearlyShort, dollars: true,
+    notes: ["spending-per-pupil"],
     subject: "spending per pupil", years: "range",
     about: (m, real, y) => `How fast each district's in-district spending per pupil grew each year on trend, from FY${y.from} ` +
       `to FY${y.to}, ${inDollars(m, real)}.`,
   },
   {
     key: "enroll", label: "Enrollment change", kind: "change", fmt: change, short: change, subject: "enrollment", years: "range",
+    notes: ["enrollment"],
     about: (m, real, y) => `How much each district's in-district enrollment changed from FY${y.from} to FY${y.to}.`,
   },
   {
     key: "income", label: "Income per resident of its towns", kind: "level", fmt: dollars, short: dollars, fifths: "districts",
+    notes: ["income-fifths"],
     about: (m) => `The combined income of each district's towns for the Chapter 70 formula, from ${m.fifths.year} state ` +
       `tax returns, divided by their combined population. The five colors are the districts' income fifths.`,
   },
   {
     key: "above", label: "Local contribution above required", kind: "level", fmt: share, short: share, years: "year",
+    notes: ["chapter-70-aid-and-net-school-spending"],
     about: (m, real, y) => `How far each district's actual net school spending in FY${y.to} ran above the state's required ` +
       "minimum, as a share of that minimum.",
   },
   {
     key: "aid", label: "Chapter 70 aid's share of required spending", kind: "level", fmt: share, short: share, years: "year",
+    notes: ["chapter-70-aid-and-net-school-spending"],
     about: (m, real, y) => `The share of each district's required spending in FY${y.to} that Chapter 70 aid covers. The ` +
       "district's towns pay the rest.",
   },
   {
     key: "gap", label: "Actual vs. budget", kind: "change", fmt: change, short: change, years: "year",
+    notes: ["budgets"],
     // Fixed cuts, the same every year, with a class past 5% either way (#223)
     cuts: [-0.05, -0.02, -0.005, 0.005, 0.02, 0.05],
     classes: ["Below −5%", "−5% to −2%", "−2% to −0.5%", "−0.5% to +0.5%", "+0.5% to +2%", "+2% to +5%", "+5% and up"],
@@ -272,31 +301,37 @@ const DISTRICT_MEASURES: Measure[] = [
   },
   {
     key: "sped_share", label: "Special education's share of spending", kind: "level", fmt: share, short: share, years: "year",
+    notes: ["special-education"],
     about: (m, real, y) => `Special education's share of each district's spending in FY${y.to}, from DESE's RADAR figures: ` +
       "teaching, services, tuition elsewhere, and transportation.",
   },
   {
     key: "swd", label: "Students with disabilities", kind: "level", fmt: share, short: share, years: "year",
+    notes: ["students"],
     about: (m, real, y) => `The share of each district's students with disabilities, those with an Individualized Education ` +
       `Program, on October 1, ${y.to - 1} (FY${y.to}).`,
   },
   {
     key: "el", label: "English learners", kind: "level", fmt: share, short: share, years: "year",
+    notes: ["students"],
     about: (m, real, y) => `The share of each district's students who are English learners, on October 1, ${y.to - 1} (FY${y.to}).`,
   },
   {
     key: "low_income", label: "Low-income students", kind: "level", fmt: share, short: share, years: "year",
+    notes: ["students"],
     about: (m, real, y) => `The share of each district's students who are low income, on October 1, ${y.to - 1} (FY${y.to}), by ` +
       "the measure DESE has counted since FY2022; its earlier measures don't compare.",
   },
   {
     key: "high_needs", label: "Students with high needs", kind: "level", fmt: share, short: share, years: "year",
+    notes: ["students"],
     about: (m, real, y) => `The share of each district's students with high needs on October 1, ${y.to - 1} (FY${y.to}): those ` +
       "with a disability, English learners now or recently, or low income, each counted once. It shifts when low income's " +
       "measure does, in FY2015 and FY2022.",
   },
   {
     key: "soc", label: "Students of color", kind: "level", fmt: share, short: share, years: "year",
+    notes: ["students"],
     about: (m, real, y) => "The share of each district's students who are Hispanic or Latino, or of a race other than white, " +
       `on October 1, ${y.to - 1} (FY${y.to}).`,
   },
@@ -443,8 +478,13 @@ const SVG = "http://www.w3.org/2000/svg";
  * real and setReal: the explorer's Dollars choice, which the map shares; refresh() redraws it when
  * that choice changes elsewhere; setSeries() hands it the measures' years when they arrive.
  */
+/** The measures on each layer, for About the data's links back to them (#227) */
+export const MAP_MEASURES: Record<Layer, readonly Measure[]> = { towns: TOWN_MEASURES, districts: DISTRICT_MEASURES };
+
 export function startMap(root: HTMLElement, data: MapData, opts: {
   openTown: (id: string) => void; openDistrict: (id: string) => void; real: () => boolean; setReal: (real: boolean) => void;
+  /** "About the data:" and the parts named, linked */
+  about: (parts: string[]) => HTMLElement | null;
 }) {
   const { meta } = data;
   let layer: Layer = "districts";
@@ -606,8 +646,10 @@ export function startMap(root: HTMLElement, data: MapData, opts: {
   const tableHolder = el("div", "table-scroll");
   tableBox.append(tableSum, tableHolder);
   const src = el("p", "map-source");
+  // After the outlines, the parts of About the data the measure draws on, set as it's drawn
+  const srcAbout = el("span");
   src.append("Outlines: the Census Bureau's ", Object.assign(el("a", undefined, "cartographic boundary file"), { href: meta.outlines }),
-    " of county subdivisions. Data: the explorer's own, as the Data tab describes.");
+    " of county subdivisions. ", srcAbout);
   // Enlarge takes the controls, the measure's name and the map, not the text and table around them
   const mapBox = el("div", "map-box");
   mapBox.append(enlargeButton(mapBox), controls, fold, figure);
@@ -912,6 +954,8 @@ export function startMap(root: HTMLElement, data: MapData, opts: {
     if (onTowns) townKey = key;
     else districtKey = key;
     measureSel.value = key;
+    const notes = list.find((m) => m.key === key)?.notes;
+    srcAbout.replaceChildren((notes && opts.about(notes)) || "Data: the explorer's own, as the Data tab describes.");
     // All grades: a town with one district takes it; a town split between two takes the two combined
     const combinedAt = (t: MapTown) => !onTowns && grades === "all" && !!t.elem && t.elem !== t.high;
     const districtOf = (t: MapTown) => (onTowns || combinedAt(t) ? null : grades === "high" ? t.high : t.elem);
@@ -1578,6 +1622,15 @@ export function startMap(root: HTMLElement, data: MapData, opts: {
     setSeries(s: MapSeries) {
       S = s;
       draw();
+    },
+    /** A link from About the data: the measure on its layer, in view */
+    show(on: Layer, key: string) {
+      layer = on;
+      if (on === "towns") townKey = key;
+      else districtKey = key;
+      stop();
+      draw();
+      section.scrollIntoView({ block: "start" });
     },
   };
 }
