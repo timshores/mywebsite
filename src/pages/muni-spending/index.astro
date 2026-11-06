@@ -1,5 +1,6 @@
 ---
 import Layout from "../../layouts/Layout.astro";
+import GroupMembers from "../../components/massppe/GroupMembers.astro";
 
 // The agencies' files behind the explorer, as kept in the public pipeline repository
 const REPO_DATA = "https://github.com/timshores/schools/blob/main/ppe_report/data/";
@@ -19,6 +20,10 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
       source: "DESE, Special Education Direct Expenditure Trends (RADAR)", url: "https://www.doe.mass.edu/research/radar/", retrieved: "Nov 3, 2026" },
     { file: "dese_circuit_breaker.csv", holds: "Circuit Breaker payments to every district, with the students and costs it claimed, FY2006 on",
       source: "DESE, Special Education Circuit Breaker Reimbursements", url: "https://educationtocareer.data.mass.gov/d/ab34-d3ma", retrieved: "Nov 3, 2026" },
+    { file: "dese_nss_budgets.csv", holds: "Every district's budgeted, actual, and required net school spending, budgets FY2011 to FY2026",
+      source: "DESE, net school spending compliance summaries (FY2010 to FY2020 from the Internet Archive)", url: "https://www.doe.mass.edu/finance/chapter70/compliance.html", retrieved: "Nov 5, 2026" },
+    { file: "dese_enrollment.csv", holds: "Every district's students by race and ethnicity, gender, and selected groups, each October 1 from 1991",
+      source: "DESE, Enrollment: Grade, Race/Ethnicity, Gender, and Selected Populations", url: "https://educationtocareer.data.mass.gov/d/t8td-gens", retrieved: "Nov 5, 2026" },
     { file: "nces_ma_districts.csv", holds: "The crosswalk from federal district IDs to DESE's district codes",
       source: "NCES Common Core of Data, through the Urban Institute's Education Data Portal", url: "https://educationdata.urban.org/", retrieved: "Oct 21, 2026" },
   ] },
@@ -49,6 +54,8 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
       source: "Division of Local Services, Excess Levy Capacity and Overrides", url: "https://dls-gw.dor.state.ma.us/reports/rdPage.aspx?rdReport=Prop2.5.ExcessLevyCapandOverride_10_pres", retrieved: "Oct 21, 2026" },
     { file: "dls_free_cash.csv", holds: "Free cash certified as of July 1, and the prior year's operating budget, FY2002 on",
       source: "Division of Local Services, Certified Free Cash as a % of Budget", url: "https://dls-gw.dor.state.ma.us/reports/rdPage.aspx?rdReport=Dashboard.Cat_1_Reports.CertifiedFreeCashBudget351", retrieved: "Nov 3, 2026" },
+    { file: "dls_free_cash_proof.csv", holds: "What each year's free cash was made of: revenue above its estimates, appropriations left unspent, the year before's free cash not spent, and adjustments, FY2021 on",
+      source: "Division of Local Services, Bureau of Accounts, Free Cash Proof Comparison", url: "https://dls-gw.dor.state.ma.us/reports/rdPage.aspx?rdReport=BalanceSheet.FreecashProofComp", retrieved: "Nov 4, 2026" },
     { file: "dls_stabilization.csv", holds: "Stabilization and special-purpose stabilization fund balances at June 30, and the operating budget, FY2002 on",
       source: "Division of Local Services, Stabilization Funds as a % of Budget", url: "https://dls-gw.dor.state.ma.us/reports/rdPage.aspx?rdReport=Dashboard.Cat_1_Reports.StablPerBudget351", retrieved: "Nov 3, 2026" },
     { file: "dls_long_term_debt.csv", holds: "Long-term debt outstanding, general fund debt service, and the budget, FY2003 on",
@@ -65,7 +72,7 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
       source: "Division of Local Services, Labor Force", url: "https://dls-gw.dor.state.ma.us/reports/rdPage.aspx?rdReport=Dashboard.TrendAnalysisReports.LaborForce", retrieved: "Nov 3, 2026" },
     { file: "census_town_population.csv", holds: "Population on July 1 at the start of each fiscal year, FY2005 on",
       source: "Census Bureau, subcounty population estimates", url: "https://www.census.gov/programs-surveys/popest.html", retrieved: "Oct 21, 2026" },
-    { file: "census_town_demographics.csv", holds: "Residents by sex, age, race and Hispanic or Latino origin, and disability, in the five-year releases that don't overlap: 2005–2009, 2010–2014, 2015–2019, 2020–2024",
+    { file: "census_town_demographics.csv", holds: "Population by sex, age, race and Hispanic or Latino origin, and disability, in the five-year releases that don't overlap: 2005–2009, 2010–2014, 2015–2019, 2020–2024",
       source: "Census Bureau, American Community Survey, tables B01001, B03002 and B18101", url: "https://www.census.gov/programs-surveys/acs", retrieved: "Nov 3, 2026" },
     { file: "census_town_households.csv", holds: "Households, each five-year release from 2005–2009 on",
       source: "Census Bureau, American Community Survey, table B11001", url: "https://www.census.gov/programs-surveys/acs", retrieved: "Oct 21, 2026" },
@@ -147,18 +154,18 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
         <div class="cmp-row">
           <select id="pick-compare" aria-labelledby="pick-compare-label" aria-describedby="cmp-name">
             <option value="none">No comparison</option>
-            <option value="cohort">Its cohort in its region</option>
-            <option value="cohort-state">Its cohort statewide</option>
+            <option value="cohort">Its enrollment group in its region</option>
+            <option value="cohort-state">Its enrollment group statewide</option>
             <option value="region">Its region</option>
             <option value="state">Statewide, without the 10 largest</option>
             <option value="state-all">Statewide, with the 10 largest</option>
             <option value="gateway">Gateway Cities</option>
             <option value="type">Its community type</option>
             <option value="fifth">Its income fifth</option>
-            <option value="other">Another district or average</option>
+            <option value="other">Another district or group</option>
           </select>
           <!-- The group a relative choice resolves to, by name, or all the groups (explorer.ts, groupLink) -->
-          <a class="cmp-name" id="cmp-name" href="/muni-spending/groups/">All groups</a>
+          <a class="cmp-name" id="cmp-name" href="/muni-spending/?view=data#groups">All groups</a>
         </div>
       </div>
       <div class="control" id="vs-control" hidden>
@@ -177,21 +184,21 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
         <div class="cmp-row">
           <select id="pick-town-compare" aria-labelledby="pick-town-compare-label" aria-describedby="town-cmp-name">
             <option value="none">No comparison</option>
-            <option value="peer">Its peer group in its region</option>
-            <option value="peer-state">Its peer group statewide</option>
+            <option value="peer">Its population group in its region</option>
+            <option value="peer-state">Its population group statewide</option>
             <option value="region">Its region</option>
             <option value="state">Statewide, without the 10 largest</option>
             <option value="state-all">Statewide, with the 10 largest</option>
             <option value="gateway">Gateway Cities</option>
             <option value="type">Its community type</option>
             <option value="fifth">Its income fifth</option>
-            <option value="other">Another town or average</option>
+            <option value="other">Another town or group</option>
           </select>
-          <a class="cmp-name" id="town-cmp-name" href="/muni-spending/groups/">All groups</a>
+          <a class="cmp-name" id="town-cmp-name" href="/muni-spending/?view=data#groups">All groups</a>
         </div>
       </div>
       <div class="control" id="town-vs-control" hidden>
-        <span id="pick-town-vs-label">Comparison town or average</span>
+        <span id="pick-town-vs-label">Comparison town or group</span>
         <select id="pick-town-vs" aria-labelledby="pick-town-vs-label"></select>
       </div>
       <fieldset class="control toggle">
@@ -219,6 +226,22 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
       <div class="control hist-control" data-view-only="districts">
         <span class="hist-head"><span id="hist-label">Since 1990</span></span>
         <button type="button" class="detail-dial hist-dial" id="hist-switch" role="switch" aria-checked="false" aria-labelledby="hist-label">
+          <span class="dial-face" aria-hidden="true"><span class="dial-pointer"></span></span>
+          <span class="dial-state" aria-hidden="true">Off</span>
+        </button>
+      </div>
+      <!-- The comparison on every chart; each chart's own dial, at its top right, turns one. Picking a comparison turns it on -->
+      <div class="control">
+        <span id="comps-label">Comps</span>
+        <button type="button" class="detail-dial hist-dial" id="comps-switch" role="switch" aria-checked="true" aria-labelledby="comps-label">
+          <span class="dial-face" aria-hidden="true"><span class="dial-pointer"></span></span>
+          <span class="dial-state" aria-hidden="true">On</span>
+        </button>
+      </div>
+      <!-- Only the trend lines, on every chart; each chart's own dial, at its top right, turns one -->
+      <div class="control">
+        <span id="trends-label">Trends only</span>
+        <button type="button" class="detail-dial hist-dial" id="trends-switch" role="switch" aria-checked="false" aria-labelledby="trends-label">
           <span class="dial-face" aria-hidden="true"><span class="dial-pointer"></span></span>
           <span class="dial-state" aria-hidden="true">Off</span>
         </button>
@@ -416,6 +439,28 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
         </button>
       </figure>
 
+      <figure id="fig-srace" class="panel">
+        <h3>Students by race and ethnicity</h3>
+        <p class="panel-sub" id="srace-sub"></p>
+        <ul class="legend" id="legend-srace" aria-label="Race and ethnicity groups. Select one or more to show only those."></ul>
+        <svg id="svg-srace" tabindex="0" role="img" aria-label="Stacked columns of students' shares by race and Hispanic or Latino origin for each fiscal year. Use the arrow keys to read each year; the data table below has every value."></svg>
+        <div class="tooltip" role="status" hidden></div>
+        <button type="button" class="table-open" data-table="srace" aria-haspopup="dialog">
+          <span class="table-open-icon" aria-hidden="true">⤢</span> Full data table
+        </button>
+      </figure>
+
+      <figure id="fig-sgroups" class="panel">
+        <h3>Students in selected groups</h3>
+        <p class="panel-sub" id="sgroups-sub"></p>
+        <ul class="legend" id="legend-sgroups"></ul>
+        <svg id="svg-sgroups" tabindex="0" role="img" aria-label="Lines of the shares of students with disabilities, English learners, low income students, and students with high needs for each fiscal year. Use the arrow keys to read each year; the data table below has every value."></svg>
+        <div class="tooltip" role="status" hidden></div>
+        <button type="button" class="table-open" data-table="sgroups" aria-haspopup="dialog">
+          <span class="table-open-icon" aria-hidden="true">⤢</span> Full data table
+        </button>
+      </figure>
+
       <figure id="fig-nss" class="panel">
         <h3>Chapter 70 aid and net school spending</h3>
         <p class="panel-sub" id="nss-sub"></p>
@@ -429,6 +474,28 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
         <button type="button" class="table-open" data-table="nss" aria-haspopup="dialog">
           <span class="table-open-icon" aria-hidden="true">⤢</span> Full data table
         </button>
+      </figure>
+
+      <figure id="fig-nssb" class="panel">
+        <h3>Budgeted and actual net school spending<span data-dper> per pupil</span></h3>
+        <p class="panel-sub" id="nssb-sub"></p>
+        <p class="panel-none" id="nssb-none" hidden></p>
+        <div id="nssb-body">
+          <ul class="legend" id="legend-nssb"></ul>
+          <svg id="svg-nssb" tabindex="0" role="img" data-aria-dper="Lines of budgeted, actual, and required net school spending{dper} for each fiscal year. Use the arrow keys to read each year; the data table below has every value." aria-label="Lines of budgeted, actual, and required net school spending per foundation pupil for each fiscal year. Use the arrow keys to read each year; the data table below has every value."></svg>
+          <div class="tooltip" role="status" hidden></div>
+          <!-- Each year's spending against its budget, in percent, the comparison's as dots -->
+          <div class="rating-box">
+            <div class="rating-head">
+              <span class="rating-title">Spent against budget</span>
+              <ul class="legend rating-legend" id="nssb-gap-legend"></ul>
+            </div>
+            <svg id="svg-nssb-gap" role="img" aria-label="Actual spending against the budget by year"></svg>
+          </div>
+          <button type="button" class="table-open" data-table="nssb" aria-haspopup="dialog">
+            <span class="table-open-icon" aria-hidden="true">⤢</span> Full data table
+          </button>
+        </div>
       </figure>
 
       <figure id="fig-rev" class="panel">
@@ -496,6 +563,17 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
         </button>
       </figure>
 
+      <figure id="fig-tfc" class="panel">
+        <h3>Where free cash comes from<span data-per> per resident</span></h3>
+        <p class="panel-sub" id="tfc-sub"></p>
+        <ul class="legend" id="legend-tfc"></ul>
+        <svg id="svg-tfc" tabindex="0" role="img" aria-label="Stacked columns of what each year's free cash was made of: the year before's free cash not spent, appropriations left unspent, and revenue above its estimates, less shortfalls and adjustments. Use the arrow keys to read each year; the data table below has every value."></svg>
+        <div class="tooltip" role="status" hidden></div>
+        <button type="button" class="table-open" data-table="tfc" aria-haspopup="dialog">
+          <span class="table-open-icon" aria-hidden="true">⤢</span> Full data table
+        </button>
+      </figure>
+
       <figure id="fig-tlevy" class="panel">
         <h3>Property tax levy and its limit<span data-per> per resident</span></h3>
         <p class="panel-sub" id="tlevy-sub"></p>
@@ -532,6 +610,13 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
         <ul class="legend" id="legend-tdebt" aria-label="Debt outstanding and authorized. Select one to show only it."></ul>
         <svg id="svg-tdebt" tabindex="0" role="img" data-aria-per="Stacked columns of long-term debt outstanding and debt authorized but not yet borrowed{per} at each fiscal year's end. Use the arrow keys to read each year; the data table below has every value." aria-label="Stacked columns of long-term debt outstanding and debt authorized but not yet borrowed per resident at each fiscal year's end. Use the arrow keys to read each year; the data table below has every value."></svg>
         <div class="tooltip" role="status" hidden></div>
+        <div class="rating-box" id="trating" hidden>
+          <div class="rating-head">
+            <span class="rating-title">Bond ratings</span>
+            <ul class="legend rating-legend" id="trating-legend" aria-label="Rating agencies"></ul>
+          </div>
+          <svg id="svg-trating" role="img" aria-label="Bond rating by year"></svg>
+        </div>
         <details class="table-view compare-view">
           <summary>Comparison table</summary>
           <div class="table-scroll" id="cmp-tdebt"></div>
@@ -600,6 +685,11 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
       <figure id="fig-tpop" class="panel">
         <h3>Population and labor force</h3>
         <p class="panel-sub" id="tpop-sub"></p>
+        <!-- The unemployment rate first; the residents, labor force and employed behind it a click away -->
+        <div class="toggle-options panel-views" id="tpop-views" role="radiogroup" aria-label="What the chart shows">
+          <label><input type="radio" name="tpop-view" value="rate" checked /><span>Unemployment rate</span></label>
+          <label><input type="radio" name="tpop-view" value="people" /><span>Population and labor force</span></label>
+        </div>
         <ul class="legend" id="legend-tpop"></ul>
         <svg id="svg-tpop" tabindex="0" role="img" aria-label="Lines of population, labor force, and employment for each fiscal year. Use the arrow keys to read each year; the data table below has every value."></svg>
         <div class="tooltip" role="status" hidden></div>
@@ -609,7 +699,7 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
       </figure>
 
       <figure id="fig-tage" class="panel">
-        <h3>Residents by age</h3>
+        <h3>Population by age</h3>
         <p class="panel-sub" id="tage-sub"></p>
         <ul class="legend" id="legend-tage" aria-label="Age groups. Select one or more to show only those."></ul>
         <svg id="svg-tage" tabindex="0" role="img" aria-label="Stacked columns of residents' shares by age for each of the Census Bureau's five-year estimates. Use the arrow keys to read each year; the data table below has every value."></svg>
@@ -620,12 +710,34 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
       </figure>
 
       <figure id="fig-trace" class="panel">
-        <h3>Residents by race and ethnicity</h3>
+        <h3>Population by race and ethnicity</h3>
         <p class="panel-sub" id="trace-sub"></p>
         <ul class="legend" id="legend-trace" aria-label="Race and ethnicity groups. Select one or more to show only those."></ul>
         <svg id="svg-trace" tabindex="0" role="img" aria-label="Stacked columns of residents' shares by race and Hispanic or Latino origin for each of the Census Bureau's five-year estimates. Use the arrow keys to read each year; the data table below has every value."></svg>
         <div class="tooltip" role="status" hidden></div>
         <button type="button" class="table-open" data-table="trace" aria-haspopup="dialog">
+          <span class="table-open-icon" aria-hidden="true">⤢</span> Full data table
+        </button>
+      </figure>
+
+      <figure id="fig-tsex" class="panel">
+        <h3>Women in the population</h3>
+        <p class="panel-sub" id="tsex-sub"></p>
+        <ul class="legend" id="legend-tsex" aria-label="Women, with its trend and the comparison"></ul>
+        <svg id="svg-tsex" tabindex="0" role="img" aria-label="Columns of the share of residents who are women for each of the Census Bureau's five-year estimates. Use the arrow keys to read each year; the data table below has every value."></svg>
+        <div class="tooltip" role="status" hidden></div>
+        <button type="button" class="table-open" data-table="tsex" aria-haspopup="dialog">
+          <span class="table-open-icon" aria-hidden="true">⤢</span> Full data table
+        </button>
+      </figure>
+
+      <figure id="fig-tdis" class="panel">
+        <h3>Population with a disability</h3>
+        <p class="panel-sub" id="tdis-sub"></p>
+        <ul class="legend" id="legend-tdis" aria-label="Population with a disability, with the trend and the comparison"></ul>
+        <svg id="svg-tdis" tabindex="0" role="img" aria-label="Columns of the share of residents with a disability for each of the Census Bureau's five-year estimates. Use the arrow keys to read each year; the data table below has every value."></svg>
+        <div class="tooltip" role="status" hidden></div>
+        <button type="button" class="table-open" data-table="tdis" aria-haspopup="dialog">
           <span class="table-open-icon" aria-hidden="true">⤢</span> Full data table
         </button>
       </figure>
@@ -654,6 +766,17 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
 
     <section class="notes" data-view-only="data" hidden>
       <h2>About the data</h2>
+      <!-- Its contents, held beside the notes as the page scrolls, or in a bar under the tabs on a narrow
+           screen; notes.ts lists the notes' bold leads and headings in it -->
+      <div class="notes-layout">
+      <nav class="notes-toc" id="notes-toc" aria-label="About the data, contents">
+        <button type="button" class="notes-toc-toggle" aria-expanded="false" aria-controls="notes-toc-list">
+          <span class="notes-toc-label">Contents</span>
+          <span class="notes-toc-current"></span>
+        </button>
+        <ol id="notes-toc-list"></ol>
+      </nav>
+      <div class="notes-body" id="notes-body">
       <p>
         <strong>Spending per pupil</strong> is the Massachusetts Department of Elementary and Secondary Education's
         (DESE) <a href="https://educationtocareer.data.mass.gov/d/er3w-dyti">per-pupil expenditure</a>
@@ -689,6 +812,19 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
         of apples in the morning compared with a picture of apples in the evening. Both dollar charts share one scale.
       </p>
       <p>
+        <strong>Trends</strong> are the straight line that best fits every year's value. Its growth is the yearly rate
+        that carries the line from its first year to its last; because the line weighs every year, an unusual first or
+        last year moves it less than it would move growth measured from the first year's value to the last year's.
+        Where the line starts at or below zero, the rate is its yearly rise as a share of its average value. With a
+        chart's Trends only dial on, the comparison's trend is drawn too, in the comparison's color.
+      </p>
+      <p>
+        <strong>Legends and dials.</strong> A chart's legend picks what it shows: a category or a line alone, or
+        several. A line picked alone draws as a single measure does, with its trend and the comparison's line. Each
+        chart's Comps dial shows or hides its comparison, and the Comps dial in the controls does it for every chart;
+        picking a comparison turns it on everywhere.
+      </p>
+      <p>
         <strong>Since 1990</strong> adds FY1990 to FY2004, from DESE's per-pupil reports in the same public records
         request. For those years DESE measured only what it called day-program spending, an older, narrower measure:
         what a district spent running its own schools, mainly from its school committee budget and the town's indirect
@@ -712,21 +848,21 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
         enrollment and population as well as with spending, so it can rise while spending per pupil falls.
       </p>
       <p>
-        <strong>Cohorts</strong> group traditional districts by FY<span data-latest>2025</span> in-district FTE, using
-        the boundaries <a href="/artifacts/western-ma-ppe-report-fy2025.pdf">the report</a> set from FY2024 Western MA
-        enrollment: Tiny up to 200 FTE, Small 201–800, Medium 801–1,600, Large 1,601–10,000, and Very large above
+        <strong>Enrollment groups</strong> sort traditional districts by FY<span data-latest>2025</span> in-district FTE,
+        using the boundaries <a href="/artifacts/western-ma-ppe-report-fy2025.pdf">the report</a> set from FY2024 Western MA
+        enrollment (the report calls them cohorts): Tiny up to 200 FTE, Small 201–800, Medium 801–1,600, Large 1,601–10,000, and Very large above
         that. Vocational districts and charter schools are groups of their own. Regions are the six regions of the
         state's Executive Office of Health and Human Services. As the report left Springfield out of its Western MA average, region averages leave out the ten very
         large districts, which have an average of their own; together they teach 23% of the pupils in
         traditional districts. There are two statewide averages, without them and with them, and the same for towns,
-        without and with the ten cities they serve (<a href="/muni-spending/groups/">groups and their members</a>). A
+        without and with the ten cities they serve (<a href="#groups">groups and their members</a>). A
         region with fewer than three districts in a
-        cohort has no regional average for it, so "its cohort in its region" uses the statewide cohort there. Spending
+        enrollment group has no regional average for it, so "its enrollment group in its region" uses the statewide group there. Spending
         averages are weighted by in-district FTE, Chapter 70 averages by foundation enrollment, and enrollment
         averages are per district. <a href="https://www.mass.gov/doc/gatewaycitiesdocx/download">Gateway Cities</a>
         are the 26 mid-size cities the Commonwealth lists, whose median household income and college attainment fall
         below the state's (the list dates from 2014). Their districts, and the cities on the Towns tab, have averages
-        of their own, alongside their size cohorts and peer groups. Two virtual schools, the state's institutional schools, and the Massachusetts
+        of their own, alongside their enrollment and population groups. Two virtual schools, the state's institutional schools, and the Massachusetts
         Academy of Math and Science are not included.
       </p>
       <p>
@@ -752,8 +888,8 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
         among the 286 traditional districts, 57 or 58 to a fifth. Each fifth has an average of its own, for "Its income
         fifth" under Compare with. The cap tab ranks the towns the same way, for whichever year it shows. Land areas are the Census Bureau's
         (<a href="https://www2.census.gov/geo/tiger/GENZ2023/shp/cb_2023_25_cousub_500k.zip">2023 cartographic
-        boundaries</a>); enrollment is DESE's latest foundation enrollment, and population the latest estimate. A
-        <a href="/muni-spending/groups/">list of every group and its members</a> has a page of its own, and a
+        boundaries</a>); enrollment is DESE's latest foundation enrollment, and population the latest estimate. Every
+        group and its members are listed under <a href="#groups">Groups and their members</a>, below, and in a
         file (<a href="/muni-spending/data/groups.csv" download>CSV</a>).
       </p>
       <p>
@@ -787,6 +923,29 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
         districts' dollars over their pupils, and a district with no claim counts as repaid nothing.
       </p>
       <p>
+        <strong>Budgets</strong> come from DESE's
+        <a href="https://www.doe.mass.edu/finance/chapter70/compliance.html">net school spending compliance summaries</a>
+        (<a href="/muni-spending/data/districts-nss-budgets.csv" download>CSV</a>, in dollars, with each file's
+        address). Each year, on its End-of-Year Pupil and Financial Report, a district gives DESE what it spent in the
+        year that just ended and what it has budgeted for the year under way, both as net school spending, the
+        spending the state counts toward its minimum. DESE posts the summaries from FY2021 on; the earlier ones, from
+        FY2010, are the Internet Archive's copies of its site. The budget is the one approved, not the school
+        committee's first proposal; level-services budgets, the cost of the year's programs and staff carried into
+        the next, are each district's own figure, and the state doesn't collect them. Per pupil divides by
+        foundation enrollment, as the Chapter 70 chart does; spending against the budget compares dollars of the day.
+        An average pools its districts' budgets over their pupils, and their spending over their budgets.
+      </p>
+      <p>
+        <strong>Students</strong> come from DESE's
+        <a href="https://educationtocareer.data.mass.gov/d/t8td-gens">enrollment by race and ethnicity, gender, and selected populations</a>
+        (<a href="/muni-spending/data/districts-students.csv" download>CSV</a>), the counts on its school profiles:
+        each district's students on October 1, shown at the fiscal year that school year falls in. Race and ethnicity
+        are as families report them, Hispanic or Latino students of any race, and each race of the students who
+        aren't. Low income has meant three things: eligibility for free or reduced-price meals through FY2014,
+        economically disadvantaged, by families' enrollment in programs such as SNAP, from FY2015 to FY2021, and a
+        broader low income from FY2022; the chart keeps them apart. An average pools its districts' students.
+      </p>
+      <p>
         <strong>Town budgets</strong> come from each town's <a href="https://dls-gw.dor.state.ma.us/reports/rdPage.aspx?rdReport=ScheduleA.GenFund_MAIN">Schedule A</a>
         (CSVs: <a href="/muni-spending/data/towns-spending.csv" download>spending</a>, <a href="/muni-spending/data/towns-revenue.csv" download>revenue</a>, each with population), the year-end report of general fund revenue and
         spending that town accountants file with the state Division of Local Services. Enterprise, capital, and other
@@ -794,10 +953,11 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
         <a href="https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025.html">Chapter 70 tables</a>
         (<a href="/muni-spending/data/towns-school-districts.csv" download>CSV</a>), and each town takes the
         region of its own school district, or of its regional district.
-        Peer groups put each town with others its size, by the July 2024 population estimate: under 1,000 residents
-        (26 towns), 1,000–2,499 (42), 2,500–9,999 (98), 10,000–24,999 (103), 25,000–49,999 (55), and 50,000 or more
-        (17). The ten cities whose school districts are very large, from Boston to Springfield, stand apart from the
-        town averages, as their districts do from the district averages. Each average pools its towns: their combined dollars over their combined residents, households, or
+        Population groups put each town with others its size, by the July 2024 population estimate: under 1,000
+        (26 towns), 1,000–2,499 (42), 2,500–9,999 (98), 10,000–24,999 (103), 25,000–49,999 (55), 50,000–99,999 (18),
+        and 100,000 or more (9). The ten cities whose school districts are very large, from Boston to Springfield, are
+        in their population groups but stand apart from the statewide and regional town averages, as their districts
+        do from the district averages. Each average pools its towns: their combined dollars over their combined residents, households, or
         taxable properties. Dollars are per
         resident, using the Census Bureau's <a href="https://www.census.gov/programs-surveys/popest.html">population estimate</a> for July 1 at the start of each fiscal year. They can also be shown per household, using the Census Bureau's
         <a href="https://www.census.gov/programs-surveys/acs">American Community Survey</a> five-year estimates
@@ -842,9 +1002,13 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
         <strong>Reserves</strong> are each town's stabilization fund balances at June 30
         (<a href="https://dls-gw.dor.state.ma.us/reports/rdPage.aspx?rdReport=Dashboard.Cat_1_Reports.StablPerBudget351">DLS</a>,
         <a href="/muni-spending/data/towns-stabilization.csv" download>CSV</a>) and the free cash the state certified from
-        that day's balance sheet (<a href="https://dls-gw.dor.state.ma.us/reports/rdPage.aspx?rdReport=Dashboard.Cat_1_Reports.CertifiedFreeCashBudget351">DLS</a>,
+        the town's balance sheet that day (<a href="https://dls-gw.dor.state.ma.us/reports/rdPage.aspx?rdReport=Dashboard.Cat_1_Reports.CertifiedFreeCashBudget351">DLS</a>,
         <a href="/muni-spending/data/towns-free-cash.csv" download>CSV</a>), shown at the fiscal year that ended: the free
-        cash certified as of July 1, 2026 is FY2026's. Their share of the budget divides by DLS's operating budget, the
+        cash certified as of July 1, 2026 is FY2026's. <strong>Where free cash comes from</strong> is the Bureau of
+        Accounts' proof of each town's free cash (<a href="https://dls-gw.dor.state.ma.us/reports/rdPage.aspx?rdReport=BalanceSheet.FreecashProofComp">DLS</a>,
+        <a href="/muni-spending/data/towns-free-cash-proof.csv" download>CSV</a>), FY2021 on: local receipts and state aid
+        above or below their estimates, appropriations left unspent, and the year before's free cash not appropriated, less
+        what the town is still owed and other adjustments, which add up to the free cash the state identifies. Their share of the budget divides by DLS's operating budget, the
         revenue the tax rate recap raises without enterprise or Community Preservation Act funds. A statewide comparison
         of each budget with what was spent isn't shown: Schedule A's spending leaves out transfers to stabilization and
         capital funds, which the budget includes, so the gap would count savings as money left unspent.
@@ -860,7 +1024,8 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
         which end with 2022.
       </p>
       <p>
-        <strong>Residents by age, race and ethnicity</strong> come from the Census Bureau's
+        <strong>Population by age, race and ethnicity</strong>, and the shares who are women and who have a disability,
+        come from the Census Bureau's
         <a href="https://www.census.gov/programs-surveys/acs">American Community Survey</a> five-year estimates, tables
         B01001, B03002 and B18101 (<a href="/muni-spending/data/towns-demographics.csv" download>CSV</a>, in counts), read
         from the Bureau's summary files. Estimates whose years overlap shouldn't be compared, so the charts use the four
@@ -910,7 +1075,13 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
         <a href="/artifacts/western-ma-ppe-inflation-addendum-fy2025.pdf">inflation addendum</a> restates its growth
         rates against this index and against the federal price index for state and local government purchases.
       </p>
-      <h3 class="source-files-title">Source files</h3>
+      <p>
+        <strong>Changed names.</strong> Until November 5, 2026, this explorer said "residents" for population, and
+        "size peer groups" for both the districts' enrollment groups and the towns' population groups. The report
+        calls the enrollment groups cohorts.
+      </p>
+      <GroupMembers />
+      <h3 class="source-files-title" id="source-files">Source files</h3>
       <p>
         The agencies' own files behind this explorer are on GitHub, in the repository with the code that prepares
         them. Each file below links to its copy there, and each source links to the agency's page for it. The files
@@ -944,6 +1115,8 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
         every row links to its source. Built by Tim Shores with Claude Code. The code that prepares the data is at
         <a href="https://github.com/timshores/schools">github.com/timshores/schools</a>.
       </p>
+      </div>
+      </div>
     </section>
 
     <!-- On every tab: whether this browser keeps the reader's choices -->
@@ -1793,6 +1966,21 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
     background: none;
   }
 
+  /* A chart's own choice of what it shows, under its description */
+  .panel-views {
+    width: fit-content;
+    margin: 0.55rem 0 0.35rem;
+  }
+
+  .panel-views[hidden] {
+    display: none;
+  }
+
+  .panel-views span {
+    padding: 0.3rem 0.75rem;
+    font-size: 0.85rem;
+  }
+
   .toggle-options input:focus-visible + span {
     outline: 2px dashed var(--accent);
     outline-offset: -4px;
@@ -1904,6 +2092,17 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
     .relations, .cw-help, .cw-intro, .map-about, .map-source, .map-table, .cap-note, .cap-table-head, .cap-steps,
     .cap-questions, [data-detail])) {
     display: none !important;
+  }
+
+  /* A heading that folds an explanation away stops folding when Detail off has taken the explanation: no chevron,
+     nothing to click */
+  .explorer.detail-off :global(.map-about-fold > summary) {
+    cursor: default;
+    pointer-events: none;
+  }
+
+  .explorer.detail-off :global(.map-about-fold > summary::before) {
+    display: none;
   }
 
   /* The campaign's credit: shown when the intro that names it is hidden, by Detail off or folded shut */
@@ -2153,6 +2352,13 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
     border: 1px solid var(--line);
     border-radius: 12px;
     padding: 0.8rem 0.9rem;
+    transition: background-color 0.12s;
+  }
+
+  /* The tile under the pointer goes white, as the control panel is (#216) */
+  .tiles :global(.tile:hover),
+  .explorer :global(.cap-tiles .tile:hover) {
+    background: #fff;
   }
 
   .tiles :global(.tile-label) {
@@ -2195,6 +2401,43 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
 
   .tiles :global(.tile-pie-share) {
     fill: #3f6e73;
+  }
+
+  /* The comparison's pie, in gold beside the town's green */
+  .tiles :global(.tile-pie.is-cmp .tile-pie-rest) {
+    fill: #f1e6c6;
+  }
+
+  .tiles :global(.tile-pie.is-cmp .tile-pie-share) {
+    fill: #a87b00;
+  }
+
+  .tiles :global(.tile-pie.is-cmp .tile-pie-ring) {
+    stroke: #a87b00;
+  }
+
+  /* The town's words, on the green of its pie */
+  .tiles :global(:is(.tile-figure.is-own, .tile-detail.is-own)) {
+    width: fit-content;
+    padding: 0 0.3rem;
+    margin-left: -0.3rem;
+    border-radius: 4px;
+    background: #dbe6e4;
+  }
+
+  /* The comparison's words, on the gold of its pie */
+  .tiles :global(.tile-detail.is-cmp) {
+    width: fit-content;
+    padding: 0 0.3rem;
+    margin-left: -0.3rem;
+    border-radius: 4px;
+    background: #f4e6bd;
+    color: var(--ink);
+  }
+
+  .tiles :global(.tile-pies) {
+    display: inline-flex;
+    gap: 0.3rem;
   }
 
   .tiles :global(.tile-pie-ring) {
@@ -2276,6 +2519,11 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
      a word at a time, so a row runs the chart's full width before the next begins (#185) */
   .legend :global(li:has(.legend-line)) {
     min-width: 0;
+  }
+
+  /* The chart's trend, then the comparison, each on a row of its own (#220) */
+  .legend :global(li.legend-row) {
+    flex-basis: 100%;
   }
 
   .legend :global(.legend-btn.legend-line) {
@@ -2394,6 +2642,14 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
     background: repeating-linear-gradient(90deg, var(--c) 0 5px, transparent 5px 8px);
   }
 
+  /* The comparison: its line, with the dot it carries at each year */
+  .panel :global(.key.linedot) {
+    width: 16px;
+    height: 8px;
+    background: radial-gradient(circle, var(--c) 0 3px, transparent 3.5px) center / 8px 8px no-repeat,
+      linear-gradient(var(--c), var(--c)) center / 16px 2px no-repeat;
+  }
+
   .panel :global(.key.hatch) {
     width: 11px;
     height: 11px;
@@ -2404,6 +2660,69 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
 
   .panel :global(.key.none) {
     width: 16px;
+  }
+
+  /* A chart's lines, in a legend of their own under it */
+  .legend-below {
+    margin: 0.3rem 0 0.2rem;
+  }
+
+  /* The votes shown alone: the entry pressed, as a chosen category is */
+  .legend :global(.legend-btn.legend-line.is-alone) {
+    color: var(--ink);
+    border-color: var(--ink-soft);
+    background: #fff;
+  }
+
+  /* The bond rating under the debt chart */
+  .rating-box {
+    margin-top: 0.6rem;
+    border-top: 1px solid var(--grid);
+    padding-top: 0.5rem;
+  }
+
+  .rating-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.4rem 0.8rem;
+    font-size: 0.82rem;
+    color: var(--ink-soft);
+  }
+
+  .rating-title {
+    color: var(--ink);
+    font-weight: 600;
+  }
+
+  .rating-legend {
+    margin: 0;
+  }
+
+  .rating-box svg {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+
+  /* Spent against budget: the zero line where spending met the budget, and the comparison's dots ringed */
+  .panel :global(.gap-zero) {
+    stroke: var(--ink-soft);
+    stroke-width: 1.2;
+  }
+
+  .panel :global(.gap-dot) {
+    stroke: var(--surface);
+    stroke-width: 1.5;
+  }
+
+  /* A Prop 2½ vote: the diamond its chart marks the year with */
+  .panel :global(.key.diamond) {
+    width: 9px;
+    height: 9px;
+    margin: 0 3.5px;
+    background: var(--c);
+    transform: rotate(45deg);
   }
 
   .panel svg {
@@ -2502,6 +2821,33 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
     stroke-linecap: round;
   }
 
+  /* The census estimates' bands, joining each group's columns */
+  .panel :global(.stack-area) {
+    opacity: 0.16;
+  }
+
+  /* Prop 2½ votes: a stem to the year's amount with an open head, haloed against the columns it crosses, and a diamond
+     on the baseline */
+  .panel :global(.mark-halo) {
+    stroke: var(--surface);
+    stroke-width: 4.5;
+    opacity: 0.85;
+  }
+
+  .panel :global(.mark-stem) {
+    stroke-width: 1.75;
+  }
+
+  .panel :global(.mark-head) {
+    fill: var(--surface);
+    stroke-width: 2;
+  }
+
+  .panel :global(.mark-diamond) {
+    stroke: var(--surface);
+    stroke-width: 1.5;
+  }
+
   /* The older measure, beside the columns rather than in them */
   .panel :global(.extra-line) {
     fill: none;
@@ -2516,6 +2862,28 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
     stroke-width: 2;
     stroke-linejoin: round;
     stroke-linecap: round;
+  }
+
+  /* With only the trends shown, each trend's name at its end, in its color */
+  /* With only the trends shown, the years far apart (the census's estimates): a dot where each estimate is */
+  .panel :global(.trend-dot) {
+    stroke: var(--surface);
+    stroke-width: 1.5;
+  }
+
+  .panel :global(.trend-label) {
+    font-size: 12px;
+    font-weight: 600;
+    paint-order: stroke;
+    stroke: var(--surface);
+    stroke-width: 4px;
+    stroke-linejoin: round;
+  }
+
+  /* The comparison: near-black, a little thicker than the rest */
+  .panel :global(.overlay-line),
+  .panel :global([data-key="cmp"] > .series-line) {
+    stroke-width: 2.75;
   }
 
   .panel :global(.dot) {
@@ -2540,13 +2908,14 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
   }
 
   /* Tooltip: value first, label after, line keys */
+  /* The hover cards (the charts', the map's, the plots'): white, as the control boxes are, so they stand apart */
   .tooltip {
     position: absolute;
     z-index: 3;
     min-width: 13rem;
     max-width: min(25rem, calc(100% - 8px));
     padding: 0.6rem 0.75rem;
-    background: var(--paper);
+    background: #fff;
     border: 1px solid var(--line);
     border-radius: 10px;
     box-shadow: 0 8px 22px var(--shadow);
@@ -2948,6 +3317,148 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
     margin-top: 1rem;
   }
 
+  /* About the data: its contents in a column beside the notes, held under the tabs as the page scrolls, the
+     part in view marked (notes.ts, #216). --notes-jump is how far below the top of the screen a part lands
+     when its link is followed, clear of the tabs. */
+  .notes-layout {
+    --notes-jump: calc(var(--tabs-h, 3rem) + 1rem);
+    display: grid;
+    grid-template-columns: 13rem minmax(0, 1fr);
+    gap: 2.25rem;
+    align-items: start;
+  }
+
+  .notes-body > :first-child {
+    margin-top: 0;
+  }
+
+  .notes-body > p,
+  .notes-body > p > strong,
+  .notes-body > h3 {
+    scroll-margin-top: var(--notes-jump);
+  }
+
+  /* A block, not the site's flex nav */
+  .notes-toc {
+    display: block;
+    position: sticky;
+    top: var(--notes-jump);
+    max-height: calc(100vh - var(--notes-jump) - 1rem);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    font-size: 0.84rem;
+    line-height: 1.3;
+  }
+
+  .notes-toc-toggle {
+    display: none;
+  }
+
+  .notes-toc ol {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    border-left: 1px solid var(--line);
+  }
+
+  .notes-toc :global(a) {
+    display: block;
+    margin-left: -1px;
+    padding: 0.2rem 0 0.2rem 0.75rem;
+    border-left: 2px solid transparent;
+    color: var(--ink-soft);
+    font-weight: 400;
+    text-decoration: none;
+  }
+
+  .notes-toc :global(li.is-sub a) {
+    padding-left: 1.6rem;
+  }
+
+  .notes-toc :global(a:hover) {
+    color: var(--ink);
+    text-decoration: underline;
+  }
+
+  .notes-toc :global(a[aria-current]) {
+    color: var(--ink);
+    font-weight: 600;
+    border-left-color: var(--accent);
+  }
+
+  /* A narrow screen: the contents fold into a bar under the tabs, naming the part in view, that opens them */
+  @media (max-width: 860px) {
+    .notes-layout {
+      --notes-jump: calc(var(--tabs-h, 3rem) + 3.4rem);
+      display: block;
+    }
+
+    .notes-toc {
+      top: var(--tabs-h, 3rem);
+      z-index: 20;
+      max-height: none;
+      overflow: visible;
+      margin: 0 0 1rem;
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+    }
+
+    .notes-toc-toggle {
+      display: flex;
+      align-items: baseline;
+      gap: 0.5rem;
+      width: 100%;
+      min-height: 2.75rem;
+      padding: 0.6rem 0.85rem;
+      font: inherit;
+      text-align: left;
+      color: var(--ink);
+      background: none;
+      border: 0;
+      border-radius: 10px;
+      cursor: pointer;
+    }
+
+    .notes-toc-label {
+      font-weight: 700;
+    }
+
+    .notes-toc-label::after {
+      content: " ▾";
+      color: var(--ink-soft);
+    }
+
+    .notes-toc.is-open .notes-toc-label::after {
+      content: " ▴";
+    }
+
+    .notes-toc-current {
+      min-width: 0;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+      color: var(--ink-soft);
+    }
+
+    .notes-toc ol {
+      display: none;
+      max-height: min(60vh, 28rem);
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      margin: 0 0.85rem 0.6rem;
+    }
+
+    .notes-toc.is-open ol {
+      display: block;
+    }
+
+    .notes-toc :global(a) {
+      padding-top: 0.45rem;
+      padding-bottom: 0.45rem;
+    }
+  }
+
   /* "above" rings the comparison menu: it pulses in and out, then stays, until the reader goes back */
   .control select:global(.beckon) {
     animation: beckon 1.4s ease-in-out 0.35s both;
@@ -3185,6 +3696,13 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
     }
   }
 
+  /* The end of a row of the map's controls: the next control starts the next row */
+  .explorer :global(.map-controls-break) {
+    flex-basis: 100%;
+    height: 0;
+    margin-top: -0.6rem;
+  }
+
   /* The map's years, on a row of their own: two handles for a change, one and a Play button for a level,
      as the explorer's own Years slider draws them (#184) */
   .explorer :global(.map-years) {
@@ -3386,6 +3904,24 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
     gap: 0.35rem;
   }
 
+  /* Groups within regions: a line for each region, a hairline between, spaced as wrapped lines are (the entries
+     carry the space the row gap would) */
+  .explorer :global(.map-legend.by-region) {
+    row-gap: 0;
+  }
+
+  .explorer :global(.map-legend.by-region li) {
+    padding-top: 0.15rem;
+    padding-bottom: 0.15rem;
+  }
+
+  .explorer :global(.map-legend.by-region .map-legend-break) {
+    flex-basis: 100%;
+    height: 0;
+    padding: 0;
+    border-top: 1px solid var(--grid);
+  }
+
   .explorer :global(.map-swatch) {
     width: 0.95rem;
     height: 0.95rem;
@@ -3416,6 +3952,53 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
     stroke-width: 2.4;
   }
 
+  /* Pointing to a group, or to the towns without one: the rest fade */
+  .explorer :global(.map-shapes .map-town) {
+    transition: opacity 0.12s ease;
+  }
+
+  .explorer :global(.map-svg.is-pointing .map-shapes .map-town) {
+    opacity: 0.55;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .explorer :global(.map-shapes .map-town) {
+      transition: none;
+    }
+  }
+
+  /* A group's region on hover: its outside edge in red (the line's inner half is masked off) */
+  .explorer :global(.map-ring) {
+    pointer-events: none;
+  }
+
+  .explorer :global(.map-ring path) {
+    fill: none;
+    stroke-width: 6;
+    stroke-linejoin: round;
+  }
+
+  /* The groups' key: each entry points out its group on the map, and lights when the map points to it */
+  .explorer :global(.map-group-key) {
+    border-radius: 6px;
+    padding: 0.05rem 0.35rem;
+    margin-left: -0.35rem;
+  }
+
+  .explorer :global(.map-group-key:focus-visible) {
+    outline: 2px dashed var(--accent);
+    outline-offset: 1px;
+  }
+
+  .explorer :global(.map-group-key.is-lit) {
+    background: var(--ink);
+    color: var(--paper);
+  }
+
+  .explorer :global(.map-tip-region) {
+    color: #b8392b;
+  }
+
   .explorer :global(.map-tip) {
     position: absolute;
     z-index: 5;
@@ -3425,11 +4008,119 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
     font-size: 0.8rem;
     line-height: 1.45;
     color: var(--ink);
-    background: var(--paper);
+    background: #fff;
     border: 1px solid var(--line);
     border-radius: 8px;
     box-shadow: 0 6px 18px var(--shadow);
     pointer-events: none;
+  }
+
+  /* Grouped, the groups' figures in the room the state leaves under its western half (map.ts drawGroupTable, #217);
+     a row, or a cell, lights with its group on the map, as the key's entries do */
+  .explorer :global(.map-stage) {
+    position: relative;
+  }
+
+  .explorer :global(.map-gtable) {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    max-width: 56%;
+    max-height: 46%;
+    overflow: auto;
+    padding: 0.45rem 0.6rem 0.5rem;
+    font-size: 0.78rem;
+    line-height: 1.3;
+    color: var(--ink);
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+  }
+
+  .explorer :global(.map-gtable table) {
+    border-collapse: collapse;
+  }
+
+  .explorer :global(.map-gtable caption) {
+    caption-side: top;
+    text-align: left;
+    font-weight: 700;
+    padding-bottom: 0.3rem;
+  }
+
+  .explorer :global(.map-gtable th),
+  .explorer :global(.map-gtable td) {
+    text-align: left;
+    padding: 0.18rem 0.5rem;
+    border-bottom: 1px solid var(--grid);
+    white-space: nowrap;
+  }
+
+  .explorer :global(.map-gtable thead th) {
+    font-weight: 600;
+    color: var(--ink-soft);
+    vertical-align: bottom;
+  }
+
+  .explorer :global(.map-gtable.map-gtable tbody th) {
+    font-weight: 400;
+  }
+
+  .explorer :global(.map-gtable .num) {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .explorer :global(.map-gtable td.num > *) {
+    vertical-align: middle;
+  }
+
+  .explorer :global(.map-gtable td .map-swatch) {
+    display: inline-block;
+    width: 0.7rem;
+    height: 0.7rem;
+    margin-right: 0.35rem;
+  }
+
+  /* Within regions, the column heads are sizes, which wrap */
+  .explorer :global(.map-gtable .is-grid thead th) {
+    white-space: normal;
+    min-width: 3.2rem;
+  }
+
+  .explorer :global(.map-gtable .is-statewide) {
+    color: var(--muted);
+  }
+
+  .explorer :global(.map-gtable [data-group]) {
+    cursor: default;
+  }
+
+  .explorer :global(.map-gtable [data-group]:focus-visible) {
+    outline: 2px dashed var(--accent);
+    outline-offset: -2px;
+  }
+
+  .explorer :global(.map-gtable .is-lit),
+  .explorer :global(.map-gtable .is-lit th) {
+    color: var(--paper);
+    background: var(--ink);
+  }
+
+  .explorer :global(.map-gtable-note) {
+    margin: 0.35rem 0 0;
+    font-size: 0.72rem;
+    color: var(--muted);
+  }
+
+  /* No room beside the state on a narrow screen: under the map */
+  @media (max-width: 760px) {
+    .explorer :global(.map-gtable) {
+      position: static;
+      max-width: none;
+      max-height: none;
+      margin-top: 0.5rem;
+    }
   }
 
   .explorer :global(.map-table) {
@@ -4064,7 +4755,10 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
   .explorer :global(.enlarge-tools) {
     float: right;
     display: inline-flex;
-    gap: 0.4rem;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 0.3rem 0.4rem;
     margin: 0.15rem 0 0.3rem 0.8rem;
   }
 
@@ -4084,6 +4778,61 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
     cursor: pointer;
   }
 
+  /* Comps and Trends only, chart by chart, together first in the row, the same place on every chart */
+  .explorer :global(.chart-dials) {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  /* Each in the Detail dial's look (explorer.ts borrows its styles), smaller */
+  .explorer :global(.chart-dial) {
+    margin: 0 0.15rem 0 0;
+    padding: 0 0.2rem;
+    gap: 0.35rem;
+    font-size: 0.8rem;
+  }
+
+  .explorer :global(.chart-dial .dial-face) {
+    width: 20px;
+    height: 20px;
+  }
+
+  .explorer :global(.chart-dial .dial-pointer) {
+    top: 1px;
+    width: 2.5px;
+    height: 7px;
+  }
+
+  .explorer :global(.chart-dial[aria-disabled="true"]) {
+    opacity: 0.45;
+    cursor: default;
+  }
+
+  .explorer :global(.chart-dial[aria-disabled="true"]:hover) {
+    color: var(--ink-soft);
+  }
+
+  /* On a phone the three take a row of their own, above the heading, and fit it */
+  @media (max-width: 520px) {
+    .explorer :global(.enlarge-tools) {
+      float: none;
+      display: flex;
+      margin: 0 0 0.35rem;
+    }
+
+    .explorer :global(.enlarge-open),
+    .explorer :global(.collapse-toggle) {
+      padding: 0.2rem 0.45rem;
+    }
+
+    /* The dials a row of their own, over Collapse and Enlarge */
+    .explorer :global(.chart-dials) {
+      flex: 1 0 100%;
+      justify-content: flex-end;
+    }
+  }
+
   .explorer :global(.enlarge-open svg),
   .explorer :global(.collapse-toggle svg) {
     width: 0.85rem;
@@ -4098,12 +4847,13 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
 
   .explorer :global(.is-collapsed > :not(h2, h3, h4, .enlarge-tools)),
   .explorer :global(.is-collapsed .enlarge-open),
+  .explorer :global(.is-collapsed .chart-dials),
   .explorer :global(.is-enlarged .collapse-toggle) {
     display: none !important;
   }
 
-  /* Nothing to enlarge where a note stands in for the chart */
-  .explorer :global(figure.panel:has(> .panel-none:not([hidden])) .enlarge-open) {
+  /* Nothing to enlarge, or to show the trends of, where a note stands in for the chart */
+  .explorer :global(figure.panel:has(> .panel-none:not([hidden])) :is(.enlarge-open, .chart-dials)) {
     display: none;
   }
 
@@ -4248,7 +4998,7 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
     position: absolute;
     z-index: 2;
     pointer-events: none;
-    background: var(--paper);
+    background: #fff;
     border: 1px solid var(--line);
     border-radius: 8px;
     padding: 0.45rem 0.6rem;
@@ -4510,6 +5260,7 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
     border: 1px solid var(--line);
     border-radius: 12px;
     padding: 0.8rem 0.9rem;
+    transition: background-color 0.12s;
   }
 
   .explorer :global(.cap-tiles .tile-label) {
@@ -4725,7 +5476,7 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
     font-weight: 400;
     line-height: 1.45;
     color: var(--ink);
-    background: var(--paper);
+    background: #fff;
     border: 1px solid var(--line);
     border-radius: 8px;
     box-shadow: 0 6px 18px var(--shadow);

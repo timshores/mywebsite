@@ -3,6 +3,7 @@
 // change is shown on a diverging scale around zero (blue up, orange down, gray near none), a level
 // on one blue scale, light to dark; both cut into five classes so a color reads as a range.
 // Hovering names the town and its value; a click opens it, or its district, in its own tab.
+// Grouped (Group by), each town shows its group's average, a region's or a size's, and a click opens the group.
 // Once the measures' years arrive (map-years.json), a change can be measured between any two years,
 // and a level shown for any year, or played from the first year to the latest.
 
@@ -24,7 +25,15 @@ const KINDS: Kind[] = ["rural", "suburban", "gateway", "core"];
 const KIND_NAME: Record<Kind, string> = { rural: "Rural", suburban: "Suburban and other", gateway: "Gateway City", core: "Inner Core" };
 // The types run from the least dense to the most, so one blue ramp, light to dark, orders them
 const KIND_COLOR: Record<Kind, string> = { rural: "#86b6ef", suburban: "#3987e5", gateway: "#1c5cab", core: "#0d366b" };
+/** A grouping: each town's (or district's) group of one kind, as the explorer compares it; its groups in order,
+ * and whether that order runs one way (by size, income, or density), so one ramp colors them */
+interface Grouping { key: string; label: string; ordered: boolean; groups: string[]; of: Record<string, string> }
 export interface MapData {
+  /** The groupings for each layer, and each group's name, its towns or districts, and its values */
+  groupings?: Record<Layer, Grouping[]>;
+  /** Each group's name, size and figures; an outlier is a town population group within a region that has too few
+   * towns for a comparison, kept on the map rather than moved to the statewide group (#219) */
+  groups?: Record<string, { name: string; members?: number | null; v: Record<string, Val>; outlier?: boolean }>;
   meta: {
     start: number; latest: number; cap_fy: number; width: number; height: number; outlines: string;
     /** Where each income fifth begins (the second through the highest), for towns and for districts */
@@ -41,6 +50,8 @@ export interface MapSeries {
   cpi: (number | null)[];
   towns: Record<string, Record<string, Arr>>;
   districts: Record<string, Record<string, Arr>>;
+  /** The group averages' */
+  groups?: Record<string, Record<string, Arr>>;
 }
 
 type Layer = "towns" | "districts";
@@ -73,9 +84,14 @@ interface Measure {
   classes?: string[];
   /** Income: the classes are the income fifths, cut where the data says each begins */
   fifths?: "towns" | "districts";
+  /** A long tail above the fifths: a sixth class from this quantile of the values up, so the few towns far above
+   * the rest don't share the top color with the many just over the last fifth */
+  tail?: number;
   /** Once the years arrive: "range", a change between two years chosen; "year", one year at a time, which
    * can play. Without it, the measure has one year, shown but not chosen. */
   years?: "range" | "year";
+  /** Figures every few years (the census's five-year estimates): a year between keeps the one before */
+  hold?: boolean;
 }
 const inDollars = (m: MapData["meta"], real: boolean) => (real ? `in FY${m.latest} dollars, after inflation` : "in nominal dollars, before inflation");
 /** What the trend is, for the "?" beside a measure of growth */
@@ -96,6 +112,8 @@ const dollars = (v: number) => `$${Math.round(v).toLocaleString("en-US")}`;
 const dense = (v: number) => (v < 100 ? v.toFixed(1) : Math.round(v).toLocaleString("en-US"));
 const denseShort = (v: number) => (v < 10 && v % 1 ? v.toFixed(1) : Math.round(v).toLocaleString("en-US"));
 const none = () => "";
+/** The American Community Survey release a fiscal year's figure comes from: the five years ending the year before */
+const acs = (y: Yrs) => `${y.to - 5}–${y.to - 1}`;
 
 const TOWN_MEASURES: Measure[] = [
   {
@@ -105,7 +123,7 @@ const TOWN_MEASURES: Measure[] = [
       "residents per square mile. Every other town counts as suburban and other.",
   },
   {
-    key: "density", label: "Residents per square mile", kind: "level", fmt: dense, short: denseShort, cuts: [250, 500, 1000, 2500],
+    key: "density", label: "Population per square mile", kind: "level", fmt: dense, short: denseShort, cuts: [250, 500, 1000, 2500],
     unit: " residents per square mile", years: "year",
     about: (m, real, y) => `Each town's population in July ${y.to - 1}, divided by its land area. A town with fewer than 500 ` +
       "residents per square mile counts as rural.",
@@ -163,8 +181,36 @@ const TOWN_MEASURES: Measure[] = [
   },
   {
     key: "bill_income", label: "Single-family tax bill as a share of income", kind: "level", fmt: share, short: share, years: "year",
+    tail: 0.95,
     about: (m, real, y) => `The average single-family tax bill in FY${y.to}, as a share of income per capita. College towns run ` +
       "high because their students count as residents but report little income.",
+  },
+  {
+    key: "older", hold: true, label: "Population 65 and older", kind: "level", fmt: share, short: share, years: "year",
+    about: (m, real, y) => `The share of each town's residents 65 and older, in the Census Bureau's American Community Survey ` +
+      `estimates for ${acs(y)}, shown at FY${y.to}.`,
+  },
+  {
+    key: "poc", hold: true, label: "Population of color", kind: "level", fmt: share, short: share, years: "year",
+    about: (m, real, y) => "The share of each town's residents who are Hispanic or Latino, or of a race other than white, " +
+      `in the Census Bureau's American Community Survey estimates for ${acs(y)}, shown at FY${y.to}.`,
+  },
+  {
+    key: "disability", hold: true, label: "Population with a disability", kind: "level", fmt: share, short: share, years: "year",
+    about: (m, real, y) => "The share of each town's residents with a disability, of those not living in institutions such " +
+      `as nursing homes, in the Census Bureau's American Community Survey estimates for ${acs(y)}, shown at FY${y.to}. The ` +
+      "survey counts disability from 2008–2012 on.",
+  },
+  {
+    key: "debt_pc", label: "Long-term debt per resident", kind: "level", fmt: dollars, short: dollars, years: "year", tail: 0.95,
+    about: (m, real, y) => `Each town's long-term debt outstanding at the end of FY${y.to}, per resident, in nominal dollars.`,
+  },
+  {
+    key: "overrides", label: "Prop 2½ overrides passed since FY2005", kind: "level", fmt: (v) => String(Math.round(v)),
+    short: (v) => String(Math.round(v)), cuts: [0, 1, 3, 6], over: true,
+    classes: ["None", "One", "Two or three", "Four to six", "Seven or more"],
+    about: (m) => "How many Proposition 2½ overrides each town's voters passed from FY2005 on, as the Division of Local " +
+      `Services records them; debt and capital exclusions aren't counted.`,
   },
   {
     key: "cap_hh", label: "The 82.5% cap: change per household with no cap", kind: "change", fmt: money, short: money, years: "year",
@@ -214,14 +260,106 @@ const DISTRICT_MEASURES: Measure[] = [
     about: (m, real, y) => `The share of each district's required spending in FY${y.to} that Chapter 70 aid covers. The ` +
       "district's towns pay the rest.",
   },
+  {
+    key: "gap", label: "Spent against budget", kind: "change", fmt: change, short: change, years: "year",
+    about: (m, real, y) => `How far each district's net school spending in FY${y.to} came from the budget it reported to DESE, ` +
+      "as a share of that budget: orange districts spent less than they budgeted, blue more. Budgets begin with FY2011.",
+    split: (up, down, n) => `${up} of ${n} districts spent more than they budgeted, and ${down} spent less.`,
+  },
+  {
+    key: "sped_share", label: "Special education's share of spending", kind: "level", fmt: share, short: share, years: "year",
+    about: (m, real, y) => `Special education's share of each district's spending in FY${y.to}, from DESE's RADAR figures: ` +
+      "teaching, services, tuition elsewhere, and transportation.",
+  },
+  {
+    key: "swd", label: "Students with disabilities", kind: "level", fmt: share, short: share, years: "year",
+    about: (m, real, y) => `The share of each district's students with disabilities, those with an Individualized Education ` +
+      `Program, on October 1, ${y.to - 1} (FY${y.to}).`,
+  },
+  {
+    key: "el", label: "English learners", kind: "level", fmt: share, short: share, years: "year",
+    about: (m, real, y) => `The share of each district's students who are English learners, on October 1, ${y.to - 1} (FY${y.to}).`,
+  },
+  {
+    key: "low_income", label: "Low-income students", kind: "level", fmt: share, short: share, years: "year",
+    about: (m, real, y) => `The share of each district's students who are low income, on October 1, ${y.to - 1} (FY${y.to}), by ` +
+      "the measure DESE has counted since FY2022; its earlier measures don't compare.",
+  },
+  {
+    key: "high_needs", label: "Students with high needs", kind: "level", fmt: share, short: share, years: "year",
+    about: (m, real, y) => `The share of each district's students with high needs on October 1, ${y.to - 1} (FY${y.to}): those ` +
+      "with a disability, English learners now or recently, or low income, each counted once. It shifts when low income's " +
+      "measure does, in FY2015 and FY2022.",
+  },
+  {
+    key: "soc", label: "Students of color", kind: "level", fmt: share, short: share, years: "year",
+    about: (m, real, y) => "The share of each district's students who are Hispanic or Latino, or of a race other than white, " +
+      `on October 1, ${y.to - 1} (FY${y.to}).`,
+  },
 ];
+/** "Western MA towns": a group's name. The explorer names its comparisons for their averages; on the map a group is
+ * its towns or districts. */
+const groupName = (n: string) => n.replace(/,? average\b/, "").replace(/ average,/, ",");
+/** A group's name, short, for the groups' table under the map: "Lowest income fifth", "Western MA", "Tiny",
+ * "1,000–2,499", "Rural" */
+const shortGroup = (n: string) => groupName(n).replace(/ (enrollment|peer) group\b/, "").replace(/^Statewide /, "")
+  .replace(/ (towns|districts)$/, "").replace(/^(Towns|Districts) in the (\w)/, (_, _w, c: string) => c.toUpperCase())
+  .replace(/^Towns of /, "").replace(/^Towns under /, "Under ");
+// The measure menu's groups, in order
+const GROUPS: Record<Layer, [string, string[]][]> = {
+  towns: [
+    ["Place and people", ["ct", "density", "pop", "income", "unemp", "older", "poc", "disability"]],
+    ["Town finances", ["spend", "edu", "eqv", "levy_room", "override", "overrides", "reserves", "debt_service", "debt_pc", "bill_income"]],
+    ["Schools", ["cap_hh"]],
+  ],
+  districts: [
+    ["Place", ["ct", "density", "income"]],
+    ["Spending", ["ppe", "above", "aid", "gap", "sped_share"]],
+    ["Students", ["enroll", "swd", "el", "low_income", "high_needs", "soc"]],
+  ],
+};
 
 // Five classes. Change: orange for down, gray near zero, blue for up, as elsewhere in the explorer.
 // Level: the palette's blue ramp, light to dark.
 const DIVERGING = ["#c2541f", "#f2a77f", "#e9e6df", "#86b6ef", "#1c5cab"];
 const SEQUENTIAL = ["#cde2fb", "#86b6ef", "#3987e5", "#1c5cab", "#0d366b"];
+// Six steps of the same blue, for a measure with a sixth class on its tail
+const SEQUENTIAL6 = ["#cde2fb", "#97c0f1", "#5f9de7", "#3279d2", "#1b55a0", "#0c3266"];
+// The groups themselves, each grouping in its own palette and none in the measures' blue, so a map of groups
+// doesn't pass for a map of values: regions in the palette's fixed order of hues, less its blue (checked with the
+// dataviz palette check; the key, the tooltip and the table name each); size in greens, community type in
+// purples, income in ambers, each light to dark (smallest, least dense, lowest first); size within a region in its
+// region's hue, light to dark by size
+const GROUP_HUES = ["#eb6834", "#1baf7a", "#6250d6", "#eda100", "#e87ba4", "#00897b", "#008300", "#e34948"];
+const GREENS = ["#d9f2e3", "#a3dfbd", "#62c492", "#2e9e66", "#16744a", "#0a4a2f"];
+const PURPLES = ["#ddd6f7", "#a99bec", "#7461d6", "#43309e"];
+const AMBERS = ["#fde9c9", "#f8c27a", "#ec9431", "#c26a12", "#7f430a"];
+// School districts, from no district of its own to its own for every grade: roses, light to dark
+const ROSES = ["#f2bcb4", "#e58b7e", "#cf5a49", "#8f2c20"];
+// A group a grouping within regions falls back to, statewide, where a region has too few of its size: gray
+const STATEWIDE_HUE = "#8f8a7f";
+/** n steps of a ramp, spread across it */
+const steps = (ramp: string[], n: number) => Array.from({ length: n }, (_, k) => ramp[n < 2 ? ramp.length - 1 : Math.round((k * (ramp.length - 1)) / (n - 1))]);
+/** A color moved toward another, by t from 0 to 1 */
+function mix(a: string, b: string, t: number) {
+  const ch = (h: string, i: number) => parseInt(h.slice(1 + 2 * i, 3 + 2 * i), 16);
+  return `#${[0, 1, 2].map((i) => Math.round(ch(a, i) + (ch(b, i) - ch(a, i)) * t).toString(16).padStart(2, "0")).join("")}`;
+}
+/** A hue's step k of n, light to dark: the lightest well toward white, the darkest a little toward black */
+const shade = (hex: string, k: number, n: number) => ((f) => (f <= 0.6 ? mix(hex, "#ffffff", 0.72 * (1 - f / 0.6))
+  : mix(hex, "#000000", 0.4 * ((f - 0.6) / 0.4))))(n > 1 ? k / (n - 1) : 0.6);
+// A grouping within regions: its region's grouping, and its size grouping, for the outline and the colors
+const WITHIN: Record<string, { region: string; size: string }> = { peer: { region: "region", size: "peer_state" },
+  cohort: { region: "region", size: "cohort_state" } };
+// The region outline on hover: the page's accent red, apart from the black of the group's
+const RING_COLOR = "#d35545";
 // No value: hatched, so it can't pass for the gray near zero (the pattern is in each map's defs)
 const NO_DATA = "url(#map-nodata)";
+// A group of towns defined by what they lack, the towns with no school district of their own: hatched as no data
+// is, but a group like any other, with its key entry, its count and its figures (Tim, #218). Its own pattern, so
+// the code that finds the towns with no data or no group passes it by.
+const HATCHED_GROUPS = new Set(["towns-schools-none"]);
+const HATCH = "url(#map-hatch)";
 /** How long each year stays on the map as it plays */
 const PLAY_MS = 900;
 
@@ -307,6 +445,8 @@ export function startMap(root: HTMLElement, data: MapData, opts: {
   let townKey = TOWN_MEASURES[0].key;
   let districtKey = "above";
   let S: MapSeries | null = null;
+  /** The grouping each layer shows, by key; "" for each town or district alone */
+  const groupBy: Record<Layer, string> = { towns: "", districts: "" };
   /** The years chosen for each measure, by layer and key; until chosen, all of them, or the latest */
   const chosen = new Map<string, Yrs>();
 
@@ -370,7 +510,23 @@ export function startMap(root: HTMLElement, data: MapData, opts: {
   const play = el("button", "map-play");
   play.type = "button";
   yearBox.append(yearLabel, track, yearOut, play);
-  controls.append(layerSeg.box, gradeSeg.box, measureWrap, dollarSeg.box, yearBox);
+  const groupWrap = el("label", "map-measure map-group");
+  const groupSel = el("select");
+  groupWrap.append(el("span", undefined, "Group by"), groupSel);
+  groupSel.addEventListener("change", () => {
+    groupBy[layer] = groupSel.value;
+    // A grouping picked shows its groups first; a measure picked after colors them by their averages
+    if (groupSel.value) {
+      if (layer === "towns") townKey = "group";
+      else districtKey = "group";
+    }
+    stop();
+    draw();
+  });
+  // Three rows, the same on either layer: what the map colors (and, for districts, which grades), then how it groups
+  // and what it measures, then dollars; the years, when a measure has them, under all three
+  const rowEnd = () => el("span", "map-controls-break");
+  controls.append(layerSeg.box, gradeSeg.box, rowEnd(), groupWrap, measureWrap, rowEnd(), dollarSeg.box, yearBox);
   // The measure's name heads a fold holding what it means; closed, it stays closed in this browser if
   // choices are remembered (the explorer's fold memory, mass-school-spending:map-about)
   const about = el("p", "map-about");
@@ -393,14 +549,49 @@ export function startMap(root: HTMLElement, data: MapData, opts: {
   svg.setAttribute("viewBox", `0 0 ${meta.width} ${meta.height}`);
   svg.setAttribute("role", "img");
   const defs = document.createElementNS(SVG, "defs");
-  defs.innerHTML = '<pattern id="map-nodata" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">' +
-    '<rect width="8" height="8" fill="#f4f1e8"/><line x1="0" y1="0" x2="0" y2="8" stroke="#bdb7aa" stroke-width="3"/></pattern>';
+  defs.innerHTML = ["map-nodata", "map-hatch"].map((id) => `<pattern id="${id}" width="8" height="8" patternUnits="userSpaceOnUse" ` +
+    'patternTransform="rotate(45)"><rect width="8" height="8" fill="#f4f1e8"/><line x1="0" y1="0" x2="0" y2="8" stroke="#bdb7aa" ' +
+    'stroke-width="3"/></pattern>').join("");
   const shapes = document.createElementNS(SVG, "g");
+  shapes.setAttribute("class", "map-shapes");
+  // The hovered group's region, within a grouping by region: a red line around its outside edge (each town's
+  // outline, drawn wide, and masked off inside the region, leaves only the edge)
+  const ring = document.createElementNS(SVG, "g");
+  ring.setAttribute("class", "map-ring");
+  ring.setAttribute("mask", "url(#map-ring-mask)");
+  const ringMask = document.createElementNS(SVG, "mask");
+  ringMask.id = "map-ring-mask";
+  ringMask.setAttribute("maskUnits", "userSpaceOnUse");
+  defs.append(ringMask);
   const lift = document.createElementNS(SVG, "g");  // the hovered town, or district, drawn on top
-  svg.append(defs, shapes, lift);
+  svg.append(defs, shapes, ring, lift);
+  function showRing(towns: MapTown[]) {
+    ring.replaceChildren();
+    ringMask.replaceChildren();
+    if (!towns.length) return;
+    const all = document.createElementNS(SVG, "rect");
+    for (const [k, v] of Object.entries({ x: -20, y: -20, width: meta.width + 40, height: meta.height + 40, fill: "#fff" })) all.setAttribute(k, String(v));
+    ringMask.append(all);
+    for (const t of towns) {
+      const inside = document.createElementNS(SVG, "path");
+      inside.setAttribute("d", t.d);
+      inside.setAttribute("fill", "#000");
+      ringMask.append(inside);
+      const edge = document.createElementNS(SVG, "path");
+      edge.setAttribute("d", t.d);
+      edge.setAttribute("stroke", RING_COLOR);
+      ring.append(edge);
+    }
+  }
   const tip = el("div", "map-tip");
   tip.hidden = true;
-  figure.append(legend, svg, tip);
+  // Grouped, the groups' figures, in a table where the state leaves room under its western half (on a narrow
+  // screen, under the map)
+  const stage = el("div", "map-stage");
+  const groupTable = el("div", "map-gtable");
+  groupTable.hidden = true;
+  stage.append(svg, groupTable);
+  figure.append(legend, stage, tip);
   const tableBox = el("details", "map-table");
   const tableSum = el("summary");
   const tableHolder = el("div", "table-scroll");
@@ -482,7 +673,13 @@ export function startMap(root: HTMLElement, data: MapData, opts: {
       return v == null || !req ? null : [round(v / req, 4), y.to];
     }
     const v = get(row[m.key], i);
-    return v == null ? null : [v, y.to];
+    if (v != null) return [v, y.to];
+    // A census figure holds until the next release: the latest at or before the year, with its own year
+    if (m.hold) for (let k = i - 1; k >= 0; k--) {
+      const x = get(row[m.key], k);
+      if (x != null) return [x, S!.years[k]];
+    }
+    return null;
   }
   /** A split town's two districts as one, each weighted by the town's pupils in it */
   function combinedRow(m: Measure, t: MapTown, y: Yrs, after: boolean): Val | null {
@@ -523,14 +720,29 @@ export function startMap(root: HTMLElement, data: MapData, opts: {
       if (!req) return null;
       return [round((w1 * v1! + w2 * v2!) / req, 4), y.to];
     }
+    if (m.years === "year") {
+      // A share of the students or of spending, each district's weighted by the town's pupils in it
+      const i = yi(y.to);
+      const a = get(r1[m.key], i);
+      const b = get(r2[m.key], i);
+      return a == null || b == null ? null : [round((w1 * a + w2 * b) / (w1 + w2), 4), y.to];
+    }
     return null;
   }
+  /** The grouping shown on this layer, if any */
+  const groupingNow = () => (data.groupings?.[layer] ?? []).find((g) => g.key === groupBy[layer]) ?? null;
+  /** The rows a layer's colors come from: its towns' or districts', or its groups' */
+  const rowsOf = (onTowns: boolean): Record<string, Record<string, Arr>>[] => {
+    const g = groupingNow();
+    if (g) return g.groups.map((id) => ({ [id]: S?.groups?.[id] ?? {} }));
+    return [onTowns ? S!.towns : S!.districts];
+  };
   /** The years a measure has on this layer, first to last */
   function yearsOf(m: Measure, onTowns: boolean): number[] {
     if (!S || !m.years) return [];
     let lo = Infinity;
     let hi = -1;
-    for (const row of Object.values(onTowns ? S.towns : S.districts)) {
+    for (const row of rowsOf(onTowns).flatMap((r) => Object.values(r))) {
       const a = row[m.key];
       if (!a) continue;
       for (let i = 0; i < a.length; i++) {
@@ -602,8 +814,8 @@ export function startMap(root: HTMLElement, data: MapData, opts: {
     }
     draw();
   });
-  const measureNow = () => (layer === "towns" ? TOWN_MEASURES.find((m) => m.key === townKey)!
-    : DISTRICT_MEASURES.find((m) => m.key === districtKey)!);
+  const measureNow = () => (layer === "towns" ? TOWN_MEASURES.find((m) => m.key === townKey) ?? TOWN_MEASURES[0]
+    : DISTRICT_MEASURES.find((m) => m.key === districtKey) ?? DISTRICT_MEASURES[0]);
 
   /** The year controls, for the measure shown: what they offer, and where they sit */
   function showYears(m: Measure, ys: number[], y: Yrs | null) {
@@ -642,17 +854,78 @@ export function startMap(root: HTMLElement, data: MapData, opts: {
 
   // What a town shows: its own value, or its district's
   let current: { measure: Measure; districtOf: (t: MapTown) => string | null; value: (t: MapTown) => Val | null; c: number[];
-    combinedAt: (t: MapTown) => boolean; kindOf?: (t: MapTown) => Kind | null } | null = null;
+    combinedAt: (t: MapTown) => boolean; kindOf?: (t: MapTown) => Kind | null; groupOf?: (t: MapTown) => string | null;
+    regionOf?: (t: MapTown) => string | null; statewide?: (g: string) => boolean } | null = null;
 
   function draw() {
     const onTowns = layer === "towns";
     layerSeg.set(layer);
     gradeSeg.set(grades);
     gradeSeg.box.hidden = onTowns;
+    // Group by: each town or district alone, or a grouping, whose groups' averages color the towns
+    const gs = data.groupings?.[layer] ?? [];
+    groupWrap.hidden = !gs.length;
+    groupSel.replaceChildren(new Option(onTowns ? "Each town alone" : "Each district alone", ""), ...gs.map((g) => new Option(g.label, g.key)));
+    if (!gs.some((g) => g.key === groupBy[layer])) groupBy[layer] = "";
+    groupSel.value = groupBy[layer];
+    const grouping = groupingNow();
+    // A grouping within regions: the region each group sits in, outlined on hover
+    const within = grouping ? WITHIN[grouping.key] : undefined;
+    // Grouped, the measures figured for the groups' averages (not those for one town alone, such as density), and
+    // the groups themselves where there are few enough to color apart
+    const forGroups = (m: Measure) => m.kind === "type" || grouping!.groups.some((g) => data.groups?.[g]?.v[m.key] != null);
+    // A grouping within regions colors its many groups by region and size, so it shows them too
+    const showsGroups = !!grouping && (grouping.groups.length <= 8 || !!within);
     const list = onTowns ? TOWN_MEASURES : DISTRICT_MEASURES;
-    measureSel.replaceChildren(...list.map((m) => new Option(m.label, m.key)));
-    measureSel.value = onTowns ? townKey : districtKey;
-    const measure = list.find((m) => m.key === measureSel.value)!;
+    measureSel.replaceChildren(...(showsGroups ? [(() => {
+      const g = document.createElement("optgroup");
+      g.label = "Groups";
+      g.append(new Option(`Each ${onTowns ? "town" : "district"}'s group`, "group"));
+      return g;
+    })()] : []), ...GROUPS[layer].map(([name, keys]) => {
+      const g = document.createElement("optgroup");
+      g.label = name;
+      g.append(...keys.map((k) => list.find((m) => m.key === k)).filter((m): m is Measure => !!m).map((m) => {
+        const o = new Option(m.label, m.key);
+        o.disabled = !!grouping && !forGroups(m);
+        return o;
+      }));
+      return g;
+    }));
+    // A measure the grouping can't show gives way to the groups themselves, or the first it can
+    const keyNow = onTowns ? townKey : districtKey;
+    const usable = (k: string) => (k === "group" ? showsGroups : !grouping || forGroups(list.find((m) => m.key === k) ?? list[0]));
+    const key = usable(keyNow) ? keyNow : showsGroups ? "group" : list.find((m) => !grouping || forGroups(m))!.key;
+    if (onTowns) townKey = key;
+    else districtKey = key;
+    measureSel.value = key;
+    // All grades: a town with one district takes it; a town split between two takes the two combined
+    const combinedAt = (t: MapTown) => !onTowns && grades === "all" && !!t.elem && t.elem !== t.high;
+    const districtOf = (t: MapTown) => (onTowns || combinedAt(t) ? null : grades === "high" ? t.high : t.elem);
+    /** A town's group: its own, or its district's; a town split between two districts takes the one teaching more
+     * of its pupils */
+    const inGrouping = (g: Grouping, t: MapTown): string | null => {
+      if (onTowns) return g.of[t.id] ?? null;
+      const w = S?.towns[t.id]?.w as number[] | undefined;
+      const d = combinedAt(t) ? (w && w[1] > w[0] ? t.high : t.elem) : districtOf(t);
+      return d ? g.of[d] ?? null : null;
+    };
+    const groupOf = (t: MapTown): string | null => (grouping ? inGrouping(grouping, t) : null);
+    const regions = within ? gs.find((g) => g.key === within.region) ?? null : null;
+    const regionOf = regions ? (t: MapTown) => inGrouping(regions, t) : undefined;
+    // Its statewide groups, where a region had too few of a size: no region to outline
+    const sizeGroups = within ? gs.find((g) => g.key === within.size) ?? null : null;
+    const statewide = (id: string) => !!sizeGroups?.groups.includes(id);
+    // A pin holds while the groups themselves show
+    if (key !== "group") pinned = null;
+    drawGroupTable(null);
+    if (key === "group") {
+      const sizes = within ? gs.find((g) => g.key === within.size) ?? null : null;
+      drawGroups(grouping!, onTowns, groupOf, districtOf, combinedAt, regionOf, regions, sizes ? (t: MapTown) => inGrouping(sizes, t) : undefined,
+        sizes);
+      return;
+    }
+    const measure = list.find((m) => m.key === key)!;
     // The years: from the series once they're here, for a measure that has them
     const bySeries = !!S && !!measure.years;
     const ys = yearsOf(measure, onTowns);
@@ -670,9 +943,6 @@ export function startMap(root: HTMLElement, data: MapData, opts: {
       if (!measure.dollars) return v;
       return after || v.length < 4 ? v.slice(0, 3) : [v[3], v[1], v[2]];
     };
-    // All grades: a town with one district takes it; a town split between two takes the two combined
-    const combinedAt = (t: MapTown) => !onTowns && grades === "all" && !!t.elem && t.elem !== t.high;
-    const districtOf = (t: MapTown) => (onTowns || combinedAt(t) ? null : grades === "high" ? t.high : t.elem);
     /** A district's own value: over the years chosen, once they're here, or as map.json has it */
     const districtVal = (d: string, after: boolean, yy: Yrs | null): Val | null =>
       (bySeries ? fromRow(measure, S!.districts[d], yy!, after) : inMode(data.districts[d]?.v[measure.key], after));
@@ -692,17 +962,29 @@ export function startMap(root: HTMLElement, data: MapData, opts: {
       const d = districtOf(t);
       return d ? inMode(data.districts[d]?.v[measure.key], after) : null;
     };
-    const value = (t: MapTown) => valueIn(t, real, y);
+    /** A group's value: its average's, over the years chosen, or as map.json has it */
+    const groupVal = (g: string, after: boolean, yy: Yrs | null): Val | null =>
+      (bySeries ? fromRow(measure, S!.groups?.[g], yy!, after) : inMode(data.groups?.[g]?.v[measure.key], after));
+    const valueAt = (t: MapTown, after: boolean, yy: Yrs | null): Val | null => {
+      if (!grouping) return valueIn(t, after, yy);
+      const g = groupOf(t);
+      return g ? groupVal(g, after, yy) : null;
+    };
+    const value = (t: MapTown) => valueAt(t, real, y);
     // Community type: each town its own, or its district's (a town split between two takes its own district's)
     if (measure.kind === "type") {
       drawTypes(measure, onTowns, (t) => (onTowns ? t.ct ?? null
         : data.districts[(combinedAt(t) ? t.elem : districtOf(t)) ?? ""]?.ct ?? null), districtOf, combinedAt);
+      if (grouping) Object.assign(current!, { groupOf, regionOf, statewide });
       return;
     }
-    // Each district counts once, however many towns it covers; with all grades, each town counts
-    const byTown = onTowns || grades === "all";
+    // Each district counts once, however many towns it covers; with all grades, each town counts. Grouped, each
+    // group counts once.
+    const byTown = !grouping && (onTowns || grades === "all");
     const shownDistricts = [...new Set(data.towns.map(districtOf).filter((d): d is string => !!d))];
-    const unitsIn = (after: boolean, yy: Yrs | null) => (byTown ? data.towns.map((t) => valueIn(t, after, yy)).filter(Boolean) as Val[]
+    const shownGroups = grouping ? [...new Set(data.towns.map(groupOf).filter((g): g is string => !!g))] : [];
+    const unitsIn = (after: boolean, yy: Yrs | null) => (grouping ? shownGroups.map((g) => groupVal(g, after, yy)).filter(Boolean) as Val[]
+      : byTown ? data.towns.map((t) => valueIn(t, after, yy)).filter(Boolean) as Val[]
       : shownDistricts.map((d) => districtVal(d, after, yy)).filter(Boolean) as Val[]);
     const units = unitsIn(real, y);
     const values = units.map((u) => u[0]);
@@ -711,11 +993,13 @@ export function startMap(root: HTMLElement, data: MapData, opts: {
     // cut on its values before and after inflation together, so both share one set of ranges and the Dollars
     // switch moves towns between them, as inflation would.
     const pooled = bySeries && measure.years === "year" ? ys.flatMap((yr) => unitsIn(real, { from: yr, to: yr }).map((u) => u[0])) : values;
-    const c = (measure.fifths ? meta.fifths[measure.fifths] : null) ?? measure.cuts
+    const base = (measure.fifths ? meta.fifths[measure.fifths] : null) ?? measure.cuts
       ?? (measure.dollars ? growthCuts([...unitsIn(true, y), ...unitsIn(false, y)].map((u) => u[0])) : cuts(measure.kind, pooled));
+    const tailCut = measure.tail ? Number(quantile(pooled, measure.tail).toPrecision(2)) : null;
+    const c = tailCut != null && tailCut > base[base.length - 1] ? [...base, tailCut] : base;
     const classOfV = (v: number) => (measure.over ? c.filter((x) => v > x).length : classOf(v, c));
-    const colors = measure.dollars ? GROWTH : measure.kind === "change" ? DIVERGING : SEQUENTIAL;
-    current = { measure, districtOf, value, c, combinedAt };
+    const colors = measure.dollars ? GROWTH : measure.kind === "change" ? DIVERGING : c.length === 5 ? SEQUENTIAL6 : SEQUENTIAL;
+    current = { measure, districtOf, value, c, combinedAt, groupOf, regionOf, statewide };
     let none = 0;
     for (const t of data.towns) {
       const v = value(t);
@@ -724,10 +1008,13 @@ export function startMap(root: HTMLElement, data: MapData, opts: {
     }
 
     // What it shows, and how the towns or districts split
-    const what = byTown ? "towns" : "districts";
+    const what = grouping ? "groups" : byTown ? "towns" : "districts";
     measureTitle.textContent = measure.label;
     const yy = y ?? { from: meta.start, to: measure.key === "cap_hh" ? meta.cap_fy : meta.latest };
-    about.replaceChildren(measure.about(meta, real, yy));
+    // A census figure held between releases: the words name the release it comes from
+    const release = measure.hold && y ? Math.max(...units.map((u) => u[1]).filter((x) => x <= y.to), -Infinity) : -Infinity;
+    about.replaceChildren(measure.about(meta, real, release > 0 ? { from: release, to: release } : yy));
+    if (measure.hold && y && release > 0 && release < y.to) about.append(` FY${y.to} keeps that release's figures until the next.`);
     if (measure.dollars) about.append(" ", trendHelp());
     const up = values.filter((v) => v > 0).length;
     const n = values.length;
@@ -739,32 +1026,38 @@ export function startMap(root: HTMLElement, data: MapData, opts: {
     if (bySeries && measure.years === "year" && ys.length > 1) {
       about.append(` Each color covers the same range in every year, FY${ys[0]} to FY${ys[ys.length - 1]}.`);
     }
-    if (!onTowns) about.append(gradeNote(measure));
+    if (!onTowns && !grouping) about.append(gradeNote(measure));
+    if (grouping) about.append(groupNote(grouping, onTowns));
 
     // Legend: each class's range, then the gray for none
     const fifthWords = ["Lowest fifth", "Second", "Middle", "Fourth", "Highest fifth"];
+    const top = c.length;
     const label = (k: number) => measure.fifths ? `${fifthWords[k]}: ${k === 0 ? `under ${measure.short(c[0])}`
-      : k === 4 ? `${measure.short(c[3])} and up` : `${measure.short(c[k - 1])} to ${measure.short(c[k] - 1)}`}`
-      : measure.classes?.[k] ?? (k === 0 ? (measure.dollars ? "Down, below 0%" : `Below ${measure.short(c[0])}`) : k === 4
-      ? `${measure.short(c[3])} and up` : `${measure.short(c[k - 1])} to ${measure.short(c[k])}`);
+      : k === top ? `${measure.short(c[top - 1])} and up` : `${measure.short(c[k - 1])} to ${measure.short(c[k] - 1)}`}`
+      : measure.classes?.[k] ?? (k === 0 ? (measure.dollars ? "Down, below 0%" : `Below ${measure.short(c[0])}`) : k === top
+      ? `${measure.short(c[top - 1])} and up` : `${measure.short(c[k - 1])} to ${measure.short(c[k])}`);
+    legend.classList.remove("by-region");
     legend.replaceChildren(...colors.map((col, k) => {
       const li = el("li");
       const sw = el("span", "map-swatch");
       sw.style.background = col;
       li.append(sw, el("span", undefined, label(k)));
       return li;
-    }), ...(none ? [(() => {
-      const li = el("li");
-      li.append(el("span", "map-swatch nodata"), el("span", undefined, onTowns ? "No data" : "No district of its own, or no data"));
-      return li;
-    })()] : []));
+    }), ...(none ? [noneKey(onTowns && !grouping ? "No data" : grouping ? "No group, or no data" : "No district of its own, or no data")] : []));
+    if (grouping) {
+      const sizes = within ? gs.find((g) => g.key === within.size) ?? null : null;
+      drawGroupTable({ g: grouping, measure, value: (g) => groupVal(g, real, y), color: (v) => colors[classOfV(v)], groupOf,
+        regions, regionOf, sizes, sizeOf: sizes ? (t) => inGrouping(sizes, t) : undefined });
+    }
     const when = y ? (measure.years === "range" ? `, FY${y.from} to FY${y.to}` : `, FY${y.to}`) : "";
     svg.setAttribute("aria-label", `Map of Massachusetts's 351 cities and towns, colored by ${measure.label.toLowerCase()}${when}` +
       (onTowns ? "." : ` of the ${{ elem: "district serving their elementary grades", high: "district serving their secondary grades",
         all: "districts serving all their grades" }[grades]}.`) + " The table below has every value.");
 
     // The table: highest first
-    const rows = byTown
+    const rows = grouping
+      ? shownGroups.map((g) => ({ name: groupName(data.groups?.[g]?.name ?? g), v: groupVal(g, real, y) })).filter((r): r is { name: string; v: Val } => !!r.v)
+      : byTown
       ? data.towns.filter((t) => value(t)).map((t) => ({ name: onTowns || schoolsOf(t) === t.name ? t.name : `${t.name} (${schoolsOf(t)})`,
         v: value(t)! }))
       : shownDistricts.map((d) => ({ name: data.districts[d]?.name ?? d, v: districtVal(d, real, y) }))
@@ -773,7 +1066,7 @@ export function startMap(root: HTMLElement, data: MapData, opts: {
     tableSum.textContent = `Every ${what.slice(0, -1)}, highest first`;
     const t = el("table");
     const hr = t.createTHead().insertRow();
-    hr.append(el("th", undefined, onTowns ? "Town" : byTown ? "Town (its districts)" : "District"), el("th", "num", measure.label),
+    hr.append(el("th", undefined, grouping ? "Group" : onTowns ? "Town" : byTown ? "Town (its districts)" : "District"), el("th", "num", measure.label),
       el("th", undefined, "Years"));
     const tb = t.createTBody();
     for (const r of rows) {
@@ -798,6 +1091,208 @@ export function startMap(root: HTMLElement, data: MapData, opts: {
     h.setAttribute("aria-label", TREND_NOTE);
     h.dataset.tip = TREND_NOTE;
     return h;
+  }
+  /** The key's words for towns without a group: on the district layer, those with no district (they tuition their
+   * pupils elsewhere) say so; otherwise it's a town or district the grouping leaves out, not missing data */
+  function noGroup(groupOf: (t: MapTown) => string | null, onTowns: boolean) {
+    const loose = data.towns.filter((t) => !groupOf(t));
+    return !onTowns && loose.every((t) => !t.elem && !t.high) ? "No school district of its own" : "In no group of this kind";
+  }
+  /** What each town shows, grouped */
+  function groupNote(g: Grouping, onTowns: boolean) {
+    const of = onTowns ? "its group" : "its district's group";
+    return ` Grouped by ${g.label.toLowerCase()}, each town shows ${of}'s figure: its ${onTowns ? "towns" : "districts"} ` +
+      "pooled, as the explorer's comparisons pool them. Point to a town to see its whole group; select it to open the group." +
+      (onTowns ? "" : " A town split between two districts takes the group of the one teaching more of its pupils.");
+  }
+  /** The groups themselves: each its color, with how many towns it covers, and the table of towns by group. A
+   * grouping within regions colors each group in its region's hue, light to dark by size. */
+  function drawGroups(g: Grouping, onTowns: boolean, groupOf: (t: MapTown) => string | null,
+    districtOf: (t: MapTown) => string | null, combinedAt: (t: MapTown) => boolean, regionOf?: (t: MapTown) => string | null,
+    regions?: Grouping | null, sizeOf?: (t: MapTown) => string | null, sizes?: Grouping | null) {
+    const counts = new Map<string, number>();
+    const member = new Map<string, MapTown>();
+    for (const t of data.towns) {
+      const id = groupOf(t);
+      if (!id) continue;
+      counts.set(id, (counts.get(id) ?? 0) + 1);
+      if (!member.has(id)) member.set(id, t);
+    }
+    // Where a group sits: its region's place among the regions, its size's among the sizes
+    const regionAt = (id: string) => (regions && regionOf ? regions.groups.indexOf(regionOf(member.get(id)!) ?? "") : -1);
+    const sizeAt = (id: string) => (sizes && sizeOf ? sizes.groups.indexOf(sizeOf(member.get(id)!) ?? "") : -1);
+    const typeKind = (id: string) => KINDS.find((k) => id.endsWith(`type-${k}`));
+    // Within regions, a group that's the statewide one (its region had too few of its size) sorts last, in gray
+    const statewide = (id: string) => !!regions && !!sizes?.groups.includes(id);
+    const lineOf = (id: string) => (statewide(id) ? 999 : regionAt(id));
+    const shown = (regions
+      ? [...g.groups].sort((a, b) => lineOf(a) - lineOf(b) || sizeAt(a) - sizeAt(b))
+      : g.key === "type" ? [...g.groups].sort((a, b) => KINDS.indexOf(typeKind(a)!) - KINDS.indexOf(typeKind(b)!)) : g.groups)
+      .filter((id) => counts.has(id));
+    const ramp = g.key === "type" ? PURPLES : g.key === "fifth" ? AMBERS : g.key === "schools" ? ROSES : GREENS;
+    // A hatched group takes no step of the ramp
+    const order = (g.key === "type" ? shown : g.groups.filter((id) => counts.has(id))).filter((id) => !HATCHED_GROUPS.has(id));
+    const color = (id: string) => (HATCHED_GROUPS.has(id) ? HATCH : regions
+      ? shade(statewide(id) ? STATEWIDE_HUE : GROUP_HUES[regionAt(id) % GROUP_HUES.length] ?? STATEWIDE_HUE, sizeAt(id), sizes?.groups.length ?? 1)
+      : g.ordered ? steps(ramp, order.length)[order.indexOf(id)] : GROUP_HUES[order.indexOf(id) % GROUP_HUES.length]);
+    current = { measure: { key: "group", label: g.label, kind: "type", fmt: () => "", short: () => "", about: () => "" },
+      districtOf, value: () => null, c: [], combinedAt, groupOf, regionOf, statewide };
+    // The groups have no years, and no dollars
+    yearBox.hidden = true;
+    dollarSeg.box.classList.add("is-idle");
+    dollarSeg.box.querySelectorAll("button").forEach((b) => (b.disabled = true));
+    for (const t of data.towns) {
+      const id = groupOf(t);
+      paths.get(t.id)!.setAttribute("fill", id ? color(id) : NO_DATA);
+    }
+    measureTitle.textContent = `${onTowns ? "Each town's" : "Each district's"} group: ${g.label.toLowerCase()}`;
+    about.replaceChildren(`The groups the explorer compares ${onTowns ? "towns" : "districts"} with, by ` +
+      `${g.label.toLowerCase()}: each town takes ${onTowns ? "its own" : "its district's"} group. Point to a group, on the map or ` +
+      "in the key, to see all of it; select it in the key to keep it lit and open its page. Select a town to open " +
+      `${onTowns ? "it" : "its district"}, and pick a measure to color each group by its figure.`);
+    if (regions) about.append(" Each region has its own hue, light to dark from the smallest group to the largest; pointing " +
+      "to a town outlines its group in black and its region in red. " + (shown.some((id) => data.groups?.[id]?.outlier)
+      ? "A region's group with fewer than three towns is marked as an outlier: the explorer compares those towns with " +
+        "the statewide group of their size."
+      : `Where a region has too few ${onTowns ? "towns" : "districts"} of a size for a group of its own, they join the ` +
+        "statewide group of that size, as the explorer's comparisons do, shown in gray."));
+    if (!onTowns) about.append(" A town split between two districts takes the group of the one teaching more of its pupils.");
+    // The key: each group, which points out its towns on the map. Within regions, each region a line of its own,
+    // a hairline between, and no more room than a wrapped line takes
+    legend.classList.toggle("by-region", !!regions);
+    const rule = () => {
+      const li = el("li", "map-legend-break");
+      li.setAttribute("aria-hidden", "true");
+      return li;
+    };
+    legend.replaceChildren(...shown.flatMap((id, k) => [...(regions && k && lineOf(id) !== lineOf(shown[k - 1]) ? [rule()] : []), (() => {
+      const li = el("li", "map-group-key");
+      li.dataset.group = id;
+      li.tabIndex = 0;
+      const sw = el("span", HATCHED_GROUPS.has(id) ? "map-swatch nodata" : "map-swatch");
+      if (!HATCHED_GROUPS.has(id)) sw.style.background = color(id);
+      // The key leaves out "enrollment group" to save room; the tooltip and the table keep it
+      const n = counts.get(id)!;
+      // The key also leaves the income fifths' "Towns in the" off: "Lowest income fifth"
+      const words = groupName(data.groups?.[id]?.name ?? id).replace(/ enrollment group\b/, "").replace(/^(Towns|Districts) in the (\w)/, (_, _w, c: string) => c.toUpperCase());
+      li.append(sw, el("span", undefined, `${words} (${n} ${n === 1 ? "town" : "towns"}${data.groups?.[id]?.outlier ? ", outlier" : ""})`));
+      pinnable(li, id, () => pointTo(id), () => (onTowns ? opts.openTown : opts.openDistrict)(id));
+      return li;
+    })()]), ...(data.towns.some((t) => !groupOf(t))
+      ? [...(regions ? [rule()] : []), noneKey(((n) => `${noGroup(groupOf, onTowns)} (${n} ${n === 1 ? "town" : "towns"})`)(data.towns.filter((t) => !groupOf(t)).length))] : []));
+    svg.setAttribute("aria-label", `Map of Massachusetts's 351 cities and towns, colored by ${onTowns ? "their" : "their districts'"} ` +
+      `group by ${g.label.toLowerCase()}. The table below lists each.`);
+    tableSum.textContent = "Every town, by group";
+    const t = el("table");
+    t.createTHead().insertRow().append(el("th", undefined, "Town"), el("th", undefined, "Group"));
+    const tb = t.createTBody();
+    const rows = data.towns.map((x) => ({ name: x.name, g: groupOf(x) }))
+      .sort((a, b) => (a.g ? shown.indexOf(a.g) : 999) - (b.g ? shown.indexOf(b.g) : 999) || a.name.localeCompare(b.name));
+    for (const r of rows) {
+      const tr = tb.insertRow();
+      const th = el("th", undefined, r.name);
+      th.scope = "row";
+      tr.append(th, el("td", undefined, r.g ? groupName(data.groups?.[r.g]?.name ?? r.g) : "–"));
+    }
+    tableHolder.replaceChildren(t);
+    tip.hidden = true;
+    // A pin holds while its group is on the map, lit again in the new key
+    if (pinned && pinned !== "(none)" && !counts.has(pinned)) pinned = null;
+    clearLift();
+    unlift();
+  }
+  /** The groups' figures, beside the map: each group in the grouping's order, its color on the map and its figure;
+   * within regions, a row for each region and a column for each size, a cell gray where the region has too few of
+   * that size and its towns are in the statewide group. Pointing to a row or a cell points out its group on the map,
+   * as pointing to a town on the map lights its row. */
+  function drawGroupTable(spec: {
+    g: Grouping; measure: Measure; value: (id: string) => Val | null; color: (v: number) => string;
+    groupOf: (t: MapTown) => string | null; regions?: Grouping | null; regionOf?: (t: MapTown) => string | null;
+    sizes?: Grouping | null; sizeOf?: (t: MapTown) => string | null;
+  } | null) {
+    groupTable.hidden = !spec;
+    if (!spec) {
+      groupTable.replaceChildren();
+      return;
+    }
+    const { g, measure, value, color } = spec;
+    const name = (id: string) => shortGroup(data.groups?.[id]?.name ?? id);
+    /** A row or cell that points out its group, from a town in it (whose region the ring outlines) */
+    const lights = <T extends HTMLElement>(node: T, id: string, from?: MapTown) => {
+      node.dataset.group = id;
+      node.tabIndex = 0;
+      node.addEventListener("pointerenter", () => pointTo(id, from));
+      node.addEventListener("focus", () => pointTo(id, from));
+      node.addEventListener("pointerleave", () => unlift());
+      node.addEventListener("blur", () => unlift());
+      return node;
+    };
+    const figureIn = (td: HTMLTableCellElement, v: Val | null, fmt: (x: number) => string) => {
+      if (!v) {
+        td.textContent = "–";
+        return td;
+      }
+      const sw = el("span", "map-swatch");
+      sw.style.background = color(v[0]);
+      td.append(sw, el("span", undefined, fmt(v[0])));
+      return td;
+    };
+    const t = el("table");
+    const first = [...new Set(data.towns.map(spec.groupOf))].map((id) => (id ? value(id) : null)).find((v) => v);
+    const years = first ? (first.length > 2 ? `FY${first[1]}–FY${first[2]}` : `FY${first[1]}`) : "";
+    // The years head the figures' column, or, within regions, where every column is figures, follow the caption
+    const grid = !!(spec.regions && spec.sizes && spec.regionOf && spec.sizeOf);
+    t.createCaption().textContent = `${measure.label}${grid && years ? `, ${years}` : ""}`;
+    const hr = t.createTHead().insertRow();
+    const tb = t.createTBody();
+    const note: string[] = [];
+    if (spec.regions && spec.sizes && spec.regionOf && spec.sizeOf) {
+      // Each region and size: the group its towns are in, and a town of them
+      const at = new Map<string, { id: string; town: MapTown }>();
+      for (const x of data.towns) {
+        const id = spec.groupOf(x), r = spec.regionOf(x), sz = spec.sizeOf(x);
+        if (id && r && sz && !at.has(`${r}|${sz}`)) at.set(`${r}|${sz}`, { id, town: x });
+      }
+      const keys = [...at.keys()];
+      const sizes = spec.sizes.groups.filter((sz) => keys.some((k) => k.endsWith(`|${sz}`)));
+      const regions = spec.regions.groups.filter((r) => keys.some((k) => k.startsWith(`${r}|`)));
+      t.classList.add("is-grid");
+      hr.append(el("th", undefined, "Region"), ...sizes.map((sz) => el("th", "num", name(sz))));
+      for (const r of regions) {
+        const tr = tb.insertRow();
+        const th = el("th", undefined, name(r));
+        th.scope = "row";
+        tr.append(th, ...sizes.map((sz) => {
+          const c = at.get(`${r}|${sz}`);
+          const td = el("td", "num");
+          if (!c) {
+            td.textContent = "";
+            return td;
+          }
+          const wide = spec.sizes!.groups.includes(c.id);
+          const outlier = !!data.groups?.[c.id]?.outlier;
+          td.classList.toggle("is-statewide", wide);
+          if (wide) note[0] = "Gray: the statewide group, where a region has too few of a size.";
+          if (outlier) note[1] = "*An outlier: fewer than three towns of its size in its region.";
+          td.title = wide ? `${name(c.id)}, statewide` : `${groupName(data.groups?.[c.id]?.name ?? c.id)}${outlier ? ", an outlier" : ""}`;
+          lights(figureIn(td, value(c.id), measure.short), c.id, c.town);
+          if (outlier && td.lastElementChild) td.lastElementChild.append("*");
+          return td;
+        }));
+      }
+    } else {
+      const present = new Set(data.towns.map(spec.groupOf).filter((id): id is string => !!id));
+      const typeKind = (id: string) => KINDS.findIndex((k) => id.endsWith(`type-${k}`));
+      const order = (g.key === "type" ? [...g.groups].sort((a, b) => typeKind(a) - typeKind(b)) : g.groups).filter((id) => present.has(id));
+      hr.append(el("th", undefined, g.label.replace(/, statewide$/, "")), el("th", "num", years));
+      for (const id of order) {
+        const tr = lights(tb.insertRow(), id);
+        const th = el("th", undefined, name(id));
+        th.scope = "row";
+        tr.append(th, figureIn(el("td", "num"), value(id), measure.fmt));
+      }
+    }
+    groupTable.replaceChildren(t, ...note.filter(Boolean).map((n) => el("p", "map-gtable-note", n)));
   }
   /** What each town shows, for a district measure */
   function gradeNote(measure: Measure) {
@@ -829,17 +1324,14 @@ export function startMap(root: HTMLElement, data: MapData, opts: {
     measureTitle.textContent = measure.label;
     about.replaceChildren(measure.about(meta, false, { from: meta.latest, to: meta.latest }));
     if (!onTowns) about.append(gradeNote(measure));
+    legend.classList.remove("by-region");
     legend.replaceChildren(...KINDS.map((k) => {
       const li = el("li");
       const sw = el("span", "map-swatch");
       sw.style.background = KIND_COLOR[k];
       li.append(sw, el("span", undefined, `${KIND_NAME[k]} (${count(k)})`));
       return li;
-    }), ...(data.towns.some((t) => !kindOf(t)) ? [(() => {
-      const li = el("li");
-      li.append(el("span", "map-swatch nodata"), el("span", undefined, "No district of its own"));
-      return li;
-    })()] : []));
+    }), ...(data.towns.some((t) => !kindOf(t)) ? [noneKey("No district of its own")] : []));
     svg.setAttribute("aria-label", `Map of Massachusetts's 351 cities and towns, colored by ${onTowns ? "their" : "their districts'"} ` +
       "community type. The table below lists each.");
     tableSum.textContent = `Every ${what.slice(0, -1)}, by type`;
@@ -859,30 +1351,133 @@ export function startMap(root: HTMLElement, data: MapData, opts: {
 
   // ---- Hover: the town, or every town of its district, outlined, with its value beside the pointer ----
   let hovered: string | null = null;
+  /** The group a key entry keeps lit, "(none)" for the towns without one */
+  let pinned: string | null = null;
+  root.addEventListener("keydown", (ev) => {
+    if (ev.key !== "Escape" || !pinned) return;
+    pinned = null;
+    draw();
+  });
   let lastPointer: { x: number; y: number; id: string } | null = null;
-  const unlift = () => {
+  /** Nothing pointed out */
+  const clearLift = () => {
     for (const p of [...lift.children]) shapes.append(p);
+    svg.classList.remove("is-pointing");
+    showRing([]);
+    legend.querySelectorAll(".is-lit").forEach((li) => li.classList.remove("is-lit"));
+    groupTable.querySelectorAll(".is-lit").forEach((n) => n.classList.remove("is-lit"));
     hovered = null;
   };
+  /** Back to the group a key entry pinned, or to nothing. Already there, it leaves the map alone: moving a town's
+   * outline between a press and its release would swallow the click (the key's blur comes between them). */
+  const unlift = () => {
+    if (pinned && hovered === pinned) return;
+    clearLift();
+    if (pinned === "(none)") pointToNone();
+    else if (pinned) pointTo(pinned);
+  };
+  /** The key's hatched entry ("No group", "No data"): pointing to it, or, grouped, to a town without a group, lifts
+   * every hatched town and lights it */
+  function noneKey(words: string) {
+    const li = el("li", "map-group-key");
+    li.dataset.none = "1";
+    li.tabIndex = 0;
+    li.append(el("span", "map-swatch nodata"), el("span", undefined, words));
+    pinnable(li, "(none)", pointToNone);
+    return li;
+  }
+  /** A key entry clicked, or pressed with Enter or Space, keeps its group lit, while pointing elsewhere shows others
+   * for a moment; clicked again, or Esc, lets it go. A pinned entry offers its group's own page. */
+  function pinnable(li: HTMLLIElement, id: string, show: () => void, open?: () => void) {
+    li.setAttribute("role", "button");
+    li.setAttribute("aria-pressed", String(pinned === id));
+    li.title = "Select to keep it lit; again to let it go";
+    li.classList.toggle("is-pinned", pinned === id);
+    if (pinned === id && open) {
+      const b = el("button", "map-group-open", "Open ›");
+      b.type = "button";
+      b.title = "Open this group in its tab";
+      b.addEventListener("click", (ev) => {
+        ev.stopPropagation();
+        open();
+      });
+      li.append(b);
+    }
+    const toggle = () => {
+      pinned = pinned === id ? null : id;
+      draw();
+      legend.querySelector<HTMLElement>(id === "(none)" ? "[data-none]" : `[data-group="${CSS.escape(id)}"]`)?.focus();
+    };
+    li.addEventListener("click", toggle);
+    li.addEventListener("keydown", (ev) => {
+      if (ev.target === li && (ev.key === "Enter" || ev.key === " ")) {
+        ev.preventDefault();
+        toggle();
+      }
+    });
+    li.addEventListener("pointerenter", show);
+    li.addEventListener("focus", show);
+    li.addEventListener("pointerleave", () => unlift());
+    li.addEventListener("blur", () => unlift());
+  }
+  function pointToNone() {
+    clearLift();
+    hovered = "(none)";
+    for (const t of data.towns) if (paths.get(t.id)!.getAttribute("fill") === NO_DATA) lift.append(paths.get(t.id)!);
+    // The rest fade, where black outlines alone don't set the set apart
+    svg.classList.add("is-pointing");
+    legend.querySelector("[data-none]")?.classList.add("is-lit");
+  }
+  /** A group's towns drawn on top, outlined, its region ringed, and its key lit */
+  function pointTo(g: string, from?: MapTown) {
+    if (!current?.groupOf) return;
+    clearLift();
+    hovered = g;
+    const towns = data.towns.filter((x) => current!.groupOf!(x) === g);
+    for (const x of towns) lift.append(paths.get(x.id)!);
+    // The towns outside the group fade, where black outlines alone don't set it apart
+    svg.classList.add("is-pointing");
+    const r = current.statewide?.(g) ? null : current.regionOf?.(from ?? towns[0] ?? data.towns[0]);
+    if (r) showRing(data.towns.filter((x) => current!.regionOf!(x) === r));
+    legend.querySelector(`[data-group="${CSS.escape(g)}"]`)?.classList.add("is-lit");
+    groupTable.querySelectorAll(`[data-group="${CSS.escape(g)}"]`).forEach((n) => n.classList.add("is-lit"));
+  }
   function showTip(at: { x: number; y: number; id: string }) {
     if (!current) return;
     const t = townById.get(at.id)!;
+    const g = current.groupOf?.(t) ?? null;
     const d = current.districtOf(t);
-    const key = d ?? t.id;
-    if (hovered !== key) {
-      unlift();
-      hovered = key;
-      const same = d ? data.towns.filter((x) => current!.districtOf(x) === d) : [t];
-      for (const x of same) lift.append(paths.get(x.id)!);
+    const key = g ?? d ?? t.id;
+    // Grouped, a town without a group points to all of them, as the key's "No group" does
+    const loose = !!current.groupOf && !g && paths.get(t.id)!.getAttribute("fill") === NO_DATA;
+    if (loose) {
+      if (hovered !== "(none)") pointToNone();
+    } else if (hovered !== key) {
+      if (g) pointTo(g, t);
+      else {
+        unlift();
+        hovered = key;
+        for (const x of d ? data.towns.filter((y) => current!.districtOf(y) === d) : [t]) lift.append(paths.get(x.id)!);
+      }
     }
     const v = current.value(t);
     tip.replaceChildren(el("strong", undefined, t.name));
-    if (layer === "districts") {
+    if (current.groupOf) {
+      tip.append(el("div", undefined, g ? groupName(data.groups?.[g]?.name ?? g) : "No group"));
+      const r = g && !current.statewide?.(g) ? current.regionOf?.(t) : null;
+      if (r) tip.append(el("div", "map-tip-region", `In ${groupName(data.groups?.[r]?.name ?? r)}, outlined in red`));
+      else if (g && current.statewide?.(g)) tip.append(el("div", "map-tip-region", "Statewide: too few of its size in its region"));
+      if (g && data.groups?.[g]?.outlier) tip.append(el("div", undefined, "An outlier: fewer than three towns of its size in its region"));
+      if (current.measure.key !== "group" && current.measure.kind !== "type") {
+        tip.append(el("div", undefined, v ? `${current.measure.fmt(v[0])}, ${v.length > 2 ? `FY${v[1]}–FY${v[2]}` : `FY${v[1]}`}` : "No data"));
+      }
+      tip.append(el("div", "cw-tip-hint", layer === "districts" && (d || t.elem) ? "Select to open the district" : "Select to open the town"));
+    } else if (layer === "districts") {
       tip.append(el("div", undefined, current.combinedAt(t) ? `${schoolsOf(t)}, combined` : d ? `${data.districts[d].name} district`
         : "No district of its own"));
     }
     const kind = current.kindOf?.(t);
-    tip.append(el("div", undefined, current.measure.kind === "type" ? (kind ? KIND_NAME[kind] : "No district of its own")
+    if (!current.groupOf) tip.append(el("div", undefined, current.measure.kind === "type" ? (kind ? KIND_NAME[kind] : "No district of its own")
       : v ? `${current.measure.fmt(v[0])}, ${v.length > 2 ? `FY${v[1]}–FY${v[2]}` : `FY${v[1]}`}` : "No data"),
       el("div", "cw-tip-hint", layer === "districts" && (d || t.elem) ? "Select to open the district" : "Select to open the town"));
     tip.hidden = false;

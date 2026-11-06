@@ -30,7 +30,9 @@ export interface CwData {
 
 type Unit = "pct" | "usd" | "count";
 type SourceKey = keyof typeof SOURCES;
-interface Var { key: string; label: string; short: string; unit: Unit; role: "outcome" | "factor"; src: SourceKey[]; log?: boolean }
+interface Var { key: string; label: string; short: string; unit: Unit; role: "outcome" | "factor"; src: SourceKey[]; log?: boolean;
+  /** The picker's group for a factor that isn't size or the towns' wealth: who the students are */
+  students?: boolean }
 
 const GATEWAY = "https://dls-gw.dor.state.ma.us/reports/rdPage.aspx?rdReport=";
 const SOURCES = {
@@ -40,6 +42,9 @@ const SOURCES = {
   la4: { name: "DLS LA-4 assessed values", url: `${GATEWAY}PropertyTaxInformation.LA4.Parcel_counts_vals` },
   bill: { name: "DLS average single-family tax bill", url: `${GATEWAY}AverageSingleTaxBill.SingleFamTaxBill_wRange` },
   pop: { name: "Census Bureau population estimates", url: "https://www.census.gov/programs-surveys/popest.html" },
+  students: { name: "DESE enrollment by selected populations", url: "https://educationtocareer.data.mass.gov/d/t8td-gens" },
+  sped: { name: "DESE special education spending (RADAR)", url: "https://www.doe.mass.edu/research/radar/" },
+  budgets: { name: "DESE net school spending compliance summaries", url: "https://www.doe.mass.edu/finance/chapter70/compliance.html" },
 };
 
 // School measures first (the usual vertical axis), then size and the towns' wealth
@@ -52,6 +57,9 @@ const VARS: Var[] = [
   { key: "aid_pfe", label: "Chapter 70 aid per foundation pupil", short: "Chapter 70 aid per pupil", unit: "usd", role: "outcome", src: ["c70"] },
   { key: "aid_share", label: "Chapter 70 aid as a share of the foundation budget", short: "aid as % of foundation", unit: "pct", role: "outcome", src: ["c70"] },
   { key: "rlc_pfe", label: "Required local contribution per foundation pupil", short: "required local contribution per pupil", unit: "usd", role: "outcome", src: ["c70"] },
+  { key: "ood_pp", label: "Spending per out-of-district pupil", short: "spending per out-of-district pupil", unit: "usd", role: "outcome", src: ["ppe"], log: true },
+  { key: "sped_share", label: "Special education's share of spending", short: "special education's share", unit: "pct", role: "outcome", src: ["sped"] },
+  { key: "gap", label: "Actual net school spending against the budget", short: "spending against budget", unit: "pct", role: "outcome", src: ["budgets"] },
   { key: "fe", label: "Foundation enrollment", short: "foundation enrollment", unit: "count", role: "factor", src: ["c70"], log: true },
   { key: "fte", label: "In-district FTE pupils", short: "in-district pupils", unit: "count", role: "factor", src: ["ppe"], log: true },
   { key: "eqv_res", label: "Equalized property value per resident of its towns", short: "property value per resident (EQV)", unit: "usd", role: "factor", src: ["eqv", "pop"], log: true },
@@ -60,6 +68,10 @@ const VARS: Var[] = [
   { key: "sf_bill", label: "Average single-family tax bill in its towns", short: "single-family tax bill", unit: "usd", role: "factor", src: ["bill"] },
   { key: "bill_income", label: "Single-family tax bill as a share of income per capita", short: "tax bill as % of income", unit: "pct", role: "factor", src: ["bill", "pop"] },
   { key: "res_share", label: "Residential share of its towns' assessed value", short: "residential share of value", unit: "pct", role: "factor", src: ["la4"] },
+  { key: "low_income", label: "Share of students who are low income (FY2022 on)", short: "low-income students", unit: "pct", role: "factor", src: ["students"], students: true },
+  { key: "el", label: "Share of students who are English learners", short: "English learners", unit: "pct", role: "factor", src: ["students"], students: true },
+  { key: "swd", label: "Share of students with disabilities", short: "students with disabilities", unit: "pct", role: "factor", src: ["students"], students: true },
+  { key: "soc", label: "Share of students of color", short: "students of color", unit: "pct", role: "factor", src: ["students"], students: true },
 ];
 const VAR = new Map(VARS.map((v) => [v.key, v]));
 
@@ -71,18 +83,23 @@ const COUNTS: Record<string, string[]> = {
   nss_pct_fb: ["nss"], nss_pct_req: ["nss"], nss_pfe: ["nss"], above_pfe: ["nss", "req"], ppe: ["ppe"],
   aid_pfe: ["aid"], aid_share: ["aid"], rlc_pfe: ["rlc"], fe: ["fe"], fte: ["fte"], eqv_res: ["eqv"], av_res: ["av"],
   income_pc: ["income"], sf_bill: ["bill"], bill_income: ["bill"], res_share: ["av"],
+  ood_pp: ["ood"], sped_share: ["sped"], gap: ["nss"], low_income: ["low"], el: ["el"], swd: ["swd"], soc: ["soc"],
 };
 // What each part is built from. Chapter 70 sets the required local contribution from equalized property
 // value (the state's estimate from assessed values) and income, and its aid fills the gap to the
 // foundation budget, so both count what the wealth measures count. Required spending, aid and the
 // contribution together, comes to about the foundation budget, which doesn't turn on wealth.
+// The foundation budget adds for low-income students and English learners, so aid, which fills the gap to it,
+// counts them too.
 const BUILT_FROM: Record<string, string[]> = {
-  req: ["aid", "rlc"], eqv: ["av"], rlc: ["eqv", "av", "income"], aid: ["rlc", "eqv", "av", "income"],
+  req: ["aid", "rlc"], eqv: ["av"], rlc: ["eqv", "av", "income"], aid: ["rlc", "eqv", "av", "income", "low", "el"],
 };
 const PART_NAME: Record<string, string> = {
   nss: "net school spending", req: "required spending", aid: "Chapter 70 aid", rlc: "the required local contribution",
   eqv: "equalized property value", av: "assessed property value", bill: "the single-family tax bill", ppe: "in-district spending",
   fe: "foundation enrollment", fte: "in-district pupils", income: "income",
+  low: "low-income students", el: "English learners", swd: "students with disabilities", soc: "students of color",
+  ood: "out-of-district payments", sped: "special education spending",
 };
 const counted = (key: string) => {
   const out = new Set<string>();
@@ -171,7 +188,11 @@ interface Preset { id: string; title: string; blurb: string; y: string; x: strin
 // caution but shared towns, which every wealth measure carries (most districts share towns with
 // another); near-duplicates are left to the picker. Pairs with no caution at all are weak (|ρ| ≤ 0.35),
 // and the formula's own (the required contribution or aid against property or income) count the same
-// thing.
+// thing. Of the students and spending measures (#207), two more pairs pass the same test in FY2025: spending
+// against the requirement and the low-income share (ρ −0.53), and students of color and enrollment (+0.56, no
+// caution at all). Strong pairs that don't, left to the picker: payments per out-of-district pupil against income
+// or low income (uneven spread, a few districts paying several hundred thousand dollars a pupil), English learners
+// against enrollment (uneven spread), and aid against the low-income share (+0.74, the formula's own again).
 const PRESETS: Preset[] = [
   {
     id: "income", title: "Spending and income", y: "nss_pct_req", x: "income_pc", log: true,
@@ -187,6 +208,16 @@ const PRESETS: Preset[] = [
     id: "property", title: "Spending and property wealth", y: "nss_pfe", x: "eqv_res", log: true,
     blurb: "*Net school spending per pupil* against *property value per resident* of each district's towns. " +
       "Districts in towns with more property per resident tend to spend more per pupil.",
+  },
+  {
+    id: "low-income", title: "Spending and low-income students", y: "nss_pct_req", x: "low_income", log: false,
+    blurb: "*Spending as a share of the requirement* against the *share of students who are low income*. Districts " +
+      "with more low-income students tend to spend closer to the state's minimum.",
+  },
+  {
+    id: "students-of-color", title: "Students of color and size", y: "soc", x: "fe", log: true,
+    blurb: "The *share of students of color* against *foundation enrollment*. Larger districts tend to have more " +
+      "students of color.",
   },
 ];
 
@@ -463,7 +494,8 @@ export function startCommonwealth(root: HTMLElement, data: CwData, opts: { openD
     controls.append(wrap);
     return s;
   };
-  const varOptions = VARS.map((v) => [v.key, capital(v.label), v.role === "outcome" ? "School spending and aid" : "Size and the towns' wealth"] as [string, string, string]);
+  const varOptions = VARS.map((v) => [v.key, capital(v.label), v.role === "outcome" ? "School spending and aid"
+    : v.students ? "Students" : "Size and the towns' wealth"] as [string, string, string]);
   const ySel = select("Vertical", varOptions);
   ySel.parentElement!.classList.add("cw-field-axis");
   const fySel = select("Year", [...years].reverse().map((y) => [String(y), `FY${y}`] as [string, string]));
@@ -858,7 +890,7 @@ export function startCommonwealth(root: HTMLElement, data: CwData, opts: { openD
     const kind = rank.filter((o) => o.r != null && o.v.role !== yv.role && !sharedParts(o.v.key, v.y).length);
     const top = kind[0];
     const here = rank.find((o) => o.v.key === v.x && o.r != null);
-    const among = yv.role === "outcome" ? "Of the measures of size and the towns' wealth" : "Of the school measures";
+    const among = yv.role === "outcome" ? "Of the measures of size, the towns' wealth, and the students" : "Of the school measures";
     finding.replaceChildren(...(!top ? [] : [`${among}, `, vn(top.v.short), " lines up most closely with ", vn(yv.short),
       ` in FY${v.fy} (ρ = ${rho(top.r!)}, ${top.n} districts)`,
       ...(!here || here === top ? ["."] : ["; ", vn(xv.short), Math.abs(Math.abs(here.r!) - Math.abs(top.r!)) < 0.005

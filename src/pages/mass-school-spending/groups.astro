@@ -2,7 +2,8 @@
 // The explorer moved from /mass-school-spending/ to /muni-spending/ on 2026-11-01, when it became the
 // municipal spending explorer. This keeps links to the old address working, with their ?d= or ?view=
 // selection and any #group; the meta refresh covers browsers without JavaScript. Where the server reads
-// public/mass-school-spending/.htaccess, it redirects first and this page is never seen.
+// public/mass-school-spending/.htaccess, it redirects first and this page is never seen. The list itself moved
+// into the explorer's About the data on 2026-11-05 (#216), so this goes straight there.
 ---
 
 <!doctype html>
@@ -12,11 +13,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="robots" content="noindex" />
     <title>Moved: Groups and their members</title>
-    <link rel="canonical" href="https://timshores.com/muni-spending/groups/" />
-    <script is:inline>location.replace("/muni-spending/groups/" + location.search + location.hash);</script>
-    <meta http-equiv="refresh" content="0; url=/muni-spending/groups/" />
+    <link rel="canonical" href="https://timshores.com/muni-spending/?view=data#groups" />
+    <script is:inline>location.replace("/muni-spending/?view=data#" + (location.hash.length > 1 ? "group-" + location.hash.slice(1) : "groups"));</script>
+    <meta http-equiv="refresh" content="0; url=/muni-spending/?view=data#groups" />
   </head>
   <body>
-    <p>The list of groups and their members has moved to <a href="/muni-spending/groups/">timshores.com/muni-spending/groups</a>.</p>
+    <p>The groups and their members are now in the explorer, under <a href="/muni-spending/?view=data#groups">About the data</a>.</p>
   </body>
 </html>
