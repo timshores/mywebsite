@@ -432,7 +432,16 @@ function cuts(kind: Measure["kind"], values: number[]): number[] {
   }
   return out;
 }
-const classOf = (v: number, c: number[]) => c.filter((x) => v >= x).length;
+/** A figure as its words give it: the number its format prints, read back ("+2.0% a year" is 0.02), so a color is
+ * the class of the figure a reader sees (#231) */
+function asShown(fmt: (v: number) => string, v: number) {
+  const s = fmt(v);
+  const n = Number(s.replace(/−/g, "-").replace(/[^\d.-]/g, ""));
+  return /\d/.test(s) && Number.isFinite(n) ? (s.includes("%") ? n / 100 : n) : v;
+}
+// Each class runs from its cut up to the next, [a, b): a figure shown equal to a cut takes the class above it. The
+// cuts carry float error (1.5 × 10⁻¹ is 0.15000000000000002), so the test allows a hair under.
+const classOf = (v: number, c: number[]) => c.filter((x) => v >= x - 1e-9).length;
 
 // Growth in dollars: down in orange, then four blues, faster growth darker. One set of classes serves the map
 // before and after inflation, so the Dollars switch moves towns between them, as inflation does.
@@ -1056,7 +1065,10 @@ export function startMap(root: HTMLElement, data: MapData, opts: {
       ?? (measure.dollars ? growthCuts([...unitsIn(true, y), ...unitsIn(false, y)].map((u) => u[0])) : cuts(measure.kind, pooled));
     const tailCut = measure.tail ? Number(quantile(pooled, measure.tail).toPrecision(2)) : null;
     const c = tailCut != null && tailCut > base[base.length - 1] ? [...base, tailCut] : base;
-    const classOfV = (v: number) => (measure.over ? c.filter((x) => v > x).length : classOf(v, c));
+    const classOfV = (raw: number) => {
+      const v = asShown(measure.fmt, raw);
+      return measure.over ? c.filter((x) => v > x + 1e-9).length : classOf(v, c);
+    };
     const colors = measure.dollars ? GROWTH : measure.kind === "change" ? (c.length === 6 ? DIVERGING7 : DIVERGING)
       : c.length === 5 ? SEQUENTIAL6 : SEQUENTIAL;
     current = { measure, districtOf, value, c, combinedAt, groupOf, regionOf, statewide };
