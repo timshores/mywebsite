@@ -828,6 +828,23 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
         picking a comparison turns it on everywhere.
       </p>
       <p>
+        <strong>Correlations</strong> on the Commonwealth tab's plots are Spearman's ρ, which compares the districts'
+        order on two measures: 1 when they fall in the same order, −1 when they fall in the opposite order, and near 0
+        when there is no consistent order. Each pair is checked for the pitfalls Aggarwal and Ranganathan describe in
+        <a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC5079093/">“Common pitfalls in statistical analysis: The use
+        of correlation techniques”</a> (2016), and the plot lists any it falls into as cautions: the measures count the
+        same thing, they are two views of the same thing, the pattern curves back, a few districts pull the result, one
+        district moves it, the regions sit apart, the spread is uneven, there are few districts, or districts share
+        towns. Two measures count the same thing, marked ◇ in the list of measures, when one is built from the other or
+        both from the same number: Chapter 70 aid counts low-income students and English learners, because the
+        foundation budget adds for each. Two views of the same thing share no number but measure one condition.
+        Low-income students and income per capita both measure how much money families have, and many English
+        learners are also students of color, so the same students count toward both shares. A strong ρ between such a
+        pair is expected: it shows that the two measures agree, not something districts do. The plots shown first have
+        a ρ at least 0.4 from zero, either way, and no caution but shared towns. A log scale can't place zero, so it leaves out the districts
+        at zero on the measure across, and the plot's caption says how many.
+      </p>
+      <p>
         <strong>Since 1990</strong> adds FY1990 to FY2004, from DESE's per-pupil reports in the same public records
         request. For those years DESE measured only what it called day-program spending, an older, narrower measure:
         what a district spent running its own schools, mainly from its school committee budget and the town's indirect
@@ -4366,6 +4383,31 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
     stroke-width: 1.5;
   }
 
+  /* Groups picked out from the legend: the rest fade, the statewide trend steps back, and each group's own trend
+     runs in its color over a ring of the surface (#233) */
+  .explorer :global(.sc-pt.is-faded) {
+    opacity: 0.16;
+  }
+
+  .explorer :global(.sc-smooth.all) {
+    stroke: var(--ink-soft);
+    stroke-dasharray: 5 3;
+    stroke-width: 1.5;
+  }
+
+  .explorer :global(.sc-smooth-halo) {
+    fill: none;
+    stroke: #fff;
+    stroke-width: 5;
+    stroke-linecap: round;
+  }
+
+  .explorer :global(.sc-smooth-group) {
+    fill: none;
+    stroke-width: 2.5;
+    stroke-linecap: round;
+  }
+
   .explorer :global(.sc-label) {
     font-size: 11.5px;
     font-weight: 700;
@@ -5102,7 +5144,73 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
   .explorer :global(.cw-key.smooth) {
     width: 18px;
     height: 2px;
-    background: var(--ink);
+    background: var(--c, var(--ink));
+  }
+
+  /* The statewide trend, under the picked groups' own */
+  .explorer :global(.cw-key.smooth.all) {
+    background: repeating-linear-gradient(90deg, var(--ink-soft) 0 5px, transparent 5px 8px);
+  }
+
+  /* A highlight's groups, each a toggle that picks it out (#233) */
+  .explorer :global(.cw-key-btn) {
+    font: inherit;
+    color: inherit;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.1rem 0.5rem;
+    margin: 0 -0.5rem;
+    background: none;
+    border: 1px solid transparent;
+    border-radius: 999px;
+    cursor: pointer;
+  }
+
+  .explorer :global(.cw-key-btn:hover:not(:disabled)) {
+    border-color: var(--line);
+    background: #fff;
+  }
+
+  .explorer :global(.cw-key-btn.is-on) {
+    color: var(--ink);
+    border-color: var(--line);
+    background: #fff;
+    margin: 0;
+  }
+
+  .explorer :global(.cw-key-btn:disabled) {
+    cursor: default;
+    opacity: 0.5;
+  }
+
+  .explorer :global(.cw-key-btn:focus-visible) {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+  }
+
+  .explorer :global(.cw-legend.has-focus .cw-key-btn:not(.is-on)) {
+    opacity: 0.6;
+  }
+
+  .explorer :global(.cw-key-rho) {
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .explorer :global(.cw-legend-note) {
+    color: var(--muted);
+    font-style: italic;
+  }
+
+  .explorer :global(.cw-legend-clear) {
+    font: inherit;
+    color: var(--accent);
+    background: none;
+    border: 0;
+    padding: 0;
+    cursor: pointer;
+    text-decoration: underline;
   }
 
   .explorer :global(.cw-caption) {

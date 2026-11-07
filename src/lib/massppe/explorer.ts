@@ -3430,7 +3430,7 @@ export async function startExplorer() {
               href: `/muni-spending/?view=commonwealth#${id}`, open: () => goTo("commonwealth", id) });
           }
         }
-        list.push({ parts: [...new Set(Object.values(c.SOURCES).map((x) => x.note))], where: "Commonwealth",
+        list.push({ parts: [...new Set(Object.values(c.SOURCES).map((x) => x.note)), "correlations"], where: "Commonwealth",
           name: "Districts side by side", href: "/muni-spending/?view=commonwealth#cw-plots", open: () => goTo("commonwealth", "cw-plots") });
       } catch { /* the charts' lines still show */ }
       list.push({ parts: ["equalized-valuation-eqv", "income-fifths"], where: "The 82.5% cap", name: "The 82.5% cap",

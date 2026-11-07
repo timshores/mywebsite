@@ -34,6 +34,8 @@ export interface ScatterOpts {
   yTitleShort?: string;
   groups: Record<string, Group>;
   smooth?: boolean;
+  /** Groups picked out: the rest fade, and each picked group gets a smoothed curve of its own, in its color */
+  focus?: string[];
   /** A thumbnail: no axis text, labels, or pointer */
   mini?: boolean;
   /** A reference line across the chart at this y, such as zero */
@@ -258,19 +260,31 @@ export function scatter(svg: SVGSVGElement, points: Point[], o: ScatterOpts) {
   const defs = svgEl("defs", {}, svg);
   svgEl("rect", { x: m.left, y: m.top, width: pw, height: ph }, svgEl("clipPath", { id: clip }, defs));
   const plot = svgEl("g", { class: "sc-points", "clip-path": `url(#${clip})` }, svg);
-  const order = [...pts].sort((a, b) => (o.groups[a.group]?.z ?? 0) - (o.groups[b.group]?.z ?? 0));
+  // Picked groups draw over the faded rest
+  const focus = new Set(o.focus ?? []);
+  const picked = (p: Point) => !focus.size || focus.has(p.group);
+  const order = [...pts].sort((a, b) => Number(picked(a)) - Number(picked(b)) || (o.groups[a.group]?.z ?? 0) - (o.groups[b.group]?.z ?? 0));
   const r = o.mini ? 2.2 : 4;
   for (const p of order) {
     const g = o.groups[p.group];
-    mark(plot, g?.shape ?? "circle", sx(p.x), sy(p.y), r, g?.color ?? "#999", `sc-pt sc-${p.group}`);
+    mark(plot, g?.shape ?? "circle", sx(p.x), sy(p.y), r, g?.color ?? "#999", `sc-pt sc-${p.group}${picked(p) ? "" : " is-faded"}`);
   }
 
   if (o.smooth) {
     // Fitted on every point, zoomed or not, so the curve doesn't change shape as the view moves
+    const path = (curve: [number, number][]) =>
+      curve.map(([cx, cy], k) => `${k ? "L" : "M"}${(m.left + ((cx - x0) / (x1 - x0 || 1)) * pw).toFixed(1)},${sy(cy).toFixed(1)}`).join("");
     const curve = loess(all.map((p) => fx(p.x)), ys);
     if (curve.length) {
-      const d = curve.map(([cx, cy], k) => `${k ? "L" : "M"}${(m.left + ((cx - x0) / (x1 - x0 || 1)) * pw).toFixed(1)},${sy(cy).toFixed(1)}`).join("");
-      svgEl("path", { d, class: o.mini ? "sc-smooth mini" : "sc-smooth", "clip-path": `url(#${clip})` }, svg);
+      svgEl("path", { d: path(curve), class: `sc-smooth${o.mini ? " mini" : ""}${focus.size ? " all" : ""}`, "clip-path": `url(#${clip})` }, svg);
+    }
+    // Each picked group's own curve, over a ring of the surface so it reads where it crosses points (eight or more)
+    for (const id of focus) {
+      const mine = all.filter((p) => p.group === id);
+      const own = mine.length >= 8 ? loess(mine.map((p) => fx(p.x)), mine.map((p) => p.y)) : [];
+      if (!own.length) continue;
+      svgEl("path", { d: path(own), class: "sc-smooth-halo", "clip-path": `url(#${clip})` }, svg);
+      svgEl("path", { d: path(own), class: "sc-smooth-group", stroke: o.groups[id]?.color ?? "#999", "clip-path": `url(#${clip})` }, svg);
     }
   }
 

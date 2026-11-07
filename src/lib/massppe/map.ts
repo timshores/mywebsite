@@ -968,12 +968,13 @@ export function startMap(root: HTMLElement, data: MapData, opts: {
     // All grades: a town with one district takes it; a town split between two takes the two combined
     const combinedAt = (t: MapTown) => !onTowns && grades === "all" && !!t.elem && t.elem !== t.high;
     const districtOf = (t: MapTown) => (onTowns || combinedAt(t) ? null : grades === "high" ? t.high : t.elem);
-    /** A town's group: its own, or its district's; a town split between two districts takes the one teaching more
-     * of its pupils */
+    /** A town's group: its own, or its district's. A town split between two districts takes the group of the one
+     * for its younger grades, usually its own, as that district's page does: Shutesbury, Pelham and Leverett are
+     * all tiny, where taking the district that teaches more of a town's pupils put two of the three in Amherst-
+     * Pelham's medium group on a few pupils' difference (#234). */
     const inGrouping = (g: Grouping, t: MapTown): string | null => {
       if (onTowns) return g.of[t.id] ?? null;
-      const w = S?.towns[t.id]?.w as number[] | undefined;
-      const d = combinedAt(t) ? (w && w[1] > w[0] ? t.high : t.elem) : districtOf(t);
+      const d = combinedAt(t) ? t.elem : districtOf(t);
       return d ? g.of[d] ?? null : null;
     };
     const groupOf = (t: MapTown): string | null => (grouping ? inGrouping(grouping, t) : null);
@@ -1180,7 +1181,7 @@ export function startMap(root: HTMLElement, data: MapData, opts: {
     const of = onTowns ? "its group" : "its district's group";
     return ` Grouped by ${g.label.toLowerCase()}, each town shows ${of}'s figure: its ${onTowns ? "towns" : "districts"} ` +
       "pooled, as the explorer's comparisons pool them. Point to a town to see its whole group; select it to open the group." +
-      (onTowns ? "" : " A town split between two districts takes the group of the one teaching more of its pupils.");
+      (onTowns ? "" : " A town split between two districts takes the group of the one for its younger grades, usually its own.");
   }
   /** The groups themselves: each its color, with how many towns it covers, and the table of towns by group. A
    * grouping within regions colors each group in its region's hue, light to dark by size. */
@@ -1234,7 +1235,7 @@ export function startMap(root: HTMLElement, data: MapData, opts: {
         `explorer compares those ${onTowns ? "towns" : "districts"} with the statewide group of their size.`
       : `Where a region has too few ${onTowns ? "towns" : "districts"} of a size for a group of its own, they join the ` +
         "statewide group of that size, as the explorer's comparisons do, shown in gray."));
-    if (!onTowns) about.append(" A town split between two districts takes the group of the one teaching more of its pupils.");
+    if (!onTowns) about.append(" A town split between two districts takes the group of the one for its younger grades, usually its own.");
     // The key: each group, which points out its towns on the map. Within regions, each region a line of its own,
     // a hairline between, and no more room than a wrapped line takes
     legend.classList.toggle("by-region", !!regions);

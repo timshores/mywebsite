@@ -125,6 +125,11 @@ const CAUSATION = "https://en.wikipedia.org/wiki/Correlation_does_not_imply_caus
 // Highlights: the first is the Amherst-Pelham region against the rest of the Connecticut
 // River Valley (Franklin, Hampshire and Hampden counties), as in the plot this tab began with
 const AP = new Set(["amherst", "pelham", "shutesbury", "leverett", "amherst-pelham"]);
+// The regions as the data names them, west to east, and as the map labels them
+const REGION_KEYS: [string, string, string][] = [["west", "Western", "Western MA"], ["central", "Central", "Central MA"],
+  ["northeast", "Northeast", "Northeast MA"], ["metro-west", "Metro West", "Metro West"], ["southeast", "Southeast", "Southeast MA"],
+  ["boston", "Boston", "Boston area"]];
+const REGION_HUES = ["#eb6834", "#1baf7a", "#6250d6", "#eda100", "#e87ba4", "#00897b"];
 const OTHER: Group = { label: "Other Massachusetts districts", color: "#a9c4e8", shape: "circle", z: 1 };
 const HIGHLIGHTS: Record<string, { label: string; groups: Record<string, Group>; of: (d: Row) => string; labels: Set<string> }> = {
   none: { label: "None", groups: { other: { ...OTHER, label: "Massachusetts districts", color: "#6f8fc4" } }, of: () => "other", labels: new Set() },
@@ -165,19 +170,32 @@ const HIGHLIGHTS: Record<string, { label: string; groups: Record<string, Group>;
     of: (d) => (d.fifth ? `f${d.fifth}` : "other"),
     labels: new Set(),
   },
-  western: {
-    label: "Western MA",
-    groups: { west: { label: "Western MA districts", color: "#2a78d6", shape: "circle", z: 2 }, other: OTHER },
-    of: (d) => (d.region === "Western" ? "west" : "other"),
+  // Each region in its hue on the map (map.ts GROUP_HUES, in the same order), the shape changing from each to the
+  // next; the regional vocational districts and a few others have no region in DESE's list
+  region: {
+    label: "Region",
+    groups: Object.fromEntries([
+      ...REGION_KEYS.map(([k, , label], i) => [k, { label, color: REGION_HUES[i], shape: (["circle", "square", "triangle"] as const)[i % 3], z: 2 }]),
+      ["none", { label: "No region listed", color: "#b5b0a5", shape: "circle", z: 1 }],
+    ]),
+    of: (d) => REGION_KEYS.find(([, r]) => r === d.region)?.[0] ?? "none",
     labels: new Set(),
   },
-  vocational: {
-    label: "Vocational districts",
-    groups: { voc: { label: "Vocational and technical districts", color: "#6250d6", shape: "square", z: 2 }, other: OTHER },
-    of: (d) => (d.type === "vocational" ? "voc" : "other"),
+  // A district of one town's own, a regional academic district, or a vocational one (with Northampton-Smith, a
+  // town's agricultural school)
+  district: {
+    label: "District type",
+    groups: {
+      voc: { label: "Vocational and technical", color: "#6250d6", shape: "triangle", z: 3 },
+      regional: { label: "Regional academic", color: "#eda100", shape: "square", z: 2 },
+      local: { label: "One town's own", color: "#2a78d6", shape: "circle", z: 1 },
+    },
+    of: (d) => (d.type === "vocational" ? "voc" : d.towns.length > 1 ? "regional" : "local"),
     labels: new Set(),
   },
 };
+/** Highlights since renamed, so a link to the old name still opens its successor */
+const HL_RENAMED: Record<string, string> = { western: "region", vocational: "district" };
 const DEFAULT_HL = "none";
 
 // Left out unless asked for, as in the original plot: a very large district, a very small
@@ -196,7 +214,10 @@ interface Preset { id: string; title: string; blurb: string; y: string; x: strin
 // against the requirement and the low-income share (ρ −0.53), and students of color and enrollment (+0.56, no
 // caution at all). Strong pairs that don't, left to the picker: payments per out-of-district pupil against income
 // or low income (uneven spread, a few districts paying several hundred thousand dollars a pupil), English learners
-// against enrollment (uneven spread), and aid against the low-income share (+0.74, the formula's own again).
+// against enrollment (uneven spread), aid against the low-income share (+0.74, the formula's own again), and students
+// of color against English learners (+0.80, uneven spread; a log scale clears it in FY2025 only by leaving out the 14
+// districts with none, and many English learners are students of color too, an overlap the shared-parts check can't
+// see; #232).
 const PRESETS: Preset[] = [
   {
     id: "income", title: "Spending and income", y: "nss_pct_req", x: "income_pc", log: true,
@@ -232,6 +253,18 @@ const vn = (s: string) => el("strong", "cw-var", s);
 const starred = (s: string) => s.split("*").map((part, i) => (i % 2 ? vn(part) : part));
 type Rich = (string | Node)[];
 const plain = (r: Rich) => r.map((x) => (typeof x === "string" ? x : x.textContent)).join("");
+// Pairs that share no number, so the ◇ doesn't mark them, but measure one condition two ways: a strong ρ between
+// them is expected, and says the two measures agree, not something districts do (#235). Kept by hand: no rule finds
+// these the way COUNTS finds a shared number.
+const SAME_THING: { pair: [string, string]; text: () => Rich }[] = [
+  { pair: ["low_income", "income_pc"], text: () => [vn("Low-income students"), " and ", vn("income per capita"),
+    " both measure how much money families have. One counts the students whose families are enrolled in programs such " +
+    "as SNAP or MassHealth; the other averages the income of every resident of the district's towns. They share no " +
+    "number, but a strong ρ between them is expected. It shows that the two measures agree, not something districts do."] },
+  { pair: ["soc", "el"], text: () => [vn("Students of color"), " and ", vn("English learners"), " overlap. Many English " +
+    "learners are also students of color, so the same students count toward both shares. They share no number, but part " +
+    "of their ρ comes from that overlap, not from anything districts do."] },
+];
 const fmt = (u: Unit, v: number) =>
   u === "pct" ? pct(v) : u === "usd" ? `$${Math.round(v).toLocaleString("en-US")}` : Math.round(v).toLocaleString("en-US");
 const short = (n: number, d: number) => String(Number((n).toFixed(d)));
@@ -257,7 +290,9 @@ function withParts<T extends HTMLElement>(node: T, parts: Rich): T {
   return node;
 }
 
-interface View { preset: string | null; y: string; x: string; fy: number; log: boolean; all: boolean; hl: string; find: string | null }
+interface View { preset: string | null; y: string; x: string; fy: number; log: boolean; all: boolean; hl: string; find: string | null;
+  /** The highlight's groups picked out from its legend, each with its own trend */
+  focus?: string[] }
 
 export function startCommonwealth(root: HTMLElement, data: CwData, opts: {
   openDistrict: (id: string) => void;
@@ -268,22 +303,29 @@ export function startCommonwealth(root: HTMLElement, data: CwData, opts: {
   const latest = data.meta.latest;
   const at = (fy: number) => years.indexOf(fy);
 
-  /** The districts with both measures in a year, less the omitted ones unless all are asked for. */
+  /** The districts with both measures in a year, less the omitted ones unless all are asked for, and less those a
+   * log scale can't place (offScale: how many, and whether any are below zero). */
   function pointsFor(v: Pick<View, "x" | "y" | "fy" | "log" | "all" | "hl" | "find">) {
     const i = at(v.fy);
     const hl = HIGHLIGHTS[v.hl] ?? HIGHLIGHTS[DEFAULT_HL];
     const pts: Point[] = [];
     const rows: Row[] = [];
+    const offScale = { n: 0, below: false };
     for (const d of data.districts) {
       const x = d.v[v.x]?.[i];
       const y = d.v[v.y]?.[i];
-      if (x == null || y == null || (v.log && x <= 0)) continue;
+      if (x == null || y == null) continue;
       if (!v.all && (OMIT_NAMES.has(d.name) || (d.v.fe[i] ?? 0) < MIN_FE)) continue;
+      if (v.log && x <= 0) {
+        offScale.n++;
+        offScale.below ||= x < 0;
+        continue;
+      }
       pts.push({ x, y, id: d.id ?? d.org, name: d.name, group: hl.of(d),
         label: (d.id != null && hl.labels.has(d.id)) || d.org === v.find });
       rows.push(d);
     }
-    return { pts, rows, hl };
+    return { pts, rows, hl, offScale };
   }
 
   interface Caution { label: string; text: Rich }
@@ -303,6 +345,8 @@ export function startCommonwealth(root: HTMLElement, data: CwData, opts: {
         `${shared.join(" and ")}, so they line up partly by definition: one is built from the other, or both from ` +
         "the same number. Part of their ρ comes from that shared arithmetic, not from anything districts do."] });
     }
+    const same = SAME_THING.find((s) => s.pair.includes(v.x) && s.pair.includes(v.y));
+    if (same) out.push({ label: "Two views of the same thing", text: same.text() });
     if (n < 30) {
       out.push({ label: "Few districts", text: [`Only ${n} districts have both measures in FY${v.fy}. With so few, a ` +
         "pattern can appear by chance."] });
@@ -425,17 +469,19 @@ export function startCommonwealth(root: HTMLElement, data: CwData, opts: {
   }
 
   /** Spearman's rho between the vertical measure and every other measure, closest first;
-   * measures without data for the year come last. */
+   * measures without data for the year come last. Each is taken on the districts its plot would show: the one across
+   * now on the scale it has, the others on the scale they open with, so a log scale leaves out its zeros here too. */
   function ranking(v: View) {
     const i = at(v.fy);
     const others = VARS.filter((o) => o.key !== v.y);
     return others.map((o) => {
+      const log = o.key === v.x ? v.log : !!o.log;
       const xs: number[] = [];
       const ys: number[] = [];
       for (const d of data.districts) {
         const x = d.v[o.key]?.[i];
         const y = d.v[v.y]?.[i];
-        if (x == null || y == null) continue;
+        if (x == null || y == null || (log && x <= 0)) continue;
         if (!v.all && (OMIT_NAMES.has(d.name) || (d.v.fe[i] ?? 0) < MIN_FE)) continue;
         xs.push(x);
         ys.push(y);
@@ -596,7 +642,8 @@ export function startCommonwealth(root: HTMLElement, data: CwData, opts: {
     "<h4>When correlation misleads</h4>" +
     "<p>A strong ρ can still mislead. Each pair on the chart is checked for the common pitfalls that Aggarwal and " +
     `Ranganathan describe (<a href="${PAPER}">“Common pitfalls in statistical analysis: The use of correlation ` +
-    "techniques,” <i>Perspectives in Clinical Research</i>, 2016</a>): two measures that count the same thing, a " +
+    "techniques,” <i>Perspectives in Clinical Research</i>, 2016</a>): two measures that count the same thing, two " +
+    "that measure one condition two ways, a " +
     "pattern that curves back on itself, a few extreme districts that pull the result, regions that sit apart, " +
     "uneven spread, too few districts, and districts that share towns, so their points aren't independent. Any the " +
     "pair falls into are listed as cautions under the chart.</p>" +
@@ -717,7 +764,7 @@ export function startCommonwealth(root: HTMLElement, data: CwData, opts: {
 
   function setParams() {
     const q = new URLSearchParams(location.search);
-    for (const k of ["plot", "x", "y", "fy", "log", "all", "hl", "find"]) q.delete(k);
+    for (const k of ["plot", "x", "y", "fy", "log", "all", "hl", "focus", "find"]) q.delete(k);
     if (view) {
       q.set("view", "commonwealth");
       if (view.preset) q.set("plot", view.preset);
@@ -727,6 +774,7 @@ export function startCommonwealth(root: HTMLElement, data: CwData, opts: {
       if (view.log) q.set("log", "1");
       if (view.all) q.set("all", "1");
       if (view.hl !== DEFAULT_HL) q.set("hl", view.hl);
+      if (view.focus?.length) q.set("focus", view.focus.join(","));
       if (view.find) q.set("find", view.find);
     }
     history.replaceState(null, "", `${location.pathname}?${q}`);
@@ -746,8 +794,9 @@ export function startCommonwealth(root: HTMLElement, data: CwData, opts: {
     allBox.checked = v.all;
     find.value = data.districts.find((d) => d.org === v.find)?.name ?? "";
 
-    const { pts, rows, hl } = pointsFor(v);
-    describe(v, pts, hl);
+    const { pts, rows, hl, offScale } = pointsFor(v);
+    const focus = (v.focus ?? []).filter((g) => hl.groups[g]);
+    describe(v, pts, hl, offScale, focus);
     // The chart takes the room the legend, finding and caption leave, so the view never scrolls
     const width = Math.max(300, figure.clientWidth || 800);
     const pad = parseFloat(getComputedStyle(body).paddingTop) + parseFloat(getComputedStyle(body).paddingBottom);
@@ -755,12 +804,13 @@ export function startCommonwealth(root: HTMLElement, data: CwData, opts: {
       caption.offsetHeight - 28;
     const height = Math.round(Math.max(220, Math.min(room, width * 0.75)));
     svg.setAttribute("aria-label", `Scatterplot of ${yv.label.toLowerCase()} against ${xv.label.toLowerCase()} for ` +
-      `${pts.length} districts, FY${v.fy}. The data table lists every value.`);
+      `${pts.length} districts, FY${v.fy}` + (focus.length ? `, picking out ${focus.map((g) => hl.groups[g].label).join(" and ")} ` +
+      "with a trend of their own" : "") + ". The data table lists every value.");
     scatter(svg, pts, {
       width, height, logX: v.log, xFmt: axisFmt(xv.unit), yFmt: axisFmt(yv.unit),
       // Narrow screens get the short names, which fit along the axes
       xTitle: xv.label, xTitleShort: capital(xv.short), yTitle: yv.label, yTitleShort: capital(yv.short),
-      groups: hl.groups, smooth: true,
+      groups: hl.groups, smooth: true, focus,
       onHover: (p, pos) => {
         if (!p || !pos) {
           tip.hidden = true;
@@ -794,7 +844,8 @@ export function startCommonwealth(root: HTMLElement, data: CwData, opts: {
   }
 
   /** The legend, finding, caption, ranking and table: everything but the chart. */
-  function describe(v: View, pts: Point[], hl: (typeof HIGHLIGHTS)[string]) {
+  function describe(v: View, pts: Point[], hl: (typeof HIGHLIGHTS)[string], offScale: { n: number; below: boolean },
+    focus: string[]) {
     const yv = VAR.get(v.y)!;
     const xv = VAR.get(v.x)!;
     const n = pts.length;
@@ -824,19 +875,62 @@ export function startCommonwealth(root: HTMLElement, data: CwData, opts: {
     ", Perspectives in Clinical Research, 2016. And whatever ρ shows, ", Object.assign(el("a", undefined,
       "correlation doesn't imply causation"), { href: CAUSATION }), ".");
     cautionList.replaceChildren(intro, ...found.flatMap((c) => [el("h4", undefined, c.label), withParts(el("p"), c.text)]), src);
-    legend.replaceChildren(...Object.entries(hl.groups).sort((a, b) => b[1].z - a[1].z).map(([, g]) => {
+    // With groups to pick from, each entry is a toggle: picked, a group keeps its color, the rest fade, and it gets
+    // its own smoothed trend and ρ, to find a pattern within a group that the statewide one hides (#233)
+    const groups = Object.entries(hl.groups).sort((a, b) => b[1].z - a[1].z);
+    const picking = groups.length > 1;
+    legend.classList.toggle("is-picking", picking);
+    legend.classList.toggle("has-focus", focus.length > 0);
+    legend.replaceChildren(...groups.map(([id, g]) => {
       const li = el("li");
       const key = el("span", `cw-key ${g.shape}`);
       key.style.setProperty("--c", g.color);
-      li.append(key, el("span", undefined, g.label));
+      if (!picking) {
+        li.append(key, el("span", undefined, g.label));
+        return li;
+      }
+      const mine = pts.filter((p) => p.group === id);
+      const on = focus.includes(id);
+      const b = el("button", `cw-key-btn${on ? " is-on" : ""}`);
+      b.type = "button";
+      b.setAttribute("aria-pressed", String(on));
+      b.disabled = !mine.length;
+      b.append(key, el("span", undefined, g.label));
+      if (on) {
+        const line = el("span", "cw-key smooth");
+        line.style.setProperty("--c", g.color);
+        const r = mine.length >= 8 ? spearman(mine.map((p) => p.x), mine.map((p) => p.y)) : null;
+        b.append(line, el("span", "cw-key-rho", r == null
+          ? `${mine.length} ${mine.length === 1 ? "district" : "districts"}, too few for ρ` : `ρ = ${rho(r)}, ${mine.length} districts`));
+      }
+      b.title = on ? "Select to stop picking this group out" : "Select to pick this group out, with its own trend and ρ";
+      b.addEventListener("click", () => refocus(on ? focus.filter((f) => f !== id) : [...focus, id]));
+      li.append(b);
       return li;
     }), (() => {
       const li = el("li");
-      li.append(el("span", "cw-key smooth"), el("span", undefined, "Smoothed trend (LOESS)"));
+      li.append(el("span", `cw-key smooth${focus.length ? " all" : ""}`),
+        el("span", undefined, focus.length ? "Smoothed trend, all districts (LOESS)" : "Smoothed trend (LOESS)"));
       return li;
-    })());
+    })(), ...(!picking ? [] : [(() => {
+      const li = el("li", "cw-legend-note");
+      if (focus.length) {
+        const clear = el("button", "cw-legend-clear", "Show all groups");
+        clear.type = "button";
+        clear.addEventListener("click", () => refocus([]));
+        li.append(clear);
+      } else li.textContent = "Select a group to pick it out, with its own trend and ρ.";
+      return li;
+    })()]));
 
-    const omitted = v.all ? "" : ` Left out: Boston, Provincetown, and districts with fewer than ${MIN_FE} foundation pupils.`;
+    // Left out: the districts too large or small to compare, unless all are asked for, and those a log scale can't place
+    const out = v.all ? [] : ["Boston", "Provincetown", `districts with fewer than ${MIN_FE} foundation pupils`];
+    if (offScale.n) {
+      out.push(`${offScale.n} ${offScale.n === 1 ? "district" : "districts"} with ${xv.short} at ${fmt(xv.unit, 0)}` +
+        `${offScale.below ? " or below" : ""}, which a log scale can't place`);
+    }
+    const omitted = !out.length ? "" : ` Left out: ${out.length < 3 ? out.join(" and ")
+      : `${out.slice(0, -1).join(", ")}, and ${out[out.length - 1]}`}.`;
     const srcs = [...new Set([...yv.src, ...xv.src])].map((k) => SOURCES[k]);
     caption.replaceChildren(`FY${v.fy} · ${n} districts that ran schools that year.${omitted} Sources: `);
     srcs.forEach((s, k) => {
@@ -845,7 +939,7 @@ export function startCommonwealth(root: HTMLElement, data: CwData, opts: {
       caption.append(...(k ? [", ", a] : [a]));
     });
     caption.append(". Towns' figures pool each district's member towns.");
-    const about = opts.about([...new Set(srcs.map((s) => s.note))]);
+    const about = opts.about([...new Set(srcs.map((s) => s.note)), "correlations"]);
     if (about) caption.append(" ", about);
 
     // The table: every district drawn, highest first
@@ -907,6 +1001,12 @@ export function startCommonwealth(root: HTMLElement, data: CwData, opts: {
         ? ", across the bottom now, is as close." : `, across the bottom now, has ρ = ${rho(here.r!)}.`])]));
   }
 
+  /** The groups picked out, changed: the plot stays the one it was, preset and all */
+  const refocus = (focus: string[]) => {
+    if (!view) return;
+    view = { ...view, focus };
+    draw();
+  };
   const change = (patch: Partial<View>) => {
     if (!view) return;
     view = { ...view, preset: null, ...patch };
@@ -924,7 +1024,7 @@ export function startCommonwealth(root: HTMLElement, data: CwData, opts: {
     change({ y: ySel.value, x, log: x === view.x ? view.log : !!VAR.get(x)?.log });
   });
   fySel.addEventListener("change", () => change({ fy: Number(fySel.value) }));
-  hlSel.addEventListener("change", () => change({ hl: hlSel.value }));
+  hlSel.addEventListener("change", () => change({ hl: hlSel.value, focus: [] }));
   logBox.addEventListener("change", () => change({ log: logBox.checked }));
   allBox.addEventListener("change", () => change({ all: allBox.checked }));
   find.addEventListener("change", () => {
@@ -961,10 +1061,13 @@ export function startCommonwealth(root: HTMLElement, data: CwData, opts: {
     const x = VAR.has(q.get("x") ?? "") ? q.get("x")! : preset?.x;
     if (!x || !y) return;
     const fy = Number(q.get("fy"));
+    const asked = HL_RENAMED[q.get("hl") ?? ""] ?? q.get("hl");
+    const hl = asked && HIGHLIGHTS[asked] ? asked : DEFAULT_HL;
     open({
       preset: preset?.id ?? null, x, y, fy: years.includes(fy) ? fy : latest,
       log: q.has("log") ? q.get("log") === "1" : preset?.log ?? !!VAR.get(x)?.log,
-      all: q.get("all") === "1", hl: q.get("hl") && HIGHLIGHTS[q.get("hl")!] ? q.get("hl")! : DEFAULT_HL, find: q.get("find"),
+      all: q.get("all") === "1", hl, find: q.get("find"),
+      focus: (q.get("focus") ?? "").split(",").filter((g) => g && HIGHLIGHTS[hl].groups[g]),
     });
   }
 
