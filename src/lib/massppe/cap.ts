@@ -16,6 +16,7 @@ import { groupedPicker } from "./picker";
 import { chartRoom, enlargeButton, isEnlarged } from "./enlarge";
 import { pointsAtGroup, scatter, ticksFor, type Group, type Point, type ScatterView } from "./scatter";
 import { BLUE, FIFTH_RAMP, ORANGE, VIOLET } from "./palette";
+import { atCap, requiredFor, solve, solveArrays, targetAt } from "./capModel";
 import css from "./cap.css?inline"; // the styles for what this module builds (#237), added as it loads (#238)
 
 addStyles(css);
@@ -108,60 +109,6 @@ const xOf = (x: CapTown, k: XKey): number | null => {
     case "cey_pc": return x.pop ? x.cey / x.pop : null;
   }
 };
-
-/**
- * The required contribution under today's rules for a given target (DESE's Townwide Contributions
- * sheet, columns P-X): last year's grown by the growth factor; down to the target if that's above
- * it; up 1% or 2% of last year's if it falls short by more than 2.5 or 7.5 points of foundation; at
- * least the target for a town whose yield is 175% of foundation or more; at most 90% of foundation.
- * With today's targets this reproduces every town's FY2027 required contribution.
- */
-function requiredFor(t: CapTown, target: number, yieldPct: number): number | null {
-  if (t.preliminary == null || t.prior == null || !t.foundation) return null;
-  const P = t.preliminary;
-  const H = t.foundation;
-  const shortfall = Math.round((target * 100) / H * 100) / 100 - (P * 100) / H;
-  const step = shortfall > 7.5 ? 0.02 : shortfall > 2.5 ? 0.01 : 0;
-  const T = Math.round(step * t.prior);
-  const V = Math.max(P - target, 0);
-  const W = yieldPct > 1.75 ? Math.max(target - (P + T), 0) : 0;
-  return Math.min(H * 0.9, Math.round(P + T - V + W));
-}
-
-/** Whether the cap held a target below the yield it would otherwise be: the one test for "at the cap" on this tab, as
- * the pipeline's at_cap (#242). DESE's target is the lesser of the two, so a capped town's target is below its yield. */
-const atCap = (target: number, cey: number, foundation: number | null) => !!foundation && target < cey - 1;
-
-/** A town's target under a cap, or none, at factor f: none for a town with no foundation budget */
-const targetAt = (cey: number, fb: number, f: number, cap: number | null) => (!fb ? 0 : cap == null ? cey * f : Math.min(cey * f, cap * fb));
-
-/** The same for arrays: one year's yields and foundation budgets, held to that year's total. */
-function solveArrays(ceys: number[], fbs: number[], total: number, cap: number | null): number {
-  let lo = 0;
-  let hi = 4;
-  for (let k = 0; k < 80; k++) {
-    const f = (lo + hi) / 2;
-    let sum = 0;
-    for (let i = 0; i < ceys.length; i++) sum += targetAt(ceys[i], fbs[i], f, cap);
-    if (sum < total) lo = f;
-    else hi = f;
-  }
-  return (lo + hi) / 2;
-}
-
-/** The factor on DESE's percentages that keeps capped targets at the year's total. */
-function solve(towns: CapTown[], total: number, cap: number | null): number {
-  let lo = 0;
-  let hi = 4;
-  for (let k = 0; k < 80; k++) {
-    const f = (lo + hi) / 2;
-    let sum = 0;
-    for (const t of towns) sum += targetAt(t.cey, t.foundation, f, cap);
-    if (sum < total) lo = f;
-    else hi = f;
-  }
-  return (lo + hi) / 2;
-}
 
 /** What a render shows, figured from the data and the reader's choices alone (#238: render() worked it out inline,
  * in one scope with the six sections it fed): the year, the town, the chosen cap's targets at the same statewide

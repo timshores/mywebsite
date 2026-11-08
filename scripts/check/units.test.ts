@@ -5,6 +5,21 @@ import { cagr, linearFit, median, quantile, spearman } from "../../src/lib/massp
 import { endsOn, trendOn, type MapSeries } from "../../src/lib/massppe/series";
 import { checkPair, sharedParts } from "../../src/lib/massppe/cautions";
 import { lower } from "../../src/lib/massppe/dom";
+import { requiredFor, solve, targetAt } from "../../src/lib/massppe/capModel";
+import cap from "../../src/data/massppe/cap.json";
+
+// The cap tab's model against the pipeline's figures, every year cap.json has (#242, Pass 2): how many towns' no-cap
+// targets agree within $1 (all should), and how many required contributions the model's rules reproduce from today's
+// targets
+const capYears = Object.values(cap.years) as unknown as { fy: number; totals: { target: number };
+  towns: { cey: number; foundation: number; nocap: number; target: number; required: number | null; preliminary: number | null; prior: number | null }[] }[];
+const capCases: [string, unknown, unknown][] = capYears.flatMap((y) => {
+  const f = solve(y.towns, y.totals.target, null);
+  const nocap = y.towns.filter((t) => Math.abs(Math.round(targetAt(t.cey, t.foundation, f, null)) - t.nocap) <= 1).length;
+  const have = y.towns.filter((t) => t.required != null);
+  const req = have.filter((t) => Math.abs((requiredFor(t, t.target, t.foundation ? t.cey / t.foundation : 0) ?? NaN) - t.required!) <= 1).length;
+  return [[`cap model no-cap targets, FY${y.fy}`, nocap, y.towns.length], [`cap model required contributions, FY${y.fy}`, req, have.length]];
+});
 
 // The map's year-by-year figures need only its years (series.ts)
 const S = { years: [2020, 2021, 2022, 2023] } as unknown as MapSeries;
@@ -93,4 +108,5 @@ export const cases: [string, unknown, unknown][] = [
   ["lower keeps a name", lower("Chapter 70 state aid"), "Chapter 70 state aid"],
   ["lower keeps an initialism", lower("FY2025 dollars"), "FY2025 dollars"],
   ["lower keeps a name inside", lower("Paid back by the state (Circuit Breaker)"), "paid back by the state (Circuit Breaker)"],
+  ...capCases,
 ];
