@@ -7,12 +7,13 @@
 // target min(yield x f, cap x foundation budget). f is 1 at 82.5%; at 100% and with no cap
 // this reproduces Michael Naughton and Tupper Brown's FY2026 targets to the dollar.
 
-import { capital, el, svgEl, vn } from "./dom";
+import { capital, el, modal, placeTip, svgEl, vn } from "./dom";
 import { change as changePct, compact, digits, pct, rho as rhoText, round, signFor, total, usd } from "./format";
 import { median, spearman } from "./stats";
 import { groupedPicker } from "./picker";
 import { chartRoom, enlargeButton, isEnlarged } from "./enlarge";
 import { scatter, ticksFor, type Group, type Point, type ScatterView } from "./scatter";
+import { BLUE, FIFTH_RAMP, ORANGE, VIOLET } from "./palette";
 
 interface CapTown {
   lea: number; name: string; id: string; county: string | null; region: string | null;
@@ -62,17 +63,17 @@ const seeAlso = (): (string | Node)[] => ["See also Kiera McLaughlin's ", link("
 /** A measure's name, bold wherever text describes it */
 
 const GROUPS: Record<string, Group> = {
-  capped: { label: "At today's cap", color: "#6250d6", shape: "square", z: 2 },
-  below: { label: "Below it", color: "#2a78d6", shape: "circle", z: 1 },
+  capped: { label: "At today's cap", color: VIOLET, shape: "square", z: 2 },
+  below: { label: "Below it", color: BLUE, shape: "circle", z: 1 },
   town: { label: "Selected town", color: "#b65c3d", shape: "triangle", z: 3 },
 };
 // By income fifth: one blue ramp, lightest for the lowest incomes, darkest for the highest
 const FIFTH_GROUPS: Record<string, Group> = {
-  f1: { label: "Lowest income fifth", color: "#86b6ef", shape: "circle", z: 1 },
-  f2: { label: "Second", color: "#5598e7", shape: "circle", z: 1 },
-  f3: { label: "Middle", color: "#2a78d6", shape: "circle", z: 1 },
-  f4: { label: "Fourth", color: "#1c5cab", shape: "circle", z: 1 },
-  f5: { label: "Highest income fifth", color: "#0d366b", shape: "circle", z: 1 },
+  f1: { label: "Lowest income fifth", color: FIFTH_RAMP[0], shape: "circle", z: 1 },
+  f2: { label: "Second", color: FIFTH_RAMP[1], shape: "circle", z: 1 },
+  f3: { label: "Middle", color: FIFTH_RAMP[2], shape: "circle", z: 1 },
+  f4: { label: "Fourth", color: FIFTH_RAMP[3], shape: "circle", z: 1 },
+  f5: { label: "Highest income fifth", color: FIFTH_RAMP[4], shape: "circle", z: 1 },
   town: GROUPS.town,
 };
 
@@ -292,26 +293,7 @@ export function startCap(root: HTMLElement, data: CapData, opts: { town: string 
 
   // Explanations: targets and required contributions in a window of its own; fiscal effort on a page of its
   // own, /muni-spending/fiscal-effort/
-  const subDialog = (id: string, title: string) => {
-    const dialog = el("dialog", "cw-sub");
-    dialog.setAttribute("aria-labelledby", id);
-    const head = el("div", "cw-head");
-    const heading = el("h2", "cw-title", title);
-    heading.id = id;
-    const close = el("button", "cw-close", "×");
-    close.type = "button";
-    close.setAttribute("aria-label", "Close");
-    close.addEventListener("click", () => dialog.close());
-    head.append(heading, close);
-    const body = el("div", "cw-sub-body");
-    dialog.append(head, body);
-    dialog.addEventListener("click", (ev) => {
-      if (ev.target === dialog) dialog.close();
-    });
-    (root.closest(".explorer") ?? document.body).append(dialog);
-    return { dialog, body };
-  };
-  const { dialog: help, body: helpBody } = subDialog("cap-help-title", "How Chapter 70 sets the minimum");
+  const { dialog: help, body: helpBody } = modal("cap-help-title", "How Chapter 70 sets the minimum", root.closest(".explorer") ?? document.body);
   /** A "?" that goes to a page of its own */
   const helpLink = (label: string, href: string) => {
     const a = el("a", "cap-help", "?");
@@ -760,12 +742,12 @@ export function startCap(root: HTMLElement, data: CapData, opts: { town: string 
         if (r.diff != null && r.diff !== 0) {
           const top = sy(Math.max(0, r.diff));
           const bar = svgEl("rect", { x, y: top, width: w, height: Math.max(1, Math.abs(sy(r.diff) - sy(0))),
-            fill: r.diff > 0 ? "#2a78d6" : "#eb6834", rx: 2 }, yearsSvg);
+            fill: r.diff > 0 ? BLUE : ORANGE, rx: 2 }, yearsSvg);
           const tip = svgEl("title", {}, bar);
           tip.textContent = `FY${r.fy}: target ${usd(r.target!)}${r.capped ? " (at the cap)" : ""}; ${scenName}, ` +
             `${signed(r.diff)}`;
         }
-        if (r.capped) svgEl("rect", { x, y: m.top + ph + 4, width: w, height: 4, fill: "#6250d6", rx: 1 }, yearsSvg);
+        if (r.capped) svgEl("rect", { x, y: m.top + ph + 4, width: w, height: 4, fill: VIOLET, rx: 1 }, yearsSvg);
         if (rows.length <= 12 || j % 2 === 0 || pw > 900) {
           const lab = svgEl("text", { x: x + w / 2, y: m.top + ph + 26, "text-anchor": "middle", class: "sc-tick" }, yearsSvg);
           lab.textContent = pw > 900 ? `FY${String(r.fy).slice(2)}` : `'${String(r.fy).slice(2)}`;
@@ -776,9 +758,9 @@ export function startCap(root: HTMLElement, data: CapData, opts: { town: string 
       const yTitle = svgEl("text", { transform: `translate(17 ${m.top + ph / 2}) rotate(-90)`, "text-anchor": "middle", class: "sc-title" }, yearsSvg);
       yTitle.textContent = "Change in target";
       const key = el("ul", "cw-legend");
-      for (const [color, label, shape] of [["#2a78d6", `Asked for more ${scenName}: today's cap saves ${t.name} this much`, "square"],
-        ["#eb6834", `Asked for less ${scenName}: today's cap costs ${t.name} this much`, "square"],
-        ["#6250d6", `${t.name} at the cap that year`, "square"]] as const) {
+      for (const [color, label, shape] of [[BLUE, `Asked for more ${scenName}: today's cap saves ${t.name} this much`, "square"],
+        [ORANGE, `Asked for less ${scenName}: today's cap costs ${t.name} this much`, "square"],
+        [VIOLET, `${t.name} at the cap that year`, "square"]] as const) {
         const li = el("li");
         const k = el("span", `cw-key ${shape}`);
         k.style.setProperty("--c", color);
@@ -869,11 +851,7 @@ export function startCap(root: HTMLElement, data: CapData, opts: { town: string 
           el("div", undefined, `${xo.title}: ${xo.fmt(p.x)}`),
           el("div", "cw-tip-hint", "Select to walk through it above"));
         tip.hidden = false;
-        const box = svg.getBoundingClientRect();
-        const fig = figure.getBoundingClientRect();
-        const scale = box.width / width;
-        tip.style.left = `${Math.min(box.left - fig.left + pos.left * scale + 12, fig.width - tip.offsetWidth - 4)}px`;
-        tip.style.top = `${Math.max(0, box.top - fig.top + pos.top * scale - tip.offsetHeight - 10)}px`;
+        placeTip(tip, svg, figure, width, pos);
       },
       onPick: (p) => {
         townId = p.id;

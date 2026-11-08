@@ -11,6 +11,7 @@ import { el, svgEl } from "./dom";
 import { enlargeButton } from "./enlarge";
 import { asShown, change, count, measured, pct, usd, yearly } from "./format";
 import { cagr, linearFit, median, quantile } from "./stats";
+import { GROUP_HUES } from "./palette";
 
 /** [value, year] for a level; [value, first year, last year] for a change */
 type Val = number[];
@@ -372,7 +373,6 @@ const SEQUENTIAL6 = ["#cde2fb", "#97c0f1", "#5f9de7", "#3279d2", "#1b55a0", "#0c
 // dataviz palette check; the key, the tooltip and the table name each); size in greens, community type in
 // purples, income in ambers, each light to dark (smallest, least dense, lowest first); size within a region in its
 // region's hue, light to dark by size
-const GROUP_HUES = ["#eb6834", "#1baf7a", "#6250d6", "#eda100", "#e87ba4", "#00897b", "#008300", "#e34948"];
 const GREENS = ["#d9f2e3", "#a3dfbd", "#62c492", "#2e9e66", "#16744a", "#0a4a2f"];
 const PURPLES = ["#ddd6f7", "#a99bec", "#7461d6", "#43309e"];
 const AMBERS = ["#fde9c9", "#f8c27a", "#ec9431", "#c26a12", "#7f430a"];

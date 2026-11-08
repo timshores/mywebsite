@@ -17,6 +17,7 @@ import type { CwData } from "./commonwealth";
 import type { MapData, MapSeries } from "./map";
 import { notesContents, plainClick, type NoteUse } from "./notes";
 import { groupedPicker, type Picker } from "./picker";
+import { AMBER, BLUE, DEEP_GREEN, GRAY, GREEN, ORANGE, PINK, RED, VIOLET } from "./palette";
 
 type Values = Val[];
 
@@ -317,133 +318,133 @@ const CHOICE_ALIASES: Record<string, string> = { western: "region" };
 const STORE = "mass-school-spending:choices";
 const CONSENT = "mass-school-spending:remember";
 
-const PPE_COLORS = ["#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#e87ba4", "#008300", "#6250d6", "#e34948", "#8f8a7f"];
+const PPE_COLORS = [BLUE, ORANGE, GREEN, AMBER, PINK, DEEP_GREEN, VIOLET, RED, GRAY];
 const NSS_SERIES = [
-  { key: "ch70_aid", label: "Chapter 70 state aid", color: "#008300" },
-  { key: "required_local", label: "Required local contribution", color: "#eda100" },
-  { key: "above_required", label: "Local contribution above required", color: "#6250d6" },
+  { key: "ch70_aid", label: "Chapter 70 state aid", color: DEEP_GREEN },
+  { key: "required_local", label: "Required local contribution", color: AMBER },
+  { key: "above_required", label: "Local contribution above required", color: VIOLET },
 ] as const;
 // Bottom to top, as the export orders them (ppe_report/export_explorer_data.py
 // REVENUE). Chapter 70 and the towns' share keep their colors from the NSS chart;
 // building aid sits on top because it comes in large, irregular payments.
 const REV_SERIES = [
-  { key: "towns", label: "Payments from towns", color: "#eda100" },
-  { key: "ch70", label: "Chapter 70 state aid", color: "#008300" },
-  { key: "retirement", label: "Teacher retirement paid by the state", color: "#2a78d6" },
-  { key: "transport", label: "Transportation aid", color: "#1baf7a" },
-  { key: "other_state", label: "Other state aid", color: "#6250d6" },
-  { key: "federal", label: "Federal", color: "#e34948" },
-  { key: "districts", label: "From other school districts", color: "#eb6834" },
-  { key: "other_local", label: "Other local", color: "#e87ba4" },
-  { key: "building", label: "School building aid", color: "#8f8a7f" },
+  { key: "towns", label: "Payments from towns", color: AMBER },
+  { key: "ch70", label: "Chapter 70 state aid", color: DEEP_GREEN },
+  { key: "retirement", label: "Teacher retirement paid by the state", color: BLUE },
+  { key: "transport", label: "Transportation aid", color: GREEN },
+  { key: "other_state", label: "Other state aid", color: VIOLET },
+  { key: "federal", label: "Federal", color: RED },
+  { key: "districts", label: "From other school districts", color: ORANGE },
+  { key: "other_local", label: "Other local", color: PINK },
+  { key: "building", label: "School building aid", color: GRAY },
 ] as const;
 // Special education, bottom to top as the export orders them (SPED): in the district's own schools, out of
 // district, then what grants and revolving funds paid. Teaching keeps the teachers' blue; the order passes the
 // dataviz palette check's adjacent-pair tests on the page's manila
 const SPED_SERIES = [
-  { key: "teaching", label: "Teaching", color: "#2a78d6" },
-  { key: "other_instructional", label: "Other instructional services", color: "#eda100" },
-  { key: "in_transport", label: "Transportation in the district", color: "#e34948" },
-  { key: "ma_public", label: "Public schools and collaboratives elsewhere", color: "#1baf7a" },
-  { key: "private", label: "Private and out-of-state schools", color: "#eb6834" },
-  { key: "ood_transport", label: "Transportation out of the district", color: "#6250d6" },
-  { key: "health", label: "Health services in private schools", color: "#008300" },
-  { key: "grants", label: "Paid from grants and revolving funds", color: "#e87ba4" },
+  { key: "teaching", label: "Teaching", color: BLUE },
+  { key: "other_instructional", label: "Other instructional services", color: AMBER },
+  { key: "in_transport", label: "Transportation in the district", color: RED },
+  { key: "ma_public", label: "Public schools and collaboratives elsewhere", color: GREEN },
+  { key: "private", label: "Private and out-of-state schools", color: ORANGE },
+  { key: "ood_transport", label: "Transportation out of the district", color: VIOLET },
+  { key: "health", label: "Health services in private schools", color: DEEP_GREEN },
+  { key: "grants", label: "Paid from grants and revolving funds", color: PINK },
 ] as const;
 type SpedKey = (typeof SPED_SERIES)[number]["key"];
 // Students in selected groups, as DESE counts them. Low income through FY2014 and from FY2022 are two measures, and
 // economically disadvantaged between them a third, so they draw apart; the one in between dashed, as the
 // explorer draws a measure that changed
 const STUDENT_GROUPS = [
-  { key: "swd", label: "Students with disabilities", what: "students with disabilities", color: "#6250d6" },
-  { key: "el", label: "English learners", what: "English learners", color: "#1baf7a" },
-  { key: "low_income", label: "Low income", what: "low income", color: "#eb6834" },
-  { key: "econ", label: "Economically disadvantaged, FY2015–FY2021", what: "economically disadvantaged", color: "#eb6834", dash: "6 3" },
-  { key: "high_needs", label: "High needs", what: "high needs", color: "#2a78d6" },
+  { key: "swd", label: "Students with disabilities", what: "students with disabilities", color: VIOLET },
+  { key: "el", label: "English learners", what: "English learners", color: GREEN },
+  { key: "low_income", label: "Low income", what: "low income", color: ORANGE },
+  { key: "econ", label: "Economically disadvantaged, FY2015–FY2021", what: "economically disadvantaged", color: ORANGE, dash: "6 3" },
+  { key: "high_needs", label: "High needs", what: "high needs", color: BLUE },
 ] as const;
 type StudentGroup = (typeof STUDENT_GROUPS)[number]["key"];
 // Budgeted and actual net school spending: the budget orange, the spending blue, the state's minimum a dotted gray
-const BUDGET_COLOR = "#eb6834";
-const ACTUAL_COLOR = "#2a78d6";
-const REQUIRED_COLOR = "#8f8a7f";
+const BUDGET_COLOR = ORANGE;
+const ACTUAL_COLOR = BLUE;
+const REQUIRED_COLOR = GRAY;
 // The Circuit Breaker's line: the state's green, darker than the health services' columns
 const CB_COLOR = "#00602f";
 // Town view: Schedule A functions and grouped revenue sources, bottom to top as
 // the export orders them (TOWN_SPEND, TOWN_REV). Education sits at the bottom so
 // its share is easy to follow; taxes and state aid keep the local and state colors.
 const TOWN_SPEND_SERIES = [
-  { key: "education", label: "Education", color: "#2a78d6" },
-  { key: "fixed", label: "Fixed costs (benefits, insurance)", color: "#eb6834" },
-  { key: "safety", label: "Public safety", color: "#e34948" },
-  { key: "works", label: "Public works", color: "#1baf7a" },
-  { key: "general", label: "General government", color: "#eda100" },
-  { key: "debt", label: "Debt service", color: "#8f8a7f" },
-  { key: "assessments", label: "Intergovernmental assessments", color: "#6250d6" },
-  { key: "human", label: "Human services", color: "#e87ba4" },
-  { key: "culture", label: "Culture and recreation", color: "#008300" },
+  { key: "education", label: "Education", color: BLUE },
+  { key: "fixed", label: "Fixed costs (benefits, insurance)", color: ORANGE },
+  { key: "safety", label: "Public safety", color: RED },
+  { key: "works", label: "Public works", color: GREEN },
+  { key: "general", label: "General government", color: AMBER },
+  { key: "debt", label: "Debt service", color: GRAY },
+  { key: "assessments", label: "Intergovernmental assessments", color: VIOLET },
+  { key: "human", label: "Human services", color: PINK },
+  { key: "culture", label: "Culture and recreation", color: DEEP_GREEN },
   { key: "other", label: "Other", color: "#c4bba9" },
 ] as const;
 const TOWN_REV_SERIES = [
-  { key: "taxes", label: "Taxes", color: "#eda100" },
-  { key: "state", label: "State aid", color: "#008300" },
-  { key: "federal", label: "Federal", color: "#e34948" },
-  { key: "charges", label: "Charges, fees, and fines", color: "#1baf7a" },
-  { key: "other", label: "Other revenue", color: "#e87ba4" },
-  { key: "transfers", label: "Transfers and other financing", color: "#8f8a7f" },
+  { key: "taxes", label: "Taxes", color: AMBER },
+  { key: "state", label: "State aid", color: DEEP_GREEN },
+  { key: "federal", label: "Federal", color: RED },
+  { key: "charges", label: "Charges, fees, and fines", color: GREEN },
+  { key: "other", label: "Other revenue", color: PINK },
+  { key: "transfers", label: "Transfers and other financing", color: GRAY },
 ] as const;
 // Property types, bottom to top as the export orders them (PROPERTY_TYPES): homes first,
 // in the blues and pinks; business property in the warm colors; land in the greens
 const PROPERTY_SERIES = [
-  { key: "single", label: "Single-family homes", color: "#2a78d6" },
-  { key: "condo", label: "Condominiums", color: "#6250d6" },
-  { key: "multi", label: "Multifamily (two or more units)", color: "#e87ba4" },
+  { key: "single", label: "Single-family homes", color: BLUE },
+  { key: "condo", label: "Condominiums", color: VIOLET },
+  { key: "multi", label: "Multifamily (two or more units)", color: PINK },
   { key: "other_res", label: "Other residential, including vacant lots", color: "#c4bba9" },
-  { key: "mixed", label: "Mixed use", color: "#eda100" },
-  { key: "commercial", label: "Commercial", color: "#eb6834" },
-  { key: "industrial", label: "Industrial", color: "#e34948" },
-  { key: "farm", label: "Farmland (Chapter 61A)", color: "#1baf7a" },
-  { key: "forest", label: "Forest, recreation, and open space", color: "#008300" },
-  { key: "personal", label: "Personal property", color: "#8f8a7f" },
+  { key: "mixed", label: "Mixed use", color: AMBER },
+  { key: "commercial", label: "Commercial", color: ORANGE },
+  { key: "industrial", label: "Industrial", color: RED },
+  { key: "farm", label: "Farmland (Chapter 61A)", color: GREEN },
+  { key: "forest", label: "Forest, recreation, and open space", color: DEEP_GREEN },
+  { key: "personal", label: "Personal property", color: GRAY },
 ] as const;
 const PARCEL_SERIES = PROPERTY_SERIES.filter((s) => s.key !== "personal");
 // The levy in the taxes color, the capacity left unused above it in a pale version of it
 const LEVY_SERIES = [
-  { key: "raised", label: "Property tax levy", color: "#eda100" },
+  { key: "raised", label: "Property tax levy", color: AMBER },
   { key: "unused", label: "Unused levy capacity", color: "#f3d9a4" },
 ] as const;
 const RESIDENTIAL = new Set(["single", "condo", "multi", "other_res"]);
 // Reserves, bottom to top: the general stabilization fund, special-purpose ones, then free cash
 const RESERVE_SERIES = [
-  { key: "stab", label: "Stabilization fund", color: "#2a78d6" },
-  { key: "sp_stab", label: "Special-purpose stabilization funds", color: "#eda100" },
-  { key: "free_cash", label: "Free cash", color: "#1baf7a" },
+  { key: "stab", label: "Stabilization fund", color: BLUE },
+  { key: "sp_stab", label: "Special-purpose stabilization funds", color: AMBER },
+  { key: "free_cash", label: "Free cash", color: GREEN },
 ] as const;
 // Debt borrowed, and in a pale version debt voters or the council authorized but the town hasn't yet borrowed
 const DEBT_SERIES = [
-  { key: "outstanding", label: "Debt outstanding", color: "#6250d6" },
+  { key: "outstanding", label: "Debt outstanding", color: VIOLET },
   { key: "unissued", label: "Authorized, not yet borrowed", color: "#b3a8ee" },
 ] as const;
 // Schedule A Part 4's purposes, bottom to top as the export orders them (CAPITAL)
 const CAPITAL_SERIES = [
-  { key: "schools", label: "Schools", color: "#2a78d6" },
-  { key: "buildings", label: "Municipal buildings", color: "#eda100" },
-  { key: "highways", label: "Highways (Chapter 90)", color: "#e34948" },
-  { key: "water", label: "Water", color: "#1baf7a" },
-  { key: "sewer", label: "Sewer", color: "#eb6834" },
-  { key: "landfill", label: "Landfill", color: "#6250d6" },
-  { key: "other", label: "Other", color: "#008300" },
+  { key: "schools", label: "Schools", color: BLUE },
+  { key: "buildings", label: "Municipal buildings", color: AMBER },
+  { key: "highways", label: "Highways (Chapter 90)", color: RED },
+  { key: "water", label: "Water", color: GREEN },
+  { key: "sewer", label: "Sewer", color: ORANGE },
+  { key: "landfill", label: "Landfill", color: VIOLET },
+  { key: "other", label: "Other", color: DEEP_GREEN },
 ] as const;
 type CapitalKey = (typeof CAPITAL_SERIES)[number]["key"];
 // Where free cash comes from, bottom to top as the export groups the state's proof (PROOF_GROUPS): the year before's
 // free cash not spent, appropriations left unspent, revenue above the estimates, and adjustments; the order passes
 // the palette check's adjacent-pair tests
 const FC_SERIES = [
-  { key: "carried", label: "Free cash not spent the year before", color: "#1baf7a", words: "of the year before's free cash it didn't spend" },
-  { key: "unspent", label: "Appropriations left unspent", color: "#2a78d6", words: "of appropriations left unspent" },
-  { key: "receipts", label: "Local receipts above the estimate", color: "#eda100", words: "of local receipts above the estimate" },
-  { key: "state_aid", label: "State aid above the estimate", color: "#008300", words: "of state aid above the estimate" },
-  { key: "other_rev", label: "Revenue the budget didn't estimate", color: "#e87ba4", words: "of revenue the budget didn't estimate" },
-  { key: "adjust", label: "Adjustments", color: "#6250d6", words: "of adjustments" },
+  { key: "carried", label: "Free cash not spent the year before", color: GREEN, words: "of the year before's free cash it didn't spend" },
+  { key: "unspent", label: "Appropriations left unspent", color: BLUE, words: "of appropriations left unspent" },
+  { key: "receipts", label: "Local receipts above the estimate", color: AMBER, words: "of local receipts above the estimate" },
+  { key: "state_aid", label: "State aid above the estimate", color: DEEP_GREEN, words: "of state aid above the estimate" },
+  { key: "other_rev", label: "Revenue the budget didn't estimate", color: PINK, words: "of revenue the budget didn't estimate" },
+  { key: "adjust", label: "Adjustments", color: VIOLET, words: "of adjustments" },
 ] as const;
 type ProofKey = (typeof FC_SERIES)[number]["key"];
 // The levy ceiling: dotted, in a slate blue, apart from the trend's rust and the comparison's ink
@@ -458,7 +459,7 @@ const RATING_DOCS = {
   moodys: "https://www.mass.gov/doc/moodys-bond-rating-description/download",
 } as const;
 // The agencies' scales line up level for level (AAA with Aaa, AA+ with Aa1, ...), so one chart holds both
-const RATING_COLORS = { sp: "#2a78d6", moodys: "#eb6834" } as const;
+const RATING_COLORS = { sp: BLUE, moodys: ORANGE } as const;
 /** A rating as plotted, or null for none ("NR", "-", "Confidential"); an S&P underlying rating (SPUR) is its rating */
 const ratingOf = (agency: "sp" | "moodys", r: string): string | null => {
   const s = agency === "sp" ? r.replace(/\s*\(SPUR\)\s*/i, "").trim().toUpperCase() : r.trim();
@@ -474,33 +475,33 @@ const AGE_SERIES = [
 ] as const;
 // Race and ethnicity: colors with no customary tie to any group, in an order whose neighbors pass the palette check
 const RACE_SERIES = [
-  { key: "white", label: "White", color: "#6250d6" },
-  { key: "black", label: "Black", color: "#eb6834" },
-  { key: "asian", label: "Asian", color: "#1baf7a" },
-  { key: "other_race", label: "Another race, or more than one", color: "#e87ba4" },
-  { key: "hispanic", label: "Hispanic or Latino, any race", color: "#2a78d6" },
+  { key: "white", label: "White", color: VIOLET },
+  { key: "black", label: "Black", color: ORANGE },
+  { key: "asian", label: "Asian", color: GREEN },
+  { key: "other_race", label: "Another race, or more than one", color: PINK },
+  { key: "hispanic", label: "Hispanic or Latino, any race", color: BLUE },
 ] as const;
 // Women: one of a pair, so the share alone, with its trend and the comparison's (Tim, #207)
-const SEX_SERIES = [{ key: "female", label: "Women", color: "#2a78d6" }] as const;
+const SEX_SERIES = [{ key: "female", label: "Women", color: BLUE }] as const;
 // With a disability, likewise
-const DISABILITY_COLOR = "#6250d6";
-const LABOR_COLOR = "#e34948";
-const EMPLOYED_COLOR = "#1baf7a";
+const DISABILITY_COLOR = VIOLET;
+const LABOR_COLOR = RED;
+const EMPLOYED_COLOR = GREEN;
 // Votes are annotations, not data: the page's ink
 const VOTE_COLOR = "#322e29";
 const VOTE_WORDS: Record<string, string> = {
   override: "Override", underride: "Underride", debt: "Debt exclusion", capital: "Capital exclusion", stabilization: "Stabilization fund",
 };
-const POP_COLOR = "#2a78d6";
+const POP_COLOR = BLUE;
 const ENROLL_SERIES = [
-  { key: "in_district", label: "In-district FTE", color: "#2a78d6" },
-  { key: "foundation", label: "Foundation enrollment", color: "#eb6834" },
-  { key: "out_of_district", label: "Out-of-district FTE", color: "#1baf7a" },
+  { key: "in_district", label: "In-district FTE", color: BLUE },
+  { key: "foundation", label: "Foundation enrollment", color: ORANGE },
+  { key: "out_of_district", label: "Out-of-district FTE", color: GREEN },
 ] as const;
 // The comparison: near-black and a little thicker than the other lines, so no category color can be taken for it
 const COMPARE_COLOR = "#141210";
 // Spending on out-of-district FTE: the out-of-district color from the enrollment chart
-const OOD_COLOR = "#1baf7a";
+const OOD_COLOR = GREEN;
 // The older measure: a color of its own and dashed, so it never reads as part of the columns
 const DAY_COLOR = "#0f6f78";
 const DAY_DASH = "6 4";
@@ -1455,7 +1456,7 @@ export async function startExplorer() {
     // With Since 1990 on, the earlier counts, each from its own source
     ...(state.hist === "on" && H ? [
       { key: "day_memb", label: "Day-program membership (DESE)", color: DAY_COLOR, dash: DAY_DASH, values: e.day_memb ?? nulls(years.length) },
-      { key: "nces", label: "Fall enrollment (NCES)", color: "#8f8a7f", dash: "2 3", values: e.nces ?? nulls(years.length) },
+      { key: "nces", label: "Fall enrollment (NCES)", color: GRAY, dash: "2 3", values: e.nces ?? nulls(years.length) },
     ] : []),
   ];
   /** The first and last positions with a value, or -1 */
@@ -3967,7 +3968,7 @@ export async function startExplorer() {
             "owed, such as unpaid taxes, and makes other adjustments, which can also add a little back."));
         legend($("legend-tfc"), [
           ...fc.map((s) => ({ key: s.key, label: s.label, color: s.color, mark: "rect" as const })),
-          { label: "Taken back by shortfalls and adjustments", color: "#8f8a7f", mark: "hatch" as const, spot: "shortfall" },
+          { label: "Taken back by shortfalls and adjustments", color: GRAY, mark: "hatch" as const, spot: "shortfall" },
           // As on the other charts: the trend, then the comparison
           ...lineLegend(fcTrend, overlayAll, usd),
         ], "tfc");

@@ -6,7 +6,8 @@
 import { change, compact, count, pct, rho, round, signFor, usd } from "./format";
 import { loess, median, pearson, spearman } from "./stats";
 import { scatter, type Group, type Point } from "./scatter";
-import { capital, el, svgEl, vn } from "./dom";
+import { capital, el, modal, placeTip, svgEl, vn } from "./dom";
+import { AMBER, BLUE, FIFTH_RAMP, GREEN, RED, REGION_HUES, VIOLET } from "./palette";
 
 type Values = (number | null)[];
 
@@ -132,7 +133,6 @@ const AP = new Set(["amherst", "pelham", "shutesbury", "leverett", "amherst-pelh
 const REGION_KEYS: [string, string, string][] = [["west", "Western", "Western MA"], ["central", "Central", "Central MA"],
   ["northeast", "Northeast", "Northeast MA"], ["metro-west", "Metro West", "Metro West"], ["southeast", "Southeast", "Southeast MA"],
   ["boston", "Boston", "Boston area"]];
-const REGION_HUES = ["#eb6834", "#1baf7a", "#6250d6", "#eda100", "#e87ba4", "#00897b"];
 const OTHER: Group = { label: "Other Massachusetts districts", color: "#a9c4e8", shape: "circle", z: 1 };
 const HIGHLIGHTS: Record<string, { label: string; groups: Record<string, Group>; of: (d: Row) => string; labels: Set<string> }> = {
   none: { label: "None", groups: { other: { ...OTHER, label: "Massachusetts districts", color: "#6f8fc4" } }, of: () => "other", labels: new Set() },
@@ -140,7 +140,7 @@ const HIGHLIGHTS: Record<string, { label: string; groups: Record<string, Group>;
     label: "Amherst-Pelham and the Valley",
     groups: {
       ap: { label: "Amherst-Pelham four towns", color: "#b65c3d", shape: "triangle", z: 3 },
-      valley: { label: "Other Connecticut River Valley districts", color: "#eda100", shape: "square", z: 2 },
+      valley: { label: "Other Connecticut River Valley districts", color: AMBER, shape: "square", z: 2 },
       other: OTHER,
     },
     of: (d) => (d.id && AP.has(d.id) ? "ap" : d.valley ? "valley" : "other"),
@@ -150,10 +150,10 @@ const HIGHLIGHTS: Record<string, { label: string; groups: Record<string, Group>;
   type: {
     label: "Community type",
     groups: {
-      core: { label: "Inner Core", color: "#e34948", shape: "triangle", z: 4 },
-      gateway: { label: "Gateway Cities outside the Inner Core", color: "#eda100", shape: "square", z: 3 },
-      suburban: { label: "Suburban and other", color: "#2a78d6", shape: "circle", z: 1 },
-      rural: { label: "Rural", color: "#1baf7a", shape: "circle", z: 2 },
+      core: { label: "Inner Core", color: RED, shape: "triangle", z: 4 },
+      gateway: { label: "Gateway Cities outside the Inner Core", color: AMBER, shape: "square", z: 3 },
+      suburban: { label: "Suburban and other", color: BLUE, shape: "circle", z: 1 },
+      rural: { label: "Rural", color: GREEN, shape: "circle", z: 2 },
       other: { ...OTHER, label: "Vocational and charter" },
     },
     of: (d) => d.ct ?? "other",
@@ -163,17 +163,17 @@ const HIGHLIGHTS: Record<string, { label: string; groups: Record<string, Group>;
   fifth: {
     label: "Income fifth",
     groups: {
-      f5: { label: "Highest income fifth", color: "#0d366b", shape: "circle", z: 5 },
-      f4: { label: "Fourth", color: "#1c5cab", shape: "circle", z: 4 },
-      f3: { label: "Middle", color: "#2a78d6", shape: "circle", z: 3 },
-      f2: { label: "Second", color: "#5598e7", shape: "circle", z: 2 },
-      f1: { label: "Lowest income fifth", color: "#86b6ef", shape: "circle", z: 1 },
+      f5: { label: "Highest income fifth", color: FIFTH_RAMP[4], shape: "circle", z: 5 },
+      f4: { label: "Fourth", color: FIFTH_RAMP[3], shape: "circle", z: 4 },
+      f3: { label: "Middle", color: FIFTH_RAMP[2], shape: "circle", z: 3 },
+      f2: { label: "Second", color: FIFTH_RAMP[1], shape: "circle", z: 2 },
+      f1: { label: "Lowest income fifth", color: FIFTH_RAMP[0], shape: "circle", z: 1 },
       other: { ...OTHER, color: "#d6d2c8", label: "Vocational and charter" },
     },
     of: (d) => (d.fifth ? `f${d.fifth}` : "other"),
     labels: new Set(),
   },
-  // Each region in its hue on the map (map.ts GROUP_HUES, in the same order), the shape changing from each to the
+  // Each region in its hue on the map (palette.ts REGION_HUES), the shape changing from each to the
   // next; the regional vocational districts and a few others have no region in DESE's list
   region: {
     label: "Region",
@@ -189,9 +189,9 @@ const HIGHLIGHTS: Record<string, { label: string; groups: Record<string, Group>;
   district: {
     label: "District type",
     groups: {
-      voc: { label: "Vocational and technical", color: "#6250d6", shape: "triangle", z: 3 },
-      regional: { label: "Regional academic", color: "#eda100", shape: "square", z: 2 },
-      local: { label: "One town's own", color: "#2a78d6", shape: "circle", z: 1 },
+      voc: { label: "Vocational and technical", color: VIOLET, shape: "triangle", z: 3 },
+      regional: { label: "Regional academic", color: AMBER, shape: "square", z: 2 },
+      local: { label: "One town's own", color: BLUE, shape: "circle", z: 1 },
     },
     of: (d) => (d.type === "vocational" ? "voc" : d.towns.length > 1 ? "regional" : "local"),
     labels: new Set(),
@@ -646,23 +646,8 @@ export function startCommonwealth(root: HTMLElement, data: CwData, opts: {
 
   /** A window over the plot view: how to read the ranking, or the data table. */
   function subDialog(heading: string, content: HTMLElement) {
-    const d = el("dialog", "cw-sub");
-    const h = el("div", "cw-head");
-    const t = el("h2", "cw-title", heading);
-    t.id = `cw-sub-${heading.replace(/\W+/g, "-").toLowerCase()}`;
-    d.setAttribute("aria-labelledby", t.id);
-    const x = el("button", "cw-close", "×");
-    x.type = "button";
-    x.setAttribute("aria-label", "Close");
-    x.addEventListener("click", () => d.close());
-    h.append(t, x);
-    const b = el("div", "cw-sub-body");
-    b.append(content);
-    d.append(h, b);
-    d.addEventListener("click", (ev) => {
-      if (ev.target === d) d.close();
-    });
-    dialog.append(d);
+    const { dialog: d, body } = modal(`cw-sub-${heading.replace(/\W+/g, "-").toLowerCase()}`, heading, dialog);
+    body.append(content);
     return d;
   }
   const aboutDialog = subDialog("Reading the correlations", why);
@@ -812,13 +797,7 @@ export function startCommonwealth(root: HTMLElement, data: CwData, opts: {
         if (d.towns.length > 1) tip.append(el("div", "cw-tip-towns", `Towns: ${d.towns.join(", ")}`));
         if (d.id) tip.append(el("div", "cw-tip-hint", "Select to open in the School districts tab"));
         tip.hidden = false;
-        const box = svg.getBoundingClientRect();
-        const fig = figure.getBoundingClientRect();
-        const scale = box.width / width;
-        const left = box.left - fig.left + pos.left * scale;
-        const top = box.top - fig.top + pos.top * scale;
-        tip.style.left = `${Math.min(left + 12, fig.width - tip.offsetWidth - 4)}px`;
-        tip.style.top = `${Math.max(0, top - tip.offsetHeight - 10)}px`;
+        placeTip(tip, svg, figure, width, pos);
       },
       onPick: (p) => {
         const d = rows.find((r) => (r.id ?? r.org) === p.id);
