@@ -2,7 +2,7 @@
 // smoothed curve (LOESS, as R's geom_smooth draws it), labels that dodge one another,
 // and the nearest point under the pointer. Plain SVG, like charts.ts.
 
-import { svgEl } from "./dom";
+import { pointsAt, svgEl } from "./dom";
 import { loess } from "./stats";
 
 export interface Point {
@@ -101,8 +101,15 @@ function mark(g: SVGGElement, shape: Group["shape"], x: number, y: number, r: nu
   return svgEl("circle", { cx: x, cy: y, r, fill, class: cls }, g);
 }
 
+/** A scatterplot's legend entry pointing at its group's points (dom.ts pointsAt, #239) */
+export const pointsAtGroup = (entry: HTMLElement, svg: SVGSVGElement, group: string, focusable = true) =>
+  pointsAt(entry, svg, () => svg.querySelectorAll(`.sc-pt.sc-${CSS.escape(group)}`), focusable);
+
 export function scatter(svg: SVGSVGElement, points: Point[], o: ScatterOpts) {
   svg.replaceChildren();
+  // A redraw (a click on the entry pointed at redraws the legend too, so it never hears the pointer leave) starts
+  // unspotlit
+  svg.classList.remove("is-spotlit");
   svg.setAttribute("viewBox", `0 0 ${o.width} ${o.height}`);
   const m = o.mini ? MINI : FULL;
   const pw = o.width - m.left - m.right;

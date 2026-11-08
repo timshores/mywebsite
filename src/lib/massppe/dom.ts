@@ -71,3 +71,23 @@ export function addStyles(css: string) {
   style.textContent = css;
   document.head.append(style);
 }
+
+/** A legend entry pointing at marks in its chart: they stay, the rest fade (svg.is-spotlit, with the CSS's rules for
+ * [data-key] marks and scatter points), on hover, and on keyboard focus where the entry is a control; every chart's
+ * legend answers a pointer this way (#239) */
+export function pointsAt(entry: HTMLElement, svg: SVGSVGElement, marks: () => Iterable<Element>, focusable = true) {
+  const on = () => {
+    for (const m of marks()) m.classList.add("is-lit");
+    svg.classList.add("is-spotlit");
+  };
+  const off = () => {
+    svg.querySelectorAll(".is-lit").forEach((m) => m.classList.remove("is-lit"));
+    svg.classList.remove("is-spotlit");
+  };
+  entry.addEventListener("pointerenter", on);
+  entry.addEventListener("pointerleave", off);
+  if (focusable) {
+    entry.addEventListener("focus", on);
+    entry.addEventListener("blur", off);
+  }
+}

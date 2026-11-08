@@ -5,7 +5,7 @@
 
 import { change, compact, count, pct, rho, round, signFor, usd } from "./format";
 import { spearman } from "./stats";
-import { scatter, type Group, type Point } from "./scatter";
+import { pointsAtGroup, scatter, type Group, type Point } from "./scatter";
 import { addStyles, capital, el, modal, placeTip, svgEl, vn } from "./dom";
 import { AMBER, BLUE, FIFTH_RAMP, GREEN, RED, REGION_HUES, VIOLET } from "./palette";
 import type { CommunityType } from "./data";
@@ -707,6 +707,8 @@ export function startCommonwealth(root: HTMLElement, data: CwData, opts: {
       }
       b.title = on ? "Select to stop picking this group out" : "Select to pick this group out, with its own trend and ρ";
       b.addEventListener("click", () => refocus(on ? focus.filter((f) => f !== id) : [...focus, id]));
+      // Pointing at an entry spotlights its group, as every chart's legend does (#239)
+      pointsAtGroup(b, svg, id);
       li.append(b);
       return li;
     }), (() => {

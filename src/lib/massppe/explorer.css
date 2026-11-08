@@ -2588,6 +2588,16 @@ html.modal-open {
   opacity: 0.16;
 }
 
+/* A scatterplot's legend entry pointed at: its group's points stay, even those a pick has faded, and the rest fade
+   (#239) */
+.explorer svg.is-spotlit .sc-pt:not(.is-lit) {
+  opacity: 0.16;
+}
+
+.explorer svg.is-spotlit .sc-pt.is-lit {
+  opacity: 1;
+}
+
 .explorer .sc-smooth.all {
   stroke: var(--ink-soft);
   stroke-dasharray: 5 3;

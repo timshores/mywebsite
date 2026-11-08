@@ -7,12 +7,12 @@
 // target min(yield x f, cap x foundation budget). f is 1 at 82.5%; at 100% and with no cap
 // this reproduces Michael Naughton and Tupper Brown's FY2026 targets to the dollar.
 
-import { addStyles, capital, el, modal, placeTip, svgEl, vn } from "./dom";
+import { addStyles, capital, el, modal, placeTip, pointsAt, svgEl, vn } from "./dom";
 import { change as changePct, compact, digits, pct, rho as rhoText, round, signFor, total, usd } from "./format";
 import { median, spearman } from "./stats";
 import { groupedPicker } from "./picker";
 import { chartRoom, enlargeButton, isEnlarged } from "./enlarge";
-import { scatter, ticksFor, type Group, type Point, type ScatterView } from "./scatter";
+import { pointsAtGroup, scatter, ticksFor, type Group, type Point, type ScatterView } from "./scatter";
 import { BLUE, FIFTH_RAMP, ORANGE, VIOLET } from "./palette";
 import css from "./cap.css?inline"; // the styles for what this module builds (#237), added as it loads (#238)
 
@@ -805,6 +805,7 @@ export function startCap(root: HTMLElement, data: CapData, opts: { town: string 
       const sy = (v: number) => m.top + ph - ((v - y0) / (y1 - y0 || 1)) * ph;
       const step = pw / rows.length;
       yearsSvg.replaceChildren();
+      yearsSvg.classList.remove("is-spotlit");
       yearsSvg.setAttribute("viewBox", `0 0 ${width} ${height}`);
       yearsSvg.setAttribute("aria-label", `Columns of how ${t.name}'s target would change ${scenName}, each year FY${first} to FY${lastFy}.`);
       const money = (v: number) => compact(v, "$");
@@ -819,12 +820,12 @@ export function startCap(root: HTMLElement, data: CapData, opts: { town: string 
         if (r.diff != null && r.diff !== 0) {
           const top = sy(Math.max(0, r.diff));
           const bar = svgEl("rect", { x, y: top, width: w, height: Math.max(1, Math.abs(sy(r.diff) - sy(0))),
-            fill: r.diff > 0 ? BLUE : ORANGE, rx: 2 }, yearsSvg);
+            fill: r.diff > 0 ? BLUE : ORANGE, rx: 2, "data-key": r.diff > 0 ? "more" : "less" }, yearsSvg);
           const tip = svgEl("title", {}, bar);
           tip.textContent = `FY${r.fy}: target ${usd(r.target!)}${r.capped ? " (at the cap)" : ""}; ${scenName}, ` +
             `${signed(r.diff)}`;
         }
-        if (r.capped) svgEl("rect", { x, y: m.top + ph + 4, width: w, height: 4, fill: VIOLET, rx: 1 }, yearsSvg);
+        if (r.capped) svgEl("rect", { x, y: m.top + ph + 4, width: w, height: 4, fill: VIOLET, rx: 1, "data-key": "capped" }, yearsSvg);
         if (rows.length <= 12 || j % 2 === 0 || pw > 900) {
           const lab = svgEl("text", { x: x + w / 2, y: m.top + ph + 26, "text-anchor": "middle", class: "sc-tick" }, yearsSvg);
           lab.textContent = pw > 900 ? `FY${String(r.fy).slice(2)}` : `'${String(r.fy).slice(2)}`;
@@ -835,13 +836,15 @@ export function startCap(root: HTMLElement, data: CapData, opts: { town: string 
       const yTitle = svgEl("text", { transform: `translate(17 ${m.top + ph / 2}) rotate(-90)`, "text-anchor": "middle", class: "sc-title" }, yearsSvg);
       yTitle.textContent = "Change in target";
       const key = el("ul", "cw-legend");
-      for (const [color, label, shape] of [[BLUE, `Asked for more ${scenName}: today's cap saves ${t.name} this much`, "square"],
-        [ORANGE, `Asked for less ${scenName}: today's cap costs ${t.name} this much`, "square"],
-        [VIOLET, `${t.name} at the cap that year`, "square"]] as const) {
+      for (const [color, label, shape, kind] of [[BLUE, `Asked for more ${scenName}: today's cap saves ${t.name} this much`, "square", "more"],
+        [ORANGE, `Asked for less ${scenName}: today's cap costs ${t.name} this much`, "square", "less"],
+        [VIOLET, `${t.name} at the cap that year`, "square", "capped"]] as const) {
         const li = el("li");
         const k = el("span", `cw-key ${shape}`);
         k.style.setProperty("--c", color);
         li.append(k, el("span", undefined, label));
+        // Pointing at an entry spotlights its years' marks, as every chart's legend does (#239)
+        pointsAt(li, yearsSvg, () => yearsSvg.querySelectorAll(`[data-key="${kind}"]`), false);
         key.append(li);
       }
       const src = el("p", "cap-note");
@@ -944,11 +947,13 @@ export function startCap(root: HTMLElement, data: CapData, opts: { town: string 
     };
     drawPlot();
     colorButtons.forEach((b, k) => b.classList.toggle("is-on", (k === 0) === (colorBy === "cap")));
-    legend.replaceChildren(...Object.values(colorBy === "fifth" ? FIFTH_GROUPS : GROUPS).map((g) => {
+    legend.replaceChildren(...Object.entries(colorBy === "fifth" ? FIFTH_GROUPS : GROUPS).map(([id, g]) => {
       const li = el("li");
       const key = el("span", `cw-key ${g.shape}`);
       key.style.setProperty("--c", g.color);
       li.append(key, el("span", undefined, g.label === "Selected town" ? t.name : g.label));
+      // Pointing at a group spotlights its towns, as every chart's legend does (#239); not a control, so no focus
+      pointsAtGroup(li, svg, id, false);
       return li;
     }));
   }
