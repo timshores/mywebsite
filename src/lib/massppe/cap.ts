@@ -6,7 +6,7 @@
 // both statewide percentages scale by one factor f, found here by bisection, with each town's
 // target min(yield x f, cap x foundation budget). f is 1 at 82.5%. A town with no foundation budget (Gosnold, with no
 // pupils of its own) takes no part in f; with no cap its target is its yield times f, as Michael Naughton and Tupper
-// Brown's FY2026 workbook gives it (#243). Against that workbook (schools ppe_report/evidence/cap_fy2026.py): every
+// Brown's FY2026 workbook gives it (#243). Against that workbook (schools ppe_report/evidence/cap.py): every
 // town within $1, at 100% and with no cap. The model itself is capModel.ts.
 
 import { addStyles, capital, el, lower, modal, placeTip, pointsAt, svgEl, vn } from "./dom";
@@ -17,6 +17,8 @@ import { chartRoom, enlargeButton, isEnlarged } from "./enlarge";
 import { pointsAtGroup, scatter, ticksFor, type Group, type Point, type ScatterView } from "./scatter";
 import { BLUE, FIFTH_RAMP, ORANGE, VIOLET } from "./palette";
 import { atCap, requiredFor, solve, solveArrays, targetAt } from "./capModel";
+import { showWork, type Work, type WorkStep } from "./showWork";
+import evidence from "../../data/massppe/evidence.json";
 import css from "./cap.css?inline"; // the styles for what this module builds (#237), added as it loads (#238)
 
 addStyles(css);
@@ -298,6 +300,47 @@ function fifthsParts({ y, withIncome, fifthOf, change, scenName, n }: Ctx) {
       `income over the July ${y.income_year} population estimate). A negative change means the group's targets are ` +
       `higher with today's cap than they would be ${scenName}: the cap raises them.`),
     scroll];
+}
+
+/** Whether a reader has the verdict's work open, kept across redraws */
+let workOpen = false;
+
+/** "Nov 8, 2026" from "2026-11-08" */
+const onDate = (iso: string) => new Date(`${iso}T12:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+
+/** The verdict's work (Project Regain Custody, Pass 3; #244): the town's figures as DESE's spreadsheet gives them, the
+ * percentages and targets the model makes from them, what it assumes, and the evidence record's last result for the
+ * year (schools ppe_report/evidence/cap.py writes evidence.json) */
+function capWork({ y, t, f, alt, scenario, scenName }: Ctx, reqAlt: number | null): Work {
+  const ev = (evidence.cap.years as Record<string, { links: number; passed: number; outside: boolean; reviewed: string | null }>)[String(y.fy)];
+  const dese = { kind: "reported" as const, source: "DESE" };
+  const steps: WorkStep[] = [
+    { value: usd(t.eqv), label: "Equalized valuation", detail: `The state's estimate of all its taxable property, January ${y.eqv_year}`, ...dese },
+    { value: usd(t.income), label: "Residents' income", detail: `From their ${y.income_year} state tax returns`, ...dese },
+    { value: usd(t.cey), label: "Combined effort yield", detail: `${rate(y.property_pct)} of the valuation plus ${rate(y.income_pct)} of the income`, ...dese },
+    { value: usd(t.foundation), label: "Foundation budget", detail: "What the formula says its schools need", ...dese },
+    { value: usd(t.target), label: "Target local contribution", detail: `The lesser of the yield and ${pct(y.max_pct, 1)} of the foundation budget`, ...dese },
+    { value: `${rate(y.property_pct * f)} · ${rate(y.income_pct * f)}`, label: `Percentages ${scenName}`,
+      detail: `Today's two, times one factor, ${f.toFixed(4)}, so the towns' targets still total ${big(y.totals.target)}`, kind: "modeled" },
+    { value: usd(alt.get(t.id)!), label: `Target ${scenName}`,
+      detail: `The yield at those percentages${scenario == null ? "" : `, or ${capPct(scenario)} of the foundation budget if that's less`}`, kind: "modeled" },
+    ...(t.required != null ? [{ value: usd(t.required), label: "Required local contribution",
+      detail: "The least the town must appropriate this year, moving toward its target", ...dese }] : []),
+    ...(reqAlt != null ? [{ value: usd(reqAlt), label: `Required local contribution ${scenName}`,
+      detail: "The year's rules applied to the target above, starting from last year's", kind: "modeled" as const }] : []),
+  ];
+  const status = !ev ? `FY${y.fy} isn't checked yet.`
+    : `Checked ${onDate(evidence.cap.checked)}: ${ev.passed} of ${ev.links} links from DESE's spreadsheet to the model this ` +
+      "page draws with pass" + (ev.outside ? ", and Michael Naughton's workbook agrees with every town's targets with a " +
+        "100% cap and with no cap, within $1" : "") +
+      `. An AI wrote the checks; ${ev.reviewed ? `${ev.reviewed} reviewed them` : "no person has reviewed them yet"}.`;
+  return {
+    steps,
+    assumptions: ["The towns' targets keep the year's statewide total, and both percentages change by the same factor.",
+      "The cap changes this year only; every other rule stays as DESE applied it."],
+    status, record: evidence.cap.record,
+    sources: [{ text: `DESE's FY${y.fy} formula spreadsheet`, href: y.source }],
+  };
 }
 
 export function startCap(root: HTMLElement, data: CapData, opts: { town: string }) {
@@ -647,7 +690,8 @@ export function startCap(root: HTMLElement, data: CapData, opts: { town: string 
   }
 
   /** One town: today's cap beside the one chosen above, line by line, under its heading, and what it means for it */
-  function drawTown({ y, t, f, alt, change, scenario, means }: Ctx) {
+  function drawTown(ctx: Ctx) {
+    const { y, t, f, alt, change, scenario, means } = ctx;
     const pAlt = y.property_pct * f;
     const iAlt = y.income_pct * f;
     const ch = change(t);
@@ -721,7 +765,11 @@ export function startCap(root: HTMLElement, data: CapData, opts: { town: string 
       ? `${means} ${t.name}'s required local contribution, the least it must appropriate for its schools, would be ` +
         `${lessMore(reqAlt - t.required)} in FY${y.fy}. `
       : "") + `Its target local contribution, the formula's goal for its share, would be ${lessMore(ch)}.`;
-    steps.replaceChildren(tableHead, scroll0, verdict);
+    // The verdict's work, kept open across redraws once a reader opens it (#244)
+    const work = showWork(capWork(ctx, reqAlt));
+    work.open = workOpen;
+    work.addEventListener("toggle", () => (workOpen = work.open));
+    steps.replaceChildren(tableHead, scroll0, verdict, work);
   }
 
   /** Year by year for this town, the same cap choice in every year since FY2007 */

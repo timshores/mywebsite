@@ -1,7 +1,7 @@
 // The cap tab's model, apart from its page (#242), so a check can run it without a browser: each town's target under
 // another cap or none, keeping the year's statewide total, and its required contribution under today's rules. The
 // pipeline figures the same targets (export_explorer_data.nocap_factor, at_cap); mywebsite's check:units compares the
-// two for every year cap.json has, and ppe_report/evidence/cap_fy2026.py traces FY2026 from DESE's spreadsheet.
+// two for every year cap.json has, and ppe_report/evidence/cap.py traces each year from DESE's spreadsheet.
 
 /** What the model reads of a town: its yield, its foundation budget, and how its required contribution moves */
 export interface ModelTown {

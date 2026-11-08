@@ -3073,3 +3073,82 @@ html.modal-open {
   stroke-width: 1;
   stroke-dasharray: 4 3;
 }
+
+/* Show the work (showWork.ts; Project Regain Custody, Pass 3, #244): beneath a result, its steps, whose each figure
+   is, what the model assumes, and how far it has been checked. The native disclosure, closed until asked for. */
+.explorer .show-work {
+  margin: 0.4rem 0 1rem;
+  font-size: 0.92rem;
+}
+
+.explorer .show-work > summary {
+  width: fit-content;
+  cursor: pointer;
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.explorer .show-work[open] > summary {
+  margin-bottom: 0.5rem;
+}
+
+.explorer .show-work-steps {
+  border-collapse: collapse;
+}
+
+.explorer .show-work-steps th,
+.explorer .show-work-steps td {
+  padding: 0.35rem 0.6rem;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+
+.explorer .show-work-steps th {
+  font-weight: 600;
+  color: var(--ink-soft);
+}
+
+.explorer .show-work-steps td.num {
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.explorer .show-work-label,
+.explorer .show-work-detail {
+  display: block;
+}
+
+.explorer .show-work-detail {
+  color: var(--ink-soft);
+  font-size: 0.86rem;
+}
+
+/* Whose figure: a word, never color alone; a modeled one in the cap's purple */
+.explorer .show-work-kind {
+  display: block;
+  width: fit-content;
+  margin: 0.25rem 0 0 auto;
+  padding: 0 0.45rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  font-size: 0.8rem;
+  color: var(--ink-soft);
+  white-space: nowrap;
+}
+
+.explorer .show-work-modeled .show-work-kind {
+  border-color: var(--violet);
+  color: #3b2f8f;
+}
+
+.explorer .show-work-head {
+  margin: 0.9rem 0 0.2rem;
+  font-weight: 600;
+}
+
+.explorer .show-work-status,
+.explorer .show-work-sources {
+  margin: 0.6rem 0 0;
+}
