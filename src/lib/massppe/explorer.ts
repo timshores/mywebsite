@@ -923,8 +923,6 @@ function drawLegend(list: HTMLElement, items: LegendItem[], panel: StackPanel | 
     below = document.createElement("ul");
     below.className = "legend legend-below";
     if (list.id) below.id = `${list.id}-below`;
-    // The page's scoped legend styles find it by the scope attribute the list above carries
-    for (const a of [...list.attributes]) if (a.name.startsWith("data-astro-cid")) below.setAttribute(a.name, a.value);
     below.setAttribute("aria-label", "Lines on the chart. Select one to hide or show it.");
     svg.after(below);
   }
@@ -1695,9 +1693,6 @@ export async function startExplorer() {
     const shows = Object.assign(document.createElement("span"), { className: "dial-state" });
     shows.setAttribute("aria-hidden", "true");
     b.append(Object.assign(document.createElement("span"), { className: "dial-label", textContent: label }), face, shows);
-    const like = $("detail-dial");
-    for (const el of [b, ...b.querySelectorAll("*")])
-      for (const a of [...like.attributes]) if (a.name.startsWith("data-astro-cid")) el.setAttribute(a.name, a.value);
     return b;
   }
   /** Each dial as the charts last drew: off, and dimmed, on a chart with no trend to show */

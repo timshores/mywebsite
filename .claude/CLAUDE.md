@@ -7,7 +7,7 @@ GitHub Actions to Namecheap FTP hosting. Its largest part is the Municipal spend
 ## Technology Stack
 - **Framework**: Astro 6 (package.json asks for ^6.3.7; 6.4.8 installed), a static site generator
 - **Language**: TypeScript (strict mode), Astro components, vanilla JavaScript; no UI framework, by design
-- **Styling**: Scoped CSS within components, CSS custom properties
+- **Styling**: Scoped CSS within components, plain stylesheets for the explorer, CSS custom properties
 - **Deployment**: GitHub Actions → Namecheap FTP (SamKirkland/FTP-Deploy-Action)
 
 ## Site Structure
@@ -62,8 +62,10 @@ Custom properties on `:root` in Layout.astro:
 
 ### When Making Changes
 - Keep the design tokens and the pill-tab navigation
-- Preserve scoped component styling; style elements a script builds with `:global()`, since scoped rules reach only
-  the markup in the file
+- The explorer's styles are plain stylesheets anchored on `.explorer` (#237): src/lib/massppe/explorer.css for the
+  page and what every tab shares, and map.css, commonwealth.css and cap.css, each imported by the module that builds
+  its elements. They reach markup and built elements alike. Other pages keep Astro's scoped styles, where a rule
+  reaches only the markup in its file (`:global()` for elements a script builds)
 - Check every explorer tab for sideways scroll at phone width (320px and 375px)
 - Ensure images are optimized before adding them to public/
 
