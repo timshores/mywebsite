@@ -84,6 +84,13 @@ Custom properties on `:root` in Layout.astro:
 - Favicon is public/favicon.svg
 
 ## Testing Before Deployment
-- Always run `npm run build` locally to catch build errors
+- `npm run build` runs `npm run check:units` first: format.ts and stats.ts, case by case (scripts/check/units.test.ts)
+- For a change to the explorer, check it in a browser with `npm run check:explorer -- <command>` against the dev
+  server or the live site (scripts/check/explorer.mjs; Playwright comes from seahag's evals):
+  - `snapshot BASE OUT.json` before and after, then `compare A.json B.json`: the words and numbers of a set of
+    views, their charts' axis labels and marks, comparison and full data tables, and every map measure's legend
+  - `styles BASE OUT.json` before and after a CSS change, then `compare`: every explorer element's computed style
+  - `overflow BASE`: no sideways scroll on any tab at 320-1366px; `colors BASE`: each map figure in one color
+- For a change to the data, regenerate it in the pipeline and check it there
+  (~/projects/schools/ppe_report/check_explorer_data.py: `shape SITE`, `diff BEFORE AFTER`)
 - Preview the built site with `npm run preview`
-- Check mobile responsiveness at narrow widths
