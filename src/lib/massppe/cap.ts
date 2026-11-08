@@ -53,6 +53,8 @@ export interface CapData { meta: { latest: number; spending?: Spending }; years:
 // of a percent. The state's own rates keep the form DESE gives them: the statewide effort percentages to three
 // decimals, the growth factor to two, the cap as the law states it (82.5%).
 const signed = (v: number) => usd(v, true);
+/** "$1,234 less", "$1,234 more", "the same" */
+const lessMore = (v: number) => (v < 0 ? `${usd(-v)} less` : v > 0 ? `${usd(v)} more` : "the same");
 const big = (v: number) => total(Math.abs(v));
 const rate = (v: number) => `${digits(v * 100, 3)}%`;
 const capPct = (c: number) => `${round(c * 100, 1)}%`;
@@ -149,6 +151,193 @@ function solve(towns: CapTown[], total: number, cap: number | null): number {
     else hi = f;
   }
   return (lo + hi) / 2;
+}
+
+/** What a render shows, figured from the data and the reader's choices alone (#238: render() worked it out inline,
+ * in one scope with the six sections it fed): the year, the town, the chosen cap's targets at the same statewide
+ * total, who would pay more or less, and the income fifths */
+function capContext(data: CapData, fy: string, townId: string, scenario: number | null) {
+  const y = data.years[fy];
+  const towns = y.towns;
+  const t = towns.find((x) => x.id === townId) ?? towns[0];
+  // The scenario's targets: the same statewide total, a different cap
+  const f = solve(towns, y.totals.target, scenario);
+  const alt = new Map(towns.map((x) => [x.id,
+    Math.round(scenario == null ? x.cey * f : Math.min(x.cey * f, scenario * x.foundation))]));
+  const change = (x: CapTown) => alt.get(x.id)! - x.target;
+  const scenName = scenario == null ? "with no cap" : `with a ${capPct(scenario)} cap`;
+  // Plain statements: "No cap means ...", "A 100% cap means ..."
+  const means = scenario == null ? "No cap means" : `A ${capPct(scenario)} cap means`;
+  const atScenarioCap = scenario == null ? 0 : towns.filter((x) => x.foundation && alt.get(x.id)! >= Math.round(scenario! * x.foundation) - 1).length;
+  const up = towns.filter((x) => change(x) > 0);
+  const down = towns.filter((x) => change(x) < 0);
+  const upSum = up.reduce((a, x) => a + change(x), 0);
+  const downSum = down.reduce((a, x) => a + change(x), 0);
+
+  // Income fifths: who is in each, for the explanation, the tiles and the table
+  // Every town with income and population, as the explorer's income fifths count them elsewhere
+  const withIncome = towns.filter((x) => x.pop_income && x.income).map((x) => ({ x, inc: x.income / x.pop_income! }))
+    .sort((a, b) => a.inc - b.inc);
+  const n = withIncome.length;
+  const fifthOf = new Map<string, number>();
+  withIncome.forEach(({ x }, k) => fifthOf.set(x.id, Math.min(4, Math.floor((k * 5) / n))));
+  const upTop = up.filter((x) => fifthOf.get(x.id) === 4).length;
+  return { y, towns, t, scenario, f, alt, change, scenName, means, atScenarioCap, up, down, upSum, downSum, withIncome, n, fifthOf, upTop };
+}
+type Ctx = ReturnType<typeof capContext>;
+
+/** A "?" that goes to a page of its own */
+const helpLink = (label: string, href: string) => {
+  const a = el("a", "cap-help", "?");
+  a.href = href;
+  a.setAttribute("aria-label", label);
+  a.title = label;
+  return a;
+};
+/** A tile: its label, its value, and the details under it */
+function tile(label: string, value: string, details: string[]) {
+  const d = el("div", "tile");
+  // Label, value, details: three rows that line up across the tiles (the page's subgrid)
+  const more = el("div", "tile-details");
+  details.forEach((x) => more.append(el("div", "tile-detail", x)));
+  d.append(el("div", "tile-label", label), el("div", "tile-value", value), more);
+  return d;
+}
+
+/** How the cap works, in this year's numbers */
+function howParts({ y }: Ctx) {
+  const p1 = el("p");
+  p1.append("Chapter 70 asks each town to pay its fair share toward its schools. Each year, a complicated formula tells " +
+    "us what's fair for each town. The formula starts out with two percentages set for the year for every town in the " +
+    `Commonwealth: in FY${y.fy}, ` +
+    `${rate(y.property_pct)} of its property value and ${rate(y.income_pct)} of its residents' income. The sum is the ` +
+    "town's combined effort yield. It's what the town would pay if it made the same fiscal effort",
+    helpLink("What is fiscal effort? An example with two towns", "/muni-spending/fiscal-effort/"),
+    " as every other town to educate its schoolchildren: the same share of its property value and its residents' income.");
+  const pCap = el("p");
+  pCap.append(`Meanwhile … no town is asked for more than ${pct(y.max_pct, 1)} of its foundation budget, the state's ` +
+    `estimate of what its schools need. ${y.totals.capped} towns, the ones with the most property and income for the ` +
+    "size of their schools, hit that 82.5% cap. They're asked for less effort than other towns, and the state pays " +
+    `at least the other ${pct(1 - y.max_pct, 1)}.`);
+
+  const p2 = el("p");
+  p2.append("Someone has to cover the difference, and that someone is other towns. The state sets the two " +
+    `percentages so that the towns together are asked for 59% of all foundation budgets, ${big(y.totals.target)} in ` +
+    `FY${y.fy}. With costs held down for the 82.5% capped towns, the required cost of education has to rise for ` +
+    `everyone to reach that total. The result for FY${y.fy}: the cap gave a ${big(y.totals.up_sum)} education ` +
+    `discount to ${y.totals.up} Massachusetts towns and added it to the required contribution of the other ` +
+    `${y.totals.down} towns.`);
+  const pSee = el("p", "cap-note");
+  pSee.append(...seeAlso());
+  return [p1, pCap, p2, pSee];
+}
+
+/** The tiles: the towns at the cap, the statewide percentages, and the wealth the cap moves */
+function tileParts({ y }: Ctx) {
+  return [
+    tile(`Towns at the cap, FY${y.fy}`, String(y.totals.capped),
+      [`Of 351 towns. Each is asked for ${pct(y.max_pct, 1)} of its foundation budget, which is less than it would pay if ` +
+        "it made the same fiscal effort as every other town."]),
+    tile("Statewide percentages", `${rate(y.property_pct)} · ${rate(y.income_pct)}`,
+      ["Of property value and of income, with the cap", `With no cap: ${rate(y.property_pct * y.factor)} · ${rate(y.income_pct * y.factor)}`]),
+    tile("Wealth redistributed by the cap", big(y.totals.up_sum), [
+      `${y.totals.up} towns are asked for ${big(y.totals.up_sum)} less because of the cap`,
+      `The other ${y.totals.down} are asked for ${big(-y.totals.down_sum)} more`]),
+  ];
+}
+
+/** The scenario in a sentence or two: its statewide percentages, and who would be asked for more or less */
+function scenarioText({ y, f, scenario, atScenarioCap, down, downSum, up, upSum, upTop, means }: Ctx) {
+  return `${means} statewide percentages of ${rate(y.property_pct * f)} of property value and ` +
+    `${rate(y.income_pct * f)} of income` + (scenario == null ? ". " : `, with ${atScenarioCap} towns at the new cap. `) +
+    `${down.length} towns would be asked for ${big(-downSum)} less in FY${y.fy}, and ${up.length} towns would be asked ` +
+    `for ${big(upSum)} more` + (up.length ? `, ${upTop} of them in the fifth with the highest income per resident.` : ".") +
+    " The town table, the year-by-year chart, the scatterplot, and the income table all follow this choice.";
+}
+
+/** The help window's explanation, with this town's numbers; sp, how far districts spent above the required minimum */
+function helpParts({ y, t }: Ctx, sp: Spending | undefined) {
+  const explain: (string | Node)[][] = [
+    ["Chapter 70 sets a minimum each town must pay toward its schools each year, its required local contribution. " +
+      "The formula works toward a target for that minimum, the target local contribution: the town's combined effort " +
+      "yield, a statewide percentage of its property value plus one of its residents' income, or " +
+      `${pct(y.max_pct, 1)} of its foundation budget if that's less.`],
+    ["The minimum doesn't jump to the target all " +
+      "at once. The formula starts from last year's required contribution and grows it by the town's municipal revenue " +
+      "growth factor, a state estimate of how fast the town's own revenue grows. If the result is above the target, " +
+      "the required contribution comes down to the target. If it falls short of the target by more than 2.5% of the " +
+      "foundation budget, the formula adds 1% of last year's amount, or 2% when it falls short by more than 7.5%."],
+  ];
+  if (t.required != null && t.prior != null && t.mrgf != null && t.preliminary != null) {
+    const g = `${(t.mrgf * 100).toFixed(2)}%`;
+    const step = t.required - t.preliminary;
+    explain.push([t.required < t.target - 1
+      ? `For ${t.name} in FY${y.fy}: last year's required contribution, ${usd(t.prior)}, grew by ${t.name}'s growth ` +
+        `factor of ${g} to ${usd(t.preliminary)}.` + (step > 1 ? ` That was more than ${t.increment && t.increment >= 0.02 ? "7.5" : "2.5"}% ` +
+        `of the foundation budget below the target, so the formula added ${t.increment ? `${(t.increment * 100).toFixed(0)}%` : "a share"} ` +
+        `of last year's amount, ${usd(step)}.` : "") +
+        ` ${t.name} must pay ${usd(t.required)}, ${usd(t.target - t.required)} less than its ${usd(t.target)} target.`
+      : t.floor
+        ? `For ${t.name} in FY${y.fy}: its yield is at least 175% of its foundation budget, and a rule for such towns ` +
+          `sets the required contribution at the full target, ${usd(t.required)}.`
+        : `For ${t.name} in FY${y.fy}: last year's required contribution, ${usd(t.prior)}, grown by ${t.name}'s growth ` +
+          `factor of ${g}, would have been ${usd(t.preliminary)}, more than the ${usd(t.target)} target, so ${t.name} ` +
+          `must pay the target.`]);
+  }
+  if (sp) {
+    explain.push([`In FY${sp.fy}, ${sp.above} of ` +
+      `${sp.districts} districts spent more than their required net school spending, the least a district may spend: ` +
+      "its towns' required contributions plus its Chapter 70 aid. The median district spent " +
+      `${pct(sp.median - 1)} more, ${sp.half_again} spent at least half again as much, and ${sp.double} at least twice ` +
+      `as much: ${big(sp.over)} above a ${big(sp.required)} minimum in all. That extra is the towns' own money, beyond ` +
+      "their required contributions."]);
+  }
+  explain.push([`The table's last row estimates what ${t.name} would be required to pay in FY${y.fy} if the cap ` +
+    "changed this year: the same rules, starting from last year's required contribution, with the new target. " +
+    "Today's rules also hold every required contribution to at most 90% of the foundation budget, and the estimate " +
+    "keeps that rule."]);
+  explain.push(["The rest of this page compares targets. Under today's rules, if a town's target fell, its required contribution " +
+    "would come down to the new target the next year; if its target rose, its required contribution would climb toward " +
+    "it a few percent a year."]);
+  explain.push(seeAlso());
+  return explain.map((parts) => {
+    const para = el("p");
+    para.append(...parts);
+    return para;
+  });
+}
+
+/** By income: each fifth of towns, highest first */
+function fifthsParts({ y, withIncome, fifthOf, change, scenName, n }: Ctx) {
+  const tbl = el("table", "cap-fifths-table");
+  const hr = tbl.createTHead().insertRow();
+  for (const h of ["Towns by income per resident", "Towns", "At today's cap", "Median income per resident",
+    `Change in what's asked, ${scenName}`, "Median change per resident", "Median change as a share of income"]) hr.append(el("th", undefined, h));
+  const tb = tbl.createTBody();
+  const names = ["Lowest fifth", "Second fifth", "Middle fifth", "Fourth fifth", "Highest fifth"];
+  // Highest fifth first
+  for (let q = 4; q >= 0; q--) {
+    const part = withIncome.filter(({ x }) => fifthOf.get(x.id) === q);
+    const sum = part.reduce((a, { x }) => a + change(x), 0);
+    const r = tb.insertRow();
+    const th = el("th", undefined, names[q]);
+    th.scope = "row";
+    r.append(th, el("td", "num", String(part.length)), el("td", "num", String(part.filter(({ x }) => x.capped).length)),
+      el("td", "num", usd(median(part.map((p) => p.inc)))),
+      el("td", "num", `${signFor(sum, big(sum), true)}${big(sum)}`),
+      el("td", "num", signed(median(part.map(({ x }) => change(x) / (x.pop || 1))))),
+      el("td", "num", (() => {
+        // A share of income that runs well under 1%, so to two decimals
+        return changePct(median(part.map(({ x }) => change(x) / x.income)), 2);
+      })()));
+  }
+  const scroll = Object.assign(el("div", "table-scroll"), { tabIndex: 0 });
+  scroll.append(tbl);
+  return [el("h3", undefined, "By income"),
+    el("p", "cap-note", `All ${n} towns, in five groups by income per resident (${y.income_year} ` +
+      `income over the July ${y.income_year} population estimate). A negative change means the group is asked for more ` +
+      `with today's cap than it would be ${scenName}: the cap costs it money.`),
+    scroll];
 }
 
 export function startCap(root: HTMLElement, data: CapData, opts: { town: string }) {
@@ -297,14 +486,6 @@ export function startCap(root: HTMLElement, data: CapData, opts: { town: string 
   // Explanations: targets and required contributions in a window of its own; fiscal effort on a page of its
   // own, /muni-spending/fiscal-effort/
   const { dialog: help, body: helpBody } = modal("cap-help-title", "How Chapter 70 sets the minimum", root.closest(".explorer") ?? document.body);
-  /** A "?" that goes to a page of its own */
-  const helpLink = (label: string, href: string) => {
-    const a = el("a", "cap-help", "?");
-    a.href = href;
-    a.setAttribute("aria-label", label);
-    a.title = label;
-    return a;
-  };
   const helpButton = (label: string, dialog = help) => {
     const b = el("button", "cap-help", "?");
     b.type = "button";
@@ -490,81 +671,23 @@ export function startCap(root: HTMLElement, data: CapData, opts: { town: string 
   let yearsW = 0;
   const yearsEnlarge = enlargeButton(yearsBox, () => render(), () => scenRow);
 
+  /** The tab for the year, town and cap chosen: the context once, then each section from it */
   function render() {
-    const y = data.years[fy];
-    const towns = y.towns;
-    const t = towns.find((x) => x.id === townId) ?? towns[0];
+    const c = capContext(data, fy, townId, scenario);
     yearButtons.forEach((b, k) => b.classList.toggle("is-on", yearKeys[k] === fy));
     picker.sync();
+    howText.replaceChildren(...howParts(c));
+    tiles.replaceChildren(...tileParts(c));
+    scenNote.textContent = scenarioText(c);
+    drawTown(c);
+    helpBody.replaceChildren(...helpParts(c, data.meta.spending));
+    drawYears(c);
+    drawChart(c);
+    fifths.replaceChildren(...fifthsParts(c));
+  }
 
-    // The scenario's targets: the same statewide total, a different cap
-    const f = solve(towns, y.totals.target, scenario);
-    const alt = new Map(towns.map((x) => [x.id,
-      Math.round(scenario == null ? x.cey * f : Math.min(x.cey * f, scenario * x.foundation))]));
-    const change = (x: CapTown) => alt.get(x.id)! - x.target;
-    const scenName = scenario == null ? "with no cap" : `with a ${capPct(scenario)} cap`;
-    // Plain statements: "No cap means ...", "A 100% cap means ..."
-    const means = scenario == null ? "No cap means" : `A ${capPct(scenario)} cap means`;
-    const lessMore = (v: number) => (v < 0 ? `${usd(-v)} less` : v > 0 ? `${usd(v)} more` : "the same");
-    const atScenarioCap = scenario == null ? 0 : towns.filter((x) => x.foundation && alt.get(x.id)! >= Math.round(scenario! * x.foundation) - 1).length;
-    const up = towns.filter((x) => change(x) > 0);
-    const down = towns.filter((x) => change(x) < 0);
-    const upSum = up.reduce((a, x) => a + change(x), 0);
-    const downSum = down.reduce((a, x) => a + change(x), 0);
-
-    // Income fifths: who is in each, for the explanation, the tiles and the table
-    // Every town with income and population, as the explorer's income fifths count them elsewhere
-    const withIncome = towns.filter((x) => x.pop_income && x.income).map((x) => ({ x, inc: x.income / x.pop_income! }))
-      .sort((a, b) => a.inc - b.inc);
-    const n = withIncome.length;
-    const fifthOf = new Map<string, number>();
-    withIncome.forEach(({ x }, k) => fifthOf.set(x.id, Math.min(4, Math.floor((k * 5) / n))));
-    const upTop = up.filter((x) => fifthOf.get(x.id) === 4).length;
-
-    // How the cap works, in this year's numbers
-    const p1 = el("p");
-    p1.append("Chapter 70 asks each town to pay its fair share toward its schools. Each year, a complicated formula tells " +
-      "us what's fair for each town. The formula starts out with two percentages set for the year for every town in the " +
-      `Commonwealth: in FY${y.fy}, ` +
-      `${rate(y.property_pct)} of its property value and ${rate(y.income_pct)} of its residents' income. The sum is the ` +
-      "town's combined effort yield. It's what the town would pay if it made the same fiscal effort",
-      helpLink("What is fiscal effort? An example with two towns", "/muni-spending/fiscal-effort/"),
-      " as every other town to educate its schoolchildren: the same share of its property value and its residents' income.");
-    const pCap = el("p");
-    pCap.append(`Meanwhile … no town is asked for more than ${pct(y.max_pct, 1)} of its foundation budget, the state's ` +
-      `estimate of what its schools need. ${y.totals.capped} towns, the ones with the most property and income for the ` +
-      "size of their schools, hit that 82.5% cap. They're asked for less effort than other towns, and the state pays " +
-      `at least the other ${pct(1 - y.max_pct, 1)}.`);
-
-    const p2 = el("p");
-    p2.append("Someone has to cover the difference, and that someone is other towns. The state sets the two " +
-      `percentages so that the towns together are asked for 59% of all foundation budgets, ${big(y.totals.target)} in ` +
-      `FY${y.fy}. With costs held down for the 82.5% capped towns, the required cost of education has to rise for ` +
-      `everyone to reach that total. The result for FY${y.fy}: the cap gave a ${big(y.totals.up_sum)} education ` +
-      `discount to ${y.totals.up} Massachusetts towns and added it to the required contribution of the other ` +
-      `${y.totals.down} towns.`);
-    const pSee = el("p", "cap-note");
-    pSee.append(...seeAlso());
-    howText.replaceChildren(p1, pCap, p2, pSee);
-
-    tiles.replaceChildren(
-      tile(`Towns at the cap, FY${y.fy}`, String(y.totals.capped),
-        [`Of 351 towns. Each is asked for ${pct(y.max_pct, 1)} of its foundation budget, which is less than it would pay if ` +
-          "it made the same fiscal effort as every other town."]),
-      tile("Statewide percentages", `${rate(y.property_pct)} · ${rate(y.income_pct)}`,
-        ["Of property value and of income, with the cap", `With no cap: ${rate(y.property_pct * y.factor)} · ${rate(y.income_pct * y.factor)}`]),
-      tile("Wealth redistributed by the cap", big(y.totals.up_sum), [
-        `${y.totals.up} towns are asked for ${big(y.totals.up_sum)} less because of the cap`,
-        `The other ${y.totals.down} are asked for ${big(-y.totals.down_sum)} more`]),
-    );
-
-    scenNote.textContent = `${means} statewide percentages of ${rate(y.property_pct * f)} of property value and ` +
-      `${rate(y.income_pct * f)} of income` + (scenario == null ? ". " : `, with ${atScenarioCap} towns at the new cap. `) +
-      `${down.length} towns would be asked for ${big(-downSum)} less in FY${y.fy}, and ${up.length} towns would be asked ` +
-      `for ${big(upSum)} more` + (up.length ? `, ${upTop} of them in the fifth with the highest income per resident.` : ".") +
-      " The town table, the year-by-year chart, the scatterplot, and the income table all follow this choice.";
-
-    // One town: today's cap beside the one chosen above, line by line
+  /** One town: today's cap beside the one chosen above, line by line, under its heading, and what it means for it */
+  function drawTown({ y, t, f, alt, change, scenario, means }: Ctx) {
     const pAlt = y.property_pct * f;
     const iAlt = y.income_pct * f;
     const ch = change(t);
@@ -638,59 +761,10 @@ export function startCap(root: HTMLElement, data: CapData, opts: { town: string 
       ? `${means} ${t.name} would be required to pay ${lessMore(reqAlt - t.required)} for its schools in FY${y.fy}. `
       : "") + `Its target, what the formula asks it to pay, would be ${lessMore(ch)}.`;
     steps.replaceChildren(tableHead, scroll0, verdict);
+  }
 
-    // The window's explanation, with this town's numbers
-    const explain: (string | Node)[][] = [
-      ["Chapter 70 sets a minimum each town must pay toward its schools each year, its required local contribution. " +
-        "The formula works toward a target for that minimum, the target local contribution: the town's combined effort " +
-        "yield, a statewide percentage of its property value plus one of its residents' income, or " +
-        `${pct(y.max_pct, 1)} of its foundation budget if that's less.`],
-      ["The minimum doesn't jump to the target all " +
-        "at once. The formula starts from last year's required contribution and grows it by the town's municipal revenue " +
-        "growth factor, a state estimate of how fast the town's own revenue grows. If the result is above the target, " +
-        "the required contribution comes down to the target. If it falls short of the target by more than 2.5% of the " +
-        "foundation budget, the formula adds 1% of last year's amount, or 2% when it falls short by more than 7.5%."],
-    ];
-    if (t.required != null && t.prior != null && t.mrgf != null && t.preliminary != null) {
-      const g = `${(t.mrgf * 100).toFixed(2)}%`;
-      const step = t.required - t.preliminary;
-      explain.push([t.required < t.target - 1
-        ? `For ${t.name} in FY${y.fy}: last year's required contribution, ${usd(t.prior)}, grew by ${t.name}'s growth ` +
-          `factor of ${g} to ${usd(t.preliminary)}.` + (step > 1 ? ` That was more than ${t.increment && t.increment >= 0.02 ? "7.5" : "2.5"}% ` +
-          `of the foundation budget below the target, so the formula added ${t.increment ? `${(t.increment * 100).toFixed(0)}%` : "a share"} ` +
-          `of last year's amount, ${usd(step)}.` : "") +
-          ` ${t.name} must pay ${usd(t.required)}, ${usd(t.target - t.required)} less than its ${usd(t.target)} target.`
-        : t.floor
-          ? `For ${t.name} in FY${y.fy}: its yield is at least 175% of its foundation budget, and a rule for such towns ` +
-            `sets the required contribution at the full target, ${usd(t.required)}.`
-          : `For ${t.name} in FY${y.fy}: last year's required contribution, ${usd(t.prior)}, grown by ${t.name}'s growth ` +
-            `factor of ${g}, would have been ${usd(t.preliminary)}, more than the ${usd(t.target)} target, so ${t.name} ` +
-            `must pay the target.`]);
-    }
-    const sp = data.meta.spending;
-    if (sp) {
-      explain.push([`In FY${sp.fy}, ${sp.above} of ` +
-        `${sp.districts} districts spent more than their required net school spending, the least a district may spend: ` +
-        "its towns' required contributions plus its Chapter 70 aid. The median district spent " +
-        `${pct(sp.median - 1)} more, ${sp.half_again} spent at least half again as much, and ${sp.double} at least twice ` +
-        `as much: ${big(sp.over)} above a ${big(sp.required)} minimum in all. That extra is the towns' own money, beyond ` +
-        "their required contributions."]);
-    }
-    explain.push([`The table's last row estimates what ${t.name} would be required to pay in FY${y.fy} if the cap ` +
-      "changed this year: the same rules, starting from last year's required contribution, with the new target. " +
-      "Today's rules also hold every required contribution to at most 90% of the foundation budget, and the estimate " +
-      "keeps that rule."]);
-    explain.push(["The rest of this page compares targets. Under today's rules, if a town's target fell, its required contribution " +
-      "would come down to the new target the next year; if its target rose, its required contribution would climb toward " +
-      "it a few percent a year."]);
-    explain.push(seeAlso());
-    helpBody.replaceChildren(...explain.map((parts) => {
-      const para = el("p");
-      para.append(...parts);
-      return para;
-    }));
-
-    // Year by year for this town, the same cap choice in every year since FY2007
+  /** Year by year for this town, the same cap choice in every year since FY2007 */
+  function drawYears({ t, scenario, means, scenName }: Ctx) {
     const H = data.history;
     const hist = H?.towns[t.id];
     if (H && hist) {
@@ -776,8 +850,10 @@ export function startCap(root: HTMLElement, data: CapData, opts: { town: string 
     } else {
       yearsBox.replaceChildren();
     }
+  }
 
-    // The chart: every town, the selected one marked, by how much more or less each household would be asked for
+  /** The chart: every town, the selected one marked, by how much more or less each household would be asked for */
+  function drawChart({ y, towns, t, change, alt, scenName, up, fifthOf }: Ctx) {
     const xo = X_OPTIONS[xKey];
     const perHh = (x: CapTown) => (x.hh ? change(x) / x.hh : null);
     chartIntro.replaceChildren("Each point is a town. Up and down, ", vn("change in target per household"), ": how much " +
@@ -875,46 +951,6 @@ export function startCap(root: HTMLElement, data: CapData, opts: { town: string 
       li.append(key, el("span", undefined, g.label === "Selected town" ? t.name : g.label));
       return li;
     }));
-
-    // By income: each fifth of towns
-    const tbl = el("table", "cap-fifths-table");
-    const hr = tbl.createTHead().insertRow();
-    for (const h of ["Towns by income per resident", "Towns", "At today's cap", "Median income per resident",
-      `Change in what's asked, ${scenName}`, "Median change per resident", "Median change as a share of income"]) hr.append(el("th", undefined, h));
-    const tb = tbl.createTBody();
-    const names = ["Lowest fifth", "Second fifth", "Middle fifth", "Fourth fifth", "Highest fifth"];
-    // Highest fifth first
-    for (let q = 4; q >= 0; q--) {
-      const part = withIncome.filter(({ x }) => fifthOf.get(x.id) === q);
-      const sum = part.reduce((a, { x }) => a + change(x), 0);
-      const r = tb.insertRow();
-      const th = el("th", undefined, names[q]);
-      th.scope = "row";
-      r.append(th, el("td", "num", String(part.length)), el("td", "num", String(part.filter(({ x }) => x.capped).length)),
-        el("td", "num", usd(median(part.map((p) => p.inc)))),
-        el("td", "num", `${signFor(sum, big(sum), true)}${big(sum)}`),
-        el("td", "num", signed(median(part.map(({ x }) => change(x) / (x.pop || 1))))),
-        el("td", "num", (() => {
-          // A share of income that runs well under 1%, so to two decimals
-          return changePct(median(part.map(({ x }) => change(x) / x.income)), 2);
-        })()));
-    }
-    const scroll = Object.assign(el("div", "table-scroll"), { tabIndex: 0 });
-    scroll.append(tbl);
-    fifths.replaceChildren(el("h3", undefined, "By income"),
-      el("p", "cap-note", `All ${n} towns, in five groups by income per resident (${y.income_year} ` +
-        `income over the July ${y.income_year} population estimate). A negative change means the group is asked for more ` +
-        `with today's cap than it would be ${scenName}: the cap costs it money.`),
-      scroll);
-  }
-
-  function tile(label: string, value: string, details: string[]) {
-    const d = el("div", "tile");
-    // Label, value, details: three rows that line up across the tiles (the page's subgrid)
-    const more = el("div", "tile-details");
-    details.forEach((x) => more.append(el("div", "tile-detail", x)));
-    d.append(el("div", "tile-label", label), el("div", "tile-value", value), more);
-    return d;
   }
 
   let lastW = 0;
