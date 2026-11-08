@@ -3297,6 +3297,12 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
     margin-top: 0.5rem;
   }
 
+  /* The scoped rule above reaches only the page's own markup, so a table the map or the cap tab builds scrolled the
+     whole page sideways on a phone (#237) */
+  .explorer :global(.table-scroll) {
+    overflow-x: auto;
+  }
+
   .table-scroll :global(table) {
     border-collapse: collapse;
     font-variant-numeric: tabular-nums;
@@ -3759,8 +3765,10 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
     color: var(--ink-soft);
   }
 
+  /* Wraps where its buttons don't fit: Grades ran 40px past a 320px screen (#237) */
   .explorer :global(.map-seg) {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     gap: 0.35rem;
   }
