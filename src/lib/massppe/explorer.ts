@@ -4235,9 +4235,10 @@ export async function startExplorer() {
       held("debt", "debt exclusion", "debt exclusions"), held("capital", "capital exclusion", "capital exclusions")].filter(Boolean);
     const p7 = townStack({
       key: "tlevy", name: t.name, series: levy, cSeries: cLevy, cmp: cLevy ? c : null, noun: "parts", rowLabel: "Levy",
-      caption: `Property tax levy and its limit${perP}`, yShort: `Levy${perP}`, totalLabel: `Levy limit${perP}`, end: lEnd, width,
-      sub: `${dollarsNote}${perP}. Proposition 2½ limits each town's levy; the stack's full height is the limit, ` +
-        `with voter-approved debt exclusions. ${used}` +
+      // DLS's names (#242): the stack's height is its Maximum Levy Limit, the Proposition 2½ limit with exclusions
+      caption: `Property tax levy and its limit${perP}`, yShort: `Levy${perP}`, totalLabel: `Maximum levy limit${perP}`, end: lEnd, width,
+      sub: `${dollarsNote}${perP}. Proposition 2½ limits each town's levy; the stack's full height is its maximum levy ` +
+        `limit, the limit with voter-approved debt and capital exclusions added. ${used}` +
         (o && op != null ? ` Override capacity, the room between the limit and the ceiling, was ${pct(op)} of the ceiling in FY${o.fy}.` : "") +
         (voteBits.length ? ` Since FY${years[0]}, ${t.kind === "town" ? `${t.name}'s voters` : "voters in these towns"} passed ${voteBits.join(", ")}.` : ""),
       extra: t.levy_ceiling_pr ? {

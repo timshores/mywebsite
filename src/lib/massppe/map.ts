@@ -167,10 +167,12 @@ const TOWN_MEASURES: Measure[] = [
       `divided by its population in July ${m.fifths.year}. The five colors are the income fifths, 70 or 71 towns each.`,
   },
   {
-    key: "levy_room", label: "Room under the levy limit", kind: "level", fmt: share, short: share, years: "year",
+    key: "levy_room", label: "Excess levy capacity", kind: "level", fmt: share, short: share, years: "year",
     notes: ["the-property-tax-levy"],
-    about: (m, real, y) => `Each town's unused levy capacity in FY${y.to}, as a share of its Proposition 2½ levy limit. The ` +
-      "lightest towns are taxing at or near their limit.",
+    // DLS's term and its measure (#242): its maximum levy limit, exclusions included, less the levy
+    about: (m, real, y) => `Each town's excess levy capacity in FY${y.to}, as the Division of Local Services figures it: ` +
+      "how far its levy fell below its maximum levy limit, the Proposition 2½ limit with debt and capital exclusions " +
+      "added, as a share of that limit. The lightest towns are levying at or near their limit.",
   },
   {
     key: "override", label: "Override capacity", kind: "level", fmt: share, short: share, years: "year",
@@ -1313,7 +1315,8 @@ export function startMap(root: HTMLElement, data: MapData, opts: {
       all: measure.key === "density" || measure.kind === "type"
         ? " A town that sends its elementary and secondary pupils to different districts shows the district that teaches its elementary grades."
         : " A town that sends its elementary and secondary pupils to different districts shows the two districts combined, " +
-          "weighted by how many of the town's pupils each one teaches.",
+          `weighted by how many of the town's pupils each one teaches: its FY${data.meta.latest} foundation enrollment in each, the same ` +
+          "weights for every year.",
     }[grades];
   }
 
