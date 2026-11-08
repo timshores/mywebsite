@@ -215,8 +215,12 @@ const MIN_SPAN = 2;
 const PER_WORD: Record<Per, string> = { resident: "resident", household: "household", parcel: "taxable property", total: "town" };
 type View = "districts" | "towns" | "commonwealth" | "cap" | "data";
 const VIEWS: View[] = ["districts", "towns", "commonwealth", "cap", "data"];
-type StackPanel = "ppe" | "ood" | "nss" | "rev" | "sped" | "tspend" | "trev" | "tval" | "tpar" | "tlevy" | "tres" | "tdebt" | "tcap" |
-  "tage" | "trace" | "tsex" | "tdis" | "tpop" | "tfc" | "teqv" | "tbill" | "srace" | "sgroups" | "enroll" | "nssb";
+/** Every chart, by its key: its figure is #fig-<key>, its drawing #svg-<key> (#237: the one list of them) */
+const PANELS = ["ppe", "sped", "enroll", "ood", "nss", "rev", "tspend", "trev", "tres", "tfc", "tlevy", "tbill", "tdebt", "tcap",
+  "tval", "tpar", "teqv", "tpop", "tage", "trace", "tsex", "tdis", "nssb", "srace", "sgroups"] as const;
+type StackPanel = (typeof PANELS)[number];
+/** Charts whose legend picks aren't remembered from one visit to the next */
+const PICKS_NOT_KEPT = new Set<StackPanel>(["ood", "teqv", "tbill"]);
 /** The lines a stacked chart can draw over its columns: its trend, the comparison, and, with Since 1990
  * on, the older measure's line and the comparison's */
 type Line = "trend" | "cmp" | "cmptrend" | "day" | "cday" | "cb" | "ceiling" | "votes";
@@ -598,6 +602,15 @@ export async function startExplorer() {
     day: h.day ? join(h.day, undefined) as Entity["day"] : undefined,
     day_memb: early(h.day_memb), nces: early(h.nces),
   });
+  /** Each yearly series in o (a list of numbers and nulls as long as the explorer's own years) with the earlier years
+   * in front, as nulls: every one, found as cut() finds them, so a series added later lines up too (#237) */
+  const padEarly = <T>(o: T): T => {
+    if (Array.isArray(o)) {
+      return (o.length === nM && o.every((x) => x === null || typeof x === "number") ? [...nulls(nH), ...o] : o.map(padEarly)) as T;
+    }
+    if (o && typeof o === "object") return Object.fromEntries(Object.entries(o).map(([k, v]) => [k, padEarly(v)])) as T;
+    return o;
+  };
   const made = new Map<string, Entity>();
   /** A district or average as the district view draws it: with Since 1990 on, its earlier years in
    * front. A former district comes from its history record. Undefined until its data has loaded. */
@@ -622,19 +635,10 @@ export async function startExplorer() {
     } else {
       const base = byId.get(id);
       if (!base || !h) return undefined;
+      // Every yearly series gains the earlier years, as nulls; those the history file has are joined instead
       e = {
-        ...base, ppe: join(h.ppe, base.ppe), enroll: join(h.enroll, base.enroll), nss: join(h.nss, base.nss),
-        ood: [...(h.ood ?? nulls(nH)), ...(base.ood ?? nulls(nM))],
-        ...(base.rev ? { rev: join(undefined, base.rev) } : {}),
-        ...(base.rev_fte ? { rev_fte: [...nulls(nH), ...base.rev_fte] } : {}),
-        ...(base.sped ? { sped: join(undefined, base.sped), sped_share: [...nulls(nH), ...base.sped_share!],
-          sped_fte: [...nulls(nH), ...base.sped_fte!] } : {}),
-        ...(base.cb ? { cb: join(undefined, base.cb) } : {}),
-        ...(base.nss_budget ? { nss_budget: [...nulls(nH), ...base.nss_budget] } : {}),
-        ...(base.nss_gap ? { nss_gap: [...nulls(nH), ...base.nss_gap] } : {}),
-        ...(base.students ? { students: { total: [...nulls(nH), ...base.students.total], race: join(undefined, base.students.race),
-          groups: join(undefined, base.students.groups) } } : {}),
-        ...dayJoin(h),
+        ...padEarly(base), ppe: join(h.ppe, base.ppe), enroll: join(h.enroll, base.enroll), nss: join(h.nss, base.nss),
+        ood: [...(h.ood ?? nulls(nH)), ...(base.ood ?? nulls(nM))], ...dayJoin(h),
       };
     }
     made.set(key, e);
@@ -704,27 +708,12 @@ export async function startExplorer() {
   if (state.to - state.from < MIN_SPAN) [state.from, state.to] = [firstYear(), meta.latest];
   // Legend selections; empty means every segment shows. Kept across districts so
   // one category can be followed from district to district.
-  const isolated: Record<StackPanel, Set<string>> = {
-    ppe: new Set(saved?.isolated?.ppe), ood: new Set(), nss: new Set(saved?.isolated?.nss), rev: new Set(saved?.isolated?.rev),
-    sped: new Set(saved?.isolated?.sped),
-    tspend: new Set(saved?.isolated?.tspend), trev: new Set(saved?.isolated?.trev),
-    tval: new Set(saved?.isolated?.tval), tpar: new Set(saved?.isolated?.tpar), tlevy: new Set(saved?.isolated?.tlevy),
-    tres: new Set(saved?.isolated?.tres), tdebt: new Set(saved?.isolated?.tdebt), tcap: new Set(saved?.isolated?.tcap),
-    tage: new Set(saved?.isolated?.tage), trace: new Set(saved?.isolated?.trace), tsex: new Set(saved?.isolated?.tsex),
-    tdis: new Set(saved?.isolated?.tdis), tpop: new Set(saved?.isolated?.tpop),
-    tfc: new Set(saved?.isolated?.tfc), teqv: new Set(), tbill: new Set(), srace: new Set(saved?.isolated?.srace),
-    sgroups: new Set(saved?.isolated?.sgroups), enroll: new Set(saved?.isolated?.enroll), nssb: new Set(saved?.isolated?.nssb),
-  };
+  const isolated = Object.fromEntries(PANELS.map((k) =>
+    [k, new Set<string>(PICKS_NOT_KEPT.has(k) ? [] : saved?.isolated?.[k])])) as Record<StackPanel, Set<string>>;
   // Lines hidden from each chart's legend; both show until clicked off
   const hidden = (k: string, dflt: Line[] = []) =>
     new Set((saved?.hidden?.[k] ?? dflt).filter((l): l is Line => LINES.includes(l as Line)));
-  const hiddenLines: Record<StackPanel, Set<Line>> = {
-    ppe: hidden("ppe"), ood: hidden("ood"), nss: hidden("nss"), rev: hidden("rev"), sped: hidden("sped"),
-    tspend: hidden("tspend"), trev: hidden("trev"),
-    tval: hidden("tval"), tpar: hidden("tpar"), tlevy: hidden("tlevy"), tres: hidden("tres"), tdebt: hidden("tdebt"), tcap: hidden("tcap"),
-    tage: hidden("tage"), trace: hidden("trace"), tsex: hidden("tsex"), tdis: hidden("tdis"), tpop: hidden("tpop"),
-    srace: hidden("srace"), sgroups: hidden("sgroups"), enroll: hidden("enroll"), nssb: hidden("nssb"), tfc: hidden("tfc"), teqv: hidden("teqv"), tbill: hidden("tbill"),
-  };
+  const hiddenLines = Object.fromEntries(PANELS.map((k) => [k, hidden(k)])) as Record<StackPanel, Set<Line>>;
 
   // Prop 2 1/2 votes shown alone, without the columns they mark
   const votesAlone = new Set<StackPanel>();
@@ -1444,7 +1433,10 @@ export async function startExplorer() {
   let panels: { panel: Panel; figure: HTMLElement; tip: (i: number) => TipContent }[] = [];
   let hovered: number | null = null;
 
-  interface TipRow { value: string; label: string; color?: string; mark?: "line" | "dash" | "rect" | "hatch" | "diamond" | "linedot"; strong?: boolean }
+  /** A hover card's row. role names the trend's row and the comparison's, which the trends-only card picks out
+   * (#237: by role, not by their colors); strong marks the total */
+  interface TipRow { value: string; label: string; color?: string; mark?: "line" | "dash" | "rect" | "hatch" | "diamond" | "linedot";
+    strong?: boolean; role?: "trend" | "cmp" }
   interface TipContent { title: string; rows: TipRow[]; note?: string }
 
   /** A "?" that shows a longer note on hover or focus (.cw-help) */
@@ -1543,8 +1535,8 @@ export async function startExplorer() {
     if (!STACKED.has(key) || !trendsAlone.has(key) || !hasTrends.get(key)) return content;
     const total = content.rows.find((r) => r.strong);
     if (!total) return content;
-    const own = content.rows.find((r) => r.mark === "dash" && r.color === TREND_COLOR);
-    const cmp = content.rows.find((r) => r !== total && r.color === COMPARE_COLOR && r.mark !== "dash");
+    const own = content.rows.find((r) => r.role === "trend");
+    const cmp = content.rows.find((r) => r.role === "cmp");
     const ct = cmpTrends.get(key);
     const cmpTrend = cmp && ct?.trend ? trendRow(ct.trend, i, ct.value, ct.step).map((r) => ({ ...r, color: COMPARE_COLOR })) : [];
     return { ...content, rows: [total, ...(own ? [own] : []), ...(cmp ? [cmp] : []), ...cmpTrend] };
@@ -1693,7 +1685,7 @@ export async function startExplorer() {
     if (!trend || v == null) return [];
     const prev = trend.values[i - 1];
     const step = prev == null ? "" : `, ${signed(v - prev, stepFmt)}${prev > 0 ? ` (${signedPct((v - prev) / prev)})` : ""} on FY${years[i - 1]}`;
-    return [{ value: fmt(v), label: trend.label + step, color: TREND_COLOR, mark: "dash" }];
+    return [{ value: fmt(v), label: trend.label + step, color: TREND_COLOR, mark: "dash", role: "trend" }];
   };
   let refocus: { panel: StackPanel; key: string } | null = null;
 
@@ -2324,7 +2316,7 @@ export async function startExplorer() {
     }
     rows.push(...trendRow(trend, i, fmt));
     if (overlay && overlay.values[i] != null) {
-      rows.push({ value: fmt(overlay.values[i]!), label: overlay.label, color: COMPARE_COLOR, mark: "line" });
+      rows.push({ value: fmt(overlay.values[i]!), label: overlay.label, color: COMPARE_COLOR, mark: "linedot", role: "cmp" });
     }
     return { title: `FY${years[i]}`, rows, note: yoy(sel ? shownTotal : total, i) };
   };
@@ -2700,7 +2692,7 @@ export async function startExplorer() {
         { value: ood.values[i] != null ? usd(ood.values[i]!) : "–", label: ood.label, strong: true },
         ...(e.enroll.out_of_district[i] != null ? [{ value: fte(e.enroll.out_of_district[i]!), label: `Out-of-district FTE pupils${perDistrict ? ", average per district" : ""}` }] : []),
         ...trendRow(oodTrend, i),
-        ...(oodOverlay && oodOverlay.values[i] != null ? [{ value: usd(oodOverlay.values[i]!), label: oodOverlay.label, color: COMPARE_COLOR, mark: "linedot" as const }] : []),
+        ...(oodOverlay && oodOverlay.values[i] != null ? [{ value: usd(oodOverlay.values[i]!), label: oodOverlay.label, color: COMPARE_COLOR, mark: "linedot" as const, role: "cmp" as const }] : []),
       ],
       note: yoy(ood.values, i),
     });
@@ -3083,7 +3075,7 @@ export async function startExplorer() {
           : tv.only && sel ? { title: `FY${years[i]}`, rows: [
             { value: shownTotal[i] == null ? "–" : pctFmt(shownTotal[i]!), label: capital(sel), strong: true },
             ...trendRow(trend, i, pctFmt, points),
-            ...(overlay && overlay.values[i] != null ? [{ value: pctFmt(overlay.values[i]!), label: overlay.label, color: COMPARE_COLOR, mark: "linedot" as const }] : []),
+            ...(overlay && overlay.values[i] != null ? [{ value: pctFmt(overlay.values[i]!), label: overlay.label, color: COMPARE_COLOR, mark: "linedot" as const, role: "cmp" as const }] : []),
           ], note: `October 1, ${years[i] - 1}` } : {
           title: `FY${years[i]}`,
           rows: [
@@ -3091,7 +3083,7 @@ export async function startExplorer() {
               .map((x) => ({ value: pctFmt(x.values[i]!), label: x.label, color: x.color, mark: "rect" as const })),
             { value: fte(st.total[i]!), label: studentsLabel },
             ...trendRow(trend, i, pctFmt),
-            ...(overlay && overlay.values[i] != null ? [{ value: pctFmt(overlay.values[i]!), label: overlay.label, color: COMPARE_COLOR, mark: "linedot" as const }] : []),
+            ...(overlay && overlay.values[i] != null ? [{ value: pctFmt(overlay.values[i]!), label: overlay.label, color: COMPARE_COLOR, mark: "linedot" as const, role: "cmp" as const }] : []),
           ],
           note: `October 1, ${years[i] - 1}`,
         };
@@ -3195,7 +3187,7 @@ export async function startExplorer() {
               { value: nss[1].values[i] != null ? usd(nss[1].values[i]!) : "–", label: nss[1].label, color: nss[1].color, mark: "line" as const },
               { value: nss[0].values[i] != null ? usd(nss[0].values[i]!) : "–", label: nss[0].label, color: nss[0].color, mark: "line" as const },
               ...trendRow(nssTrend, i),
-              ...(nssOverlay && nssOverlay.values[i] != null ? [{ value: usd(nssOverlay.values[i]!), label: nssOverlay.label, color: COMPARE_COLOR, mark: "linedot" as const }] : []),
+              ...(nssOverlay && nssOverlay.values[i] != null ? [{ value: usd(nssOverlay.values[i]!), label: nssOverlay.label, color: COMPARE_COLOR, mark: "linedot" as const, role: "cmp" as const }] : []),
             ],
           };
         },
@@ -3929,7 +3921,7 @@ export async function startExplorer() {
               ...fcShown.filter((s) => s.values[k] != null && s.values[k] !== 0).reverse()
                 .map((s) => ({ value: usd(s.values[k]!), label: s.label, color: s.color, mark: "rect" as const })),
               ...trendRow(fcTrendPage, i),
-              ...(overlay && overlay.values[k] != null ? [{ value: usd(overlay.values[k]!), label: overlay.label, color: COMPARE_COLOR, mark: "linedot" as const }] : []),
+              ...(overlay && overlay.values[k] != null ? [{ value: usd(overlay.values[k]!), label: overlay.label, color: COMPARE_COLOR, mark: "linedot" as const, role: "cmp" as const }] : []),
             ] };
           },
         });
@@ -4296,7 +4288,7 @@ export async function startExplorer() {
             label: p0 === p1 ? label : `${label}, ${signed(v[p1]! - v[p0]!, points)}`, ...extra }]);
           // The trends run through every year, so their figures are the hovered year's
           const rows = [...row(shownTotal, capital(sel!), { strong: true }), ...trendRow(trend, i, pctFmt, points),
-            ...(overlay ? row(overlay.values, overlay.label, { color: COMPARE_COLOR, mark: "linedot" }) : [])];
+            ...(overlay ? row(overlay.values, overlay.label, { color: COMPARE_COLOR, mark: "linedot", role: "cmp" }) : [])];
           return { title: p0 === p1 ? `${span(p0)}, at FY${years[p0]}` : `${span(p0)} to ${span(p1)}`, rows: rows.length ? rows : [none] };
         };
         const tip = (i: number): TipContent => tv.only && sel ? together(i) : dm.population[i] == null
@@ -4307,7 +4299,7 @@ export async function startExplorer() {
               .map((x) => ({ value: pctFmt(x.values[i]!), label: x.label, color: x.color, mark: "rect" as const })),
             { value: count(base.of(dm)[i]!), label: base.label },
             ...trendRow(trend, i, pctFmt),
-            ...(overlay && overlay.values[i] != null ? [{ value: pctFmt(overlay.values[i]!), label: overlay.label, color: COMPARE_COLOR, mark: "linedot" as const }] : []),
+            ...(overlay && overlay.values[i] != null ? [{ value: pctFmt(overlay.values[i]!), label: overlay.label, color: COMPARE_COLOR, mark: "linedot" as const, role: "cmp" as const }] : []),
           ] };
         return { panel, tip };
       };
@@ -4405,10 +4397,7 @@ export async function startExplorer() {
     trendDials.set(p, trends);
   }
   syncDials();
-  ["svg-ppe", "svg-sped", "svg-enroll", "svg-ood", "svg-nss", "svg-rev", "svg-tspend", "svg-trev", "svg-tres", "svg-tfc", "svg-tlevy", "svg-tbill",
-    "svg-tdebt", "svg-tcap", "svg-tval", "svg-tpar", "svg-teqv", "svg-tpop", "svg-tage", "svg-trace", "svg-tsex", "svg-tdis",
-    "svg-nssb", "svg-srace", "svg-sgroups"]
-    .forEach((id) => keyboard($(id) as unknown as SVGSVGElement));
+  for (const k of PANELS) keyboard($(`svg-${k}`) as unknown as SVGSVGElement);
   root.classList.remove("is-loading");
 
   // Redraw at a new width; the root, because the hidden view's panels measure 0
