@@ -2,6 +2,11 @@
 // a reader should see. scripts/check/units.mjs runs these before every build.
 import * as f from "../../src/lib/massppe/format";
 import { cagr, linearFit, median, quantile, spearman } from "../../src/lib/massppe/stats";
+import { endsOn, trendOn, type MapSeries } from "../../src/lib/massppe/series";
+import { checkPair, sharedParts } from "../../src/lib/massppe/cautions";
+
+// The map's year-by-year figures need only its years (series.ts)
+const S = { years: [2020, 2021, 2022, 2023] } as unknown as MapSeries;
 
 export const cases: [string, unknown, unknown][] = [
   // Percentages to one decimal; a level's sign only below zero
@@ -69,4 +74,13 @@ export const cases: [string, unknown, unknown][] = [
   ["cagr from zero", cagr(0, 121, 2), null],
   ["quantile nearest rank", quantile([5, 1, 4, 2, 3], 0.6), 3],
   ["spearman monotone", spearman([1, 2, 3, 4], [10, 20, 25, 100]), 1],
+  // The map's figures by year (series.ts): trend growth from the fitted line's ends, rounded as map.json's
+  ["trendOn", JSON.stringify(trendOn(S, [100, 110, 120, 130], 0, 3)), "[0.09139,2020,2023]"],
+  ["trendOn from zero", trendOn(S, [0, 10, 20, 30], 0, 3), null],
+  ["endsOn", JSON.stringify(endsOn([null, 0, 5, null, 7], 0, 4)), "[2,4]"],
+  // The plots' cautions (cautions.ts): a shared count, and a pair measuring one condition (#235)
+  ["sharedParts aid and low income", JSON.stringify(sharedParts("aid_pfe", "low_income")), JSON.stringify(["low-income students"])],
+  ["sharedParts none", JSON.stringify(sharedParts("soc", "el")), "[]"],
+  ["checkPair two views", checkPair({ x: "el", y: "soc", fy: 2025, log: false }, { short: "students of color" },
+    { short: "English learners" }, [], []).map((c) => c.label).join(" | "), "Two views of the same thing | Few districts"],
 ];
