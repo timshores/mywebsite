@@ -190,9 +190,9 @@ interface Preset { id: string; title: string; blurb: string; y: string; x: strin
 // caution at all). Strong pairs that don't, left to the picker: payments per out-of-district pupil against income
 // or low income (uneven spread, a few districts paying several hundred thousand dollars a pupil), English learners
 // against enrollment (uneven spread), aid against the low-income share (+0.74, the formula's own again), and students
-// of color against English learners (+0.80, uneven spread; a log scale clears it in FY2025 only by leaving out the 14
-// districts with none, and many English learners are students of color too, an overlap the shared-parts check can't
-// see; #232).
+// of color against English learners (+0.80, uneven spread; a log scale had cleared it only by leaving out the districts
+// with none, which it no longer does, #244; and many English learners are students of color too, an overlap the
+// shared-parts check can't see; #232).
 const PRESETS: Preset[] = [
   {
     id: "income", title: "Spending and income", y: "nss_pct_req", x: "income_pc", log: true,
@@ -250,11 +250,19 @@ interface View { preset: string | null; y: string; x: string; fy: number; log: b
 
 /** The districts with both measures in a year, less the omitted ones unless all are asked for, and less those a
  * log scale can't place (offScale: how many, and whether any are below zero). */
+/** The pair as the cautions read it: the measure across on the scale it opens with, whatever the reader's toggle, so
+ * the cautions don't change with the drawing (#244) */
+const analysisPair = (v: Pick<View, "x" | "y" | "fy">) => ({ x: v.x, y: v.y, fy: v.fy, log: !!VAR.get(v.x)?.log });
+
 function pointsFor(data: CwData, v: Pick<View, "x" | "y" | "fy" | "log" | "all" | "hl" | "find">) {
   const i = data.meta.years.indexOf(v.fy);
   const hl = HIGHLIGHTS[v.hl] ?? HIGHLIGHTS[DEFAULT_HL];
   const pts: Point[] = [];
   const rows: Row[] = [];
+  // Every district with both figures, drawn or not: what ρ, the cautions, the legend's ρ and the table count. A log
+  // scale changes only the drawing (Tim, #244): it can't place zero, but ρ compares ranks, which it doesn't change.
+  const stat: Point[] = [];
+  const statRows: Row[] = [];
   const offScale = { n: 0, below: false };
   // Districts that ran schools that year (they have foundation enrollment then) but lack one of the two figures, as
   // when DESE hasn't reported actual net school spending: left out, and counted for the caption (#242)
@@ -267,32 +275,34 @@ function pointsFor(data: CwData, v: Pick<View, "x" | "y" | "fy" | "log" | "all" 
       if (d.v.fe[i] != null) missing++;
       continue;
     }
+    const pt = { x, y, id: d.id ?? d.org, name: d.name, group: hl.of(d),
+      label: (d.id != null && hl.labels.has(d.id)) || d.org === v.find };
+    stat.push(pt);
+    statRows.push(d);
     if (v.log && x <= 0) {
       offScale.n++;
       offScale.below ||= x < 0;
       continue;
     }
-    pts.push({ x, y, id: d.id ?? d.org, name: d.name, group: hl.of(d),
-      label: (d.id != null && hl.labels.has(d.id)) || d.org === v.find });
+    pts.push(pt);
     rows.push(d);
   }
-  return { pts, rows, hl, offScale, missing };
+  return { pts, rows, stat, statRows, hl, offScale, missing };
 }
 
 /** Spearman's rho between the vertical measure and every other measure, closest first;
- * measures without data for the year come last. Each is taken on the districts its plot would show: the one across
- * now on the scale it has, the others on the scale they open with, so a log scale leaves out its zeros here too. */
+ * measures without data for the year come last. Each is taken on every district with both figures, whatever the
+ * scale: a log scale changes only the drawing (#244). */
 function ranking(data: CwData, v: View) {
   const i = data.meta.years.indexOf(v.fy);
   const others = VARS.filter((o) => o.key !== v.y);
   return others.map((o) => {
-    const log = o.key === v.x ? v.log : !!o.log;
     const xs: number[] = [];
     const ys: number[] = [];
     for (const d of data.districts) {
       const x = d.v[o.key]?.[i];
       const y = d.v[v.y]?.[i];
-      if (x == null || y == null || (log && x <= 0)) continue;
+      if (x == null || y == null) continue;
       if (!v.all && (OMIT_NAMES.has(d.name) || (d.v.fe[i] ?? 0) < MIN_FE)) continue;
       xs.push(x);
       ys.push(y);
@@ -316,8 +326,8 @@ export function startCommonwealth(root: HTMLElement, data: CwData, opts: {
     // The gallery's rule, tested on the data each time it's drawn (#242: it had been checked by hand, once): ρ at least
     // 0.4 from zero, and no caution but Shared towns. A plot that fails it stays reachable by its link.
     const tested = pointsFor(data, { x: p.x, y: p.y, fy: latest, log: p.log, all: false, hl: DEFAULT_HL, find: null });
-    const r = spearman(tested.pts.map((q) => q.x), tested.pts.map((q) => q.y));
-    const cautions = checkPair({ x: p.x, y: p.y, fy: latest, log: p.log }, VAR.get(p.y)!, VAR.get(p.x)!, tested.pts, tested.rows)
+    const r = spearman(tested.stat.map((q) => q.x), tested.stat.map((q) => q.y));
+    const cautions = checkPair(analysisPair({ x: p.x, y: p.y, fy: latest }), VAR.get(p.y)!, VAR.get(p.x)!, tested.stat, tested.statRows)
       .filter((c) => c.label !== "Shared towns");
     if (r == null || Math.abs(r) < 0.4 || cautions.length) continue;
     const card = el("button", "cw-card");
@@ -401,7 +411,8 @@ export function startCommonwealth(root: HTMLElement, data: CwData, opts: {
   };
   const logBox = check("Log scale across",
     "Spreads out the crowded low end. Equal distances along the bottom multiply by the same amount " +
-    "(100 to 1,000 to 10,000) instead of adding the same amount, so small and large districts both get room.");
+    "(100 to 1,000 to 10,000) instead of adding the same amount, so small and large districts both get room. It " +
+    "changes only the drawing: ρ and the cautions are the same either way.");
   const allBox = check(`Include Boston, Provincetown, and districts under ${MIN_FE} pupils`);
   const findWrap = el("label", "cw-field cw-find");
   const find = el("input");
@@ -607,9 +618,9 @@ export function startCommonwealth(root: HTMLElement, data: CwData, opts: {
     allBox.checked = v.all;
     find.value = data.districts.find((d) => d.org === v.find)?.name ?? "";
 
-    const { pts, rows, hl, offScale, missing } = pointsFor(data, v);
+    const { pts, rows, stat, statRows, hl, offScale, missing } = pointsFor(data, v);
     const focus = (v.focus ?? []).filter((g) => hl.groups[g]);
-    describe(v, pts, rows, hl, offScale, missing, focus);
+    describe(v, stat, statRows, hl, offScale, missing, focus, pts.length);
     // The chart takes the room the legend, finding and caption leave, so the view never scrolls
     const width = Math.max(300, figure.clientWidth || 800);
     const pad = parseFloat(getComputedStyle(body).paddingTop) + parseFloat(getComputedStyle(body).paddingBottom);
@@ -651,12 +662,13 @@ export function startCommonwealth(root: HTMLElement, data: CwData, opts: {
   }
 
   /** The legend, finding, caption, ranking and table: everything but the chart, each part drawn on its own (#238).
-   * rows: the districts behind the points, which the cautions read. */
+   * pts and rows: every district with both figures, drawn or not, which the statistics count (#244); drawn: how many
+   * the chart places. */
   function describe(v: View, pts: Point[], rows: Row[], hl: (typeof HIGHLIGHTS)[string], offScale: { n: number; below: boolean },
-    missing: number, focus: string[]) {
-    drawCautions(v, pts.length, checkPair(v, VAR.get(v.y)!, VAR.get(v.x)!, pts, rows));
+    missing: number, focus: string[], drawn: number) {
+    drawCautions(v, pts.length, checkPair(analysisPair(v), VAR.get(v.y)!, VAR.get(v.x)!, pts, rows));
     drawLegend(pts, hl, focus);
-    drawCaption(v, pts.length, offScale, missing);
+    drawCaption(v, drawn, offScale, missing);
     drawTable(v, pts);
     const rank = ranking(data, v);
     drawPicker(v, rank);
@@ -757,7 +769,7 @@ export function startCommonwealth(root: HTMLElement, data: CwData, opts: {
     if (missing) out.push(`${missing} ${missing === 1 ? "district" : "districts"} without both figures that year`);
     if (offScale.n) {
       out.push(`${offScale.n} ${offScale.n === 1 ? "district" : "districts"} with ${xv.short} at ${axisFmt(xv.unit)(0)}` +
-        `${offScale.below ? " or below" : ""}, which a log scale can't place`);
+        `${offScale.below ? " or below" : ""}, which a log scale can't place, though ρ and the cautions count them`);
     }
     const omitted = !out.length ? "" : ` Left out: ${out.length < 3 ? out.join(" and ")
       : `${out.slice(0, -1).join(", ")}, and ${out[out.length - 1]}`}.`;

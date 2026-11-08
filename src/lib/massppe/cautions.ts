@@ -96,7 +96,9 @@ export function checkPair(v: Pair, yv: { short: string }, xv: { short: string },
       "pattern can appear by chance."] });
   }
   if (n < 8) return out;
-  const xs = pts.map((p) => (v.log ? Math.log10(p.x) : p.x));
+  // On a log scale where every value can take one; a district at zero keeps the shape checks linear (#244)
+  const logged = v.log && pts.every((p) => p.x > 0);
+  const xs = pts.map((p) => (logged ? Math.log10(p.x) : p.x));
   const ys = pts.map((p) => p.y);
   const rs = spearman(xs, ys) ?? 0;
   const rp = pearson(xs, ys);

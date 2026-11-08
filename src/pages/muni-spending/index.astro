@@ -658,8 +658,10 @@ const asFirst = (c: Chart) => (c.svg + KEYS)
         Low-income students and income per capita both measure how much money families have, and many English
         learners are also students of color, so the same students count toward both shares. A strong ρ between such a
         pair is expected: it shows that the two measures agree, not something districts do. The plots shown first have
-        a ρ at least 0.4 from zero, either way, and no caution but shared towns. A log scale can't place zero, so it leaves out the districts
-        at zero on the measure across, and the plot's caption says how many.
+        a ρ at least 0.4 from zero, either way, and no caution but shared towns. A log scale can't place zero, so the
+        plot can't draw the districts at zero on the measure across, and its caption says how many. It changes only
+        the drawing: ρ, the cautions and the ranking still count those districts, since ρ compares ranks, which a log
+        scale doesn't change, and the cautions read each measure on the scale it opens with.
       </p>
       <p>
         <strong>Since 1990</strong> adds FY1990 to FY2004, from DESE's per-pupil reports in the same public records
