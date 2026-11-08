@@ -1,0 +1,33 @@
+---
+// An old address of the explorer's, sending the reader on (#237): its script carries the old link's selection
+// (?d=, ?view=, #group) to the new address, and the meta refresh covers browsers without JavaScript. The explorer
+// itself, or the groups and their members, which moved into its About the data on 2026-11-05 (#216): a link to one
+// group (#id) opens it there (#group-id), any other the list.
+interface Props {
+  to: "explorer" | "groups";
+}
+const { to } = Astro.props;
+const page = to === "explorer"
+  ? { title: "Moved: Massachusetts municipal spending explorer", href: "/muni-spending/",
+      go: 'location.replace("/muni-spending/" + location.search + location.hash);',
+      words: "The municipal spending explorer has moved to", link: "timshores.com/muni-spending", after: "." }
+  : { title: "Moved: Groups and their members", href: "/muni-spending/?view=data#groups",
+      go: 'location.replace("/muni-spending/?view=data#" + (location.hash.length > 1 ? "group-" + location.hash.slice(1) : "groups"));',
+      words: "The groups and their members are now in the explorer, under", link: "About the data", after: "." };
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex" />
+    <title>{page.title}</title>
+    <link rel="canonical" href={`https://timshores.com${page.href}`} />
+    <script is:inline set:html={page.go} />
+    <meta http-equiv="refresh" content={`0; url=${page.href}`} />
+  </head>
+  <body>
+    <p>{page.words} <a href={page.href}>{page.link}</a>{page.after}</p>
+  </body>
+</html>

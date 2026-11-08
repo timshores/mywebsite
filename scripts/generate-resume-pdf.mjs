@@ -1,7 +1,8 @@
-import { createWriteStream, existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import { createWriteStream, existsSync, mkdirSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { basename, dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import PDFDocument from "pdfkit";
+import { readConstExport } from "./profile-validation.mjs";
 
 const scriptDir = dirname(fileURLToPath(import.meta.url));
 const projectRoot = resolve(scriptDir, "..");
@@ -323,16 +324,6 @@ function pillList(doc, items, x, y, width) {
     cursorX += labelW + 4;
     doc.y = cursorY + 15.8;
   }
-}
-
-async function readConstExport(filePath, exportName) {
-  const source = readFileSync(filePath, "utf8");
-  const moduleSource = source
-    .replace(new RegExp(`export\\s+const\\s+${exportName}\\s*=`), "export default")
-    .replace(/\s+as const;?\s*$/, ";");
-  const encoded = Buffer.from(moduleSource).toString("base64");
-  const module = await import(`data:text/javascript;base64,${encoded}`);
-  return module.default;
 }
 
 function writeResumeData(fileName) {

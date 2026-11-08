@@ -1,15 +1,15 @@
 import { readFileSync } from "node:fs";
+import { transformSync } from "esbuild";
 
 export const expectedProfileName = "Tim Shores";
 
+/** A named export of a TypeScript data file (src/data/profile.ts and the like), its types stripped by esbuild, so
+ * the file may carry annotations as well as `as const`. The file imports nothing of its own. The one loader for
+ * every script (#237). */
 export async function readConstExport(filePath, exportName) {
-  const source = readFileSync(filePath, "utf8");
-  const moduleSource = source
-    .replace(new RegExp(`export\\s+const\\s+${exportName}\\s*=`), "export default")
-    .replace(/\s+as const;?\s*$/, ";");
-  const encoded = Buffer.from(moduleSource).toString("base64");
-  const module = await import(`data:text/javascript;base64,${encoded}`);
-  return module.default;
+  const { code } = transformSync(readFileSync(filePath, "utf8"), { loader: "ts", format: "esm" });
+  const module = await import(`data:text/javascript;base64,${Buffer.from(code).toString("base64")}`);
+  return module[exportName];
 }
 
 export function validateProfile(profile, { previousProfile = null } = {}) {

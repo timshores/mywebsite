@@ -19,5 +19,8 @@
     "astro": "^6.3.7",
     "pdf-parse": "^2.4.5",
     "pdfkit": "^0.17.2"
+  },
+  "devDependencies": {
+    "esbuild": "0.27.7"
   }
 }

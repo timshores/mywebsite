@@ -1,21 +1,6 @@
 ---
-// The groups and their members moved into the explorer's About the data on 2026-11-05 (#216). This keeps links
-// to the old page working: a link to one group (#id) opens it there (#group-id), any other the list; the meta
-// refresh covers browsers without JavaScript.
+// The groups and their members moved into the explorer's About the data on 2026-11-05 (#216).
+import Moved from "../../components/Moved.astro";
 ---
 
-<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="robots" content="noindex" />
-    <title>Moved: Groups and their members</title>
-    <link rel="canonical" href="https://timshores.com/muni-spending/?view=data#groups" />
-    <script is:inline>location.replace("/muni-spending/?view=data#" + (location.hash.length > 1 ? "group-" + location.hash.slice(1) : "groups"));</script>
-    <meta http-equiv="refresh" content="0; url=/muni-spending/?view=data#groups" />
-  </head>
-  <body>
-    <p>The groups and their members are now in the explorer, under <a href="/muni-spending/?view=data#groups">About the data</a>.</p>
-  </body>
-</html>
+<Moved to="groups" />

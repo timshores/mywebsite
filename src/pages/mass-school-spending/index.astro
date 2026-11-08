@@ -1,22 +1,8 @@
 ---
 // The explorer moved from /mass-school-spending/ to /muni-spending/ on 2026-11-01, when it became the
-// municipal spending explorer. This keeps links to the old address working, with their ?d= or ?view=
-// selection and any #group; the meta refresh covers browsers without JavaScript. Where the server reads
-// public/mass-school-spending/.htaccess, it redirects first and this page is never seen.
+// municipal spending explorer. Where the server reads public/mass-school-spending/.htaccess, it redirects first
+// and this page is never seen.
+import Moved from "../../components/Moved.astro";
 ---
 
-<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="robots" content="noindex" />
-    <title>Moved: Massachusetts municipal spending explorer</title>
-    <link rel="canonical" href="https://timshores.com/muni-spending/" />
-    <script is:inline>location.replace("/muni-spending/" + location.search + location.hash);</script>
-    <meta http-equiv="refresh" content="0; url=/muni-spending/" />
-  </head>
-  <body>
-    <p>The municipal spending explorer has moved to <a href="/muni-spending/">timshores.com/muni-spending</a>.</p>
-  </body>
-</html>
+<Moved to="explorer" />
