@@ -7,7 +7,7 @@
 // rather than fetched, the data ships as hashed JavaScript chunks, which the host
 // compresses (it sends .json uncompressed).
 
-import { gapColumns, lines, niceTicks, niceTicksRange, ratingSteps, stackedColumns, type Marks, type Panel, type Series, type Val } from "./charts";
+import { gapColumns, lines, markKey, niceTicks, niceTicksRange, ratingSteps, stackedColumns, type Marks, type Panel, type Series, type Val } from "./charts";
 import { capital, svgEl, text } from "./dom";
 import { cagr, linearFit } from "./stats";
 import { andList, change, compact, measured as fte, pct, points, signFor, total as amount, usd } from "./format";
@@ -2216,10 +2216,13 @@ export async function startExplorer() {
     if (!key || key === "toggle" || !box) return;
     for (const svg of box.querySelectorAll<SVGSVGElement>("svg")) {
       svg.querySelectorAll(".is-lit").forEach((m) => m.classList.remove("is-lit"));
-      // An entry's key, or one in a mark's list of them (a comparison's line under a measure's entry too)
-      const marks = on ? svg.querySelectorAll(`[data-key~="${CSS.escape(key)}"]`) : [];
+      // An entry's key, or one in a mark's list of them (a comparison's line under a measure's entry too), as the
+      // charts write it (charts.ts markKey)
+      const marks = on ? svg.querySelectorAll(`[data-key~="${CSS.escape(markKey(key))}"]`) : [];
       marks.forEach((m) => m.classList.add("is-lit"));
-      svg.classList.toggle("is-spotlit", marks.length > 0);
+      // The rest fade even where the entry has nothing drawn (no figures, or too thin to draw), so every entry
+      // answers a hover the same way and shows there's nothing of it here (#239)
+      svg.classList.toggle("is-spotlit", on && !!svg.querySelector("[data-key]"));
     }
   }
   const legendEntry = (ev: Event) => (ev.target instanceof Element ? ev.target.closest<HTMLElement>(".legend [data-key]") : null);

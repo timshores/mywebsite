@@ -123,12 +123,17 @@ function trendLabels(svg: SVGSVGElement, ax: Axis, trends: Series[]) {
   }
 }
 
+/** A legend key as one word of a mark's data-key list, which a hovered legend entry matches word by word
+ * ([data-key~=...], explorer.ts spotlight). Category names have spaces ("Pupil Services", "Insurance, Retirement and
+ * Other"), which split them into words that matched nothing, or matched another category's "Other" (#239), so each
+ * key is URI-encoded; a "line:" prefix stays as it is. The legend's side encodes its keys with this too. */
+export const markKey = (key: string) => (key.startsWith("line:") ? `line:${encodeURIComponent(key.slice(5))}` : encodeURIComponent(key));
 /** What a line's marks answer to in the legend (data-key, a list): the comparison's line, and where a chart compares
  * several measures ("cmp:swd"), that measure's entry too, so either lights it */
-const lineKey = (key: string) => (key === "cmp" ? "line:cmp" : key.startsWith("cmp:") ? `line:cmp ${key.slice(4)}` : key);
+const lineKey = (key: string) => (key === "cmp" ? "line:cmp" : key.startsWith("cmp:") ? `line:cmp ${markKey(key.slice(4))}` : markKey(key));
 /** And a trend's: the chart's own trend; the comparison's trend, as the comparison itself, since it draws only where
  * the comparison's line doesn't ("cmptrend:swd", as its measure's too); or, for one of several, its series */
-const trendKey = (tr: Series) => (tr.key === "trend" ? "line:trend" : tr.key.startsWith("cmptrend") ? lineKey(`cmp${tr.key.slice(8)}`) : tr.key);
+const trendKey = (tr: Series) => (tr.key === "trend" ? "line:trend" : tr.key.startsWith("cmptrend") ? lineKey(`cmp${tr.key.slice(8)}`) : markKey(tr.key));
 
 interface Frame {
   width: number;
@@ -334,7 +339,7 @@ export function stackedColumns(
       if (at.length > 1 && hi.some((v, k) => v > lo[k])) {
         const top = at.map((i, k) => `${ax.x(i).toFixed(1)},${ax.y(hi[k]).toFixed(1)}`);
         const bottom = at.map((i, k) => `${ax.x(i).toFixed(1)},${ax.y(lo[k]).toFixed(1)}`).reverse();
-        svgEl("path", { d: `M${top.join("L")}L${bottom.join("L")}Z`, fill: s.color, class: "stack-area", "data-key": s.key }, ag);
+        svgEl("path", { d: `M${top.join("L")}L${bottom.join("L")}Z`, fill: s.color, class: "stack-area", "data-key": markKey(s.key) }, ag);
       }
       lo = hi;
     }
@@ -355,7 +360,7 @@ export function stackedColumns(
     if (positiveTop === 0 && total < 0) {
       const neg = stacks.find((s, k) => (vals[k] ?? 0) < 0);
       const h = ax.y(total) - ax.y(0);
-      if (h > 0.5) svgEl("path", { d: bottomRoundedRect(x, ax.y(0), w, h, RADIUS), fill: neg?.color ?? "currentColor", "data-key": neg?.key ?? "" }, g);
+      if (h > 0.5) svgEl("path", { d: bottomRoundedRect(x, ax.y(0), w, h, RADIUS), fill: neg?.color ?? "currentColor", "data-key": markKey(neg?.key ?? "") }, g);
       return;
     }
     let base = 0;
@@ -374,9 +379,9 @@ export function stackedColumns(
       const h = yBot - yTop;
       if (h <= 0.5) return;
       if (k === segs.length - 1) {
-        svgEl("path", { d: topRoundedRect(x, yTop, w, h, RADIUS), fill: s.color, "data-key": s.key }, g);
+        svgEl("path", { d: topRoundedRect(x, yTop, w, h, RADIUS), fill: s.color, "data-key": markKey(s.key) }, g);
       } else {
-        svgEl("rect", { x, y: yTop, width: w, height: h, fill: s.color, "data-key": s.key }, g);
+        svgEl("rect", { x, y: yTop, width: w, height: h, fill: s.color, "data-key": markKey(s.key) }, g);
       }
     });
     if (positiveTop > solidTop) {
@@ -410,7 +415,7 @@ export function stackedColumns(
   if (frame.trendsOnly) trendLabels(svg, ax, trends);
 
   // Marks: stems over the columns, under the lines; the diamonds go on last, over everything
-  const markG = marks && marks.at.some(Boolean) ? svgEl("g", { class: "marks", "data-key": `line:${marks.key}` }, svg) : null;
+  const markG = marks && marks.at.some(Boolean) ? svgEl("g", { class: "marks", "data-key": markKey(`line:${marks.key}`) }, svg) : null;
   if (marks && markG) {
     marks.at.forEach((on, i) => {
       const v = marks.amount[i];
@@ -425,7 +430,7 @@ export function stackedColumns(
   // Extra lines, each with a dot on every year it has: their measure is not the columns'
   for (const s of extras) {
     if (!s.values.some((v) => v != null)) continue;
-    const eg = svgEl("g", { class: "extra", "data-key": `line:${s.key}` }, svg);
+    const eg = svgEl("g", { class: "extra", "data-key": markKey(`line:${s.key}`) }, svg);
     svgEl("path", { d: linePath(ax, s.values), class: "extra-line", stroke: s.color, ...(s.dash ? { "stroke-dasharray": s.dash } : {}) }, eg);
     s.values.forEach((v, i) => {
       if (v != null) svgEl("circle", { cx: ax.x(i), cy: ax.y(v), r: 2.5, fill: s.color, class: "extra-dot" }, eg);
@@ -486,7 +491,7 @@ export function stackedColumns(
   // Each marked year's diamond, just under the baseline, over the columns and lines
   if (marks && markG) {
     const s = 4.5;
-    const top = svgEl("g", { class: "marks", "data-key": `line:${marks.key}` }, svg);
+    const top = svgEl("g", { class: "marks", "data-key": markKey(`line:${marks.key}`) }, svg);
     marks.at.forEach((on, i) => {
       if (!on) return;
       const x = ax.x(i), y = ax.y(0) + s + 1;
