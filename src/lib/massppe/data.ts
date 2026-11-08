@@ -37,7 +37,7 @@ export interface TownData {
     property?: boolean;
     /** FY2025 Chapter 70 target local contribution: percentages of EQV and income, the cap */
     c70_target?: { fy: number; eqv_year: number; income_year: number; property_pct: number; income_pct: number;
-      target_share: number; cap: number; capped_towns: number };
+      target_share: number; cap: number };
   };
   averages: ListedTown[];
   towns: ListedTown[];

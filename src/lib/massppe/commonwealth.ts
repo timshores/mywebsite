@@ -121,9 +121,13 @@ const HIGHLIGHTS: Record<string, { label: string; groups: Record<string, Group>;
       gateway: { label: "Gateway Cities outside the Inner Core", color: AMBER, shape: "square", z: 3 },
       suburban: { label: "Suburban and other", color: BLUE, shape: "circle", z: 1 },
       rural: { label: "Rural", color: GREEN, shape: "circle", z: 2 },
-      other: { ...OTHER, label: "Vocational and charter" },
+      other: { ...OTHER, label: "Vocational and technical" },
+      former: { ...OTHER, color: "#b5b0a5", label: "Districts since merged or closed" },
     },
-    of: (d) => d.ct ?? "other",
+    // Only traditional districts have a community type or an income fifth: the vocational ones have neither, and
+    // nor do the traditional ones the explorer no longer lists, since merged or closed (Acton, Chatham; #242). The
+    // plots have no charter schools: DESE's Chapter 70 profiles don't include them.
+    of: (d) => d.ct ?? (d.type === "vocational" ? "other" : "former"),
     labels: new Set(),
   },
   // The fifths in order, one blue ramp from the lowest incomes (lightest) to the highest (darkest)
@@ -135,9 +139,10 @@ const HIGHLIGHTS: Record<string, { label: string; groups: Record<string, Group>;
       f3: { label: "Middle", color: FIFTH_RAMP[2], shape: "circle", z: 3 },
       f2: { label: "Second", color: FIFTH_RAMP[1], shape: "circle", z: 2 },
       f1: { label: "Lowest income fifth", color: FIFTH_RAMP[0], shape: "circle", z: 1 },
-      other: { ...OTHER, color: "#d6d2c8", label: "Vocational and charter" },
+      other: { ...OTHER, color: "#d6d2c8", label: "Vocational and technical" },
+      former: { ...OTHER, color: "#b5b0a5", label: "Districts since merged or closed" },
     },
-    of: (d) => (d.fifth ? `f${d.fifth}` : "other"),
+    of: (d) => (d.fifth ? `f${d.fifth}` : d.type === "vocational" ? "other" : "former"),
     labels: new Set(),
   },
   // Each region in its hue on the map (palette.ts REGION_HUES), the shape changing from each to the
@@ -251,11 +256,17 @@ function pointsFor(data: CwData, v: Pick<View, "x" | "y" | "fy" | "log" | "all" 
   const pts: Point[] = [];
   const rows: Row[] = [];
   const offScale = { n: 0, below: false };
+  // Districts that ran schools that year (they have foundation enrollment then) but lack one of the two figures, as
+  // when DESE hasn't reported actual net school spending: left out, and counted for the caption (#242)
+  let missing = 0;
   for (const d of data.districts) {
     const x = d.v[v.x]?.[i];
     const y = d.v[v.y]?.[i];
-    if (x == null || y == null) continue;
     if (!v.all && (OMIT_NAMES.has(d.name) || (d.v.fe[i] ?? 0) < MIN_FE)) continue;
+    if (x == null || y == null) {
+      if (d.v.fe[i] != null) missing++;
+      continue;
+    }
     if (v.log && x <= 0) {
       offScale.n++;
       offScale.below ||= x < 0;
@@ -265,7 +276,7 @@ function pointsFor(data: CwData, v: Pick<View, "x" | "y" | "fy" | "log" | "all" 
       label: (d.id != null && hl.labels.has(d.id)) || d.org === v.find });
     rows.push(d);
   }
-  return { pts, rows, hl, offScale };
+  return { pts, rows, hl, offScale, missing };
 }
 
 /** Spearman's rho between the vertical measure and every other measure, closest first;
@@ -588,9 +599,9 @@ export function startCommonwealth(root: HTMLElement, data: CwData, opts: {
     allBox.checked = v.all;
     find.value = data.districts.find((d) => d.org === v.find)?.name ?? "";
 
-    const { pts, rows, hl, offScale } = pointsFor(data, v);
+    const { pts, rows, hl, offScale, missing } = pointsFor(data, v);
     const focus = (v.focus ?? []).filter((g) => hl.groups[g]);
-    describe(v, pts, rows, hl, offScale, focus);
+    describe(v, pts, rows, hl, offScale, missing, focus);
     // The chart takes the room the legend, finding and caption leave, so the view never scrolls
     const width = Math.max(300, figure.clientWidth || 800);
     const pad = parseFloat(getComputedStyle(body).paddingTop) + parseFloat(getComputedStyle(body).paddingBottom);
@@ -634,10 +645,10 @@ export function startCommonwealth(root: HTMLElement, data: CwData, opts: {
   /** The legend, finding, caption, ranking and table: everything but the chart, each part drawn on its own (#238).
    * rows: the districts behind the points, which the cautions read. */
   function describe(v: View, pts: Point[], rows: Row[], hl: (typeof HIGHLIGHTS)[string], offScale: { n: number; below: boolean },
-    focus: string[]) {
+    missing: number, focus: string[]) {
     drawCautions(v, pts.length, checkPair(v, VAR.get(v.y)!, VAR.get(v.x)!, pts, rows));
     drawLegend(pts, hl, focus);
-    drawCaption(v, pts.length, offScale);
+    drawCaption(v, pts.length, offScale, missing);
     drawTable(v, pts);
     const rank = ranking(data, v);
     drawPicker(v, rank);
@@ -729,11 +740,13 @@ export function startCommonwealth(root: HTMLElement, data: CwData, opts: {
   }
 
   /** The caption: the year, how many districts, which are left out, the sources and the parts of About the data */
-  function drawCaption(v: View, n: number, offScale: { n: number; below: boolean }) {
+  function drawCaption(v: View, n: number, offScale: { n: number; below: boolean }, missing: number) {
     const yv = VAR.get(v.y)!;
     const xv = VAR.get(v.x)!;
-    // Left out: the districts too large or small to compare, unless all are asked for, and those a log scale can't place
+    // Left out: the districts too large or small to compare, unless all are asked for, those without both figures, and
+    // those a log scale can't place
     const out = v.all ? [] : ["Boston", "Provincetown", `districts with fewer than ${MIN_FE} foundation pupils`];
+    if (missing) out.push(`${missing} ${missing === 1 ? "district" : "districts"} without both figures that year`);
     if (offScale.n) {
       out.push(`${offScale.n} ${offScale.n === 1 ? "district" : "districts"} with ${xv.short} at ${axisFmt(xv.unit)(0)}` +
         `${offScale.below ? " or below" : ""}, which a log scale can't place`);

@@ -4,8 +4,10 @@
 //
 // Any cap keeps the formula's rule that targets add up to 59% of all foundation budgets, so
 // both statewide percentages scale by one factor f, found here by bisection, with each town's
-// target min(yield x f, cap x foundation budget). f is 1 at 82.5%; at 100% and with no cap
-// this reproduces Michael Naughton and Tupper Brown's FY2026 targets to the dollar.
+// target min(yield x f, cap x foundation budget). f is 1 at 82.5%. A town with no foundation budget (Gosnold, with no
+// pupils of its own) has no target under any cap and takes no share of the total (#242). Against Michael Naughton and
+// Tupper Brown's FY2026 workbook, last compared 2026-11-08: at 100%, every town within $1; with no cap, every town
+// within 0.01%.
 
 import { addStyles, capital, el, lower, modal, placeTip, pointsAt, svgEl, vn } from "./dom";
 import { change as changePct, compact, digits, pct, rho as rhoText, round, signFor, total, usd } from "./format";
@@ -43,7 +45,8 @@ interface Spending { fy: number; districts: number; above: number; median: numbe
 
 /** Every town's yield, foundation budget, target and required contribution by year, FY2007 on */
 interface History {
-  years: number[]; source: string;
+  /** capped: each year's count of towns at the cap (export_explorer_data.at_cap, the test atCap repeats) */
+  years: number[]; source: string; capped?: number[];
   towns: Record<string, { cey: (number | null)[]; foundation: (number | null)[]; target: (number | null)[]; required: (number | null)[] }>;
 }
 
@@ -125,6 +128,13 @@ function requiredFor(t: CapTown, target: number, yieldPct: number): number | nul
   return Math.min(H * 0.9, Math.round(P + T - V + W));
 }
 
+/** Whether the cap held a target below the yield it would otherwise be: the one test for "at the cap" on this tab, as
+ * the pipeline's at_cap (#242). DESE's target is the lesser of the two, so a capped town's target is below its yield. */
+const atCap = (target: number, cey: number, foundation: number | null) => !!foundation && target < cey - 1;
+
+/** A town's target under a cap, or none, at factor f: none for a town with no foundation budget */
+const targetAt = (cey: number, fb: number, f: number, cap: number | null) => (!fb ? 0 : cap == null ? cey * f : Math.min(cey * f, cap * fb));
+
 /** The same for arrays: one year's yields and foundation budgets, held to that year's total. */
 function solveArrays(ceys: number[], fbs: number[], total: number, cap: number | null): number {
   let lo = 0;
@@ -132,7 +142,7 @@ function solveArrays(ceys: number[], fbs: number[], total: number, cap: number |
   for (let k = 0; k < 80; k++) {
     const f = (lo + hi) / 2;
     let sum = 0;
-    for (let i = 0; i < ceys.length; i++) sum += cap == null ? ceys[i] * f : Math.min(ceys[i] * f, cap * fbs[i]);
+    for (let i = 0; i < ceys.length; i++) sum += targetAt(ceys[i], fbs[i], f, cap);
     if (sum < total) lo = f;
     else hi = f;
   }
@@ -146,7 +156,7 @@ function solve(towns: CapTown[], total: number, cap: number | null): number {
   for (let k = 0; k < 80; k++) {
     const f = (lo + hi) / 2;
     let sum = 0;
-    for (const t of towns) sum += cap == null ? t.cey * f : Math.min(t.cey * f, cap * t.foundation);
+    for (const t of towns) sum += targetAt(t.cey, t.foundation, f, cap);
     if (sum < total) lo = f;
     else hi = f;
   }
@@ -162,13 +172,12 @@ function capContext(data: CapData, fy: string, townId: string, scenario: number 
   const t = towns.find((x) => x.id === townId) ?? towns[0];
   // The scenario's targets: the same statewide total, a different cap
   const f = solve(towns, y.totals.target, scenario);
-  const alt = new Map(towns.map((x) => [x.id,
-    Math.round(scenario == null ? x.cey * f : Math.min(x.cey * f, scenario * x.foundation))]));
+  const alt = new Map(towns.map((x) => [x.id, Math.round(targetAt(x.cey, x.foundation, f, scenario))]));
   const change = (x: CapTown) => alt.get(x.id)! - x.target;
   const scenName = scenario == null ? "with no cap" : `with a ${capPct(scenario)} cap`;
   // Plain statements: "No cap means ...", "A 100% cap means ..."
   const means = scenario == null ? "No cap means" : `A ${capPct(scenario)} cap means`;
-  const atScenarioCap = scenario == null ? 0 : towns.filter((x) => x.foundation && alt.get(x.id)! >= Math.round(scenario! * x.foundation) - 1).length;
+  const atScenarioCap = scenario == null ? 0 : towns.filter((x) => atCap(alt.get(x.id)!, x.cey * f, x.foundation)).length;
   const up = towns.filter((x) => change(x) > 0);
   const down = towns.filter((x) => change(x) < 0);
   const upSum = up.reduce((a, x) => a + change(x), 0);
@@ -236,13 +245,16 @@ function howParts({ y }: Ctx) {
 function tileParts({ y }: Ctx) {
   return [
     tile(`Towns at the cap, FY${y.fy}`, String(y.totals.capped),
-      [`Of 351 towns. Each is asked for ${pct(y.max_pct, 1)} of its foundation budget, which is less than it would pay if ` +
-        "it made the same fiscal effort as every other town."]),
+      // True of every capped town: the cap holds the target below the yield. It had said each pays less than at the same
+      // effort as other towns, which fails for 91 of FY2027's 193 under the tab's own no-cap rates, and "asked for" the
+      // 82.5%, which only 99 of them are required to pay this year (#242)
+      [`Of 351 towns. The cap holds each one's target local contribution to ${pct(y.max_pct, 1)} of its foundation ` +
+        "budget, below its combined effort yield, what this year's percentages of its property value and income would set."]),
     tile("Statewide percentages", `${rate(y.property_pct)} · ${rate(y.income_pct)}`,
       ["Of property value and of income, with the cap", `With no cap: ${rate(y.property_pct * y.factor)} · ${rate(y.income_pct * y.factor)}`]),
     tile("Wealth redistributed by the cap", big(y.totals.up_sum), [
       `${y.totals.up} towns are asked for ${big(y.totals.up_sum)} less because of the cap`,
-      `The other ${y.totals.down} are asked for ${big(-y.totals.down_sum)} more`]),
+      `${y.totals.down} are asked for ${big(-y.totals.down_sum)} more`]),
   ];
 }
 
@@ -774,8 +786,8 @@ export function startCap(root: HTMLElement, data: CapData, opts: { town: string 
         const fb = hist.foundation[j];
         const target = hist.target[j];
         if (cey == null || fb == null || target == null) return { fy, diff: null as number | null, target, capped: false };
-        const other = scenario == null ? cey * f[j] : Math.min(cey * f[j], scenario * fb);
-        return { fy, diff: Math.round(other - target), target, capped: target < cey - 1 };
+        const other = targetAt(cey, fb, f[j], scenario);
+        return { fy, diff: Math.round(other - target), target, capped: atCap(target, cey, fb) };
       });
       const have = rows.filter((r) => r.diff != null);
       const sum = have.reduce((a, r) => a + r.diff!, 0);

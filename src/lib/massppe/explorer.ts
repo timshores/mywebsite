@@ -486,16 +486,20 @@ const WEIGHT_NOTE = "An average weights each district's figure by its pupils. Fr
   "membership: full-time equivalents over the year. DESE's reports for FY1990 to FY1996 give no pupils, so those " +
   "years use the fall enrollment the National Center for Education Statistics counts (Common Core of Data), a head " +
   "count from a different agency. In FY1997 and FY1998, when both exist, nine districts in ten differ by less than 9%.";
-const MEASURE_NOTE = "In FY2005 the state's Department of Elementary and Secondary Education (DESE) began measuring spending per pupil by function, from all funds: the measure the " +
-  "columns show. Before then the dashed line shows DESE's older, narrower day-program figure. The two measure " +
-  "different things, so the explorer doesn't connect them. Each has its own trend and growth rate.";
-const HIST_NOTE = "Before FY2005, DESE measured only spending in a district's own schools, mostly from its school " +
-  "budget. The dashed line shows that narrower figure. In FY2005 and FY2006, the gap between the line and the " +
-  "columns is the difference between the two measures.";
+// Before FY2005 the explorer reads only DESE's day-program series; DESE's reports for some of those years also give an
+// integrated cost per pupil, which About the data mentions and nothing reads yet (#242: these had said DESE measured
+// nothing else)
+const MEASURE_NOTE = "The columns show the state's Department of Elementary and Secondary Education (DESE) spending per " +
+  "pupil by function, from all funds, which its reports give from FY2005. Before then the dashed line shows DESE's " +
+  "older, narrower day-program figure. The two measure different things, so the explorer doesn't connect them. Each " +
+  "has its own trend and growth rate.";
+const HIST_NOTE = "Before FY2005, the explorer shows DESE's day-program spending: what a district spent in its own " +
+  "schools, mostly from its school budget. The dashed line shows that narrower figure. In FY2005 and FY2006, the gap " +
+  "between the line and the columns is the difference between the two measures.";
 const SWITCH_NOTE = "Adds FY1990 to FY2004, from DESE's per-pupil reports, which its Public Records Center provided in " +
-  "October 2026 (public records request P004939-101625). For those years DESE measured only its older, narrower " +
-  "day-program spending, drawn as a dashed line that runs to FY2006. Districts that no longer exist are listed " +
-  "under Former districts.";
+  "October 2026 (public records request P004939-101625). For those years the explorer draws DESE's older, narrower " +
+  "day-program spending, as a dashed line that runs to FY2006. Districts that no longer exist are listed under " +
+  "Former districts.";
 // The site accent (Layout.astro --accent), dashed, so the trend reads apart from the comparison
 const TREND_COLOR = "#b65c3d";
 
@@ -1769,9 +1773,9 @@ export async function startExplorer() {
   // menu on whatever was being compared, so nothing jumps; Swap makes what was compared the focus, and what was the
   // focus its comparison, by name ("Another ...")
   for (const side of [
-    { menu: compareSelect, swap: "swap-district", focus: "d", choice: "cmp", vs: "vs", chain: CHAIN, fallback: "statewide",
+    { menu: compareSelect, swap: "swap-district", focus: "d", choice: "cmp", vs: "vs", chain: CHAIN, fallback: "statewide-all",
       get: () => entity(state.d) },
-    { menu: townCompareSelect, swap: "swap-town", focus: "t", choice: "tcmp", vs: "tvs", chain: TOWN_CHAIN, fallback: "towns-statewide",
+    { menu: townCompareSelect, swap: "swap-town", focus: "t", choice: "tcmp", vs: "tvs", chain: TOWN_CHAIN, fallback: "towns-statewide-all",
       get: () => townById.get(state.t) },
   ] as const) {
     const compared = () => comparisonOf(side.get(), state[side.choice], state[side.vs], side.chain);
@@ -3028,8 +3032,9 @@ export async function startExplorer() {
       "special education schools. With few out-of-district FTE, one placement moves the figure a lot. ", helpTip(
         "DESE's data reports no separate figure for these payments from FY2009. The explorer works them out from DESE's " +
         "totals: total spending per pupil times all FTE pupils, less in-district spending per pupil times in-district " +
-        "pupils, over out-of-district pupils. For FY2005 to FY2008, where DESE printed the figure, the two agree to within " +
-        "0.7%. An average pools its districts' payments over their out-of-district pupils."));
+        "pupils, over out-of-district pupils. DESE printed the figure only for FY2005 to FY2008, whose in-district totals " +
+        "were themselves worked out from it, so no DESE figure checks the method from FY2009. An average pools its " +
+        "districts' payments over their out-of-district pupils."));
     let oodMax = 0;
     years.forEach((_, i) => (oodMax = Math.max(oodMax, ood.values[i] ?? 0, oodOverlay?.values[i] ?? 0)));
     const oodTv = trendView("ood", oodTrend, oodOverlayAll, cName);

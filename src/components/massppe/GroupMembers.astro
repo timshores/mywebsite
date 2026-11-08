@@ -87,9 +87,10 @@ const KINDS: Record<"districts" | "towns", [string, string, string][]> = {
       `large ones, those with more than 10,000 in-district pupils, and one with them. The ${big.length} are ` +
       `${andList(big.map((d) => d.name))}. Together they teach ${bigShare} of the pupils in traditional districts, so in an ` +
       `average weighted by pupils they carry ${bigShare} of its weight between them, ${big[0].name} ${largestShare} on ` +
-      `its own. The average without them, the explorer's usual comparison, follows ${REPORT}, which left Springfield ` +
-      `out of its Western MA average; it covers the other ${pooledN}. The average with them covers all ` +
-      `${traditional.length}. The ${big.length} also have an average of their own: Very large, under Enrollment groups. ` +
+      `its own. The average with them, Statewide, is the explorer's usual comparison and covers all ` +
+      `${traditional.length}. The average without them follows ${REPORT}, which left Springfield out of its Western MA ` +
+      `average; it covers the other ${pooledN}. The ${big.length} also have an average of their own: Very large, under ` +
+      `Enrollment groups. ` +
       `Spending averages weight each district by its in-district pupils (full-time ` +
       `equivalents); Chapter 70 averages, by foundation enrollment. The figures come from the state's Department of ` +
       `Elementary and Secondary Education (DESE): its ${HUB} and its ${C70}.`],
@@ -120,8 +121,10 @@ const KINDS: Record<"districts" | "towns", [string, string, string][]> = {
     ["state", "Statewide", `Two statewide averages: one without the ${apart.length} cities whose school districts have ` +
       `more than 10,000 pupils, and one with them. The ${apart.length} are ${andList(apart)}. They're home to ` +
       `${apartShare} of the state's residents, so in an average that pools dollars and residents they carry ` +
-      `${apartShare} of its weight. The average without them, the explorer's usual comparison, covers the other ` +
-      `${latestPop.length - apart.length}; the average with them, all ${latestPop.length}. Each average pools its towns: their ` +
+      `${apartShare} of its weight. The average with them, Statewide, is the explorer's usual comparison and covers all ` +
+      `${latestPop.length}; the average without them covers the other ${latestPop.length - apart.length}. The ` +
+      `${apart.length} also have an average of their own, the cities with very large school districts, which the map ` +
+      `shows when it groups towns by region. Each average pools its towns: their ` +
       `combined dollars over their combined residents. Budgets come from the Division of Local Services' ${DLS}, and ` +
       `population from the Census Bureau's ${POP}.`],
     ["region", "Regions", "The same six EOHHS regions: a town's region is its school district's, or, for the few towns " +
@@ -134,6 +137,9 @@ const KINDS: Record<"districts" | "towns", [string, string, string][]> = {
       "towns share both. Where they don't, “Its population group in its region” compares with the group statewide."],
     ["group", "Gateway Cities", `The same ${gatewayN} cities, including those whose school districts have ` +
       "more than 10,000 pupils."],
+    ["apart", "Cities with very large school districts", `The ${apart.length} cities named under Statewide, whose ` +
+      "school districts have more than 10,000 pupils. The region averages leave them out, so the map shows them as " +
+      "this group when it groups towns by region."],
     ["type", "Community types", `Rural: under 500 residents per square mile, the line in the ${RURAL_PLAN} for the ` +
       "Commonwealth's Rural Policy Advisory Commission. Inner Core, Gateway Cities outside the Inner Core, and Suburban " +
       `and other are defined as they are for districts, above. Land areas come from the Census Bureau's ${LAND}.`],

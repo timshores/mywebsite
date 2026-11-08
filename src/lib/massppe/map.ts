@@ -35,8 +35,11 @@ const KIND_NAME: Record<Kind, string> = { rural: "Rural", suburban: "Suburban an
 // The types run from the least dense to the most, so one blue ramp, light to dark, orders them
 const KIND_COLOR: Record<Kind, string> = { rural: "#86b6ef", suburban: "#3987e5", gateway: "#1c5cab", core: "#0d366b" };
 /** A grouping: each town's (or district's) group of one kind, as the explorer compares it; its groups in order,
- * and whether that order runs one way (by size, income, or density), so one ramp colors them */
-interface Grouping { key: string; label: string; ordered: boolean; groups: string[]; of: Record<string, string> }
+ * and whether that order runs one way (by size, income, or density), so one ramp colors them. apart: the places
+ * shown in a group other than their own, because their own group's average leaves them out (#242): by region, the
+ * ten very large school districts and their cities, shown together */
+interface Grouping { key: string; label: string; ordered: boolean; groups: string[]; of: Record<string, string>;
+  apart?: Record<string, string> }
 export interface MapData {
   /** The groupings for each layer, and each group's name, its towns or districts, and its values */
   groupings?: Record<Layer, Grouping[]>;
@@ -68,7 +71,9 @@ interface Measure {
   /** For a change: what grew, in the sentence on how the towns or districts split ("spending per pupil") */
   subject?: string;
   /** For the cap: its own sentence on the split */
-  split?: (up: number, down: number, n: number) => string;
+  /** How many went each way, of n towns or districts (what): up, down, and the rest, unchanged, which had been counted
+   * as down (#242) */
+  split?: (up: number, down: number, n: number, what: string) => string;
   /** After a level's median: its unit, if the number needs one (" residents per square mile") */
   unit?: string;
   /** Growth in dollars, which the Dollars switch shows before or after inflation */
@@ -229,7 +234,8 @@ const TOWN_MEASURES: Measure[] = [
     notes: ["equalized-valuation-eqv"],
     about: (m, real, y) => `How much more or less each town would be asked to pay toward its schools in FY${y.to} with no cap, ` +
       "per household, keeping that year's statewide total. The cap saves the blue towns money and costs the orange towns money.",
-    split: (up, down, n) => `With no cap, ${up} of ${n} towns would be asked for more and the other ${down} would be asked for less.`,
+    split: (up, down, n) => `With no cap, ${up} of ${n} towns would be asked for more and ${down} would be asked for less.` +
+      (n - up - down ? ` The other ${n - up - down} would be asked for the same.` : ""),
   },
 ];
 
@@ -289,7 +295,12 @@ const DISTRICT_MEASURES: Measure[] = [
     about: (m, real, y) => `How far each district's net school spending in FY${y.to} came from the budget it reported to DESE, ` +
       "as a share of that budget: orange districts spent less than they budgeted, blue more, and gray within half a " +
       "percent either way. Budgets begin with FY2011.",
-    split: (up, down, n) => `${up} of ${n} districts spent more than they budgeted, and ${down} spent less.`,
+    // With all grades, each town shows its district's figure, or its two districts' combined, so the towns are counted
+    split: (up, down, n, what) => (what === "towns"
+      ? `In ${up} of ${n} towns, the districts that serve them spent more than they budgeted, and in ${down}, less.` +
+        (n - up - down ? ` In the other ${n - up - down}, they spent what they budgeted.` : "")
+      : `${up} of ${n} ${what} spent more than they budgeted, and ${down} spent less.` +
+        (n - up - down ? ` The other ${n - up - down} spent what they budgeted.` : "")),
   },
   {
     key: "sped_share", label: "Special education's share of spending", kind: "level", fmt: share, short: share, years: "year",
@@ -334,7 +345,7 @@ const groupName = (n: string) => n.replace(/,? average\b/, "").replace(/ average
 /** A group's name, short, for the groups' table under the map: "Lowest income fifth", "Western MA", "Tiny",
  * "1,000–2,499", "Rural" */
 const shortGroup = (n: string) => groupName(n).replace(/ (enrollment|peer) group\b/, "").replace(/^Statewide /, "")
-  .replace(/ (towns|districts)$/, "").replace(/^(Towns|Districts) in the (\w)/, (_, _w, c: string) => c.toUpperCase())
+  .replace(/(?<! school) (towns|districts)$/, "").replace(/^(Towns|Districts) in the (\w)/, (_, _w, c: string) => c.toUpperCase())
   .replace(/^Towns of /, "").replace(/^Towns under /, "Under ");
 // The measure menu's groups, in order
 const GROUPS: Record<Layer, [string, string[]][]> = {
@@ -454,12 +465,10 @@ function placesOf(onTowns: boolean, grades: Grades, gs: Grouping[], grouping: Gr
    * for its younger grades, usually its own, as that district's page does: Shutesbury, Pelham and Leverett are
    * all tiny, where taking the district that teaches more of a town's pupils put two of the three in Amherst-
    * Pelham's medium group on a few pupils' difference (#234). */
-  const inGrouping = (g: Grouping, t: MapTown): string | null => {
-    if (onTowns) return g.of[t.id] ?? null;
-    const d = combinedAt(t) ? t.elem : districtOf(t);
-    return d ? g.of[d] ?? null : null;
-  };
-  const groupOf = (t: MapTown): string | null => (grouping ? inGrouping(grouping, t) : null);
+  const unitOf = (t: MapTown) => (onTowns ? t.id : combinedAt(t) ? t.elem : districtOf(t));
+  const inGrouping = (g: Grouping, t: MapTown): string | null => ((u) => (u ? g.of[u] ?? null : null))(unitOf(t));
+  // The group a place is shown in: the one whose average pools it (#242)
+  const groupOf = (t: MapTown): string | null => (grouping ? ((u) => (u ? grouping.apart?.[u] ?? grouping.of[u] ?? null : null))(unitOf(t)) : null);
   // A grouping within regions: the region each group sits in, outlined on hover, and its size
   const within = grouping ? WITHIN[grouping.key] : undefined;
   const regions = within ? gs.find((g) => g.key === within.region) ?? null : null;
@@ -1011,7 +1020,7 @@ export function startMap(root: HTMLElement, data: MapData, opts: {
     const { values } = classes;
     const up = values.filter((v) => v > 0).length;
     const n = values.length;
-    about.append(" " + (measure.split ? measure.split(up, n - up, n)
+    about.append(" " + (measure.split ? measure.split(up, values.filter((v) => v < 0).length, n, what)
       : measure.kind === "change" ? (up === n ? `In all ${n} ${what}, ${measure.subject} grew` : up === 0 ? `In none of the ${n} ${what} did ${measure.subject} grow`
         : `In ${up} of ${n} ${what}, ${measure.subject} grew`) + (measure.dollars && real ? " faster than prices" : "") +
         (up === n || up === 0 ? "." : `; in the other ${n - up}, it did not.`)
@@ -1078,11 +1087,15 @@ export function startMap(root: HTMLElement, data: MapData, opts: {
     const loose = data.towns.filter((t) => !groupOf(t));
     return !onTowns && loose.every((t) => !t.elem && !t.high) ? "No school district of its own" : "In no group of this kind";
   }
+  /** Why the very large stand apart when grouped by region (#242) */
+  const apartNote = (onTowns: boolean) => `The region averages leave out the ten ${onTowns ? "cities with very large school " +
+    "districts" : "very large districts"}, so they are shown together, in gray, as a group of their own.`;
   /** What each town shows, grouped */
   function groupNote(g: Grouping, onTowns: boolean) {
     const of = onTowns ? "its group" : "its district's group";
     return ` Grouped by ${lower(g.label)}, each town shows ${of}'s figure: its ${onTowns ? "towns" : "districts"} ` +
       "pooled, as the explorer's comparisons pool them. Point to a town to see its whole group; select it to open the group." +
+      (g.apart ? ` ${apartNote(onTowns)}` : "") +
       (onTowns ? "" : " A town split between two districts takes the group of the one for its younger grades, usually its own.");
   }
   /** The groups themselves: each its color, with how many towns it covers, and the table of towns by group. A
@@ -1111,8 +1124,10 @@ export function startMap(root: HTMLElement, data: MapData, opts: {
       : g.key === "type" ? [...present].sort((a, b) => KINDS.indexOf(typeKind(a)!) - KINDS.indexOf(typeKind(b)!)) : present;
     const ramp = g.key === "type" ? PURPLES : g.key === "fifth" ? AMBERS : g.key === "schools" ? ROSES : GREENS;
     // A hatched group takes no step of the ramp
-    const order = (g.key === "type" ? shown : g.groups.filter((id) => counts.has(id))).filter((id) => !HATCHED_GROUPS.has(id));
-    const color = (id: string) => (HATCHED_GROUPS.has(id) ? HATCH : regions
+    // The places their own group leaves out, shown together in gray, as a group within regions that's statewide is
+    const outside = new Set(Object.values(g.apart ?? {}));
+    const order = (g.key === "type" ? shown : g.groups.filter((id) => counts.has(id))).filter((id) => !HATCHED_GROUPS.has(id) && !outside.has(id));
+    const color = (id: string) => (HATCHED_GROUPS.has(id) ? HATCH : outside.has(id) ? STATEWIDE_HUE : regions
       ? shade(statewide(id) ? STATEWIDE_HUE : GROUP_HUES[regionAt(id) % GROUP_HUES.length] ?? STATEWIDE_HUE, sizeAt(id), sizes?.groups.length ?? 1)
       : g.ordered ? steps(ramp, order.length)[order.indexOf(id)] : GROUP_HUES[order.indexOf(id) % GROUP_HUES.length]);
     current = { measure: { key: "group", label: g.label, kind: "type", fmt: () => "", short: () => "", about: () => "" },
@@ -1130,6 +1145,7 @@ export function startMap(root: HTMLElement, data: MapData, opts: {
       `${lower(g.label)}: each town takes ${onTowns ? "its own" : "its district's"} group. Point to a group, on the map or ` +
       "in the key, to see all of it; select it in the key to keep it lit and open its page. Select a town to open " +
       `${onTowns ? "it" : "its district"}, and pick a measure to color each group by its figure.`);
+    if (g.apart) about.append(` ${apartNote(onTowns)}`);
     if (regions) about.append(" Each region has its own hue, light to dark from the smallest group to the largest; pointing " +
       "to a town outlines its group in black and its region in red. " + (shown.some((id) => data.groups?.[id]?.outlier)
       ? `A region's group with fewer than three ${onTowns ? "towns" : "districts"} is marked as a regional outlier: the ` +

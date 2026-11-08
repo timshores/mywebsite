@@ -1,10 +1,14 @@
 ---
 import Layout from "../../layouts/Layout.astro";
 import GroupMembers from "../../components/massppe/GroupMembers.astro";
+import capData from "../../data/massppe/cap.json";
 // The explorer's styles, a plain stylesheet anchored on .explorer rather than this page's scoped <style> (#237)
 import "../../lib/massppe/explorer.css";
 
 // The agencies' files behind the explorer, as kept in the public pipeline repository
+// About the data's FY2025 count of towns at the 82.5% cap, from DESE's history as the cap tab counts it (#242: it was
+// typed by hand)
+const cappedFy2025 = capData.history.capped[capData.history.years.indexOf(2025)];
 const REPO_DATA = "https://github.com/timshores/schools/blob/main/ppe_report/data/";
 const SOURCE_FILES: { group: string; files: { file: string; holds: string; source: string; url: string; retrieved: string }[] }[] = [
   { group: "School districts", files: [
@@ -14,6 +18,8 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
       source: "DESE, Office of School Finance workbooks, public records request P004939-101625", url: `${REPO_DATA}dese_archive/README.md`, retrieved: "Oct 28, 2026" },
     { file: "dese_c70_profile.csv", holds: "Foundation enrollment and budget, required local contribution, Chapter 70 aid, and required and actual net school spending, by district and year",
       source: "DESE, Chapter 70 district profiles", url: "https://www.doe.mass.edu/finance/chapter70/default.html", retrieved: "Oct 18, 2026" },
+    { file: "dese_c70_fy2023_reference.csv", holds: "FY2023 required and actual net school spending for every district, which replace the current profiles' misassigned FY2023 figures",
+      source: "DESE, Chapter 70 district profiles, as downloaded in August 2025", url: "https://www.doe.mass.edu/finance/chapter70/default.html", retrieved: "Aug 2025" },
     { file: "dese_c70_regional_members.csv", holds: "Each regional district's member towns and their FY2025 required contributions",
       source: "DESE, FY2025 Chapter 70 regional district summary", url: "https://www.doe.mass.edu/finance/chapter70/fy2025/chapter-2025.html", retrieved: "Oct 21, 2026" },
     { file: "census_f33_ma.csv", holds: "Revenue by source for every Massachusetts school system, FY2009 to FY2024",
@@ -274,8 +280,8 @@ const asFirst = (c: Chart) => (c.svg + KEYS)
             <option value="cohort">Its enrollment group in its region</option>
             <option value="cohort-state">Its enrollment group statewide</option>
             <option value="region">Its region</option>
-            <option value="state">Statewide, without the 10 largest</option>
-            <option value="state-all">Statewide, with the 10 largest</option>
+            <option value="state-all">Statewide</option>
+            <option value="state">Statewide, without the 10 very large districts</option>
             <option value="gateway">Gateway Cities</option>
             <option value="type">Its community type</option>
             <option value="fifth">Its income fifth</option>
@@ -304,8 +310,8 @@ const asFirst = (c: Chart) => (c.svg + KEYS)
             <option value="peer">Its population group in its region</option>
             <option value="peer-state">Its population group statewide</option>
             <option value="region">Its region</option>
-            <option value="state">Statewide, without the 10 largest</option>
-            <option value="state-all">Statewide, with the 10 largest</option>
+            <option value="state-all">Statewide</option>
+            <option value="state">Statewide, without the 10 cities with very large districts</option>
             <option value="gateway">Gateway Cities</option>
             <option value="type">Its community type</option>
             <option value="fifth">Its income fifth</option>
@@ -396,10 +402,14 @@ const asFirst = (c: Chart) => (c.svg + KEYS)
       <div id="cw-map"></div>
       <h3 class="cw-plots-title" id="cw-plots">Districts side by side</h3>
       <p class="cw-intro">
-        Each plot shows every Massachusetts school district on two measures. These pairs line up closely, with a
-        correlation of 0.4 or more, and raise no caution but “Shared towns,” which comes with any measure of a
-        district's towns. Open one to choose other measures, the year, and which
-        districts stand out, and to see which factors line up most closely with spending.
+        Each plot shows the state's school districts on two measures: the traditional and vocational districts in
+        DESE's Chapter 70 profiles that ran schools that year and have both figures. Charter schools aren't in those
+        profiles. Boston, Provincetown, and districts under 20 foundation pupils are left out unless you ask for them,
+        and each plot's caption says what else is. These pairs have a correlation of at least 0.4, moderate or strong,
+        and raise no caution but “Shared towns,” which comes with any measure of a district's towns. They were chosen
+        because they pass that test, so they show the pairs that line up best, not typical ones. Open one to choose
+        other measures, the year, and which districts stand out, and to see which factors line up most closely with
+        spending.
       </p>
       <div id="cw-root"><p class="tab-loading">Loading the plots…</p></div>
     </section>
@@ -584,8 +594,9 @@ const asFirst = (c: Chart) => (c.svg + KEYS)
       <p class="notes-sub">
         <strong>Spending on out-of-district FTE</strong> shows that tuition on its own, per out-of-district FTE pupil.
         DESE's data has no separate figure for it from FY2009, so the explorer works it out from DESE's totals: total
-        spending less in-district spending. For FY2005 to FY2008, where DESE printed the figure, the two agree to within
-        0.7%.
+        spending less in-district spending. DESE printed the figure for FY2005 to FY2008, and the explorer's matches it
+        there, but only because those years' in-district totals were themselves worked out from DESE's printed
+        payments. So no DESE figure checks the method in the years that need it, from FY2009.
       </p>
       <p>
         <strong>Enrollment</strong> comes in three measures. In-district FTE is full-year enrollment of students who
@@ -605,6 +616,9 @@ const asFirst = (c: Chart) => (c.svg + KEYS)
         regional district's member towns, pays the required local contribution. Anything above that is a local choice. Because spending per pupil and
         net school spending use different denominators, the two charts are not the same measure: they are a picture
         of apples in the morning compared with a picture of apples in the evening. Both dollar charts share one scale.
+        For FY2023, DESE's current file, from March 2026, gives 90 districts, most of them regional, another
+        district's required or actual net school spending: Gill-Montague's figures are Hawlemont's, for example. Until DESE corrects it, the explorer takes those FY2023 figures from DESE's August 2025 file, listed
+        under Source files below.
       </p>
       <p>
         <strong>Trends</strong> are the straight line that best fits every year's value. Its growth is the yearly rate
@@ -638,10 +652,12 @@ const asFirst = (c: Chart) => (c.svg + KEYS)
       </p>
       <p>
         <strong>Since 1990</strong> adds FY1990 to FY2004, from DESE's per-pupil reports in the same public records
-        request. For those years DESE measured only what it called day-program spending, an older, narrower measure:
+        request. For those years the explorer draws what DESE called day-program spending, an older, narrower measure:
         what a district spent running its own schools, mainly from its school committee budget and the town's indirect
         costs for them, divided by the pupils enrolled there. It leaves out pupils sent to other schools and what is
-        paid for them, so it usually runs below the columns. It continues to FY2006, so the two measures overlap for
+        paid for them, so it usually runs below the columns. DESE's reports for some of those years also give an
+        integrated cost per pupil, which counts the pupils a district pays for elsewhere; the explorer hasn't read it
+        yet. It continues to FY2006, so the two measures overlap for
         two years: in FY2005, which DESE's workbook sets out both ways, Abington's was $6,766 per pupil against $7,463
         in the columns. The explorer draws it as a separate dashed line, and each measure
         has its own trend and growth rate. The older measure's averages weight each district by DESE's average
@@ -666,8 +682,9 @@ const asFirst = (c: Chart) => (c.svg + KEYS)
         that. Vocational districts and charter schools are groups of their own. Regions are the six regions of the
         state's Executive Office of Health and Human Services. As the report left Springfield out of its Western MA average, region averages leave out the ten very
         large districts, which have an average of their own; together they teach 23% of the pupils in
-        traditional districts. There are two statewide averages, without them and with them, and the same for towns,
-        without and with the ten cities they serve (<a href="#groups">groups and their members</a>). A
+        traditional districts. There are two statewide averages: Statewide, of every traditional district, and the same
+        without the ten. Towns have the same two, with and without the ten cities those districts serve
+        (<a href="#groups">groups and their members</a>). A
         region with fewer than three districts in a
         enrollment group has no regional average for it, so "its enrollment group in its region" uses the statewide group there. Spending
         averages are weighted by in-district FTE, Chapter 70 averages by foundation enrollment, and enrollment
@@ -779,8 +796,8 @@ const asFirst = (c: Chart) => (c.svg + KEYS)
         quarter in Amherst and recovers a year later. Population groups put each town with others its size, by the July
         2024 estimate: under 1,000 (26 towns), 1,000–2,499 (42), 2,500–9,999 (98), 10,000–24,999 (103), 25,000–49,999
         (55), 50,000–99,999 (18), and 100,000 or more (9). The ten cities whose school districts are very large, from
-        Boston to Springfield, are in their population groups but stand apart from the statewide and regional town
-        averages, as their districts do from the district averages.
+        Boston to Springfield, are in their population groups, but the regional town averages leave them out, as do the
+        region averages of districts. So does the second statewide average; the first, Statewide, includes them.
       </p>
       <p>
         <strong>Property</strong> comes from the state Division of Local Services. Parcels and assessed values are
@@ -875,7 +892,7 @@ const asFirst = (c: Chart) => (c.svg + KEYS)
         town's target local contribution was 0.3906% of its January 2022 EQV plus 1.4312% of its residents' 2021
         income. The state chose the two percentages so that, statewide, property and income would each supply half
         of a total equal to 59% of all foundation budgets. No town's target could exceed 82.5% of its foundation
-        budget, and 182 towns were at that cap. Each year a town's required contribution moves from the year before
+        budget, and {cappedFy2025} towns were at that cap. Each year a town's required contribution moves from the year before
         toward its target, and Chapter 70 aid pays at least the rest of the foundation budget.
       </p>
       <p>
