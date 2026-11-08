@@ -555,6 +555,641 @@ const signedPct = (v: number) => change(v);
 /** A share already in percent, as the students' and residents' shares come: "43.2%" */
 const pctFmt = (v: number) => pct(v / 100);
 
+// ---- What needs none of the explorer's state, at module scope (#237: it sat inside startExplorer's closure),
+// so the pure parts can be tested in Node and the rest plainly don't depend on what the reader picked ----
+
+const nulls = (n: number): Values => Array(n).fill(null);
+
+/** Each named series: the earlier years (nH of them), then the explorer's own (nM) */
+function joinSeries<T extends object>(early: T | undefined, later: T | undefined, nH: number, nM: number): T {
+  const a = (early ?? {}) as Record<string, Values>;
+  const b = (later ?? {}) as Record<string, Values>;
+  const keys = [...new Set([...Object.keys(a), ...Object.keys(b)])];
+  return Object.fromEntries(keys.map((k) => [k, [...(a[k] ?? nulls(nH)), ...(b[k] ?? nulls(nM))]])) as T;
+}
+
+/** Each yearly series in o (a list of numbers and nulls as long as the explorer's own years, nM) with the nH earlier years
+ * in front, as nulls: every one, found as cut() finds them, so a series added later lines up too (#237) */
+function padYears<T>(o: T, nH: number, nM: number): T {
+  if (Array.isArray(o)) return (yearly(o, nM) ? [...nulls(nH), ...o] : o.map((x) => padYears(x, nH, nM))) as T;
+  if (o && typeof o === "object") return Object.fromEntries(Object.entries(o).map(([k, v]) => [k, padYears(v, nH, nM)])) as T;
+  return o;
+}
+
+const yearly = (v: unknown, n: number) => Array.isArray(v) && v.length === n && v.every((x) => x === null || typeof x === "number");
+function cut<T>(o: T, a: number, b: number, n: number): T {
+  if (Array.isArray(o)) return (yearly(o, n) ? o.slice(a, b + 1) : o.map((x) => cut(x, a, b, n))) as T;
+  if (o && typeof o === "object") return Object.fromEntries(Object.entries(o).map(([k, v]) => [k, cut(v, a, b, n)])) as T;
+  return o;
+}
+
+/** The first and last positions with a value, or -1 */
+const firstAt = (vals: Values) => vals.findIndex((v) => v != null);
+const lastAt = (vals: Values) => {
+  for (let i = vals.length - 1; i >= 0; i--) if (vals[i] != null) return i;
+  return -1;
+};
+
+const stackTop = (series: Series[], i: number) => series.reduce((a, s) => a + Math.max(0, s.values[i] ?? 0), 0);
+const fmtUsd = (v: number) => compact(v, "$");
+
+/** "teachers", "3 selected categories", or null when everything shows. */
+const selectionName = (shown: Series[], all: Series[], noun: string) =>
+  shown.length === all.length ? null : shown.length === 1 ? shown[0].label.toLowerCase() : `${shown.length} selected ${noun}`;
+
+/** Revenue averages cover only their regional districts, and say so. */
+const revName = (c: Entity) => (c.kind === "district" ? c.name : `${c.name} (regional districts)`);
+
+/** "Shutesbury" or "the Statewide Tiny enrollment group average", for use mid-sentence. */
+const refName = (c: Named) => c.ref ?? (c.kind === "district" || c.kind === "town" ? c.name : `the ${c.name}`);
+
+/** Why an entity has no revenue chart, in the chart's place. */
+function noRevenue(e: Entity): string {
+  // The source and why it falls short for these are in the Data tab, not here
+  if (e.type === "charter" || e.cohort === "CHARTER") return "Detailed revenue figures aren't available for charter schools.";
+  if (e.kind === "district") return "Detailed revenue figures aren't available for town-run districts.";
+  const n = e.rev_members ?? 0;
+  return n === 0 ? `The ${e.name} includes no regional districts, so it has no revenue average.`
+    : `The ${e.name} includes only ${n === 1 ? "one regional district" : `${n} regional districts`}, too few for a revenue average.`;
+}
+
+/** A trend's short name, for the end of its line: "Leverett trend", "Western MA Tiny enrollment group trend"; with what it
+ * measures, where a chart has several: "Leverett labor force trend" */
+const trendName = (name: string, what = "") => ((w) => (/ average\b/.test(name) ? name.replace(/ average\b/, `${w} trend`)
+  : `${name}${w} trend`))(what ? ` ${what}` : "");
+/** A trend's yearly figure, in the chart's own units, for the words at the end of its line: "+$550 (+3.2%) a year";
+ * short, for a narrow chart, without "a year" */
+const trendFigure = (values: Values, fmt: (v: number) => string, short = false) => ((r) => (r ? `${signed(r.perYear, fmt)}` +
+  `${r.rate != null ? ` (${signedPct(r.rate)})` : ""}${short ? "" : " a year"}` : ""))(trendRate(values));
+/** The words at a trend's end: its name and its yearly figure (#220), and a shorter name with the figure for a
+ * narrow chart */
+const trendEnds = (name: string, short: string, values: Values, fmt: (v: number) => string) =>
+  ({ endLabel: `${name} ${trendFigure(values, fmt)}`.trim(), endShort: `${short} ${trendFigure(values, fmt, true)}`.trim() });
+const trendOf = (name: string, sel: string | null, shownTotal: Values, fmt: (v: number) => string = usd): Series =>
+  ((values) => ({ key: "trend", label: `${name} trend${sel ? `, ${sel}` : ""}`, color: TREND_COLOR, values,
+    ...trendEnds(trendName(name), name.length <= 18 ? `${name} trend` : "Trend", values, fmt) }))(linearTrend(shownTotal));
+
+const hasLine = (s: Series | null): s is Series => !!s && s.values.some((v) => v != null);
+
+/** The comparison's own trend, in its color: "Western MA towns ... average trend, total" */
+const cmpTrendOf = (cmp: Series): Series =>
+  ({ key: "cmptrend", label: cmp.label.replace(/^(.*?)(, .*)?$/, "$1 trend$2"), color: COMPARE_COLOR, values: linearTrend(cmp.values) });
+
+/** A hover card's row. role names the trend's row and the comparison's, which the trends-only card picks out
+ * (#237: by role, not by their colors); strong marks the total */
+interface TipRow { value: string; label: string; color?: string; mark?: "line" | "dash" | "rect" | "hatch" | "diamond" | "linedot";
+  strong?: boolean; role?: "trend" | "cmp" }
+interface TipContent { title: string; rows: TipRow[]; note?: string }
+
+/** A "?" that shows a longer note on hover or focus (.cw-help) */
+function helpTip(note: string) {
+  const h = text("span", "?", "cw-help wide");
+  h.tabIndex = 0;
+  h.setAttribute("role", "note");
+  h.setAttribute("aria-label", note);
+  h.dataset.tip = note;
+  return h;
+}
+
+// A "?"'s note opens from the "?" (a wide one) or centered under it, which can run past the
+// window's edge; shift it back inside. Every "?" on the page, the map's and Commonwealth's too.
+const TIP_MARGIN = 8;
+function placeTip(h: HTMLElement, retry = true) {
+  const cs = getComputedStyle(h, "::after");
+  const inner = parseFloat(cs.width);
+  // The note exists only while hovered or focused; if the hover hasn't applied yet, look next frame
+  if (!(inner > 0)) {
+    if (retry) requestAnimationFrame(() => placeTip(h, false));
+    return;
+  }
+  const w = cs.boxSizing === "border-box" ? inner
+    : inner + parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight) + parseFloat(cs.borderLeftWidth) + parseFloat(cs.borderRightWidth);
+  const r = h.getBoundingClientRect();
+  // Inside an enlarged chart's window the note stays within that window; elsewhere, within the page
+  const dlg = h.closest("dialog");
+  const area = dlg?.open ? dlg.getBoundingClientRect() : null;
+  const edgeL = (area?.left ?? 0) + TIP_MARGIN;
+  const edgeR = (area?.right ?? document.documentElement.clientWidth) - TIP_MARGIN;
+  const left = h.classList.contains("wide") ? r.left : r.left + r.width / 2 - w / 2;
+  const dx = left + w > edgeR ? Math.max(edgeR - (left + w), edgeL - left) : left < edgeL ? edgeL - left : 0;
+  if (dx) h.style.setProperty("--tip-dx", `${Math.round(dx)}px`);
+  else h.style.removeProperty("--tip-dx");
+  // ...and opens above the "?" where it would run past the window's bottom and there's room above
+  if (area) {
+    const ht = parseFloat(cs.height) + parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom) + 2;
+    h.classList.toggle("tip-above", r.bottom + 6 + ht > area.bottom - TIP_MARGIN && r.top - 6 - ht > area.top + TIP_MARGIN);
+  }
+}
+
+/** A chart over fewer years than the rest, from the page's year off on: hover, the tooltip and the keyboard speak in
+ * the page's years, the chart in its own */
+const offsetPanel = (p: Panel, off: number, n: number): Panel => ({
+  svg: p.svg,
+  ax: Object.assign(Object.create(p.ax) as Panel["ax"], { x: (i: number) => p.ax.x(i - off) }),
+  setHover: (i) => p.setHover(i == null || i < off || i >= off + n ? null : i - off),
+});
+
+function showTip(figure: HTMLElement, panel: Panel, i: number, content: TipContent) {
+  const tip = figure.querySelector<HTMLElement>(".tooltip")!;
+  tip.replaceChildren(text("div", content.title, "tip-title"));
+  for (const r of content.rows) {
+    const row = document.createElement("div");
+    row.className = `tip-row${r.strong ? " strong" : ""}`;
+    const key = document.createElement("span");
+    key.className = `key ${r.mark ?? "none"}`;
+    if (r.color) key.style.setProperty("--c", r.color);
+    row.append(key, text("span", r.value, "tip-value"), text("span", r.label, "tip-label"));
+    tip.append(row);
+  }
+  if (content.note) tip.append(text("div", content.note, "tip-note"));
+  tip.hidden = false;
+  const svgBox = panel.svg.getBoundingClientRect();
+  const figBox = figure.getBoundingClientRect();
+  const scale = svgBox.width / panel.ax.frame.width;
+  const x = svgBox.left - figBox.left + panel.ax.x(i) * scale;
+  const w = tip.offsetWidth;
+  const left = x + 16 + w > figBox.width ? x - 16 - w : x + 16;
+  tip.style.left = `${Math.max(0, left)}px`;
+  tip.style.top = `${svgBox.top - figBox.top + 8}px`;
+  // A tall tip on a phone can run past the bottom of the screen, or of an enlarged chart's window;
+  // move it up until it fits
+  const dlg = figure.closest("dialog");
+  const area = dlg?.open ? dlg.getBoundingClientRect() : { top: 0, bottom: window.innerHeight };
+  const box = tip.getBoundingClientRect();
+  const over = box.bottom - (area.bottom - 8);
+  if (over > 0) tip.style.top = `${Math.max(box.top - over, area.top + 8) - figBox.top}px`;
+}
+
+// ---- Legend: stacked segments are toggle buttons that isolate them; the lines are
+// toggle buttons that hide them on that chart ----
+interface LegendItem { label: string; color: string; mark: "rect" | "line" | "dash" | "hatch" | "diamond" | "linedot"; key?: string; line?: Line;
+  /** The chart marks (their data-key) a plain entry spotlights on hover or focus, without isolating them */
+  spot?: string;
+  /** Beside the label, in lighter type: the trend's yearly rise */
+  detail?: string;
+  /** A "?" after the entry, with a note on hover or focus */
+  help?: string;
+  /** A button that shows or hides something else, pressed while it shows */
+  toggle?: () => void;
+  on?: boolean }
+
+// A legend row runs the chart's full width (#185): a line's long entry that would drop to a new row starts in
+// the room left on this one instead, its words wrapping there, when that room is at least FIT_MIN wide. Refit
+// whenever a legend's width changes (the window, Enlarge, a tab coming into view) and when the web fonts
+// arrive, since an entry's width changes with its font while the legend's own width doesn't.
+const FIT_MIN = 192;
+const legendWidth = new WeakMap<HTMLElement, number>();
+const legends = new Set<HTMLElement>();
+/** Refit every legend drawn: when the web fonts arrive, and when Detail changes what an entry needs */
+const refitLegends = () => legends.forEach(fitLegend);
+// Made with the first legend, so the module loads where there's no ResizeObserver (Node)
+let legendFit: ResizeObserver | null = null;
+const refitResized = (entries: ResizeObserverEntry[]) => {
+  for (const e of entries) {
+    const list = e.target as HTMLElement;
+    if (Math.round(e.contentRect.width) !== legendWidth.get(list)) fitLegend(list);
+  }
+};
+function fitLegend(list: HTMLElement) {
+  const items = [...list.children] as HTMLElement[];
+  for (const li of items) li.style.flexBasis = "";
+  const width = list.clientWidth;
+  legendWidth.set(list, Math.round(list.getBoundingClientRect().width));
+  if (!width) return;
+  const gap = parseFloat(getComputedStyle(list).columnGap) || 0;
+  const right = list.getBoundingClientRect().left + width;
+  for (let i = 0; i < items.length; i++) {
+    const li = items[i];
+    const btn = li.querySelector<HTMLElement>(".legend-line");
+    // The trend and the comparison each have a row of their own
+    if (!btn || li.classList.contains("legend-row")) continue;
+    const prev = i ? items[i - 1].getBoundingClientRect() : null;
+    if (prev && li.getBoundingClientRect().top > prev.top + 1) {  // dropped to a new row
+      // The swatch with the name, and the figure, each stay whole, so the room has to hold the wider of them
+      // beside whatever else the entry carries (its "?"), measured while the entry still has its own width
+      const beside = li.getBoundingClientRect().width - btn.getBoundingClientRect().width;
+      const cs = getComputedStyle(btn);
+      const pad = ["paddingLeft", "paddingRight", "borderLeftWidth", "borderRightWidth"]
+        .reduce((s, k) => s + parseFloat(cs[k as "paddingLeft"]), 0) + 12;
+      const whole = [...li.querySelectorAll<HTMLElement>(".legend-detail, .legend-keep")].map((e) => e.getBoundingClientRect().width);
+      const need = Math.max(FIT_MIN, ...whole.map((w) => w + beside + pad));
+      const room = right - prev.right - gap;
+      if (room >= need) li.style.flexBasis = `${Math.floor(room)}px`;
+    }
+    hug(li, btn);
+  }
+}
+/** A wrapped entry ends where its longest line does, not at the edge of the room it was given, so the pill
+ * its button shows on hover, and its "?", sit at the end of the words (#189) */
+function hug(li: HTMLElement, btn: HTMLElement) {
+  const range = document.createRange();
+  range.selectNodeContents(btn);
+  if (!range.getClientRects().length) return;
+  const cs = getComputedStyle(btn);
+  // A few passes: a line's end can move as the entry narrows (a space at the break stops counting)
+  for (let pass = 0; pass < 3; pass++) {
+    const inner = btn.getBoundingClientRect().right - parseFloat(cs.paddingRight) - parseFloat(cs.borderRightWidth);
+    const slack = inner - Math.max(...[...range.getClientRects()].map((r) => r.right));
+    if (slack <= 1) return;
+    li.style.flexBasis = `${Math.ceil(li.getBoundingClientRect().width - slack) + 1}px`;
+  }
+}
+/** A line's legend name, its swatch held to it: "-- Leverett trend" never breaks, nor a comparison's swatch
+ * from its first word (#187); a qualifier after the name (", actual net school spending") can wrap, and the
+ * figure after that moves to the next line whole */
+function lineLabel(key: HTMLElement, label: string) {
+  const m = /^(.*?\btrend)(,.*)?$/.exec(label) ?? /^(\S+)(.*)$/.exec(label);
+  const head = m ? m[1] : label;
+  const keep = document.createElement("span");
+  keep.className = "legend-keep";
+  keep.append(key, head);
+  const span = document.createElement("span");
+  span.append(keep, m?.[2] ?? "");
+  return span;
+}
+/** A trend's figure, "+$550 (+3.2%) a year, before inflation": whole on one line, except on a phone, where
+ * it may break once, between the amount and "a year" */
+function lineDetail(detail: string) {
+  const d = document.createElement("span");
+  d.className = "legend-detail";
+  const k = detail.indexOf(" a year");
+  if (k < 0) d.textContent = detail;
+  else d.append(text("span", detail.slice(0, k), "legend-whole"), " ", text("span", detail.slice(k + 1), "legend-whole"));
+  return d;
+}
+/** What a legend's buttons change, and what follows a click: the entry to focus once redrawn, and whether to offer to
+ * remember the change (#237: the legend took these from the explorer's closure) */
+interface LegendState { isolated: Record<StackPanel, Set<string>>; hiddenLines: Record<StackPanel, Set<Line>>; votesAlone: Set<StackPanel>;
+  onChange: (panel: StackPanel, key: string, ask: boolean) => void }
+function drawLegend(list: HTMLElement, items: LegendItem[], panel: StackPanel | undefined, ls: LegendState) {
+  const set = panel ? ls.isolated[panel] : null;
+  const toggles = items.filter((it) => it.key);
+  const swatch = (it: LegendItem) => {
+    const key = document.createElement("span");
+    key.className = `key ${it.mark}`;
+    key.style.setProperty("--c", it.color);
+    return key;
+  };
+  const nodes = items.map((it) => {
+    const li = document.createElement("li");
+    // The chart's trend, then the comparison, each on a row of its own under the rest (#220)
+    const row = it.line === "trend" || it.line === "cmp";
+    if (row) li.classList.add("legend-row");
+    if (panel && it.toggle) {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "legend-btn legend-line";
+      btn.dataset.key = "toggle";
+      btn.setAttribute("aria-pressed", String(!!it.on));
+      btn.append(swatch(it), text("span", it.label));
+      btn.addEventListener("click", () => {
+        it.toggle!();
+        ls.onChange(panel, "toggle", false);
+      });
+      li.append(btn, ...(it.help ? [helpTip(it.help)] : []));
+      return li;
+    }
+    if (panel && it.line) {
+      const line = it.line;
+      const off = ls.hiddenLines[panel].has(line);
+      // The votes switch between shown over the chart and shown alone
+      const alone = line === "votes" && !off && ls.votesAlone.has(panel);
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = `legend-btn legend-line${off ? " is-off" : ""}${alone ? " is-alone" : ""}`;
+      btn.dataset.key = `line:${line}`;
+      btn.setAttribute("aria-pressed", String(!off));
+      btn.title = line === "votes" ? (off ? "Show the votes" : alone ? "Show the chart with the votes" : "Show only the votes")
+        : off ? "Show this line" : "Hide this line";
+      // The space is where the figure may move to the next line, after the name, never inside it
+      btn.append(lineLabel(swatch(it), it.label), ...(it.detail ? [" ", lineDetail(it.detail)] : []));
+      btn.addEventListener("click", () => {
+        if (line === "votes" && !off) {
+          if (alone) ls.votesAlone.delete(panel);
+          else ls.votesAlone.add(panel);
+        } else if (off) ls.hiddenLines[panel].delete(line);
+        else ls.hiddenLines[panel].add(line);
+        ls.onChange(panel, `line:${line}`, true);
+      });
+      li.append(btn, ...(it.help ? [helpTip(it.help)] : []));
+      return li;
+    }
+    if (!set || !it.key) {
+      li.className = row ? "legend-static legend-row" : "legend-static";
+      if (it.spot) li.dataset.key = it.spot;
+      // A trend's figure, as beside the trend's button on the charts whose lines toggle
+      li.append(swatch(it), text("span", it.label), ...(it.detail ? [" ", lineDetail(it.detail)] : []), ...(it.help ? [helpTip(it.help)] : []));
+      return li;
+    }
+    const key = it.key;
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "legend-btn";
+    btn.dataset.key = key;
+    btn.setAttribute("aria-pressed", String(set.has(key)));
+    if (set.size && !set.has(key)) btn.classList.add("is-off");
+    btn.title = !set.has(key) ? `Click to show ${set.size ? `${it.label} too` : `only ${it.label}`}`
+      : set.size === 1 ? "Click to show everything again" : `Click to hide ${it.label}`;
+    btn.append(swatch(it), text("span", it.label), ...(it.detail ? [" ", lineDetail(it.detail)] : []));
+    btn.addEventListener("click", () => {
+      if (set.has(key)) set.delete(key);
+      else set.add(key);
+      if (set.size === toggles.length) set.clear();
+      ls.onChange(panel!, key, true);
+    });
+    li.append(btn);
+    return li;
+  });
+  if (set?.size) {
+    const li = document.createElement("li");
+    const reset = text("button", "Show all", "legend-reset") as HTMLButtonElement;
+    reset.type = "button";
+    reset.addEventListener("click", () => {
+      set.clear();
+      ls.onChange(panel!, toggles[0].key!, true);
+    });
+    li.append(reset);
+    nodes.push(li);
+  }
+  // A chart with categories to pick keeps its lines (trend, comparison, ceiling, votes) in a legend of their own
+  // under it, so the categories read alone
+  // A line chart's own lines (entries that spotlight a series) stay above with the categories
+  const isLine = (it: LegendItem) => !it.key && !it.spot && (!!it.line || !!it.toggle ||
+    ["line", "dash", "diamond", "linedot"].includes(it.mark));
+  const split = items.some((it) => !isLine(it)) && items.some(isLine);
+  const svg = list.parentElement?.querySelector<SVGSVGElement>(":scope > svg");
+  let below = list.parentElement?.querySelector<HTMLElement>(":scope > ul.legend-below") ?? null;
+  if (split && svg && !below) {
+    below = document.createElement("ul");
+    below.className = "legend legend-below";
+    if (list.id) below.id = `${list.id}-below`;
+    // The page's scoped legend styles find it by the scope attribute the list above carries
+    for (const a of [...list.attributes]) if (a.name.startsWith("data-astro-cid")) below.setAttribute(a.name, a.value);
+    below.setAttribute("aria-label", "Lines on the chart. Select one to hide or show it.");
+    svg.after(below);
+  }
+  const lower = split && below ? nodes.filter((_, k) => k < items.length && isLine(items[k])) : [];
+  list.replaceChildren(...nodes.filter((n) => !lower.includes(n)));
+  for (const l of [list, ...(below ? [below] : [])]) {
+    if (l === below) {
+      l.replaceChildren(...lower);
+      l.hidden = !lower.length;
+    }
+    fitLegend(l);
+    (legendFit ??= new ResizeObserver(refitResized)).observe(l);
+    legends.add(l);
+  }
+}
+
+type TableCol = { label: string; values: Values; fmt: (v: number) => string };
+
+// ---- Comparison table: the report's start year, growth rates and last two years,
+// shaded against the comparison. `end` is the last year's index, for a source
+// that trails the others. ----
+interface CmpRow { label: string; color: string; mark: "rect" | "line" | "dash" | "linedot"; values: Values; base: Values | null; total?: boolean }
+
+interface CmpOpts { end?: number; noCmpNote?: string; per?: string;
+  /** The first year's position; with Since 1990 on, by default the first year any row has */
+  start?: number }
+
+/** Rows for what the legend shows: each shown segment, then the total, or the selection's
+ * total when several are isolated. */
+function cmpRows(shown: Series[], cAll: Series[] | null, sel: string | null, total: Values, cTotal: Values | null,
+  shownTotal: Values, cShownTotal: Values | null, totalLabel: string): CmpRow[] {
+  const rows: CmpRow[] = [...shown].reverse().map((s) => ({
+    label: s.label, color: s.color, mark: "rect", values: s.values, base: cAll?.find((x) => x.key === s.key)?.values ?? null,
+  }));
+  if (!sel) rows.push({ label: totalLabel, color: "", mark: "rect", values: total, base: cTotal, total: true });
+  else if (shown.length > 1) rows.push({ label: `Total, ${sel}`, color: "", mark: "rect", values: shownTotal, base: cShownTotal, total: true });
+  return rows;
+}
+
+/** The comparison table, over years; hist, with Since 1990 on; link, the "above" that goes to the comparison menu */
+function drawCompareTable(holder: HTMLElement, years: number[], caption: string, rowLabel: string, rows: CmpRow[],
+  kind: "usd" | "fte" | "count", cmp: Named | null,
+  { end = years.length - 1, noCmpNote, per = "pupil", start, hist = false, link }: CmpOpts & { hist?: boolean; link: () => Node }) {
+  const cName = cmp ? cmp.name : null;
+  const fmt = kind === "usd" ? usd : kind === "count" ? (v: number) => Math.round(v).toLocaleString("en-US") : fte;
+  const unit = kind === "usd" ? (per ? ` $/${per}` : " $") : "";
+  const prior = end - 1;
+  const s0 = start ?? (hist ? Math.max(0, Math.min(...rows.map((r) => {
+    const i = firstAt(r.values);
+    return i < 0 ? Infinity : i;
+  }))) : 0);
+  // Growth over the years shown, then over the last 10 and 5 when the window holds more
+  const windows = [end - s0, ...[10, 5].filter((n) => n < end - s0)].filter((n) => n > 0);
+  const t = document.createElement("table");
+  t.append(text("caption", caption));
+  const head = t.createTHead().insertRow();
+  const blank = text("th", "");
+  blank.className = "swatch-col";
+  head.append(blank, text("th", rowLabel, "label-col"), text("th", `${years[s0]}${unit}`),
+    ...windows.map((n) => text("th", `CAGR ${n}y`)),
+    text("th", `${years[prior]}${unit}`), text("th", `${years[end]}${unit}`));
+
+  const sr = (above: boolean) => text("span", above ? " (above comparison)" : " (below comparison)", "sr-only");
+  const level = (r: CmpRow, i: number) => {
+    const v = r.values[i];
+    const td = text("td", v == null ? "—" : fmt(v));
+    const b = r.base?.[i];
+    if (v != null && b != null && b > 0 && cName) {
+      const rel = (v - b) / b;
+      const bg = shade(gapShown(rel, 0), SHADE_BINS_REL);
+      td.title = `${cName}: ${fmt(b)} (${signFor(rel, gapText(rel, 0), true)}${gapText(rel, 0)}%)`;
+      if (bg) {
+        td.style.background = bg;
+        td.append(sr(rel > 0));
+      }
+    }
+    return td;
+  };
+  const growth = (r: CmpRow, n: number) => {
+    const g = cagr(r.values[end - n], r.values[end], n);
+    const td = text("td", g == null ? "—" : change(g));
+    const gb = r.base ? cagr(r.base[end - n], r.base[end], n) : null;
+    if (g != null && gb != null && cName) {
+      const delta = g - gb;
+      const bg = shade(gapShown(delta, 1), SHADE_BINS_PP);
+      td.title = `${cName}: ${change(gb)} (${signFor(delta, gapText(delta, 1), true)}${gapText(delta, 1)} pp)`;
+      if (bg) {
+        td.style.background = bg;
+        td.append(sr(delta > 0));
+      }
+    }
+    return td;
+  };
+
+  const body = t.createTBody();
+  for (const r of rows) {
+    const tr = body.insertRow();
+    if (r.total) tr.className = "total";
+    const sw = document.createElement("td");
+    sw.className = "swatch-col";
+    if (!r.total) {
+      const key = document.createElement("span");
+      key.className = `key ${r.mark}`;
+      key.style.setProperty("--c", r.color);
+      sw.append(key);
+    }
+    const th = text("th", r.label);
+    th.setAttribute("scope", "row");
+    tr.append(sw, th, level(r, s0), ...windows.map((n) => growth(r, n)), level(r, prior), level(r, end));
+  }
+
+  const note = document.createElement("div");
+  note.className = "compare-legend";
+  if (cName) {
+    const chip = (color: string, label: string) => {
+      const s = document.createElement("span");
+      s.className = "chip";
+      const box = document.createElement("span");
+      box.className = "chip-box";
+      box.style.background = color;
+      s.append(box, text("span", label));
+      return s;
+    };
+    const chips = document.createElement("div");
+    chips.className = "chips";
+    chips.append(chip(ABOVE_SHADES[2], `Above ${cName}`), chip(BELOW_SHADES[2], `Below ${cName}`));
+    note.append(chips, text("p",
+      `Shaded where a value differs from ${refName(cmp!)} by 5% or more (${{ usd: "dollars", fte: "enrollment", count: "counts" }[kind]}) ` +
+      "or a growth rate by 0.5 percentage points or more; darker shading marks a larger gap. " +
+      "Hover a cell for the comparison value. CAGR is the compound annual growth rate, (end\u00a0÷\u00a0start)^(1\u00a0÷\u00a0years)\u00a0−\u00a01."));
+  } else {
+    const p = document.createElement("p");
+    p.append(...(noCmpNote ? [noCmpNote] : ["Choose a comparison ", link(), " to shade this table against it."]),
+      " CAGR is the compound annual growth rate, (end\u00a0÷\u00a0start)^(1\u00a0÷\u00a0years)\u00a0−\u00a01.");
+    note.append(p);
+  }
+  // The box takes the table's width; the note stretches to match it
+  const box = document.createElement("div");
+  box.className = "compare-box";
+  box.append(t, note);
+  holder.replaceChildren(box);
+}
+
+// ---- Stat tiles ----
+/** A headline tile; with a share, a small pie of it beside the value */
+function tile(label: string, value: string, details: string[],
+  share?: { v: number; title: string; own?: string; cmp?: { v: number; title: string; detail: string } | null } | null,
+  help?: string) {
+  const div = document.createElement("div");
+  div.className = "tile";
+  // The green pie's figure on green: the tile's own value, or the detail line it names (own)
+  const val = document.createElement("div");
+  val.className = "tile-value";
+  val.append(text("span", value, share && !share.own ? "tile-figure is-own" : "tile-figure"));
+  if (share) {
+    val.classList.add("has-pie");
+    const pies = document.createElement("span");
+    pies.className = "tile-pies";
+    pies.append(pie(share.v, share.title), ...(share.cmp ? [pie(share.cmp.v, share.cmp.title, true)] : []));
+    val.append(pies);
+  }
+  // Three rows, label, value, details, that line up with the tiles beside it (the page's subgrid)
+  const more = document.createElement("div");
+  more.className = "tile-details";
+  // The comparison's line, the one its gold pie shows, on a gold ground
+  details.filter(Boolean).forEach((d) => more.append(text("div", d,
+    d === share?.cmp?.detail ? "tile-detail is-cmp" : share?.own && d === share.own ? "tile-detail is-own" : "tile-detail")));
+  const head = text("div", label, "tile-label");
+  if (help) head.append(" ", helpTip(help));
+  div.append(head, val, more);
+  return div;
+}
+
+/** A tile's pie: one share of a whole, clockwise from twelve o'clock. The tile's text carries the figure, so
+ *  screen readers skip it; the hover title says what it shows. Ringed, so the whole reads against the page. */
+function pie(f: number, title: string, cmp = false) {
+  const R = 15;
+  const svg = svgEl("svg", { viewBox: "-16 -16 32 32", class: cmp ? "tile-pie is-cmp" : "tile-pie", "aria-hidden": "true" });
+  svgEl("title", {}, svg).textContent = title;
+  svgEl("circle", { r: R, class: "tile-pie-rest" }, svg);
+  const v = Math.max(0, Math.min(1, f));
+  if (v >= 0.999) svgEl("circle", { r: R, class: "tile-pie-share" }, svg);
+  else if (v > 0.001) {
+    const a = v * 2 * Math.PI;
+    const x = (R * Math.sin(a)).toFixed(2), y = (-R * Math.cos(a)).toFixed(2);
+    svgEl("path", { d: `M0 0V${-R}A${R} ${R} 0 ${v > 0.5 ? 1 : 0} 1 ${x} ${y}Z`, class: "tile-pie-share" }, svg);
+  }
+  svgEl("circle", { r: R, class: "tile-pie-ring" }, svg);
+  return svg;
+}
+
+/** A group in focus: the Compare with choice that names that same group ("Its region", for a region's), greyed in
+ * the menu as a cue that it's the group already in focus */
+const SELF_CHOICE: Record<string, string> = { "region-cohort": "cohort", cohort: "cohort-state", region: "region", group: "gateway",
+  type: "type", fifth: "fifth", "region-peer": "peer", peer: "peer-state" };
+function markSelf(sel: HTMLSelectElement, x: { id: string; kind: string; scope?: string }) {
+  const self = x.kind !== "average" ? null
+    : x.scope === "state" ? (x.id.endsWith("statewide-all") ? "state-all" : "state") : SELF_CHOICE[x.scope ?? ""] ?? null;
+  for (const o of sel.options) {
+    const on = o.value === self;
+    o.disabled = on;
+    o.title = on ? "The group in focus" : "";
+  }
+}
+
+/** Names separated by commas; past seven, the first six and a button for the rest. */
+function nameList(items: HTMLElement[]): HTMLElement {
+  const list = document.createElement("span");
+  const show = (n: number) => {
+    list.replaceChildren();
+    items.slice(0, n).forEach((it, k) => list.append(...(k ? [", ", it] : [it])));
+    if (n < items.length) {
+      const more = text("button", `and ${items.length - n} more`, "rel-more") as HTMLButtonElement;
+      more.type = "button";
+      more.addEventListener("click", () => show(items.length));
+      list.append(" ", more);
+    }
+  };
+  show(items.length > 7 ? 6 : items.length);
+  return list;
+}
+
+interface RelRow { name: HTMLElement; kind?: string; amount?: number | null; extra: [string, HTMLElement[]] | null }
+
+/** Swap beside Compare with: shown while there's a comparison, and active when the comparison can be the
+ * focus (it's in the District or Town menu) and the focus can be its comparison */
+function swapButton(b: HTMLButtonElement, name: string, c: (Named & { id: string }) | null, can: boolean) {
+  b.classList.toggle("is-idle", !c);
+  b.disabled = !can;
+  const what = c && can ? `Show ${c.name}, compared with ${name}` : "Can't swap these two";
+  b.title = what;
+  b.setAttribute("aria-label", `Swap: ${what}`);
+}
+
+function relations(spec: { root: string; note: string; rows: RelRow[] } | null) {
+  const box = $("relations");
+  box.hidden = !spec;
+  if (!spec) {
+    box.replaceChildren();
+    return;
+  }
+  const head = document.createElement("div");
+  head.className = "rel-head";
+  head.append(text("strong", spec.root), text("span", spec.note, "rel-note"));
+  const tree = document.createElement("ul");
+  tree.className = "rel-tree";
+  for (const r of spec.rows) {
+    const li = document.createElement("li");
+    const name = document.createElement("span");
+    name.className = "rel-name";
+    name.append(r.name);
+    li.append(name);
+    if (r.kind != null) li.append(text("span", r.kind, "rel-kind"));
+    if (r.amount !== undefined) li.append(text("span", r.amount != null ? amount(r.amount) : "–", "rel-amt"));
+    if (r.extra) {
+      const extra = document.createElement("span");
+      extra.className = "rel-extra";
+      extra.append(`${r.extra[0]} `, nameList(r.extra[1]));
+      li.append(extra);
+    }
+    tree.append(li);
+  }
+  box.replaceChildren(head, tree);
+}
+
 export async function startExplorer() {
   const root = $("explorer");
   let data: Data;
@@ -608,29 +1243,15 @@ export async function startExplorer() {
   // ---- With Since 1990 on, each series gains the earlier years in front ----
   const nH = H ? H.years.length : 0;
   const nM = meta.years.length;
-  const nulls = (n: number): Values => Array(n).fill(null);
   /** Each named series: the earlier years, then the explorer's own */
-  function join<T extends object>(early: T | undefined, later: T | undefined): T {
-    const a = (early ?? {}) as Record<string, Values>;
-    const b = (later ?? {}) as Record<string, Values>;
-    const keys = [...new Set([...Object.keys(a), ...Object.keys(b)])];
-    return Object.fromEntries(keys.map((k) => [k, [...(a[k] ?? nulls(nH)), ...(b[k] ?? nulls(nM))]])) as T;
-  }
+  const join = <T extends object>(early: T | undefined, later: T | undefined) => joinSeries(early, later, nH, nM);
   /** The older measure's series run from FY1990 into the explorer's own years (to FY2006); nothing after */
   const early = (v: Values | undefined) => (v ? [...v, ...nulls(nH + nM - v.length)] : undefined);
   const dayJoin = (h: HistRec): Partial<Entity> => ({
     day: h.day ? join(h.day, undefined) as Entity["day"] : undefined,
     day_memb: early(h.day_memb), nces: early(h.nces),
   });
-  /** Each yearly series in o (a list of numbers and nulls as long as the explorer's own years) with the earlier years
-   * in front, as nulls: every one, found as cut() finds them, so a series added later lines up too (#237) */
-  const padEarly = <T>(o: T): T => {
-    if (Array.isArray(o)) {
-      return (o.length === nM && o.every((x) => x === null || typeof x === "number") ? [...nulls(nH), ...o] : o.map(padEarly)) as T;
-    }
-    if (o && typeof o === "object") return Object.fromEntries(Object.entries(o).map(([k, v]) => [k, padEarly(v)])) as T;
-    return o;
-  };
+  const padEarly = <T>(o: T): T => padYears(o, nH, nM);
   const made = new Map<string, Entity>();
   /** A district or average as the district view draws it: with Since 1990 on, its earlier years in
    * front. A former district comes from its history record. Undefined until its data has loaded. */
@@ -1353,19 +1974,6 @@ export async function startExplorer() {
     return values.map((v, i) => (v == null ? null : (v * base) / meta.cpi[String(years[i])]));
   };
 
-  /** A group in focus: the Compare with choice that names that same group ("Its region", for a region's), greyed in
-   * the menu as a cue that it's the group already in focus */
-  const SELF_CHOICE: Record<string, string> = { "region-cohort": "cohort", cohort: "cohort-state", region: "region", group: "gateway",
-    type: "type", fifth: "fifth", "region-peer": "peer", peer: "peer-state" };
-  function markSelf(sel: HTMLSelectElement, x: { id: string; kind: string; scope?: string }) {
-    const self = x.kind !== "average" ? null
-      : x.scope === "state" ? (x.id.endsWith("statewide-all") ? "state-all" : "state") : SELF_CHOICE[x.scope ?? ""] ?? null;
-    for (const o of sel.options) {
-      const on = o.value === self;
-      o.disabled = on;
-      o.title = on ? "The group in focus" : "";
-    }
-  }
   /** The id each view's "Compare with" choice points to for this district or town, if any (comparisonOf) */
   const comparisonId = (e: Entity | undefined) => comparisonOf(e, state.cmp, state.vs, CHAIN);
   const townComparisonId = (t: Town | undefined) => comparisonOf(t, state.tcmp, state.tvs, TOWN_CHAIN);
@@ -1376,8 +1984,6 @@ export async function startExplorer() {
     return c ? win(c) : null;
   };
 
-  /** "Shutesbury" or "the Statewide Tiny enrollment group average", for use mid-sentence. */
-  const refName = (c: Named) => c.ref ?? (c.kind === "district" || c.kind === "town" ? c.name : `the ${c.name}`);
 
   const townComparison = (t: Town) => {
     const id = townComparisonId(t);
@@ -1385,15 +1991,6 @@ export async function startExplorer() {
     return c ? win(c) : null;
   };
 
-  /** Why an entity has no revenue chart, in the chart's place. */
-  function noRevenue(e: Entity): string {
-    // The source and why it falls short for these are in the Data tab, not here
-    if (e.type === "charter" || e.cohort === "CHARTER") return "Detailed revenue figures aren't available for charter schools.";
-    if (e.kind === "district") return "Detailed revenue figures aren't available for town-run districts.";
-    const n = e.rev_members ?? 0;
-    return n === 0 ? `The ${e.name} includes no regional districts, so it has no revenue average.`
-      : `The ${e.name} includes only ${n === 1 ? "one regional district" : `${n} regional districts`}, too few for a revenue average.`;
-  }
 
   /** Per pupil, or with Totals on, back to dollars: each year's figure times the pupils it was
    * divided by. An average's figures are pooled per pupil and its enrollment is per district, so its
@@ -1421,20 +2018,12 @@ export async function startExplorer() {
       { key: "nces", label: "Fall enrollment (NCES)", color: GRAY, dash: "2 3", values: e.nces ?? nulls(years.length) },
     ] : []),
   ];
-  /** The first and last positions with a value, or -1 */
-  const firstAt = (vals: Values) => vals.findIndex((v) => v != null);
-  const lastAt = (vals: Values) => {
-    for (let i = vals.length - 1; i >= 0; i--) if (vals[i] != null) return i;
-    return -1;
-  };
   /** The older measure's programs, drawn only when asked for */
   let showPrograms = false;
   const revSeries = (e: Entity): Series[] | null =>
     e.rev ? REV_SERIES.map((s) => ({ ...s, values: deflate(inDollars(e.rev![s.key], e, "rev")) })) : null;
   const spedSeries = (e: Entity): Series[] | null =>
     e.sped ? SPED_SERIES.map((s) => ({ ...s, values: deflate(inDollars(e.sped![s.key], e, "sped")) })) : null;
-  /** Revenue averages cover only their regional districts, and say so. */
-  const revName = (c: Entity) => (c.kind === "district" ? c.name : `${c.name} (regional districts)`);
   const totals = (series: Series[]): Values => years.map((_, i) => sumAt(series.map((s) => s.values), i));
   const strictTotals = (series: Series[]): Values => years.map((_, i) => sumStrict(series.map((s) => s.values), i));
   // Actual NSS is the full stack, so it exists only where DESE reported actual spending
@@ -1442,9 +2031,6 @@ export async function startExplorer() {
     years.map((_, i) => (series[2].values[i] == null ? null : sumAt(series.map((s) => s.values), i)));
   const visible = <T extends Series>(series: T[], panel: StackPanel): T[] =>
     isolated[panel].size ? series.filter((s) => isolated[panel].has(s.key)) : series;
-  /** "teachers", "3 selected categories", or null when everything shows. */
-  const selectionName = (shown: Series[], all: Series[], noun: string) =>
-    shown.length === all.length ? null : shown.length === 1 ? shown[0].label.toLowerCase() : `${shown.length} selected ${noun}`;
 
   /** Ticks fitted to the columns actually drawn, including any that hang below zero. */
   function fitTicks(series: Series[], overlay: Values | null) {
@@ -1465,51 +2051,8 @@ export async function startExplorer() {
   let panels: { panel: Panel; figure: HTMLElement; tip: (i: number) => TipContent }[] = [];
   let hovered: number | null = null;
 
-  /** A hover card's row. role names the trend's row and the comparison's, which the trends-only card picks out
-   * (#237: by role, not by their colors); strong marks the total */
-  interface TipRow { value: string; label: string; color?: string; mark?: "line" | "dash" | "rect" | "hatch" | "diamond" | "linedot";
-    strong?: boolean; role?: "trend" | "cmp" }
-  interface TipContent { title: string; rows: TipRow[]; note?: string }
 
-  /** A "?" that shows a longer note on hover or focus (.cw-help) */
-  function helpTip(note: string) {
-    const h = text("span", "?", "cw-help wide");
-    h.tabIndex = 0;
-    h.setAttribute("role", "note");
-    h.setAttribute("aria-label", note);
-    h.dataset.tip = note;
-    return h;
-  }
 
-  // A "?"'s note opens from the "?" (a wide one) or centered under it, which can run past the
-  // window's edge; shift it back inside. Every "?" on the page, the map's and Commonwealth's too.
-  const TIP_MARGIN = 8;
-  function placeTip(h: HTMLElement, retry = true) {
-    const cs = getComputedStyle(h, "::after");
-    const inner = parseFloat(cs.width);
-    // The note exists only while hovered or focused; if the hover hasn't applied yet, look next frame
-    if (!(inner > 0)) {
-      if (retry) requestAnimationFrame(() => placeTip(h, false));
-      return;
-    }
-    const w = cs.boxSizing === "border-box" ? inner
-      : inner + parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight) + parseFloat(cs.borderLeftWidth) + parseFloat(cs.borderRightWidth);
-    const r = h.getBoundingClientRect();
-    // Inside an enlarged chart's window the note stays within that window; elsewhere, within the page
-    const dlg = h.closest("dialog");
-    const area = dlg?.open ? dlg.getBoundingClientRect() : null;
-    const edgeL = (area?.left ?? 0) + TIP_MARGIN;
-    const edgeR = (area?.right ?? document.documentElement.clientWidth) - TIP_MARGIN;
-    const left = h.classList.contains("wide") ? r.left : r.left + r.width / 2 - w / 2;
-    const dx = left + w > edgeR ? Math.max(edgeR - (left + w), edgeL - left) : left < edgeL ? edgeL - left : 0;
-    if (dx) h.style.setProperty("--tip-dx", `${Math.round(dx)}px`);
-    else h.style.removeProperty("--tip-dx");
-    // ...and opens above the "?" where it would run past the window's bottom and there's room above
-    if (area) {
-      const ht = parseFloat(cs.height) + parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom) + 2;
-      h.classList.toggle("tip-above", r.bottom + 6 + ht > area.bottom - TIP_MARGIN && r.top - 6 - ht > area.top + TIP_MARGIN);
-    }
-  }
   const tipTarget = (ev: Event) => (ev.target instanceof Element ? ev.target.closest<HTMLElement>(".cw-help") : null);
   for (const type of ["pointerover", "focusin"]) {
     document.addEventListener(type, (ev) => {
@@ -1518,44 +2061,7 @@ export async function startExplorer() {
     });
   }
 
-  /** A chart over fewer years than the rest, from the page's year off on: hover, the tooltip and the keyboard speak in
-   * the page's years, the chart in its own */
-  const offsetPanel = (p: Panel, off: number, n: number): Panel => ({
-    svg: p.svg,
-    ax: Object.assign(Object.create(p.ax) as Panel["ax"], { x: (i: number) => p.ax.x(i - off) }),
-    setHover: (i) => p.setHover(i == null || i < off || i >= off + n ? null : i - off),
-  });
 
-  function showTip(figure: HTMLElement, panel: Panel, i: number, content: TipContent) {
-    const tip = figure.querySelector<HTMLElement>(".tooltip")!;
-    tip.replaceChildren(text("div", content.title, "tip-title"));
-    for (const r of content.rows) {
-      const row = document.createElement("div");
-      row.className = `tip-row${r.strong ? " strong" : ""}`;
-      const key = document.createElement("span");
-      key.className = `key ${r.mark ?? "none"}`;
-      if (r.color) key.style.setProperty("--c", r.color);
-      row.append(key, text("span", r.value, "tip-value"), text("span", r.label, "tip-label"));
-      tip.append(row);
-    }
-    if (content.note) tip.append(text("div", content.note, "tip-note"));
-    tip.hidden = false;
-    const svgBox = panel.svg.getBoundingClientRect();
-    const figBox = figure.getBoundingClientRect();
-    const scale = svgBox.width / panel.ax.frame.width;
-    const x = svgBox.left - figBox.left + panel.ax.x(i) * scale;
-    const w = tip.offsetWidth;
-    const left = x + 16 + w > figBox.width ? x - 16 - w : x + 16;
-    tip.style.left = `${Math.max(0, left)}px`;
-    tip.style.top = `${svgBox.top - figBox.top + 8}px`;
-    // A tall tip on a phone can run past the bottom of the screen, or of an enlarged chart's window;
-    // move it up until it fits
-    const dlg = figure.closest("dialog");
-    const area = dlg?.open ? dlg.getBoundingClientRect() : { top: 0, bottom: window.innerHeight };
-    const box = tip.getBoundingClientRect();
-    const over = box.bottom - (area.bottom - 8);
-    if (over > 0) tip.style.top = `${Math.max(box.top - over, area.top + 8) - figBox.top}px`;
-  }
 
   // The charts of columns in categories, whose hover cards list the categories under the total
   const STACKED = new Set<string>(["ppe", "ood", "nss", "rev", "sped", "srace", "tspend", "trev", "tval", "tpar", "tlevy", "tres",
@@ -1596,47 +2102,16 @@ export async function startExplorer() {
     });
   }
 
-  // ---- Legend: stacked segments are toggle buttons that isolate them; the lines are
-  // toggle buttons that hide them on that chart ----
-  interface LegendItem { label: string; color: string; mark: "rect" | "line" | "dash" | "hatch" | "diamond" | "linedot"; key?: string; line?: Line;
-    /** The chart marks (their data-key) a plain entry spotlights on hover or focus, without isolating them */
-    spot?: string;
-    /** Beside the label, in lighter type: the trend's yearly rise */
-    detail?: string;
-    /** A "?" after the entry, with a note on hover or focus */
-    help?: string;
-    /** A button that shows or hides something else, pressed while it shows */
-    toggle?: () => void;
-    on?: boolean }
 
   // ---- Chart lines: the entity's own trend (dashed) and the comparison (solid, with dots).
   // Both follow what the legend isolates; either can be hidden from its legend entry. ----
-  /** A trend's short name, for the end of its line: "Leverett trend", "Western MA Tiny enrollment group trend"; with what it
-   * measures, where a chart has several: "Leverett labor force trend" */
-  const trendName = (name: string, what = "") => ((w) => (/ average\b/.test(name) ? name.replace(/ average\b/, `${w} trend`)
-    : `${name}${w} trend`))(what ? ` ${what}` : "");
-  /** A trend's yearly figure, in the chart's own units, for the words at the end of its line: "+$550 (+3.2%) a year";
-   * short, for a narrow chart, without "a year" */
-  const trendFigure = (values: Values, fmt: (v: number) => string, short = false) => ((r) => (r ? `${signed(r.perYear, fmt)}` +
-    `${r.rate != null ? ` (${signedPct(r.rate)})` : ""}${short ? "" : " a year"}` : ""))(trendRate(values));
-  /** The words at a trend's end: its name and its yearly figure (#220), and a shorter name with the figure for a
-   * narrow chart */
-  const trendEnds = (name: string, short: string, values: Values, fmt: (v: number) => string) =>
-    ({ endLabel: `${name} ${trendFigure(values, fmt)}`.trim(), endShort: `${short} ${trendFigure(values, fmt, true)}`.trim() });
-  const trendOf = (name: string, sel: string | null, shownTotal: Values, fmt: (v: number) => string = usd): Series =>
-    ((values) => ({ key: "trend", label: `${name} trend${sel ? `, ${sel}` : ""}`, color: TREND_COLOR, values,
-      ...trendEnds(trendName(name), name.length <= 18 ? `${name} trend` : "Trend", values, fmt) }))(linearTrend(shownTotal));
   /** The line as drawn: null while its legend entry has it hidden. */
   const drawn = (panel: StackPanel, line: Line, s: Series | null): Series | null => (hiddenLines[panel].has(line) ? null : s);
-  const hasLine = (s: Series | null): s is Series => !!s && s.values.some((v) => v != null);
   /** Legend entries for the lines the chart can draw, hidden ones included so they can come back. */
   /** A trend's yearly figure for its legend entry: "+$43 (+3.7%) a year, before inflation" */
   const trendDetail = (values: Values, fmt: (v: number) => string) => ((r) => (r ? `${signed(r.perYear, fmt)}` +
     `${r.rate != null ? ` (${signedPct(r.rate)})` : ""} a year` +
     (fmt === usd ? (state.usd === "nominal" ? ", before inflation" : ", after inflation") : "") : undefined))(trendRate(values));
-  /** The comparison's own trend, in its color: "Western MA towns ... average trend, total" */
-  const cmpTrendOf = (cmp: Series): Series =>
-    ({ key: "cmptrend", label: cmp.label.replace(/^(.*?)(, .*)?$/, "$1 trend$2"), color: COMPARE_COLOR, values: linearTrend(cmp.values) });
   /** The comparison's trend figure, for the comparison's legend entry */
   const cmpDetail = (cmp: Series, fmt: (v: number) => string = usd) => (hasLine(cmpTrendOf(cmp)) ? trendDetail(cmpTrendOf(cmp).values, fmt) : undefined);
   /** The trends a chart draws, and whether it draws them alone: its own, and with only the trends shown, the
@@ -1722,218 +2197,20 @@ export async function startExplorer() {
   };
   let refocus: { panel: StackPanel; key: string } | null = null;
 
-  // A legend row runs the chart's full width (#185): a line's long entry that would drop to a new row starts in
-  // the room left on this one instead, its words wrapping there, when that room is at least FIT_MIN wide. Refit
-  // whenever a legend's width changes (the window, Enlarge, a tab coming into view) and when the web fonts
-  // arrive, since an entry's width changes with its font while the legend's own width doesn't.
-  const FIT_MIN = 192;
-  const legendWidth = new WeakMap<HTMLElement, number>();
-  const legends = new Set<HTMLElement>();
-  document.fonts?.ready.then(() => legends.forEach(fitLegend));
-  document.fonts?.addEventListener?.("loadingdone", () => legends.forEach(fitLegend));
-  const legendFit = new ResizeObserver((entries) => {
-    for (const e of entries) {
-      const list = e.target as HTMLElement;
-      if (Math.round(e.contentRect.width) !== legendWidth.get(list)) fitLegend(list);
-    }
-  });
-  function fitLegend(list: HTMLElement) {
-    const items = [...list.children] as HTMLElement[];
-    for (const li of items) li.style.flexBasis = "";
-    const width = list.clientWidth;
-    legendWidth.set(list, Math.round(list.getBoundingClientRect().width));
-    if (!width) return;
-    const gap = parseFloat(getComputedStyle(list).columnGap) || 0;
-    const right = list.getBoundingClientRect().left + width;
-    for (let i = 0; i < items.length; i++) {
-      const li = items[i];
-      const btn = li.querySelector<HTMLElement>(".legend-line");
-      // The trend and the comparison each have a row of their own
-      if (!btn || li.classList.contains("legend-row")) continue;
-      const prev = i ? items[i - 1].getBoundingClientRect() : null;
-      if (prev && li.getBoundingClientRect().top > prev.top + 1) {  // dropped to a new row
-        // The swatch with the name, and the figure, each stay whole, so the room has to hold the wider of them
-        // beside whatever else the entry carries (its "?"), measured while the entry still has its own width
-        const beside = li.getBoundingClientRect().width - btn.getBoundingClientRect().width;
-        const cs = getComputedStyle(btn);
-        const pad = ["paddingLeft", "paddingRight", "borderLeftWidth", "borderRightWidth"]
-          .reduce((s, k) => s + parseFloat(cs[k as "paddingLeft"]), 0) + 12;
-        const whole = [...li.querySelectorAll<HTMLElement>(".legend-detail, .legend-keep")].map((e) => e.getBoundingClientRect().width);
-        const need = Math.max(FIT_MIN, ...whole.map((w) => w + beside + pad));
-        const room = right - prev.right - gap;
-        if (room >= need) li.style.flexBasis = `${Math.floor(room)}px`;
-      }
-      hug(li, btn);
-    }
-  }
+  // The legends refit when the web fonts arrive, since an entry's width changes with its font while the legend's doesn't
+  document.fonts?.ready.then(refitLegends);
+  document.fonts?.addEventListener?.("loadingdone", refitLegends);
 
-  /** A wrapped entry ends where its longest line does, not at the edge of the room it was given, so the pill
-   * its button shows on hover, and its "?", sit at the end of the words (#189) */
-  function hug(li: HTMLElement, btn: HTMLElement) {
-    const range = document.createRange();
-    range.selectNodeContents(btn);
-    if (!range.getClientRects().length) return;
-    const cs = getComputedStyle(btn);
-    // A few passes: a line's end can move as the entry narrows (a space at the break stops counting)
-    for (let pass = 0; pass < 3; pass++) {
-      const inner = btn.getBoundingClientRect().right - parseFloat(cs.paddingRight) - parseFloat(cs.borderRightWidth);
-      const slack = inner - Math.max(...[...range.getClientRects()].map((r) => r.right));
-      if (slack <= 1) return;
-      li.style.flexBasis = `${Math.ceil(li.getBoundingClientRect().width - slack) + 1}px`;
-    }
-  }
 
-  /** A line's legend name, its swatch held to it: "-- Leverett trend" never breaks, nor a comparison's swatch
-   * from its first word (#187); a qualifier after the name (", actual net school spending") can wrap, and the
-   * figure after that moves to the next line whole */
-  function lineLabel(key: HTMLElement, label: string) {
-    const m = /^(.*?\btrend)(,.*)?$/.exec(label) ?? /^(\S+)(.*)$/.exec(label);
-    const head = m ? m[1] : label;
-    const keep = document.createElement("span");
-    keep.className = "legend-keep";
-    keep.append(key, head);
-    const span = document.createElement("span");
-    span.append(keep, m?.[2] ?? "");
-    return span;
-  }
 
-  /** A trend's figure, "+$550 (+3.2%) a year, before inflation": whole on one line, except on a phone, where
-   * it may break once, between the amount and "a year" */
-  function lineDetail(detail: string) {
-    const d = document.createElement("span");
-    d.className = "legend-detail";
-    const k = detail.indexOf(" a year");
-    if (k < 0) d.textContent = detail;
-    else d.append(text("span", detail.slice(0, k), "legend-whole"), " ", text("span", detail.slice(k + 1), "legend-whole"));
-    return d;
-  }
 
-  function legend(list: HTMLElement, items: LegendItem[], panel?: StackPanel) {
-    const set = panel ? isolated[panel] : null;
-    const toggles = items.filter((it) => it.key);
-    const swatch = (it: LegendItem) => {
-      const key = document.createElement("span");
-      key.className = `key ${it.mark}`;
-      key.style.setProperty("--c", it.color);
-      return key;
-    };
-    const nodes = items.map((it) => {
-      const li = document.createElement("li");
-      // The chart's trend, then the comparison, each on a row of its own under the rest (#220)
-      const row = it.line === "trend" || it.line === "cmp";
-      if (row) li.classList.add("legend-row");
-      if (panel && it.toggle) {
-        const btn = document.createElement("button");
-        btn.type = "button";
-        btn.className = "legend-btn legend-line";
-        btn.dataset.key = "toggle";
-        btn.setAttribute("aria-pressed", String(!!it.on));
-        btn.append(swatch(it), text("span", it.label));
-        btn.addEventListener("click", () => {
-          it.toggle!();
-          refocus = { panel, key: "toggle" };
-          render();
-        });
-        li.append(btn, ...(it.help ? [helpTip(it.help)] : []));
-        return li;
-      }
-      if (panel && it.line) {
-        const line = it.line;
-        const off = hiddenLines[panel].has(line);
-        // The votes switch between shown over the chart and shown alone
-        const alone = line === "votes" && !off && votesAlone.has(panel);
-        const btn = document.createElement("button");
-        btn.type = "button";
-        btn.className = `legend-btn legend-line${off ? " is-off" : ""}${alone ? " is-alone" : ""}`;
-        btn.dataset.key = `line:${line}`;
-        btn.setAttribute("aria-pressed", String(!off));
-        btn.title = line === "votes" ? (off ? "Show the votes" : alone ? "Show the chart with the votes" : "Show only the votes")
-          : off ? "Show this line" : "Hide this line";
-        // The space is where the figure may move to the next line, after the name, never inside it
-        btn.append(lineLabel(swatch(it), it.label), ...(it.detail ? [" ", lineDetail(it.detail)] : []));
-        btn.addEventListener("click", () => {
-          if (line === "votes" && !off) {
-            if (alone) votesAlone.delete(panel);
-            else votesAlone.add(panel);
-          } else if (off) hiddenLines[panel].delete(line);
-          else hiddenLines[panel].add(line);
-          refocus = { panel, key: `line:${line}` };
-          askToRemember();
-          render();
-        });
-        li.append(btn, ...(it.help ? [helpTip(it.help)] : []));
-        return li;
-      }
-      if (!set || !it.key) {
-        li.className = row ? "legend-static legend-row" : "legend-static";
-        if (it.spot) li.dataset.key = it.spot;
-        // A trend's figure, as beside the trend's button on the charts whose lines toggle
-        li.append(swatch(it), text("span", it.label), ...(it.detail ? [" ", lineDetail(it.detail)] : []), ...(it.help ? [helpTip(it.help)] : []));
-        return li;
-      }
-      const key = it.key;
-      const btn = document.createElement("button");
-      btn.type = "button";
-      btn.className = "legend-btn";
-      btn.dataset.key = key;
-      btn.setAttribute("aria-pressed", String(set.has(key)));
-      if (set.size && !set.has(key)) btn.classList.add("is-off");
-      btn.title = !set.has(key) ? `Click to show ${set.size ? `${it.label} too` : `only ${it.label}`}`
-        : set.size === 1 ? "Click to show everything again" : `Click to hide ${it.label}`;
-      btn.append(swatch(it), text("span", it.label), ...(it.detail ? [" ", lineDetail(it.detail)] : []));
-      btn.addEventListener("click", () => {
-        if (set.has(key)) set.delete(key);
-        else set.add(key);
-        if (set.size === toggles.length) set.clear();
-        refocus = { panel: panel!, key };
-        askToRemember();
-        render();
-      });
-      li.append(btn);
-      return li;
-    });
-    if (set?.size) {
-      const li = document.createElement("li");
-      const reset = text("button", "Show all", "legend-reset") as HTMLButtonElement;
-      reset.type = "button";
-      reset.addEventListener("click", () => {
-        set.clear();
-        refocus = { panel: panel!, key: toggles[0].key! };
-        askToRemember();
-        render();
-      });
-      li.append(reset);
-      nodes.push(li);
-    }
-    // A chart with categories to pick keeps its lines (trend, comparison, ceiling, votes) in a legend of their own
-    // under it, so the categories read alone
-    // A line chart's own lines (entries that spotlight a series) stay above with the categories
-    const isLine = (it: LegendItem) => !it.key && !it.spot && (!!it.line || !!it.toggle ||
-      ["line", "dash", "diamond", "linedot"].includes(it.mark));
-    const split = items.some((it) => !isLine(it)) && items.some(isLine);
-    const svg = list.parentElement?.querySelector<SVGSVGElement>(":scope > svg");
-    let below = list.parentElement?.querySelector<HTMLElement>(":scope > ul.legend-below") ?? null;
-    if (split && svg && !below) {
-      below = document.createElement("ul");
-      below.className = "legend legend-below";
-      if (list.id) below.id = `${list.id}-below`;
-      // The page's scoped legend styles find it by the scope attribute the list above carries
-      for (const a of [...list.attributes]) if (a.name.startsWith("data-astro-cid")) below.setAttribute(a.name, a.value);
-      below.setAttribute("aria-label", "Lines on the chart. Select one to hide or show it.");
-      svg.after(below);
-    }
-    const lower = split && below ? nodes.filter((_, k) => k < items.length && isLine(items[k])) : [];
-    list.replaceChildren(...nodes.filter((n) => !lower.includes(n)));
-    for (const l of [list, ...(below ? [below] : [])]) {
-      if (l === below) {
-        l.replaceChildren(...lower);
-        l.hidden = !lower.length;
-      }
-      fitLegend(l);
-      legendFit.observe(l);
-      legends.add(l);
-    }
-  }
+  /** A legend: what its buttons change, and after a click, the entry to give focus back to once the charts redraw */
+  const legendState: LegendState = { isolated, hiddenLines, votesAlone, onChange: (panel, key, ask) => {
+    refocus = { panel, key };
+    if (ask) askToRemember();
+    render();
+  } };
+  const legend = (list: HTMLElement, items: LegendItem[], panel?: StackPanel) => drawLegend(list, items, panel, legendState);
 
   // A legend entry, hovered or focused from the keyboard, spotlights its marks in its chart: they stay,
   // the rest fade. A tap on a touch screen isolates instead, as a click does, so touch doesn't spotlight.
@@ -1959,7 +2236,6 @@ export async function startExplorer() {
   document.addEventListener("focusout", (ev) => spotlight(legendEntry(ev), false));
 
   // ---- Full data table: every year, shown in an overlay wider than the page column ----
-  type TableCol = { label: string; values: Values; fmt: (v: number) => string };
   const fullTables: Record<string, { caption: string; cols: TableCol[] }> = {};
   const dialog = $<HTMLDialogElement>("table-dialog");
 
@@ -1999,26 +2275,6 @@ export async function startExplorer() {
     if (ev.target === dialog) dialog.close();
   });
 
-  // ---- Comparison table: the report's start year, growth rates and last two years,
-  // shaded against the comparison. `end` is the last year's index, for a source
-  // that trails the others. ----
-  interface CmpRow { label: string; color: string; mark: "rect" | "line" | "dash" | "linedot"; values: Values; base: Values | null; total?: boolean }
-
-  interface CmpOpts { end?: number; noCmpNote?: string; per?: string;
-    /** The first year's position; with Since 1990 on, by default the first year any row has */
-    start?: number }
-
-  /** Rows for what the legend shows: each shown segment, then the total, or the selection's
-   * total when several are isolated. */
-  function cmpRows(shown: Series[], cAll: Series[] | null, sel: string | null, total: Values, cTotal: Values | null,
-    shownTotal: Values, cShownTotal: Values | null, totalLabel: string): CmpRow[] {
-    const rows: CmpRow[] = [...shown].reverse().map((s) => ({
-      label: s.label, color: s.color, mark: "rect", values: s.values, base: cAll?.find((x) => x.key === s.key)?.values ?? null,
-    }));
-    if (!sel) rows.push({ label: totalLabel, color: "", mark: "rect", values: total, base: cTotal, total: true });
-    else if (shown.length > 1) rows.push({ label: `Total, ${sel}`, color: "", mark: "rect", values: shownTotal, base: cShownTotal, total: true });
-    return rows;
-  }
 
   /** "above", linked to the view's comparison menu; from an enlarged chart, it closes the window first.
    * Under the menu, a "Go back" link returns to the table until it's used or the view changes. */
@@ -2178,159 +2434,13 @@ export async function startExplorer() {
   window.addEventListener("resize", dockSoon);
   dockLabel();
 
-  function compareTable(holder: HTMLElement, caption: string, rowLabel: string, rows: CmpRow[], kind: "usd" | "fte" | "count",
-    cmp: Named | null, { end = last, noCmpNote, per = "pupil", start }: CmpOpts = {}) {
-    const cName = cmp ? cmp.name : null;
-    const fmt = kind === "usd" ? usd : kind === "count" ? (v: number) => Math.round(v).toLocaleString("en-US") : fte;
-    const unit = kind === "usd" ? (per ? ` $/${per}` : " $") : "";
-    const prior = end - 1;
-    const s0 = start ?? (state.hist === "on" ? Math.max(0, Math.min(...rows.map((r) => {
-      const i = firstAt(r.values);
-      return i < 0 ? Infinity : i;
-    }))) : 0);
-    // Growth over the years shown, then over the last 10 and 5 when the window holds more
-    const windows = [end - s0, ...[10, 5].filter((n) => n < end - s0)].filter((n) => n > 0);
-    const t = document.createElement("table");
-    t.append(text("caption", caption));
-    const head = t.createTHead().insertRow();
-    const blank = text("th", "");
-    blank.className = "swatch-col";
-    head.append(blank, text("th", rowLabel, "label-col"), text("th", `${years[s0]}${unit}`),
-      ...windows.map((n) => text("th", `CAGR ${n}y`)),
-      text("th", `${years[prior]}${unit}`), text("th", `${years[end]}${unit}`));
+  const compareTable = (holder: HTMLElement, caption: string, rowLabel: string, rows: CmpRow[], kind: "usd" | "fte" | "count",
+    cmp: Named | null, opts: CmpOpts = {}) =>
+    drawCompareTable(holder, years, caption, rowLabel, rows, kind, cmp, { ...opts, hist: state.hist === "on", link: compareLink });
 
-    const sr = (above: boolean) => text("span", above ? " (above comparison)" : " (below comparison)", "sr-only");
-    const level = (r: CmpRow, i: number) => {
-      const v = r.values[i];
-      const td = text("td", v == null ? "—" : fmt(v));
-      const b = r.base?.[i];
-      if (v != null && b != null && b > 0 && cName) {
-        const rel = (v - b) / b;
-        const bg = shade(gapShown(rel, 0), SHADE_BINS_REL);
-        td.title = `${cName}: ${fmt(b)} (${signFor(rel, gapText(rel, 0), true)}${gapText(rel, 0)}%)`;
-        if (bg) {
-          td.style.background = bg;
-          td.append(sr(rel > 0));
-        }
-      }
-      return td;
-    };
-    const growth = (r: CmpRow, n: number) => {
-      const g = cagr(r.values[end - n], r.values[end], n);
-      const td = text("td", g == null ? "—" : change(g));
-      const gb = r.base ? cagr(r.base[end - n], r.base[end], n) : null;
-      if (g != null && gb != null && cName) {
-        const delta = g - gb;
-        const bg = shade(gapShown(delta, 1), SHADE_BINS_PP);
-        td.title = `${cName}: ${change(gb)} (${signFor(delta, gapText(delta, 1), true)}${gapText(delta, 1)} pp)`;
-        if (bg) {
-          td.style.background = bg;
-          td.append(sr(delta > 0));
-        }
-      }
-      return td;
-    };
 
-    const body = t.createTBody();
-    for (const r of rows) {
-      const tr = body.insertRow();
-      if (r.total) tr.className = "total";
-      const sw = document.createElement("td");
-      sw.className = "swatch-col";
-      if (!r.total) {
-        const key = document.createElement("span");
-        key.className = `key ${r.mark}`;
-        key.style.setProperty("--c", r.color);
-        sw.append(key);
-      }
-      const th = text("th", r.label);
-      th.setAttribute("scope", "row");
-      tr.append(sw, th, level(r, s0), ...windows.map((n) => growth(r, n)), level(r, prior), level(r, end));
-    }
-
-    const note = document.createElement("div");
-    note.className = "compare-legend";
-    if (cName) {
-      const chip = (color: string, label: string) => {
-        const s = document.createElement("span");
-        s.className = "chip";
-        const box = document.createElement("span");
-        box.className = "chip-box";
-        box.style.background = color;
-        s.append(box, text("span", label));
-        return s;
-      };
-      const chips = document.createElement("div");
-      chips.className = "chips";
-      chips.append(chip(ABOVE_SHADES[2], `Above ${cName}`), chip(BELOW_SHADES[2], `Below ${cName}`));
-      note.append(chips, text("p",
-        `Shaded where a value differs from ${refName(cmp!)} by 5% or more (${{ usd: "dollars", fte: "enrollment", count: "counts" }[kind]}) ` +
-        "or a growth rate by 0.5 percentage points or more; darker shading marks a larger gap. " +
-        "Hover a cell for the comparison value. CAGR is the compound annual growth rate, (end\u00a0÷\u00a0start)^(1\u00a0÷\u00a0years)\u00a0−\u00a01."));
-    } else {
-      const p = document.createElement("p");
-      p.append(...(noCmpNote ? [noCmpNote] : ["Choose a comparison ", compareLink(), " to shade this table against it."]),
-        " CAGR is the compound annual growth rate, (end\u00a0÷\u00a0start)^(1\u00a0÷\u00a0years)\u00a0−\u00a01.");
-      note.append(p);
-    }
-    // The box takes the table's width; the note stretches to match it
-    const box = document.createElement("div");
-    box.className = "compare-box";
-    box.append(t, note);
-    holder.replaceChildren(box);
-  }
-
-  // ---- Stat tiles ----
-  /** A headline tile; with a share, a small pie of it beside the value */
-  function tile(label: string, value: string, details: string[],
-    share?: { v: number; title: string; own?: string; cmp?: { v: number; title: string; detail: string } | null } | null,
-    help?: string) {
-    const div = document.createElement("div");
-    div.className = "tile";
-    // The green pie's figure on green: the tile's own value, or the detail line it names (own)
-    const val = document.createElement("div");
-    val.className = "tile-value";
-    val.append(text("span", value, share && !share.own ? "tile-figure is-own" : "tile-figure"));
-    if (share) {
-      val.classList.add("has-pie");
-      const pies = document.createElement("span");
-      pies.className = "tile-pies";
-      pies.append(pie(share.v, share.title), ...(share.cmp ? [pie(share.cmp.v, share.cmp.title, true)] : []));
-      val.append(pies);
-    }
-    // Three rows, label, value, details, that line up with the tiles beside it (the page's subgrid)
-    const more = document.createElement("div");
-    more.className = "tile-details";
-    // The comparison's line, the one its gold pie shows, on a gold ground
-    details.filter(Boolean).forEach((d) => more.append(text("div", d,
-      d === share?.cmp?.detail ? "tile-detail is-cmp" : share?.own && d === share.own ? "tile-detail is-own" : "tile-detail")));
-    const head = text("div", label, "tile-label");
-    if (help) head.append(" ", helpTip(help));
-    div.append(head, val, more);
-    return div;
-  }
-
-  /** A tile's pie: one share of a whole, clockwise from twelve o'clock. The tile's text carries the figure, so
-   *  screen readers skip it; the hover title says what it shows. Ringed, so the whole reads against the page. */
-  function pie(f: number, title: string, cmp = false) {
-    const R = 15;
-    const svg = svgEl("svg", { viewBox: "-16 -16 32 32", class: cmp ? "tile-pie is-cmp" : "tile-pie", "aria-hidden": "true" });
-    svgEl("title", {}, svg).textContent = title;
-    svgEl("circle", { r: R, class: "tile-pie-rest" }, svg);
-    const v = Math.max(0, Math.min(1, f));
-    if (v >= 0.999) svgEl("circle", { r: R, class: "tile-pie-share" }, svg);
-    else if (v > 0.001) {
-      const a = v * 2 * Math.PI;
-      const x = (R * Math.sin(a)).toFixed(2), y = (-R * Math.cos(a)).toFixed(2);
-      svgEl("path", { d: `M0 0V${-R}A${R} ${R} 0 ${v > 0.5 ? 1 : 0} 1 ${x} ${y}Z`, class: "tile-pie-share" }, svg);
-    }
-    svgEl("circle", { r: R, class: "tile-pie-ring" }, svg);
-    return svg;
-  }
 
   // ---- Chart helpers shared by both views ----
-  const stackTop = (series: Series[], i: number) => series.reduce((a, s) => a + Math.max(0, s.values[i] ?? 0), 0);
-  const fmtUsd = (v: number) => compact(v, "$");
   const yoy = (vals: Values, i: number) =>
     i > 0 && vals[i] != null && vals[i - 1] ? `${change(vals[i]! / vals[i - 1]! - 1)} from FY${years[i - 1]}` : undefined;
   /** Tooltip for a stacked panel: the total (or the isolated selection), its segments, the comparison. */
@@ -2567,12 +2677,6 @@ export async function startExplorer() {
   /** Draw the view; refresh() has loaded what it needs. */
   // ---- The window of years: each entity's yearly series, cut to it, made once per window. A series
   // is yearly when it runs the length of the slider's scale. ----
-  const yearly = (v: unknown, n: number) => Array.isArray(v) && v.length === n && v.every((x) => x === null || typeof x === "number");
-  function cut<T>(o: T, a: number, b: number, n: number): T {
-    if (Array.isArray(o)) return (yearly(o, n) ? o.slice(a, b + 1) : o.map((x) => cut(x, a, b, n))) as T;
-    if (o && typeof o === "object") return Object.fromEntries(Object.entries(o).map(([k, v]) => [k, cut(v, a, b, n)])) as T;
-    return o;
-  }
   const cuts = new WeakMap<object, { key: string; value: unknown }>();
   function win<T extends object>(o: T): T {
     const n = scale().length;
@@ -3375,24 +3479,7 @@ export async function startExplorer() {
     return span;
   }
 
-  /** Names separated by commas; past seven, the first six and a button for the rest. */
-  function nameList(items: HTMLElement[]): HTMLElement {
-    const list = document.createElement("span");
-    const show = (n: number) => {
-      list.replaceChildren();
-      items.slice(0, n).forEach((it, k) => list.append(...(k ? [", ", it] : [it])));
-      if (n < items.length) {
-        const more = text("button", `and ${items.length - n} more`, "rel-more") as HTMLButtonElement;
-        more.type = "button";
-        more.addEventListener("click", () => show(items.length));
-        list.append(" ", more);
-      }
-    };
-    show(items.length > 7 ? 6 : items.length);
-    return list;
-  }
 
-  interface RelRow { name: HTMLElement; kind?: string; amount?: number | null; extra: [string, HTMLElement[]] | null }
 
   /** Beside Compare with: a relative choice ("Its enrollment group in its region") as the group it stands for, by
    * name, linking to that group in About the data's list of groups; otherwise a link to all the groups */
@@ -3496,46 +3583,7 @@ export async function startExplorer() {
     return uses;
   }
 
-  /** Swap beside Compare with: shown while there's a comparison, and active when the comparison can be the
-   * focus (it's in the District or Town menu) and the focus can be its comparison */
-  function swapButton(b: HTMLButtonElement, name: string, c: (Named & { id: string }) | null, can: boolean) {
-    b.classList.toggle("is-idle", !c);
-    b.disabled = !can;
-    const what = c && can ? `Show ${c.name}, compared with ${name}` : "Can't swap these two";
-    b.title = what;
-    b.setAttribute("aria-label", `Swap: ${what}`);
-  }
 
-  function relations(spec: { root: string; note: string; rows: RelRow[] } | null) {
-    const box = $("relations");
-    box.hidden = !spec;
-    if (!spec) {
-      box.replaceChildren();
-      return;
-    }
-    const head = document.createElement("div");
-    head.className = "rel-head";
-    head.append(text("strong", spec.root), text("span", spec.note, "rel-note"));
-    const tree = document.createElement("ul");
-    tree.className = "rel-tree";
-    for (const r of spec.rows) {
-      const li = document.createElement("li");
-      const name = document.createElement("span");
-      name.className = "rel-name";
-      name.append(r.name);
-      li.append(name);
-      if (r.kind != null) li.append(text("span", r.kind, "rel-kind"));
-      if (r.amount !== undefined) li.append(text("span", r.amount != null ? amount(r.amount) : "–", "rel-amt"));
-      if (r.extra) {
-        const extra = document.createElement("span");
-        extra.className = "rel-extra";
-        extra.append(`${r.extra[0]} `, nameList(r.extra[1]));
-        li.append(extra);
-      }
-      tree.append(li);
-    }
-    box.replaceChildren(head, tree);
-  }
 
   // ---- Town view ----
   const count = (v: number) => Math.round(v).toLocaleString("en-US");
