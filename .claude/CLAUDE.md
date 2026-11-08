@@ -1,65 +1,76 @@
 # Proto-Parsec - Personal Website Project
 
 ## Project Overview
-This is Tim Shores' professional/personal website showcasing work as a Data Storyteller. The site is built with Astro and deployed to timshores.com via GitHub Actions to Namecheap FTP hosting.
+This is Tim Shores' professional/personal website, timshores.com. The site is built with Astro and deployed via
+GitHub Actions to Namecheap FTP hosting. Its largest part is the Municipal spending explorer at /muni-spending/.
 
 ## Technology Stack
-- **Framework**: Astro 5.15.5 (static site generator)
-- **Language**: TypeScript (strict mode), Astro components, vanilla JavaScript
+- **Framework**: Astro 6 (package.json asks for ^6.3.7; 6.4.8 installed), a static site generator
+- **Language**: TypeScript (strict mode), Astro components, vanilla JavaScript; no UI framework, by design
 - **Styling**: Scoped CSS within components, CSS custom properties
 - **Deployment**: GitHub Actions → Namecheap FTP (SamKirkland/FTP-Deploy-Action)
 
 ## Site Structure
-- **src/pages/**: Auto-routed pages (index.astro, work.astro, contact.astro)
-- **src/layouts/**: Shared layout wrapper with navigation
-- **src/components/**: Reusable Astro components
-- **src/assets/**: SVGs and images
-- **public/**: Static assets (portraits, favicon)
+- **src/pages/**: Auto-routed pages: index.astro (About), work.astro, portfolio.astro, contact.astro, and
+  muni-spending/ (the explorer; its old addresses, mass-school-spending/ and massppe/, render Moved.astro)
+- **src/lib/massppe/**: The explorer's TypeScript: explorer.ts (district and town views), map.ts, commonwealth.ts
+  (the plots), cap.ts, charts.ts, scatter.ts, notes.ts (About the data), format.ts (how every figure is written),
+  stats.ts
+- **src/data/massppe/**: The explorer's data, written by ~/projects/schools/ppe_report/export_explorer_data.py;
+  regenerate it there, never by hand
+- **src/layouts/Layout.astro**: Shared layout: the header, its navigation, the design tokens, the new-tab rule
+- **src/components/**: LiveRibbon (the home page's link to the explorer), Moved, massppe/GroupMembers
+- **public/**: Static assets: portraits, resume PDFs, favicon, the explorer's downloadable CSVs
 
 ## Design System & Style Guidelines
 
 ### Color Palette
-- **Primary Background**: Manila beige (`#F4EFE3`)
-- **Text**: Warm inks (`#322E29`)
-- **Accent**: Red (`#D35545`)
-- **Shadows**: `rgba(50, 46, 41, 0.25)`
+Custom properties on `:root` in Layout.astro:
+- **Page**: `--canvas` #f4f1e8, with faint radial washes; content sits on `--paper` #fefcf7
+- **Text**: `--ink` #1f1f1c, `--ink-soft` #524f45
+- **Accents**: `--accent` #b65c3d (rust red), `--accent-2` #556a57 (green)
+- **Lines and shadows**: `--line` #d8d0c2, `--shadow` rgba(31, 31, 28, 0.1)
 
 ### Key Design Patterns
-- **Navigation**: Sticky folder-tab style with `clip-path` for distinctive shape
-- **Cards**: plain content panels. A card is not a control; only the links inside it act (design voice, 2026-11-01: the click-to-pop stepped shadow announced every card as a button and swallowed Enter on the links inside)
-- **Left Margin**: Decorative red line accent
-- **Copy width**: prose runs the full width of its column, as a rule (Tim, 2026-11-02). No `max-width` on paragraphs, lists, notes, or intros; tooltips, controls, tables, and dialog headings keep theirs
-- **Responsive**: Mobile breakpoint at 768px
-- **Transitions**: Smooth hover animations and fade-in effects
+- **Navigation**: pill tabs in the header; the active tab fills with a gradient from `--accent` to `--accent-2`
+- **Cards**: plain content panels. A card is not a control; only the links inside it act (design voice, 2026-11-01:
+  the click-to-pop stepped shadow announced every card as a button and swallowed Enter on the links inside)
+- **Accent rules**: experience and work items carry a 4px left border in `--accent-2`
+- **Copy width**: prose runs the full width of its column, as a rule (Tim, 2026-11-02). No `max-width` on
+  paragraphs, lists, notes, or intros; tooltips, controls, tables, and dialog headings keep theirs
+- **Responsive**: Layout's header folds at 760px; the home page's hero and the explorer fold at 860px; check
+  320px to 1920px, with no sideways scroll at any width
+- **Numbers**: every figure the explorer shows goes through format.ts, one rule for each kind of figure
 
 ### Typography
 - Body: Karla; headings: Besley (Google Fonts, loaded in `src/layouts/Layout.astro`)
-- Headings use varying weights for hierarchy
 
 ## Build & Development Commands
 - `npm run dev` - Start local dev server (localhost:4321)
-- `npm run build` - Build static site to ./dist/
+- `npm run build` - Check the profile data, then build the static site to ./dist/
 - `npm run preview` - Preview production build locally
+- Type check: `npx tsc` here is a placeholder package that checks nothing. Use a real TypeScript install outside the
+  repo (`npm install --prefix <scratch>/ts typescript`) and run `node <scratch>/ts/node_modules/typescript/bin/tsc
+  --noEmit -p .`; its only errors today are four in the astro config files (missing node types)
 
 ## Deployment
-- **Auto-deploy**: Pushes to main branch trigger GitHub Actions workflow
-- **Target**: Namecheap FTP server root directory
-- **Build output**: ./dist/ folder contents
-- **Workflow**: .github/workflows/deploy.yml
+- **Auto-deploy**: Pushes to main trigger the GitHub Actions workflow (.github/workflows/deploy.yml), which runs
+  `npm ci` and `npm run build` on Node 22 and uploads ./dist/ to the server root
+- FTP credentials are GitHub Secrets (FTP_SERVER, FTP_USERNAME, FTP_PASSWORD)
 
 ## Important Conventions
 
 ### When Making Changes
-- Maintain the existing design aesthetic (manila/warm ink/red color scheme)
-- Keep the distinctive folder-tab navigation style
-- Preserve scoped component styling patterns
-- Test responsive behavior at 768px breakpoint
-- Ensure all images are optimized before adding to public/
+- Keep the design tokens and the pill-tab navigation
+- Preserve scoped component styling; style elements a script builds with `:global()`, since scoped rules reach only
+  the markup in the file
+- Check every explorer tab for sideways scroll at phone width (320px and 375px)
+- Ensure images are optimized before adding them to public/
 
 ### Content Updates
-- **About/Home** (index.astro): Bio, skills, experience timeline
-- **Work** (work.astro): Portfolio projects with tags and tech stacks
-- **Contact** (contact.astro): Contact info and availability
+- **About/Home** (index.astro): data from src/data/profile.ts
+- **Work** (work.astro) and **Portfolio** (portfolio.astro): data from src/data/portfolio.ts
+- **Contact** (contact.astro)
 
 ### Code Style
 - Use TypeScript strict mode
@@ -67,18 +78,12 @@ This is Tim Shores' professional/personal website showcasing work as a Data Stor
 - Keep vanilla JavaScript for interactive features (no framework dependencies)
 - Use CSS custom properties for themeable values
 
-## Deployment Considerations
-- Changes to main branch deploy automatically
-- FTP credentials stored in GitHub Secrets (FTP_SERVER, FTP_USERNAME, FTP_PASSWORD)
-- Build output goes directly to server root (no subdirectory)
-- Node.js 20 used in CI/CD pipeline
-
 ## Asset Management
-- Portrait images in public/ (portrait.jpg, portrait-a.png, portrait-b.png)
-- SVGs can go in either src/assets/ or public/ depending on usage
+- Portrait images in public/ (portrait-a.png, portrait-b.png)
+- SVGs and images processed by Astro go in src/assets/ (the ribbon); others in public/
 - Favicon is public/favicon.svg
 
 ## Testing Before Deployment
 - Always run `npm run build` locally to catch build errors
-- Preview built site with `npm run preview`
-- Check mobile responsiveness manually at narrow widths
+- Preview the built site with `npm run preview`
+- Check mobile responsiveness at narrow widths
