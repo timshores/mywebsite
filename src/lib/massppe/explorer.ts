@@ -1614,7 +1614,8 @@ export async function startExplorer() {
     toSlider.value = String(b);
     if (ys[b] !== state.to || ys[a] !== state.from) update({ to: ys[b], from: ys[a] });
   });
-  yearsMark.append(helpTip(MEASURE_NOTE));
+  // In the label, so the two sit together under the tick (#238)
+  yearsMark.querySelector(".years-mark-label")!.append(helpTip(MEASURE_NOTE));
 
   // Since 1990: on, the slider's first handle moves to FY1990 if it was at the start; off, any handle
   // before FY{start} comes back to it

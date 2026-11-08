@@ -696,22 +696,23 @@ html.modal-open {
   pointer-events: none;
 }
 
+/* The label and its "?", centered together under the tick (#238: the "?" was nudged there from outside the label by
+   offsets meant for a position it never had) */
 .explorer .years-mark-label {
   position: absolute;
   top: 16px;
   left: 50%;
   transform: translateX(-50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
   font-size: 0.68rem;
   font-weight: 500;
   color: var(--ink-soft);
   white-space: nowrap;
 }
 
-/* The "?" beside the label, nudged from where it sits. It stays position: relative, from the .cw-help rule, as it has
-   always shown: the position: absolute this rule set lost, while scoped, to that later rule of equal weight (#237) */
 .explorer .years-mark .cw-help {
-  top: 15px;
-  left: calc(50% + 3.1rem);
   pointer-events: auto;
 }
 
