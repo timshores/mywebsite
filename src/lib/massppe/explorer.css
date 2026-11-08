@@ -25,6 +25,14 @@
   /* The pair's hues, a rise and a fall: the values palette.ts names BLUE and ORANGE, which the charts draw in */
   --blue: #2a78d6;
   --orange: #eb6834;
+  /* Colors that were near-identical, one each (#238): the creams of the swap pill, the bar track, the dial face and
+     the picker handle; the lighter cream of the plots' thumbnails and the cap tab's minimum row; the pie's light
+     gold; palette.ts's VIOLET; and one shadow for every window */
+  --cream: #efe9dd;
+  --cream-light: #fbf8f1;
+  --gold-light: #f1e6c6;
+  --violet: #6250d6;
+  --dialog-shadow: 0 24px 60px rgba(var(--ink-rgb), 0.28);
   font-variant-numeric: normal;
 }
 
@@ -63,7 +71,7 @@ html.modal-open {
 .explorer span.swap {
   padding: 0.05em 0.45em;
   border-radius: 999px;
-  background: #efe9dd;
+  background: var(--cream);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -933,7 +941,7 @@ html.modal-open {
   height: 26px;
   border-radius: 50%;
   border: 1.5px solid var(--ink-soft);
-  background: radial-gradient(circle at 40% 35%, var(--white) 0%, #efe8dc 75%);
+  background: radial-gradient(circle at 40% 35%, var(--white) 0%, var(--cream) 75%);
   box-shadow: 0 1px 2px rgba(var(--ink-rgb), 0.25);
   transform: rotate(50deg);
   transition: transform 0.25s ease;
@@ -1004,7 +1012,7 @@ html.modal-open {
 
 .explorer .view-tabs [role="tab"]:hover {
   color: var(--ink);
-  background: rgba(255, 255, 255, 0.55);
+  background: var(--card);
 }
 
 .explorer .view-tabs [role="tab"][aria-selected="true"] {
@@ -1262,7 +1270,7 @@ html.modal-open {
 
 /* The comparison's pie, in gold beside the town's green */
 .explorer .tiles .tile-pie.is-cmp .tile-pie-rest {
-  fill: #f1e6c6;
+  fill: var(--gold-light);
 }
 
 .explorer .tiles .tile-pie.is-cmp .tile-pie-share {
@@ -1288,7 +1296,7 @@ html.modal-open {
   padding: 0 0.3rem;
   margin-left: -0.3rem;
   border-radius: 4px;
-  background: #f4e6bd;
+  background: var(--gold-light);
   color: var(--ink);
 }
 
@@ -1424,7 +1432,7 @@ html.modal-open {
 
 .explorer .legend .legend-btn:hover {
   border-color: var(--line);
-  background: rgba(255, 255, 255, 0.7);
+  background: var(--card);
 }
 
 .explorer .legend .legend-btn[aria-pressed="true"] {
@@ -1446,7 +1454,7 @@ html.modal-open {
 
 .explorer .legend .legend-btn.legend-line:hover {
   border-color: var(--line);
-  background: rgba(255, 255, 255, 0.7);
+  background: var(--card);
 }
 
 .explorer .legend .legend-line.is-off span:last-child {
@@ -1926,7 +1934,7 @@ html.modal-open {
   background: var(--paper);
   border: 1px solid var(--line);
   border-radius: 16px;
-  box-shadow: 0 24px 60px rgba(var(--ink-rgb), 0.28);
+  box-shadow: var(--dialog-shadow);
 }
 
 .explorer .table-dialog[open] {
@@ -2653,7 +2661,7 @@ html.modal-open {
   border-radius: 14px;
   background: var(--paper);
   color: var(--ink);
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  box-shadow: var(--dialog-shadow);
 }
 
 .explorer .cw-sub[open] {
@@ -2886,7 +2894,7 @@ html.modal-open {
   background: var(--paper);
   border: 1px solid var(--line);
   border-radius: 14px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  box-shadow: var(--dialog-shadow);
   overflow: hidden;
 }
 

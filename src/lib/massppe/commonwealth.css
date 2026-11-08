@@ -36,7 +36,7 @@
   width: 100%;
   height: auto;
   aspect-ratio: 320 / 190;
-  background: #fbf8f1;
+  background: var(--cream-light);
   border-radius: 8px;
 }
 
@@ -69,7 +69,7 @@
   border-radius: 14px;
   background: var(--paper);
   color: var(--ink);
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
+  box-shadow: var(--dialog-shadow);
 }
 
 .explorer .cw-dialog[open] {
@@ -216,7 +216,7 @@
 
 .explorer .cw-body.picker-closed .cw-picker-handle {
   cursor: pointer;
-  background: #f3eee3;
+  background: var(--canvas);
 }
 
 .explorer .cw-body.picker-closed .cw-picker-handle::before {
@@ -229,7 +229,7 @@
 
 .explorer .cw-picker-handle:hover,
 .explorer .cw-picker-handle:focus-visible {
-  background: #efe7d8;
+  background: var(--cream);
 }
 
 .explorer .cw-picker {
@@ -476,7 +476,7 @@
 }
 
 .explorer .cw-bar:hover {
-  background: #f3eee3;
+  background: var(--canvas);
 }
 
 .explorer .cw-bar.is-current {
@@ -487,7 +487,7 @@
 .explorer .cw-bar-track {
   position: relative;
   height: 6px;
-  background: #efe9dd;
+  background: var(--cream);
   border-radius: 4px;
 }
 

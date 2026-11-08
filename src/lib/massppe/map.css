@@ -312,7 +312,7 @@
 }
 
 .explorer .map-swatch.nodata {
-  background: repeating-linear-gradient(45deg, var(--canvas) 0 3px, #bdb7aa 3px 5px);
+  background: repeating-linear-gradient(45deg, var(--canvas) 0 3px, var(--axis) 3px 5px);
 }
 
 .explorer .map-svg {

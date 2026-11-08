@@ -357,7 +357,7 @@
 
 .explorer .cap-steps-table tr.minimum th,
 .explorer .cap-steps-table tr.minimum td {
-  background: #fbf6ea;
+  background: var(--cream-light);
 }
 
 .explorer .cap-level {
@@ -412,7 +412,7 @@
   line-height: 1.5;
   color: #2b2160;
   background: #ebe6fc;
-  border-left: 5px solid #6250d6;
+  border-left: 5px solid var(--violet);
   border-radius: 8px;
 }
 
