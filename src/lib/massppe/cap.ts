@@ -7,14 +7,16 @@
 // target min(yield x f, cap x foundation budget). f is 1 at 82.5%; at 100% and with no cap
 // this reproduces Michael Naughton and Tupper Brown's FY2026 targets to the dollar.
 
-import { capital, el, modal, placeTip, svgEl, vn } from "./dom";
+import { addStyles, capital, el, modal, placeTip, svgEl, vn } from "./dom";
 import { change as changePct, compact, digits, pct, rho as rhoText, round, signFor, total, usd } from "./format";
 import { median, spearman } from "./stats";
 import { groupedPicker } from "./picker";
 import { chartRoom, enlargeButton, isEnlarged } from "./enlarge";
 import { scatter, ticksFor, type Group, type Point, type ScatterView } from "./scatter";
 import { BLUE, FIFTH_RAMP, ORANGE, VIOLET } from "./palette";
-import "./cap.css"; // the styles for what this module builds (#237)
+import css from "./cap.css?inline"; // the styles for what this module builds (#237), added as it loads (#238)
+
+addStyles(css);
 
 interface CapTown {
   lea: number; name: string; id: string; county: string | null; region: string | null;

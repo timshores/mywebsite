@@ -62,3 +62,12 @@ export function placeTip(tip: HTMLElement, svg: SVGSVGElement, figure: HTMLEleme
   tip.style.left = `${Math.min(box.left - fig.left + pos.left * scale + 12, fig.width - tip.offsetWidth - 4)}px`;
   tip.style.top = `${Math.max(0, box.top - fig.top + pos.top * scale - tip.offsetHeight - 10)}px`;
 }
+
+/** A module's stylesheet, added to the page when the module first loads, so a tab's styles arrive with the tab
+ * (#238). Imported as text (?inline): imported as a stylesheet, Astro links every module's sheet from the page's
+ * head, wanted or not. It goes after the page's own sheet, as it did when linked. */
+export function addStyles(css: string) {
+  const style = document.createElement("style");
+  style.textContent = css;
+  document.head.append(style);
+}

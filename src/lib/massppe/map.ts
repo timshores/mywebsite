@@ -7,13 +7,15 @@
 // Once the measures' years arrive (map-years.json), a change can be measured between any two years,
 // and a level shown for any year, or played from the first year to the latest.
 
-import { el, svgEl } from "./dom";
+import { addStyles, el, svgEl } from "./dom";
 import { enlargeButton } from "./enlarge";
 import { asShown, change, count, measured, pct, usd, yearly } from "./format";
 import { cagr, linearFit, median, quantile } from "./stats";
 import { GROUP_HUES } from "./palette";
 import type { CommunityType } from "./data";
-import "./map.css"; // the styles for what this module builds (#237)
+import css from "./map.css?inline"; // the styles for what this module builds (#237), added as it loads (#238)
+
+addStyles(css);
 
 /** [value, year] for a level; [value, first year, last year] for a change */
 type Val = number[];

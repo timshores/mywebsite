@@ -6,10 +6,12 @@
 import { change, compact, count, pct, rho, round, signFor, usd } from "./format";
 import { loess, median, pearson, spearman } from "./stats";
 import { scatter, type Group, type Point } from "./scatter";
-import { capital, el, modal, placeTip, svgEl, vn } from "./dom";
+import { addStyles, capital, el, modal, placeTip, svgEl, vn } from "./dom";
 import { AMBER, BLUE, FIFTH_RAMP, GREEN, RED, REGION_HUES, VIOLET } from "./palette";
 import type { CommunityType } from "./data";
-import "./commonwealth.css"; // the styles for what this module builds (#237)
+import css from "./commonwealth.css?inline"; // the styles for what this module builds (#237), added as it loads (#238)
+
+addStyles(css);
 
 type Values = (number | null)[];
 
