@@ -17,10 +17,10 @@ const rate = (v: number) => `${digits(v * 100, 3)}%`;
 
 const rows: { label: string; cells: string[]; total?: boolean }[] = [
   { label: "House, assessed", cells: [usd(house), usd(house)] },
-  { label: "Family income", cells: incomes.map(usd) },
+  { label: "Family income", cells: incomes.map((v) => usd(v)) },
   { label: `From property, ${rate(pEx)}`, cells: [usd(house * pEx), usd(house * pEx)] },
   { label: `From income, ${rate(iEx)}`, cells: incomes.map((inc) => usd(inc * iEx)) },
-  { label: "Combined effort yield", cells: cey.map(usd), total: true },
+  { label: "Combined effort yield", cells: cey.map((v) => usd(v)), total: true },
   { label: "Share of family income", cells: cey.map((c, k) => pct(c / incomes[k], 1)) },
   { label: "Property tax rate to raise it", cells: cey.map((c) => `$${((c / house) * 1000).toFixed(2)} per $1,000`) },
 ];
