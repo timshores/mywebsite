@@ -85,6 +85,7 @@ Custom properties on `:root` in Layout.astro:
 
 ## Testing Before Deployment
 - `npm run build` runs `npm run check:units` first: format.ts and stats.ts, case by case (scripts/check/units.test.ts)
+  and `npm run check:ids` after: every element id explorer.ts looks up is on the built page
 - For a change to the explorer, check it in a browser with `npm run check:explorer -- <command>` against the dev
   server or the live site (scripts/check/explorer.mjs; Playwright comes from seahag's evals):
   - `snapshot BASE OUT.json` before and after, then `compare A.json B.json`: the words and numbers of a set of

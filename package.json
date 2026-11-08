@@ -8,11 +8,12 @@
     "profile:apply": "node scripts/sync-profile-pdf.mjs --apply",
     "profile:check": "node scripts/check-profile-data.mjs",
     "check:units": "node scripts/check/units.mjs",
+    "check:ids": "node scripts/check/ids.mjs",
     "check:explorer": "node scripts/check/explorer.mjs",
     "resume:generate": "node scripts/generate-resume-pdf.mjs",
     "linkedin:sync": "node scripts/sync-linkedin-feed.mjs",
     "dev": "npm run profile:check && astro dev",
-    "build": "npm run profile:check && npm run check:units && astro build",
+    "build": "npm run profile:check && npm run check:units && astro build && npm run check:ids",
     "preview": "astro preview",
     "font-lab": "astro dev --config astro.fontlab.config.mjs",
     "astro": "astro"
