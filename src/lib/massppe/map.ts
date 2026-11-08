@@ -440,13 +440,139 @@ function growthCuts(values: number[]): number[] {
 }
 
 
+// ---- What a draw shows, figured apart from the page: draw() worked it all out inline, the grouping's sizes twice,
+// in one function of 240 lines (#238). These take what they need and touch nothing; draw() hands their results to
+// the parts that write the page. ----
+
+/** How each town finds what it shows on a layer: its district for the grades chosen, or its two combined; its group
+ * in the grouping shown and, within regions, its region and its size; and what one of the values counts */
+function placesOf(onTowns: boolean, grades: Grades, gs: Grouping[], grouping: Grouping | null) {
+  // All grades: a town with one district takes it; a town split between two takes the two combined
+  const combinedAt = (t: MapTown) => !onTowns && grades === "all" && !!t.elem && t.elem !== t.high;
+  const districtOf = (t: MapTown) => (onTowns || combinedAt(t) ? null : grades === "high" ? t.high : t.elem);
+  /** A town's group: its own, or its district's. A town split between two districts takes the group of the one
+   * for its younger grades, usually its own, as that district's page does: Shutesbury, Pelham and Leverett are
+   * all tiny, where taking the district that teaches more of a town's pupils put two of the three in Amherst-
+   * Pelham's medium group on a few pupils' difference (#234). */
+  const inGrouping = (g: Grouping, t: MapTown): string | null => {
+    if (onTowns) return g.of[t.id] ?? null;
+    const d = combinedAt(t) ? t.elem : districtOf(t);
+    return d ? g.of[d] ?? null : null;
+  };
+  const groupOf = (t: MapTown): string | null => (grouping ? inGrouping(grouping, t) : null);
+  // A grouping within regions: the region each group sits in, outlined on hover, and its size
+  const within = grouping ? WITHIN[grouping.key] : undefined;
+  const regions = within ? gs.find((g) => g.key === within.region) ?? null : null;
+  const regionOf = regions ? (t: MapTown) => inGrouping(regions, t) : undefined;
+  const sizes = within ? gs.find((g) => g.key === within.size) ?? null : null;
+  const sizeOf = sizes ? (t: MapTown) => inGrouping(sizes, t) : undefined;
+  // Its statewide groups, where a region had too few of a size: no region to outline
+  const statewide = (id: string) => !!sizes?.groups.includes(id);
+  // Each district counts once, however many towns it covers; with all grades, each town counts. Grouped, each
+  // group counts once.
+  const byTown = !grouping && (onTowns || grades === "all");
+  const what = grouping ? "groups" : byTown ? "towns" : "districts";
+  return { grouping, within, combinedAt, districtOf, groupOf, regions, regionOf, sizes, sizeOf, statewide, byTown, what };
+}
+type Places = ReturnType<typeof placesOf>;
+
+/** A measure's figures: each district's, each town's (its own, its district's, or its two districts' combined) and
+ * each group's, over the years chosen once the series is here (S), before then as map.json has them; and the values
+ * that count, one for each town, district or group, for the classes, the words and the table */
+function figuresOf(data: MapData, S: MapSeries | null, measure: Measure, onTowns: boolean, at: Places) {
+  const { latest } = data.meta;
+  // Growth in dollars comes as [after inflation, first year, last year, before inflation], each its own trend
+  const inMode = (v: Val | null | undefined, after: boolean): Val | null => {
+    if (!v) return null;
+    if (!measure.dollars) return v;
+    return after || v.length < 4 ? v.slice(0, 3) : [v[3], v[1], v[2]];
+  };
+  /** A district's own value: over the years chosen, once they're here, or as map.json has it */
+  const districtVal = (d: string, after: boolean, yy: Yrs | null): Val | null =>
+    (S ? fromRow(S, latest, measure, S.districts[d], yy!, after) : inMode(data.districts[d]?.v[measure.key], after));
+  const valueIn = (t: MapTown, after: boolean, yy: Yrs | null): Val | null => {
+    if (S) {
+      if (onTowns) return fromRow(S, latest, measure, S.towns[t.id], yy!, after);
+      if (at.combinedAt(t)) {
+        // Density isn't combined, and a town without the two weights takes its own district's
+        return measure.key === "density" || !S.towns[t.id]?.w ? districtVal(t.elem!, after, yy) : combinedRow(S, latest, measure, t, yy!, after);
+      }
+      const d = at.districtOf(t);
+      return d ? districtVal(d, after, yy) : null;
+    }
+    if (onTowns) return inMode(t.v[measure.key], after);
+    // Density isn't combined: a split town takes its own district's
+    if (at.combinedAt(t)) return inMode(t.all?.[measure.key] ?? data.districts[t.elem!]?.v[measure.key], after);
+    const d = at.districtOf(t);
+    return d ? inMode(data.districts[d]?.v[measure.key], after) : null;
+  };
+  /** A group's value: its average's, over the years chosen, or as map.json has it */
+  const groupVal = (g: string, after: boolean, yy: Yrs | null): Val | null =>
+    (S ? fromRow(S, latest, measure, S.groups?.[g], yy!, after) : inMode(data.groups?.[g]?.v[measure.key], after));
+  const valueAt = (t: MapTown, after: boolean, yy: Yrs | null): Val | null => {
+    if (!at.grouping) return valueIn(t, after, yy);
+    const g = at.groupOf(t);
+    return g ? groupVal(g, after, yy) : null;
+  };
+  const shownDistricts = [...new Set(data.towns.map(at.districtOf).filter((d): d is string => !!d))];
+  const shownGroups = at.grouping ? [...new Set(data.towns.map(at.groupOf).filter((g): g is string => !!g))] : [];
+  /** The values that count, before or after inflation, over the years given */
+  const unitsIn = (after: boolean, yy: Yrs | null) => (at.grouping ? shownGroups.map((g) => groupVal(g, after, yy)).filter(Boolean) as Val[]
+    : at.byTown ? data.towns.map((t) => valueIn(t, after, yy)).filter(Boolean) as Val[]
+    : shownDistricts.map((d) => districtVal(d, after, yy)).filter(Boolean) as Val[]);
+  return { districtVal, valueIn, groupVal, valueAt, shownDistricts, shownGroups, unitsIn };
+}
+type Figures = ReturnType<typeof figuresOf>;
+
+/** The classes a measure's values fall in, and each class's color: the state's own lines, the income fifths, or
+ * cuts on the values. years: once the series is here, every year the measure has. */
+function classesOf(meta: MapData["meta"], measure: Measure, unitsIn: Figures["unitsIn"], real: boolean, y: Yrs | null,
+  years: number[] | null) {
+  const units = unitsIn(real, y);
+  const values = units.map((u) => u[0]);
+  // A level's classes are cut on every year's values together, so a color holds one range in every year and a
+  // town that changes color as the years play has moved between ranges. Growth in dollars: the classes are
+  // cut on its values before and after inflation together, so both share one set of ranges and the Dollars
+  // switch moves towns between them, as inflation would.
+  const pooled = years && measure.years === "year" ? years.flatMap((yr) => unitsIn(real, { from: yr, to: yr }).map((u) => u[0])) : values;
+  const base = (measure.fifths ? meta.fifths[measure.fifths] : null) ?? measure.cuts
+    ?? (measure.dollars ? growthCuts([...unitsIn(true, y), ...unitsIn(false, y)].map((u) => u[0])) : cuts(measure.kind, pooled));
+  const tailCut = measure.tail ? Number(quantile(pooled, measure.tail).toPrecision(2)) : null;
+  const c = tailCut != null && tailCut > base[base.length - 1] ? [...base, tailCut] : base;
+  const classOfV = (raw: number) => {
+    const v = asShown(measure.fmt, raw);
+    return measure.over ? c.filter((x) => v > x + 1e-9).length : classOf(v, c);
+  };
+  const colors = measure.dollars ? GROWTH : measure.kind === "change" ? (c.length === 6 ? DIVERGING7 : DIVERGING)
+    : c.length === 5 ? SEQUENTIAL6 : SEQUENTIAL;
+  return { units, values, c, classOfV, colors };
+}
+type Classes = ReturnType<typeof classesOf>;
+
+/** The key's words for class k of a measure cut at c */
+function classLabel(measure: Measure, c: number[], k: number) {
+  const fifthWords = ["Lowest fifth", "Second", "Middle", "Fourth", "Highest fifth"];
+  const top = c.length;
+  return measure.fifths ? `${fifthWords[k]}: ${k === 0 ? `under ${measure.short(c[0])}`
+    : k === top ? `${measure.short(c[top - 1])} and up` : `${measure.short(c[k - 1])} to ${measure.short(c[k] - 1)}`}`
+    : measure.classes?.[k] ?? (k === 0 ? (measure.dollars ? "Down, below 0%" : `Below ${measure.short(c[0])}`) : k === top
+    ? `${measure.short(c[top - 1])} and up` : `${measure.short(c[k - 1])} to ${measure.short(c[k])}`);
+}
+
+/** What one draw shows, for the parts that write it out: the measure, where each town finds its figure, the figures
+ * and their classes; the years chosen (y), once the series is here, and every year the measure has (ys) */
+interface Shown {
+  onTowns: boolean; measure: Measure; at: Places; fig: Figures; classes: Classes; real: boolean;
+  y: Yrs | null; ys: number[]; bySeries: boolean; value: (t: MapTown) => Val | null;
+}
+
+/** The measures on each layer, for About the data's links back to them (#227) */
+export const MAP_MEASURES: Record<Layer, readonly Measure[]> = { towns: TOWN_MEASURES, districts: DISTRICT_MEASURES };
+
 /**
  * real and setReal: the explorer's Dollars choice, which the map shares; refresh() redraws it when
  * that choice changes elsewhere; setSeries() hands it the measures' years when they arrive.
  */
-/** The measures on each layer, for About the data's links back to them (#227) */
-export const MAP_MEASURES: Record<Layer, readonly Measure[]> = { towns: TOWN_MEASURES, districts: DISTRICT_MEASURES };
-
 export function startMap(root: HTMLElement, data: MapData, opts: {
   openTown: (id: string) => void; openDistrict: (id: string) => void; real: () => boolean; setReal: (real: boolean) => void;
   /** "About the data:" and the parts named, linked */
@@ -753,8 +879,9 @@ export function startMap(root: HTMLElement, data: MapData, opts: {
     combinedAt: (t: MapTown) => boolean; kindOf?: (t: MapTown) => Kind | null; groupOf?: (t: MapTown) => string | null;
     regionOf?: (t: MapTown) => string | null; statewide?: (g: string) => boolean } | null = null;
 
-  function draw() {
-    const onTowns = layer === "towns";
+  /** The controls above the measure menu: the layer, the grades, and Group by, whose choice falls back to each town
+   * or district alone on a layer without it; the layer's groupings */
+  function showGroupings(onTowns: boolean) {
     layerSeg.set(layer);
     gradeSeg.set(grades);
     gradeSeg.box.hidden = onTowns;
@@ -764,14 +891,16 @@ export function startMap(root: HTMLElement, data: MapData, opts: {
     groupSel.replaceChildren(new Option(onTowns ? "Each town alone" : "Each district alone", ""), ...gs.map((g) => new Option(g.label, g.key)));
     if (!gs.some((g) => g.key === groupBy[layer])) groupBy[layer] = "";
     groupSel.value = groupBy[layer];
-    const grouping = groupingNow();
-    // A grouping within regions: the region each group sits in, outlined on hover
-    const within = grouping ? WITHIN[grouping.key] : undefined;
+    return gs;
+  }
+  /** The measure menu for the layer and its grouping, and the measure shown: the one chosen, unless the grouping can't
+   * show it; and, under the map, the parts of About the data it draws on */
+  function showMeasures(onTowns: boolean, grouping: Grouping | null, within: boolean) {
     // Grouped, the measures figured for the groups' averages (not those for one town alone, such as density), and
     // the groups themselves where there are few enough to color apart
     const forGroups = (m: Measure) => m.kind === "type" || grouping!.groups.some((g) => data.groups?.[g]?.v[m.key] != null);
     // A grouping within regions colors its many groups by region and size, so it shows them too
-    const showsGroups = !!grouping && (grouping.groups.length <= 8 || !!within);
+    const showsGroups = !!grouping && (grouping.groups.length <= 8 || within);
     const list = onTowns ? TOWN_MEASURES : DISTRICT_MEASURES;
     measureSel.replaceChildren(...(showsGroups ? [(() => {
       const g = document.createElement("optgroup");
@@ -797,33 +926,29 @@ export function startMap(root: HTMLElement, data: MapData, opts: {
     measureSel.value = key;
     const notes = list.find((m) => m.key === key)?.notes;
     srcAbout.replaceChildren((notes && opts.about(notes)) || "Data: the explorer's own, as the Data tab describes.");
-    // All grades: a town with one district takes it; a town split between two takes the two combined
-    const combinedAt = (t: MapTown) => !onTowns && grades === "all" && !!t.elem && t.elem !== t.high;
-    const districtOf = (t: MapTown) => (onTowns || combinedAt(t) ? null : grades === "high" ? t.high : t.elem);
-    /** A town's group: its own, or its district's. A town split between two districts takes the group of the one
-     * for its younger grades, usually its own, as that district's page does: Shutesbury, Pelham and Leverett are
-     * all tiny, where taking the district that teaches more of a town's pupils put two of the three in Amherst-
-     * Pelham's medium group on a few pupils' difference (#234). */
-    const inGrouping = (g: Grouping, t: MapTown): string | null => {
-      if (onTowns) return g.of[t.id] ?? null;
-      const d = combinedAt(t) ? t.elem : districtOf(t);
-      return d ? g.of[d] ?? null : null;
-    };
-    const groupOf = (t: MapTown): string | null => (grouping ? inGrouping(grouping, t) : null);
-    const regions = within ? gs.find((g) => g.key === within.region) ?? null : null;
-    const regionOf = regions ? (t: MapTown) => inGrouping(regions, t) : undefined;
-    // Its statewide groups, where a region had too few of a size: no region to outline
-    const sizeGroups = within ? gs.find((g) => g.key === within.size) ?? null : null;
-    const statewide = (id: string) => !!sizeGroups?.groups.includes(id);
-    // A pin holds while the groups themselves show
+    return { list, key };
+  }
+  /** Dollars: before or after inflation, for growth in dollars; idle for any other measure */
+  function showDollars(measure: Measure, real: boolean) {
+    dollarSeg.set(real ? "real" : "nominal");
+    dollarSeg.box.classList.toggle("is-idle", !measure.dollars);
+    dollarSeg.box.title = measure.dollars ? "" : "This measure isn't growth in dollars, so inflation doesn't change it";
+    dollarSeg.box.querySelectorAll("button").forEach((b) => (b.disabled = !measure.dollars));
+  }
+
+  /** The map, its key, its words and its tables, for the layer, grouping, measure and years chosen: the controls,
+   * then the figures and their classes (placesOf, figuresOf, classesOf), then each part that writes them out */
+  function draw() {
+    const onTowns = layer === "towns";
+    const gs = showGroupings(onTowns);
+    const at = placesOf(onTowns, grades, gs, groupingNow());
+    const { list, key } = showMeasures(onTowns, at.grouping, !!at.within);
     // A pin holds while the map shows what it was pinned on: the same layer, grouping and measure
     view = `${layer}:${groupBy[layer]}:${key}`;
     if (pinned && pinnedIn !== view) pinned = null;
     drawGroupTable(null);
     if (key === "group") {
-      const sizes = within ? gs.find((g) => g.key === within.size) ?? null : null;
-      drawGroups(grouping!, onTowns, groupOf, districtOf, combinedAt, regionOf, regions, sizes ? (t: MapTown) => inGrouping(sizes, t) : undefined,
-        sizes);
+      drawGroups(at.grouping!, onTowns, at);
       return;
     }
     const measure = list.find((m) => m.key === key)!;
@@ -834,93 +959,56 @@ export function startMap(root: HTMLElement, data: MapData, opts: {
     showYears(measure, ys, y);
     // Growth in dollars, before or after inflation
     const real = opts.real();
-    dollarSeg.set(real ? "real" : "nominal");
-    dollarSeg.box.classList.toggle("is-idle", !measure.dollars);
-    dollarSeg.box.title = measure.dollars ? "" : "This measure isn't growth in dollars, so inflation doesn't change it";
-    dollarSeg.box.querySelectorAll("button").forEach((b) => (b.disabled = !measure.dollars));
-    // Growth in dollars comes as [after inflation, first year, last year, before inflation], each its own trend
-    const inMode = (v: Val | null | undefined, after: boolean): Val | null => {
-      if (!v) return null;
-      if (!measure.dollars) return v;
-      return after || v.length < 4 ? v.slice(0, 3) : [v[3], v[1], v[2]];
-    };
-    /** A district's own value: over the years chosen, once they're here, or as map.json has it */
-    const districtVal = (d: string, after: boolean, yy: Yrs | null): Val | null =>
-      (bySeries ? fromRow(S!, meta.latest, measure, S!.districts[d], yy!, after) : inMode(data.districts[d]?.v[measure.key], after));
-    const valueIn = (t: MapTown, after: boolean, yy: Yrs | null): Val | null => {
-      if (bySeries) {
-        if (onTowns) return fromRow(S!, meta.latest, measure, S!.towns[t.id], yy!, after);
-        if (combinedAt(t)) {
-          // Density isn't combined, and a town without the two weights takes its own district's
-          return measure.key === "density" || !S!.towns[t.id]?.w ? districtVal(t.elem!, after, yy) : combinedRow(S!, meta.latest, measure, t, yy!, after);
-        }
-        const d = districtOf(t);
-        return d ? districtVal(d, after, yy) : null;
-      }
-      if (onTowns) return inMode(t.v[measure.key], after);
-      // Density isn't combined: a split town takes its own district's
-      if (combinedAt(t)) return inMode(t.all?.[measure.key] ?? data.districts[t.elem!]?.v[measure.key], after);
-      const d = districtOf(t);
-      return d ? inMode(data.districts[d]?.v[measure.key], after) : null;
-    };
-    /** A group's value: its average's, over the years chosen, or as map.json has it */
-    const groupVal = (g: string, after: boolean, yy: Yrs | null): Val | null =>
-      (bySeries ? fromRow(S!, meta.latest, measure, S!.groups?.[g], yy!, after) : inMode(data.groups?.[g]?.v[measure.key], after));
-    const valueAt = (t: MapTown, after: boolean, yy: Yrs | null): Val | null => {
-      if (!grouping) return valueIn(t, after, yy);
-      const g = groupOf(t);
-      return g ? groupVal(g, after, yy) : null;
-    };
-    const value = (t: MapTown) => valueAt(t, real, y);
+    showDollars(measure, real);
+    const fig = figuresOf(data, bySeries ? S : null, measure, onTowns, at);
+    const value = (t: MapTown) => fig.valueAt(t, real, y);
     // Community type: each town its own, or its district's (a town split between two takes its own district's)
     if (measure.kind === "type") {
       drawTypes(measure, onTowns, (t) => (onTowns ? t.ct ?? null
-        : data.districts[(combinedAt(t) ? t.elem : districtOf(t)) ?? ""]?.ct ?? null), districtOf, combinedAt);
-      if (grouping) Object.assign(current!, { groupOf, regionOf, statewide });
+        : data.districts[(at.combinedAt(t) ? t.elem : at.districtOf(t)) ?? ""]?.ct ?? null), at.districtOf, at.combinedAt);
+      if (at.grouping) Object.assign(current!, { groupOf: at.groupOf, regionOf: at.regionOf, statewide: at.statewide });
       return;
     }
-    // Each district counts once, however many towns it covers; with all grades, each town counts. Grouped, each
-    // group counts once.
-    const byTown = !grouping && (onTowns || grades === "all");
-    const shownDistricts = [...new Set(data.towns.map(districtOf).filter((d): d is string => !!d))];
-    const shownGroups = grouping ? [...new Set(data.towns.map(groupOf).filter((g): g is string => !!g))] : [];
-    const unitsIn = (after: boolean, yy: Yrs | null) => (grouping ? shownGroups.map((g) => groupVal(g, after, yy)).filter(Boolean) as Val[]
-      : byTown ? data.towns.map((t) => valueIn(t, after, yy)).filter(Boolean) as Val[]
-      : shownDistricts.map((d) => districtVal(d, after, yy)).filter(Boolean) as Val[]);
-    const units = unitsIn(real, y);
-    const values = units.map((u) => u[0]);
-    // A level's classes are cut on every year's values together, so a color holds one range in every year and a
-    // town that changes color as the years play has moved between ranges. Growth in dollars: the classes are
-    // cut on its values before and after inflation together, so both share one set of ranges and the Dollars
-    // switch moves towns between them, as inflation would.
-    const pooled = bySeries && measure.years === "year" ? ys.flatMap((yr) => unitsIn(real, { from: yr, to: yr }).map((u) => u[0])) : values;
-    const base = (measure.fifths ? meta.fifths[measure.fifths] : null) ?? measure.cuts
-      ?? (measure.dollars ? growthCuts([...unitsIn(true, y), ...unitsIn(false, y)].map((u) => u[0])) : cuts(measure.kind, pooled));
-    const tailCut = measure.tail ? Number(quantile(pooled, measure.tail).toPrecision(2)) : null;
-    const c = tailCut != null && tailCut > base[base.length - 1] ? [...base, tailCut] : base;
-    const classOfV = (raw: number) => {
-      const v = asShown(measure.fmt, raw);
-      return measure.over ? c.filter((x) => v > x + 1e-9).length : classOf(v, c);
-    };
-    const colors = measure.dollars ? GROWTH : measure.kind === "change" ? (c.length === 6 ? DIVERGING7 : DIVERGING)
-      : c.length === 5 ? SEQUENTIAL6 : SEQUENTIAL;
-    current = { measure, districtOf, value, c, combinedAt, groupOf, regionOf, statewide };
+    // The values, and the classes that color them
+    const classes = classesOf(meta, measure, fig.unitsIn, real, y, bySeries ? ys : null);
+    current = { measure, districtOf: at.districtOf, value, c: classes.c, combinedAt: at.combinedAt, groupOf: at.groupOf,
+      regionOf: at.regionOf, statewide: at.statewide };
     let none = 0;
     for (const t of data.towns) {
       const v = value(t);
       if (!v) none++;
-      paths.get(t.id)!.setAttribute("fill", v ? colors[classOfV(v[0])] : NO_DATA);
+      paths.get(t.id)!.setAttribute("fill", v ? classes.colors[classes.classOfV(v[0])] : NO_DATA);
     }
+    const shown: Shown = { onTowns, measure, at, fig, classes, real, y, ys, bySeries, value };
+    drawAbout(shown);
+    drawLegend(shown, none);
+    if (at.grouping) {
+      drawGroupTable({ g: at.grouping, measure, value: (g) => fig.groupVal(g, real, y), color: (v) => classes.colors[classes.classOfV(v)],
+        groupOf: at.groupOf, regions: at.regions, regionOf: at.regionOf, sizes: at.sizes, sizeOf: at.sizeOf });
+    }
+    const when = y ? (measure.years === "range" ? `, FY${y.from} to FY${y.to}` : `, FY${y.to}`) : "";
+    svg.setAttribute("aria-label", `Map of Massachusetts's 351 cities and towns, colored by ${measure.label.toLowerCase()}${when}` +
+      (onTowns ? "." : ` of the ${{ elem: "district serving their elementary grades", high: "district serving their secondary grades",
+        all: "districts serving all their grades" }[grades]}.`) + " The table below has every value.");
+    drawTable(shown);
+    // Playing, the pointer's town keeps its outline and its figure follows the year
+    if (!timer) {
+      tip.hidden = true;
+      unlift();
+    } else if (hovered && lastPointer) showTip(lastPointer);
+  }
 
-    // What it shows, and how the towns or districts split
-    const what = grouping ? "groups" : byTown ? "towns" : "districts";
+  /** What it shows, and how the towns or districts split */
+  function drawAbout({ onTowns, measure, at, classes, real, y, ys, bySeries }: Shown) {
+    const { what } = at;
     measureTitle.textContent = measure.label;
     const yy = y ?? { from: meta.start, to: measure.key === "cap_hh" ? meta.cap_fy : meta.latest };
     // A census figure held between releases: the words name the release it comes from
-    const release = measure.hold && y ? Math.max(...units.map((u) => u[1]).filter((x) => x <= y.to), -Infinity) : -Infinity;
+    const release = measure.hold && y ? Math.max(...classes.units.map((u) => u[1]).filter((x) => x <= y.to), -Infinity) : -Infinity;
     about.replaceChildren(measure.about(meta, real, release > 0 ? { from: release, to: release } : yy));
     if (measure.hold && y && release > 0 && release < y.to) about.append(` FY${y.to} keeps that release's figures until the next.`);
     if (measure.dollars) about.append(" ", trendHelp());
+    const { values } = classes;
     const up = values.filter((v) => v > 0).length;
     const n = values.length;
     about.append(" " + (measure.split ? measure.split(up, n - up, n)
@@ -931,52 +1019,39 @@ export function startMap(root: HTMLElement, data: MapData, opts: {
     if (bySeries && measure.years === "year" && ys.length > 1) {
       about.append(` Each color covers the same range in every year, FY${ys[0]} to FY${ys[ys.length - 1]}.`);
     }
-    if (!onTowns && !grouping) about.append(gradeNote(measure));
-    if (grouping) about.append(groupNote(grouping, onTowns));
-
-    // Legend: each class's range, then the gray for none
-    const fifthWords = ["Lowest fifth", "Second", "Middle", "Fourth", "Highest fifth"];
-    const top = c.length;
-    const label = (k: number) => measure.fifths ? `${fifthWords[k]}: ${k === 0 ? `under ${measure.short(c[0])}`
-      : k === top ? `${measure.short(c[top - 1])} and up` : `${measure.short(c[k - 1])} to ${measure.short(c[k] - 1)}`}`
-      : measure.classes?.[k] ?? (k === 0 ? (measure.dollars ? "Down, below 0%" : `Below ${measure.short(c[0])}`) : k === top
-      ? `${measure.short(c[top - 1])} and up` : `${measure.short(c[k - 1])} to ${measure.short(c[k])}`);
+    if (!onTowns && !at.grouping) about.append(gradeNote(measure));
+    if (at.grouping) about.append(groupNote(at.grouping, onTowns));
+  }
+  /** Legend: each class's range, then the gray for none */
+  function drawLegend({ onTowns, measure, at, classes }: Shown, none: number) {
     legend.classList.remove("by-region");
     // Each range points out its towns on the map, and pins them, as a group's entry does (#221)
-    legend.replaceChildren(...colors.map((col, k) => {
+    legend.replaceChildren(...classes.colors.map((col, k) => {
       const li = el("li", "map-group-key");
       li.dataset.class = String(k);
       li.dataset.fill = col;
       li.tabIndex = 0;
       const sw = el("span", "map-swatch");
       sw.style.background = col;
-      li.append(sw, el("span", undefined, label(k)));
+      li.append(sw, el("span", undefined, classLabel(measure, classes.c, k)));
       pinnable(li, `class:${k}`, () => pointToClass(k));
       return li;
-    }), ...(none ? [noneKey(onTowns && !grouping ? "No data" : grouping ? "No group, or no data" : "No district of its own, or no data")] : []));
-    if (grouping) {
-      const sizes = within ? gs.find((g) => g.key === within.size) ?? null : null;
-      drawGroupTable({ g: grouping, measure, value: (g) => groupVal(g, real, y), color: (v) => colors[classOfV(v)], groupOf,
-        regions, regionOf, sizes, sizeOf: sizes ? (t) => inGrouping(sizes, t) : undefined });
-    }
-    const when = y ? (measure.years === "range" ? `, FY${y.from} to FY${y.to}` : `, FY${y.to}`) : "";
-    svg.setAttribute("aria-label", `Map of Massachusetts's 351 cities and towns, colored by ${measure.label.toLowerCase()}${when}` +
-      (onTowns ? "." : ` of the ${{ elem: "district serving their elementary grades", high: "district serving their secondary grades",
-        all: "districts serving all their grades" }[grades]}.`) + " The table below has every value.");
-
-    // The table: highest first
-    const rows = grouping
-      ? shownGroups.map((g) => ({ name: groupName(data.groups?.[g]?.name ?? g), v: groupVal(g, real, y) })).filter((r): r is { name: string; v: Val } => !!r.v)
-      : byTown
+    }), ...(none ? [noneKey(onTowns && !at.grouping ? "No data" : at.grouping ? "No group, or no data" : "No district of its own, or no data")] : []));
+  }
+  /** The table: highest first */
+  function drawTable({ onTowns, measure, at, fig, real, y, value }: Shown) {
+    const rows = at.grouping
+      ? fig.shownGroups.map((g) => ({ name: groupName(data.groups?.[g]?.name ?? g), v: fig.groupVal(g, real, y) })).filter((r): r is { name: string; v: Val } => !!r.v)
+      : at.byTown
       ? data.towns.filter((t) => value(t)).map((t) => ({ name: onTowns || schoolsOf(t) === t.name ? t.name : `${t.name} (${schoolsOf(t)})`,
         v: value(t)! }))
-      : shownDistricts.map((d) => ({ name: data.districts[d]?.name ?? d, v: districtVal(d, real, y) }))
+      : fig.shownDistricts.map((d) => ({ name: data.districts[d]?.name ?? d, v: fig.districtVal(d, real, y) }))
         .filter((r): r is { name: string; v: Val } => !!r.v);
     rows.sort((a, b) => b.v[0] - a.v[0]);
-    tableSum.textContent = `Every ${what.slice(0, -1)}, highest first`;
+    tableSum.textContent = `Every ${at.what.slice(0, -1)}, highest first`;
     const t = el("table");
     const hr = t.createTHead().insertRow();
-    hr.append(el("th", undefined, grouping ? "Group" : onTowns ? "Town" : byTown ? "Town (its districts)" : "District"), el("th", "num", measure.label),
+    hr.append(el("th", undefined, at.grouping ? "Group" : onTowns ? "Town" : at.byTown ? "Town (its districts)" : "District"), el("th", "num", measure.label),
       el("th", undefined, "Years"));
     const tb = t.createTBody();
     for (const r of rows) {
@@ -986,11 +1061,6 @@ export function startMap(root: HTMLElement, data: MapData, opts: {
       tr.append(th, el("td", "num", measure.fmt(r.v[0])), el("td", undefined, r.v.length > 2 ? `FY${r.v[1]}–FY${r.v[2]}` : `FY${r.v[1]}`));
     }
     tableHolder.replaceChildren(t);
-    // Playing, the pointer's town keeps its outline and its figure follows the year
-    if (!timer) {
-      tip.hidden = true;
-      unlift();
-    } else if (hovered && lastPointer) showTip(lastPointer);
   }
 
   /** A "?" that explains the trend, on hover or focus */
@@ -1017,9 +1087,8 @@ export function startMap(root: HTMLElement, data: MapData, opts: {
   }
   /** The groups themselves: each its color, with how many towns it covers, and the table of towns by group. A
    * grouping within regions colors each group in its region's hue, light to dark by size. */
-  function drawGroups(g: Grouping, onTowns: boolean, groupOf: (t: MapTown) => string | null,
-    districtOf: (t: MapTown) => string | null, combinedAt: (t: MapTown) => boolean, regionOf?: (t: MapTown) => string | null,
-    regions?: Grouping | null, sizeOf?: (t: MapTown) => string | null, sizes?: Grouping | null) {
+  function drawGroups(g: Grouping, onTowns: boolean, at: Places) {
+    const { groupOf, districtOf, combinedAt, regionOf, regions, sizeOf, sizes } = at;
     const counts = new Map<string, number>();
     const member = new Map<string, MapTown>();
     for (const t of data.towns) {
