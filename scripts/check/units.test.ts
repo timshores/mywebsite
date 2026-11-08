@@ -82,6 +82,10 @@ export const cases: [string, unknown, unknown][] = [
   // The plots' cautions (cautions.ts): a shared count, and a pair measuring one condition (#235)
   ["sharedParts aid and low income", JSON.stringify(sharedParts("aid_pfe", "low_income")), JSON.stringify(["low-income students"])],
   ["sharedParts none", JSON.stringify(sharedParts("soc", "el")), "[]"],
+  // A ratio counts its denominator, all the way down: the requirement counts the foundation budget, which counts
+  // low-income students; it doesn't turn on wealth (#242)
+  ["sharedParts requirement and low income", JSON.stringify(sharedParts("nss_pct_req", "low_income")), JSON.stringify(["low-income students"])],
+  ["sharedParts requirement and income", JSON.stringify(sharedParts("nss_pct_req", "income_pc")), "[]"],
   ["checkPair two views", checkPair({ x: "el", y: "soc", fy: 2025, log: false }, { short: "students of color" },
     { short: "English learners" }, [], []).map((c) => c.label).join(" | "), "Two views of the same thing | Few districts"],
   // A label inside a sentence (dom.ts): the first letter lowercased, but not a name's or an initialism's (#241)

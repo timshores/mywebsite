@@ -20,23 +20,26 @@ export interface PairRow { id: string | null; org: string; region: string | null
 // construction: one is a component of the other, or both count the same thing. A shared
 // denominator alone doesn't count. Required spending is aid plus the required local contribution;
 // EQV starts from assessed values.
+// A ratio counts its denominator too (#242): spending as a share of the requirement counts the requirement, and a figure
+// per foundation pupil counts foundation enrollment
 const COUNTS: Record<string, string[]> = {
-  nss_pct_fb: ["nss"], nss_pct_req: ["nss"], nss_pfe: ["nss"], above_pfe: ["nss", "req"], ppe: ["ppe"],
-  aid_pfe: ["aid"], aid_share: ["aid"], rlc_pfe: ["rlc"], fe: ["fe"], fte: ["fte"], eqv_res: ["eqv"], av_res: ["av"],
+  nss_pct_fb: ["nss", "fb"], nss_pct_req: ["nss", "req"], nss_pfe: ["nss", "fe"], above_pfe: ["nss", "req", "fe"], ppe: ["ppe"],
+  aid_pfe: ["aid", "fe"], aid_share: ["aid", "fb"], rlc_pfe: ["rlc", "fe"], fe: ["fe"], fte: ["fte"], eqv_res: ["eqv"], av_res: ["av"],
   income_pc: ["income"], sf_bill: ["bill"], bill_income: ["bill"], res_share: ["av"],
   ood_pp: ["ood"], sped_share: ["sped"], gap: ["nss"], low_income: ["low"], el: ["el"], swd: ["swd"], soc: ["soc"],
 };
-// What each part is built from. Chapter 70 sets the required local contribution from equalized property
-// value (the state's estimate from assessed values) and income, and its aid fills the gap to the
-// foundation budget, so both count what the wealth measures count. Required spending, aid and the
-// contribution together, comes to about the foundation budget, which doesn't turn on wealth.
-// The foundation budget adds for low-income students and English learners, so aid, which fills the gap to it,
-// counts them too.
+// What each part is built from, followed all the way down (#242: one level had missed that the requirement counts
+// low-income students). Chapter 70 sets the required local contribution from equalized property value (the state's
+// estimate from assessed values) and income, and its aid fills the gap to the foundation budget, so both count what
+// the wealth measures count. Required spending, aid and the contribution together, comes to about the foundation
+// budget, which doesn't turn on wealth: it counts the foundation budget alone. The foundation budget adds for
+// low-income students and English learners, per foundation pupil.
 const BUILT_FROM: Record<string, string[]> = {
-  req: ["aid", "rlc"], eqv: ["av"], rlc: ["eqv", "av", "income"], aid: ["rlc", "eqv", "av", "income", "low", "el"],
+  req: ["fb"], fb: ["fe", "low", "el"], eqv: ["av"], rlc: ["eqv", "income"], aid: ["rlc", "fb"],
 };
 const PART_NAME: Record<string, string> = {
   nss: "net school spending", req: "required spending", aid: "Chapter 70 aid", rlc: "the required local contribution",
+  fb: "the foundation budget",
   eqv: "equalized property value", av: "assessed property value", bill: "the single-family tax bill", ppe: "in-district spending",
   fe: "foundation enrollment", fte: "in-district pupils", income: "income",
   low: "low-income students", el: "English learners", swd: "students with disabilities", soc: "students of color",
@@ -44,10 +47,12 @@ const PART_NAME: Record<string, string> = {
 };
 const counted = (key: string) => {
   const out = new Set<string>();
-  for (const p of COUNTS[key] ?? []) {
+  const add = (p: string) => {
+    if (out.has(p)) return;
     out.add(p);
-    for (const q of BUILT_FROM[p] ?? []) out.add(q);
-  }
+    for (const q of BUILT_FROM[p] ?? []) add(q);
+  };
+  for (const p of COUNTS[key] ?? []) add(p);
   return out;
 };
 /** The parts two measures both count, by name; empty when they're independent of each other. */

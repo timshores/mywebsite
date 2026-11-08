@@ -65,7 +65,7 @@ const VARS: Var[] = [
   { key: "nss_pct_fb", label: "Actual net school spending as a share of the foundation budget", short: "spending as % of foundation", unit: "pct", role: "outcome", src: ["c70"] },
   { key: "nss_pct_req", label: "Actual net school spending as a share of required", short: "spending as % of required", unit: "pct", role: "outcome", src: ["c70"] },
   { key: "nss_pfe", label: "Actual net school spending per foundation pupil", short: "net school spending per pupil", unit: "usd", role: "outcome", src: ["c70"] },
-  { key: "above_pfe", label: "Local contribution above required per foundation pupil", short: "local contribution above required per pupil", unit: "usd", role: "outcome", src: ["c70"] },
+  { key: "above_pfe", label: "Spending above required per foundation pupil", short: "spending above required per pupil", unit: "usd", role: "outcome", src: ["c70"] },
   { key: "ppe", label: "In-district spending per pupil", short: "spending per pupil", unit: "usd", role: "outcome", src: ["ppe"] },
   { key: "aid_pfe", label: "Chapter 70 aid per foundation pupil", short: "Chapter 70 aid per pupil", unit: "usd", role: "outcome", src: ["c70"] },
   { key: "aid_share", label: "Chapter 70 aid as a share of the foundation budget", short: "aid as % of foundation", unit: "pct", role: "outcome", src: ["c70"] },
@@ -313,13 +313,20 @@ export function startCommonwealth(root: HTMLElement, data: CwData, opts: {
   // ---- Gallery ----
   const gallery = el("div", "cw-gallery");
   for (const p of PRESETS) {
+    // The gallery's rule, tested on the data each time it's drawn (#242: it had been checked by hand, once): ρ at least
+    // 0.4 from zero, and no caution but Shared towns. A plot that fails it stays reachable by its link.
+    const tested = pointsFor(data, { x: p.x, y: p.y, fy: latest, log: p.log, all: false, hl: DEFAULT_HL, find: null });
+    const r = spearman(tested.pts.map((q) => q.x), tested.pts.map((q) => q.y));
+    const cautions = checkPair({ x: p.x, y: p.y, fy: latest, log: p.log }, VAR.get(p.y)!, VAR.get(p.x)!, tested.pts, tested.rows)
+      .filter((c) => c.label !== "Shared towns");
+    if (r == null || Math.abs(r) < 0.4 || cautions.length) continue;
     const card = el("button", "cw-card");
     card.type = "button";
     card.setAttribute("aria-haspopup", "dialog");
     const thumb = svgEl("svg");
     thumb.setAttribute("class", "cw-thumb");
     thumb.setAttribute("aria-hidden", "true");
-    const { pts, hl } = pointsFor(data, { x: p.x, y: p.y, fy: latest, log: p.log, all: false, hl: DEFAULT_HL, find: null });
+    const { pts, hl } = tested;
     scatter(thumb, pts, { width: 320, height: 190, logX: p.log, xFmt: String, yFmt: String, groups: hl.groups, smooth: true, mini: true });
     card.append(thumb, el("span", "cw-card-title", p.title), withParts(el("span", "cw-card-blurb"), starred(p.blurb)),
       el("span", "cw-card-axes", `${capital(VAR.get(p.y)!.short)} · ${VAR.get(p.x)!.short} · FY${latest}`));

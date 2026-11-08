@@ -614,7 +614,12 @@ const asFirst = (c: Chart) => (c.svg + KEYS)
         <a href="https://www.doe.mass.edu/finance/chapter70/default.html">Chapter 70 district profiles</a>
         (<a href="/muni-spending/data/districts-chapter70.csv" download>CSV</a>). The state sets a required
         level of net school spending for each district each year. Chapter 70 aid pays part of it, and the town, or a
-        regional district's member towns, pays the required local contribution. Anything above that is a local choice. Because spending per pupil and
+        regional district's member towns, pays the required local contribution. Anything above that is a local choice,
+        paid from local revenues: net school spending counts only Chapter 70 aid and local revenues (603 CMR 10.06). The
+        chart stacks the aid, the rest of the required spending, and the spending above the requirement. By statute
+        the middle part is the required local contribution, but DESE's profiles give a different required local
+        contribution in 1,402 of 12,655 district-years, most of them in FY2009, so the chart calls it required spending
+        beyond aid. Because spending per pupil and
         net school spending use different denominators, the two charts are not the same measure: they are a picture
         of apples in the morning compared with a picture of apples in the evening. Both dollar charts share one scale.
         For FY2023, DESE's current file, from March 2026, gives 90 districts, most of them regional, another
@@ -731,7 +736,9 @@ const asFirst = (c: Chart) => (c.svg + KEYS)
         $18.4 million of revenue against $37.6 million of spending). The survey's Massachusetts file has no charter
         schools, so they and their average have no revenue figures. Payments from towns include a regional
         district's member-town assessments; payments from other school districts include tuition for pupils they
-        send. Revenue per pupil usually runs about a third above spending per pupil, because it also pays for what
+        send. State formula aid is the survey's general formula assistance, Chapter 70 aid as the Census Bureau counts
+        it; the Chapter 70 chart's aid is DESE's, per foundation pupil instead of per in-district pupil. Revenue per
+        pupil usually runs about a third above spending per pupil, because it also pays for what
         the spending measure leaves out, such as tuition for out-of-district FTE, school buildings, and the
         teachers' pensions the state pays into the teachers' retirement system on districts' behalf. School building
         aid can arrive in one large payment. In FY2009 the state paid $412 million of Chapter 70 aid with federal

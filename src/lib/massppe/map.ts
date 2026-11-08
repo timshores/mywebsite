@@ -277,7 +277,7 @@ const DISTRICT_MEASURES: Measure[] = [
       `tax returns, divided by their combined population. The five colors are the districts' income fifths.`,
   },
   {
-    key: "above", label: "Local contribution above required", kind: "level", fmt: share, short: share, years: "year",
+    key: "above", label: "Spending above required", kind: "level", fmt: share, short: share, years: "year",
     notes: ["chapter-70-aid-and-net-school-spending"],
     about: (m, real, y) => `How far each district's actual net school spending in FY${y.to} ran above the state's required ` +
       "minimum, as a share of that minimum.",

@@ -284,15 +284,20 @@ const CONSENT = "mass-school-spending:remember";
 const PPE_COLORS = [BLUE, ORANGE, GREEN, AMBER, PINK, DEEP_GREEN, VIOLET, RED, GRAY];
 const NSS_SERIES = [
   { key: "ch70_aid", label: "Chapter 70 state aid", color: DEEP_GREEN },
-  { key: "required_local", label: "Required local contribution", color: AMBER },
-  { key: "above_required", label: "Local contribution above required", color: VIOLET },
+  // The middle part is required net school spending less aid. By statute that's the required local contribution, but
+  // DESE's profiles differ from its own distrlc in 1,402 of 12,655 district-years (most in FY2009), so the chart names
+  // what it is; above it, spending above the requirement, as DESE puts it (#242)
+  { key: "required_local", label: "Required spending beyond aid", color: AMBER },
+  { key: "above_required", label: "Spending above required", color: VIOLET },
 ] as const;
 // Bottom to top, as the export orders them (ppe_report/export_explorer_data.py
 // REVENUE). Chapter 70 and the towns' share keep their colors from the NSS chart;
 // building aid sits on top because it comes in large, irregular payments.
 const REV_SERIES = [
   { key: "towns", label: "Payments from towns", color: AMBER },
-  { key: "ch70", label: "Chapter 70 state aid", color: DEEP_GREEN },
+  // The Census Bureau's general formula assistance, which in Massachusetts is Chapter 70 aid as the survey counts it,
+  // per in-district pupil: named apart from DESE's aid on the Chapter 70 chart, per foundation pupil (#242)
+  { key: "ch70", label: "State formula aid (Chapter 70)", color: DEEP_GREEN },
   { key: "retirement", label: "Teacher retirement paid by the state", color: BLUE },
   { key: "transport", label: "Transportation aid", color: GREEN },
   { key: "other_state", label: "Other state aid", color: VIOLET },
@@ -2920,7 +2925,7 @@ export async function startExplorer() {
       tile(`Chapter 70 aid${whole ? "" : " per foundation pupil"}, FY${years[tl]}`, aid != null ? money(aid) : "–", [aidLine, cAidLine],
         aidShare != null ? { v: aidShare, title: `Chapter 70 aid: ${aidLine}`, own: aidLine,
           cmp: cAidShare != null ? { v: cAidShare, title: cAidLine, detail: cAidLine } : null } : null),
-      tile(`Local contribution above required, FY${years[tl]}`, above != null ? money(above) : aid != null ? "Not reported" : "–", [
+      tile(`Spending above required, FY${years[tl]}`, above != null ? money(above) : aid != null ? "Not reported" : "–", [
         above == null ? (aid != null ? `DESE has not reported FY${years[tl]} actual spending` : "")
           : !whole ? "Per foundation pupil" : e.kind === "district" ? "In total" : "For the average district",
         cNss && cNss[2].values[tl] != null ? `${cName}: ${money(cNss[2].values[tl]!)}` : "",
