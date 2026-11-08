@@ -9,6 +9,7 @@
 
 import { gapColumns, lines, niceTicks, niceTicksRange, ratingSteps, stackedColumns, type Marks, type Panel, type Series, type Val } from "./charts";
 import { capital, svgEl, text } from "./dom";
+import { cagr, linearFit } from "./stats";
 import { andList, change, compact, measured as fte, pct, points, signFor, total as amount, usd } from "./format";
 import { closeEnlarged, enlargeButton } from "./enlarge";
 import type { CapData } from "./cap";
@@ -569,24 +570,9 @@ function sumStrict(groups: Values[], i: number): number | null {
   return vals.some((v) => v == null) ? null : vals.reduce<number>((a, v) => a + v!, 0);
 }
 
-/** Least-squares straight line through the years that have a value, drawn across those years;
- * all null with fewer than three values. Its growth (trendRate) is the explorer's yearly growth
- * everywhere: the charts, the tiles and the map. */
-function linearTrend(values: Values): Values {
-  const pts = values.flatMap((v, i) => (v == null ? [] : [[i, v] as const]));
-  if (pts.length < 3) return values.map(() => null);
-  const n = pts.length;
-  const mx = pts.reduce((a, [x]) => a + x, 0) / n;
-  const my = pts.reduce((a, [, y]) => a + y, 0) / n;
-  const slope = pts.reduce((a, [x, y]) => a + (x - mx) * (y - my), 0) / pts.reduce((a, [x]) => a + (x - mx) ** 2, 0);
-  const [first, lastAt] = [pts[0][0], pts[n - 1][0]];
-  return values.map((_, i) => (i < first || i > lastAt ? null : my + slope * (i - mx)));
-}
-
-function cagr(first: number | null, last: number | null, years: number) {
-  if (first == null || last == null || first <= 0 || last <= 0 || years <= 0) return null;
-  return (last / first) ** (1 / years) - 1;
-}
+/** The trend: the least-squares line through the years that have a value (stats.ts linearFit). Its growth
+ * (trendRate) is the yearly growth of the charts and the tiles; the map's follows the pipeline's rule. */
+const linearTrend = (values: Values): Values => linearFit(values);
 
 /** A trend line's rise each year, and its yearly growth, compounded from its first year to its last */
 function trendRate(trend: Values) {

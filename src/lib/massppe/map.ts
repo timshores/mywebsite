@@ -10,7 +10,7 @@
 import { el, svgEl } from "./dom";
 import { enlargeButton } from "./enlarge";
 import { asShown, change, count, measured, pct, usd, yearly } from "./format";
-import { median } from "./stats";
+import { cagr, linearFit, median, quantile } from "./stats";
 
 /** [value, year] for a level; [value, first year, last year] for a change */
 type Val = number[];
@@ -411,10 +411,6 @@ function nice(x: number) {
   const p = 10 ** Math.floor(Math.log10(x));
   return [1, 1.5, 2, 2.5, 3, 5, 10].map((m) => m * p).reduce((a, b) => (Math.abs(b - x) < Math.abs(a - x) ? b : a));
 }
-const quantile = (xs: number[], q: number) => {
-  const s = [...xs].sort((a, b) => a - b);
-  return s[Math.min(s.length - 1, Math.max(0, Math.round(q * (s.length - 1))))];
-};
 /** Four cut points between five classes */
 function cuts(kind: Measure["kind"], values: number[]): number[] {
   if (kind === "change") {
@@ -668,24 +664,15 @@ export function startMap(root: HTMLElement, data: MapData, opts: {
 
   // ---- The measures year by year, by the rules the pipeline uses for the figures in map.json ----
   const yi = (y: number) => S!.years.indexOf(y);
-  /** The least-squares line's yearly growth from its first year to its last, between lo and hi */
+  /** The least-squares line's yearly growth from its first year to its last, between lo and hi; none where the line
+   * starts or ends at or below zero, as the pipeline rules for the figures in map.json */
   function trendOn(a: Arr, lo: number, hi: number): Val | null {
-    const pts: [number, number][] = [];
-    for (let i = lo; i <= hi; i++) {
-      const v = get(a, i);
-      if (v != null) pts.push([i, v]);
-    }
-    if (pts.length < 3) return null;
-    const n = pts.length;
-    const mx = pts.reduce((s, [i]) => s + i, 0) / n;
-    const my = pts.reduce((s, [, v]) => s + v, 0) / n;
-    const slope = pts.reduce((s, [i, v]) => s + (i - mx) * (v - my), 0) / pts.reduce((s, [i]) => s + (i - mx) ** 2, 0);
-    const a0 = pts[0][0];
-    const b0 = pts[n - 1][0];
-    const fa = my + slope * (a0 - mx);
-    const fb = my + slope * (b0 - mx);
-    if (fa <= 0 || fb <= 0) return null;
-    return [round((fb / fa) ** (1 / (b0 - a0)) - 1, 5), S!.years[a0], S!.years[b0]];
+    const fit = linearFit(S!.years.map((_, i) => (i < lo || i > hi ? null : get(a, i))));
+    const at = fit.flatMap((v, i) => (v == null ? [] : [i]));
+    if (!at.length) return null;
+    const [a0, b0] = [at[0], at[at.length - 1]];
+    const g = cagr(fit[a0], fit[b0], b0 - a0);
+    return g == null ? null : [round(g, 5), S!.years[a0], S!.years[b0]];
   }
   /** Trend growth after inflation (in the latest year's dollars) or before; the pipeline fits each on its own */
   function growthOn(a: Arr, lo: number, hi: number, after: boolean): Val | null {

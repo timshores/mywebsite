@@ -9,10 +9,10 @@
 
 import { capital, el, svgEl, vn } from "./dom";
 import { change as changePct, compact, digits, pct, rho as rhoText, round, signFor, total, usd } from "./format";
-import { median } from "./stats";
+import { median, spearman } from "./stats";
 import { groupedPicker } from "./picker";
 import { chartRoom, enlargeButton, isEnlarged } from "./enlarge";
-import { scatter, spearman, ticksFor, type Group, type Point, type ScatterView } from "./scatter";
+import { scatter, ticksFor, type Group, type Point, type ScatterView } from "./scatter";
 
 interface CapTown {
   lea: number; name: string; id: string; county: string | null; region: string | null;

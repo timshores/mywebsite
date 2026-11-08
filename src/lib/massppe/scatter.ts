@@ -3,6 +3,7 @@
 // and the nearest point under the pointer. Plain SVG, like charts.ts.
 
 import { svgEl } from "./dom";
+import { loess } from "./stats";
 
 export interface Point {
   x: number;
@@ -88,80 +89,6 @@ function logTicks(min: number, max: number): number[] {
   const steps = hi - lo <= 3 ? [1, 2, 5] : [1, 3];
   const out: number[] = [];
   for (let e = lo; e <= hi; e++) for (const k of steps) if (k * 10 ** e >= min && k * 10 ** e <= max) out.push(k * 10 ** e);
-  return out;
-}
-
-/** Spearman's rank correlation: Pearson's r on the ranks, ties sharing their average rank. */
-export function spearman(xs: number[], ys: number[]): number | null {
-  const n = xs.length;
-  if (n < 3) return null;
-  const rank = (v: number[]) => {
-    const order = v.map((x, i) => [x, i] as const).sort((a, b) => a[0] - b[0]);
-    const r = new Array<number>(n);
-    for (let i = 0; i < n; ) {
-      let j = i;
-      while (j + 1 < n && order[j + 1][0] === order[i][0]) j++;
-      for (let k = i; k <= j; k++) r[order[k][1]] = (i + j) / 2 + 1;
-      i = j + 1;
-    }
-    return r;
-  };
-  const a = rank(xs);
-  const b = rank(ys);
-  const ma = a.reduce((s, v) => s + v, 0) / n;
-  const mb = b.reduce((s, v) => s + v, 0) / n;
-  let num = 0;
-  let da = 0;
-  let db = 0;
-  for (let i = 0; i < n; i++) {
-    num += (a[i] - ma) * (b[i] - mb);
-    da += (a[i] - ma) ** 2;
-    db += (b[i] - mb) ** 2;
-  }
-  return da && db ? num / Math.sqrt(da * db) : null;
-}
-
-/** Pearson's r: the ordinary correlation, on the values themselves. */
-export function pearson(xs: number[], ys: number[]): number | null {
-  const n = xs.length;
-  if (n < 3) return null;
-  const mx = xs.reduce((a, v) => a + v, 0) / n;
-  const my = ys.reduce((a, v) => a + v, 0) / n;
-  let num = 0;
-  let dx = 0;
-  let dy = 0;
-  for (let i = 0; i < n; i++) {
-    num += (xs[i] - mx) * (ys[i] - my);
-    dx += (xs[i] - mx) ** 2;
-    dy += (ys[i] - my) ** 2;
-  }
-  return dx && dy ? num / Math.sqrt(dx * dy) : null;
-}
-
-/** Local linear regression with tricube weights over the nearest `span` of the points. */
-export function loess(xs: number[], ys: number[], span = 0.75, steps = 80): [number, number][] {
-  const n = xs.length;
-  if (n < 5) return [];
-  const k = Math.max(3, Math.ceil(span * n));
-  const lo = Math.min(...xs);
-  const hi = Math.max(...xs);
-  const out: [number, number][] = [];
-  for (let s = 0; s <= steps; s++) {
-    const x0 = lo + ((hi - lo) * s) / steps;
-    const d = xs.map((x) => Math.abs(x - x0));
-    const h = [...d].sort((a, b) => a - b)[k - 1] || 1e-12;
-    let sw = 0, sx = 0, sy = 0, sxx = 0, sxy = 0;
-    for (let i = 0; i < n; i++) {
-      const u = d[i] / h;
-      if (u >= 1) continue;
-      const w = (1 - u ** 3) ** 3;
-      sw += w; sx += w * xs[i]; sy += w * ys[i]; sxx += w * xs[i] ** 2; sxy += w * xs[i] * ys[i];
-    }
-    if (!sw) continue;
-    const den = sw * sxx - sx * sx;
-    const slope = Math.abs(den) > 1e-12 ? (sw * sxy - sx * sy) / den : 0;
-    out.push([x0, (sy - slope * sx) / sw + slope * x0]);
-  }
   return out;
 }
 

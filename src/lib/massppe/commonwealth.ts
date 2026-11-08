@@ -4,8 +4,8 @@
 // Data: src/data/massppe/commonwealth.json (export_explorer_data.commonwealth_data).
 
 import { change, compact, count, pct, rho, round, signFor, usd } from "./format";
-import { median } from "./stats";
-import { loess, pearson, scatter, spearman, type Group, type Point } from "./scatter";
+import { loess, median, pearson, spearman } from "./stats";
+import { scatter, type Group, type Point } from "./scatter";
 import { capital, el, svgEl, vn } from "./dom";
 
 type Values = (number | null)[];
