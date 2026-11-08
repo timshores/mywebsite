@@ -12,6 +12,8 @@ Common commands:
 - `npm run profile:apply` (applies a reviewed candidate and regenerates public files)
 - `npm run profile:check`
 - `npm run linkedin:sync`
+- `npm run check:units` (in every build) and `npm run check:explorer -- <command>` (browser checks of the explorer;
+  see .claude/CLAUDE.md, Testing Before Deployment)
 
 LinkedIn profile PDFs belong at `local-data/Profile.pdf`. Never make profile import an implicit side effect of dev or build. Review `local-data/profile-import-report.md` and `local-data/profile-candidate.ts` before applying an import.
 
