@@ -86,6 +86,121 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
       source: "Bureau of Labor Statistics, CPI-U Northeast", url: "https://data.bls.gov/timeseries/CUUR0100SA0", retrieved: "Oct 18, 2026" },
   ] },
 ];
+
+// The charts of the School districts and Towns tabs, one figure each, built here from this list (#237). explorer.ts
+// draws into the elements their ids name: fig-, svg- and legend- with the key, the key with -sub (and -none and
+// -body), the cmp- boxes of the comparison table, the button's data-table. {dper} and {per} stand where a title or
+// a chart's description names the amounts, per pupil or per resident until the reader picks others: explorer.ts
+// rewrites the headings' spans, and the descriptions from data-aria-dper and data-aria-per.
+type Chart = {
+  key: string;
+  /** The parts of About the data the chart draws on, which explorer.ts links under it */
+  about: string;
+  title: string;
+  /** What the chart draws, for a screen reader */
+  svg: string;
+  /** The legend's name, where its entries are buttons */
+  legend?: string;
+  /** A note can stand in for the chart, in {key}-none; the rest is in {key}-body, to go with it */
+  none?: boolean;
+  /** The chart's own choice of what it shows, over its legend; the first option is the one shown */
+  views?: { label: string; note: string; options: { value: string; text: string }[] };
+  /** A small chart under the chart, its title and legend in a row above it; box, the id of one explorer.ts shows only
+   * when it has something to draw, which starts hidden */
+  rating?: { title: string; legend: string; legendLabel?: string; svg: string; label: string; box?: string; hidden?: boolean;
+    note?: string };
+  /** The comparison table's boxes: cmp- and each of these */
+  compare?: string[];
+  /** A table of its own under the button, folded */
+  votes?: { id: string; summary: string };
+};
+const DISTRICT_CHARTS: Chart[] = [
+  { key: "ppe", about: "spending-per-pupil since-1990", title: "Spending{dper} by category",
+    legend: "Spending categories. Select one or more to show only those.",
+    svg: "Stacked columns of spending{dper} by category for each fiscal year.", compare: ["ppe", "day"] },
+  { key: "sped", about: "special-education", title: "Special education spending{dper} by category", none: true,
+    legend: "Special education spending categories. Select one or more to show only those.",
+    svg: "Stacked columns of special education spending{dper} by category for each fiscal year.", compare: ["sped"] },
+  { key: "enroll", about: "enrollment", title: "Enrollment",
+    svg: "Lines of in-district, foundation, and out-of-district enrollment for each fiscal year.", compare: ["enroll"] },
+  { key: "ood", about: "spending-on-out-of-district-fte", title: "Spending on out-of-district FTE",
+    svg: "Columns of what the district pays to educate its pupils elsewhere, for each fiscal year.", compare: ["ood"] },
+  { key: "srace", about: "students", title: "Students by race and ethnicity",
+    legend: "Race and ethnicity groups. Select one or more to show only those.",
+    svg: "Stacked columns of students' shares by race and Hispanic or Latino origin for each fiscal year." },
+  { key: "sgroups", about: "students", title: "Students in selected groups",
+    svg: "Lines of the shares of students with disabilities, English learners, low income students, and students with high needs for each fiscal year." },
+  { key: "nss", about: "chapter-70-aid-and-net-school-spending", title: "Chapter 70 aid and net school spending",
+    legend: "Net school spending components. Select one or more to show only those.",
+    svg: "Stacked columns of Chapter 70 aid, required local contribution, and local contribution above required{dper} for each fiscal year.",
+    compare: ["nss"] },
+  { key: "nssb", about: "budgets", title: "Budgeted and actual net school spending{dper}", none: true,
+    svg: "Lines of budgeted, actual, and required net school spending{dper} for each fiscal year.",
+    rating: { title: "Actual vs. budget", legend: "nssb-gap-legend", svg: "svg-nssb-gap", label: "Actual vs. budget by year",
+      note: "Actual vs. budget: each year's spending against its budget, in percent, the comparison's as dots" } },
+  { key: "rev", about: "revenue-by-source", title: "Revenue{dper} by source", none: true,
+    legend: "Revenue sources. Select one or more to show only those.",
+    svg: "Stacked columns of revenue{dper} by source for each fiscal year.", compare: ["rev"] },
+];
+const TOWN_CHARTS: Chart[] = [
+  { key: "tspend", about: "town-budgets town-and-school-budgets-overlap-without-lining-up", title: "General fund spending{per} by function",
+    legend: "Spending functions. Select one or more to show only those.",
+    svg: "Stacked columns of general fund spending{per} by function for each fiscal year.", compare: ["tspend"] },
+  { key: "trev", about: "town-budgets revenue-groups", title: "General fund revenue{per} by source",
+    legend: "Revenue sources. Select one or more to show only those.",
+    svg: "Stacked columns of general fund revenue{per} by source for each fiscal year.", compare: ["trev"] },
+  { key: "tres", about: "reserves", title: "Reserves{per}", legend: "Reserves. Select one or more to show only those.",
+    svg: "Stacked columns of stabilization funds and free cash{per} at each fiscal year's end.", compare: ["tres"] },
+  { key: "tfc", about: "where-free-cash-comes-from", title: "Where free cash comes from{per}",
+    svg: "Stacked columns of what each year's free cash was made of: the year before's free cash not spent, appropriations left unspent, and revenue above its estimates, less shortfalls and adjustments." },
+  { key: "tlevy", about: "the-property-tax-levy proposition-2-votes", title: "Property tax levy and its limit{per}",
+    legend: "Levy and unused capacity. Select one to show only it.",
+    svg: "Stacked columns of the property tax levy and unused levy capacity{per} for each fiscal year.", compare: ["tlevy"],
+    votes: { id: "tvotes", summary: "Proposition 2½ votes" } },
+  { key: "tbill", about: "property", title: "Average single-family tax bill",
+    svg: "Line of the average single-family tax bill for each fiscal year." },
+  { key: "tdebt", about: "long-term-debt", title: "Long-term debt{per}", legend: "Debt outstanding and authorized. Select one to show only it.",
+    svg: "Stacked columns of long-term debt outstanding and debt authorized but not yet borrowed{per} at each fiscal year's end.",
+    rating: { title: "Bond ratings", legend: "trating-legend", legendLabel: "Rating agencies", svg: "svg-trating", label: "Bond rating by year",
+      box: "trating", hidden: true },
+    compare: ["tdebt"] },
+  { key: "tcap", about: "capital-projects", title: "Capital projects spending{per} by purpose",
+    legend: "Capital project purposes. Select one or more to show only those.",
+    svg: "Stacked columns of capital projects fund spending{per} by purpose for each fiscal year.", compare: ["tcap"] },
+  { key: "tval", about: "property", title: "Assessed value{per} by property type", legend: "Property types. Select one or more to show only those.",
+    svg: "Stacked columns of assessed property value{per} by property type for each fiscal year.", compare: ["tval"] },
+  { key: "tpar", about: "property", title: "Parcels by property type", legend: "Property types. Select one or more to show only those.",
+    svg: "Stacked columns of parcels by property type for each fiscal year.", compare: ["tpar"] },
+  { key: "teqv", about: "equalized-valuation-eqv", title: "Equalized valuation{per}",
+    svg: "Line of equalized valuation{per}, every other fiscal year." },
+  { key: "tpop", about: "population-estimates labor-force", title: "Population and labor force",
+    views: { label: "What the chart shows", note: "The unemployment rate first; the residents, labor force and employed behind it a click away",
+      options: [{ value: "rate", text: "Unemployment rate" }, { value: "people", text: "Population and labor force" }] },
+    svg: "Lines of population, labor force, and employment for each fiscal year." },
+  { key: "tage", about: "population-by-age-race-and-ethnicity", title: "Population by age",
+    legend: "Age groups. Select one or more to show only those.",
+    svg: "Stacked columns of residents' shares by age for each of the Census Bureau's five-year estimates." },
+  { key: "trace", about: "population-by-age-race-and-ethnicity", title: "Population by race and ethnicity",
+    legend: "Race and ethnicity groups. Select one or more to show only those.",
+    svg: "Stacked columns of residents' shares by race and Hispanic or Latino origin for each of the Census Bureau's five-year estimates." },
+  { key: "tsex", about: "population-by-age-race-and-ethnicity", title: "Women in the population",
+    legend: "Women, with its trend and the comparison",
+    svg: "Columns of the share of residents who are women for each of the Census Bureau's five-year estimates." },
+  { key: "tdis", about: "population-by-age-race-and-ethnicity", title: "Population with a disability",
+    legend: "Population with a disability, with the trend and the comparison",
+    svg: "Columns of the share of residents with a disability for each of the Census Bureau's five-year estimates." },
+];
+// The two tabs' sets of charts, each in a box the explorer shows with its tab
+const PANELS = [
+  { id: "panels", view: "districts", charts: DISTRICT_CHARTS },
+  { id: "town-panels", view: "towns", charts: TOWN_CHARTS, hidden: true },
+];
+// Every chart's description ends the same way: it reads year by year, and its table has the rest
+const KEYS = " Use the arrow keys to read each year; the data table below has every value.";
+// The description with the amounts explorer.ts first fills in: per pupil (per foundation pupil on the two net school
+// spending charts), per resident
+const asFirst = (c: Chart) => (c.svg + KEYS)
+  .replace("{dper}", ["nss", "nssb"].includes(c.key) ? " per foundation pupil" : " per pupil").replace("{per}", " per resident");
 ---
 
 <Layout
@@ -376,374 +491,49 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
       </p>
     </section>
 
-    <div id="panels" class="panels" data-view-only="districts">
-      <figure id="fig-ppe" class="panel" data-about="spending-per-pupil since-1990">
-        <h3>Spending<span data-dper> per pupil</span> by category</h3>
-        <p class="panel-sub" id="ppe-sub"></p>
-        <ul class="legend" id="legend-ppe" aria-label="Spending categories. Select one or more to show only those."></ul>
-        <svg id="svg-ppe" tabindex="0" role="img" data-aria-dper="Stacked columns of spending{dper} by category for each fiscal year. Use the arrow keys to read each year; the data table below has every value." aria-label="Stacked columns of spending per pupil by category for each fiscal year. Use the arrow keys to read each year; the data table below has every value."></svg>
-        <div class="tooltip" role="status" hidden></div>
-        <details class="table-view compare-view">
-          <summary>Comparison table</summary>
-          <div class="table-scroll" id="cmp-ppe"></div>
-          <div class="table-scroll" id="cmp-day"></div>
-        </details>
-        <button type="button" class="table-open" data-table="ppe" aria-haspopup="dialog">
-          <span class="table-open-icon" aria-hidden="true">⤢</span> Full data table
-        </button>
-      </figure>
-
-      <figure id="fig-sped" class="panel" data-about="special-education">
-        <h3>Special education spending<span data-dper> per pupil</span> by category</h3>
-        <p class="panel-sub" id="sped-sub"></p>
-        <p class="panel-none" id="sped-none" hidden></p>
-        <div id="sped-body">
-          <ul class="legend" id="legend-sped" aria-label="Special education spending categories. Select one or more to show only those."></ul>
-          <svg id="svg-sped" tabindex="0" role="img" data-aria-dper="Stacked columns of special education spending{dper} by category for each fiscal year. Use the arrow keys to read each year; the data table below has every value." aria-label="Stacked columns of special education spending per pupil by category for each fiscal year. Use the arrow keys to read each year; the data table below has every value."></svg>
-          <div class="tooltip" role="status" hidden></div>
-          <details class="table-view compare-view">
-            <summary>Comparison table</summary>
-            <div class="table-scroll" id="cmp-sped"></div>
-          </details>
-          <button type="button" class="table-open" data-table="sped" aria-haspopup="dialog">
-            <span class="table-open-icon" aria-hidden="true">⤢</span> Full data table
-          </button>
-        </div>
-      </figure>
-
-      <figure id="fig-enroll" class="panel" data-about="enrollment">
-        <h3>Enrollment</h3>
-        <p class="panel-sub" id="enroll-sub"></p>
-        <ul class="legend" id="legend-enroll"></ul>
-        <svg id="svg-enroll" tabindex="0" role="img" aria-label="Lines of in-district, foundation, and out-of-district enrollment for each fiscal year. Use the arrow keys to read each year; the data table below has every value."></svg>
-        <div class="tooltip" role="status" hidden></div>
-        <details class="table-view compare-view">
-          <summary>Comparison table</summary>
-          <div class="table-scroll" id="cmp-enroll"></div>
-        </details>
-        <button type="button" class="table-open" data-table="enroll" aria-haspopup="dialog">
-          <span class="table-open-icon" aria-hidden="true">⤢</span> Full data table
-        </button>
-      </figure>
-
-      <figure id="fig-ood" class="panel" data-about="spending-on-out-of-district-fte">
-        <h3>Spending on out-of-district FTE</h3>
-        <p class="panel-sub" id="ood-sub"></p>
-        <ul class="legend" id="legend-ood"></ul>
-        <svg id="svg-ood" tabindex="0" role="img" aria-label="Columns of what the district pays to educate its pupils elsewhere, for each fiscal year. Use the arrow keys to read each year; the data table below has every value."></svg>
-        <div class="tooltip" role="status" hidden></div>
-        <details class="table-view compare-view">
-          <summary>Comparison table</summary>
-          <div class="table-scroll" id="cmp-ood"></div>
-        </details>
-        <button type="button" class="table-open" data-table="ood" aria-haspopup="dialog">
-          <span class="table-open-icon" aria-hidden="true">⤢</span> Full data table
-        </button>
-      </figure>
-
-      <figure id="fig-srace" class="panel" data-about="students">
-        <h3>Students by race and ethnicity</h3>
-        <p class="panel-sub" id="srace-sub"></p>
-        <ul class="legend" id="legend-srace" aria-label="Race and ethnicity groups. Select one or more to show only those."></ul>
-        <svg id="svg-srace" tabindex="0" role="img" aria-label="Stacked columns of students' shares by race and Hispanic or Latino origin for each fiscal year. Use the arrow keys to read each year; the data table below has every value."></svg>
-        <div class="tooltip" role="status" hidden></div>
-        <button type="button" class="table-open" data-table="srace" aria-haspopup="dialog">
-          <span class="table-open-icon" aria-hidden="true">⤢</span> Full data table
-        </button>
-      </figure>
-
-      <figure id="fig-sgroups" class="panel" data-about="students">
-        <h3>Students in selected groups</h3>
-        <p class="panel-sub" id="sgroups-sub"></p>
-        <ul class="legend" id="legend-sgroups"></ul>
-        <svg id="svg-sgroups" tabindex="0" role="img" aria-label="Lines of the shares of students with disabilities, English learners, low income students, and students with high needs for each fiscal year. Use the arrow keys to read each year; the data table below has every value."></svg>
-        <div class="tooltip" role="status" hidden></div>
-        <button type="button" class="table-open" data-table="sgroups" aria-haspopup="dialog">
-          <span class="table-open-icon" aria-hidden="true">⤢</span> Full data table
-        </button>
-      </figure>
-
-      <figure id="fig-nss" class="panel" data-about="chapter-70-aid-and-net-school-spending">
-        <h3>Chapter 70 aid and net school spending</h3>
-        <p class="panel-sub" id="nss-sub"></p>
-        <ul class="legend" id="legend-nss" aria-label="Net school spending components. Select one or more to show only those."></ul>
-        <svg id="svg-nss" tabindex="0" role="img" data-aria-dper="Stacked columns of Chapter 70 aid, required local contribution, and local contribution above required{dper} for each fiscal year. Use the arrow keys to read each year; the data table below has every value." aria-label="Stacked columns of Chapter 70 aid, required local contribution, and local contribution above required per foundation pupil for each fiscal year. Use the arrow keys to read each year; the data table below has every value."></svg>
-        <div class="tooltip" role="status" hidden></div>
-        <details class="table-view compare-view">
-          <summary>Comparison table</summary>
-          <div class="table-scroll" id="cmp-nss"></div>
-        </details>
-        <button type="button" class="table-open" data-table="nss" aria-haspopup="dialog">
-          <span class="table-open-icon" aria-hidden="true">⤢</span> Full data table
-        </button>
-      </figure>
-
-      <figure id="fig-nssb" class="panel" data-about="budgets">
-        <h3>Budgeted and actual net school spending<span data-dper> per pupil</span></h3>
-        <p class="panel-sub" id="nssb-sub"></p>
-        <p class="panel-none" id="nssb-none" hidden></p>
-        <div id="nssb-body">
-          <ul class="legend" id="legend-nssb"></ul>
-          <svg id="svg-nssb" tabindex="0" role="img" data-aria-dper="Lines of budgeted, actual, and required net school spending{dper} for each fiscal year. Use the arrow keys to read each year; the data table below has every value." aria-label="Lines of budgeted, actual, and required net school spending per foundation pupil for each fiscal year. Use the arrow keys to read each year; the data table below has every value."></svg>
-          <div class="tooltip" role="status" hidden></div>
-          <!-- Actual vs. budget: each year's spending against its budget, in percent, the comparison's as dots -->
-          <div class="rating-box">
-            <div class="rating-head">
-              <span class="rating-title">Actual vs. budget</span>
-              <ul class="legend rating-legend" id="nssb-gap-legend"></ul>
-            </div>
-            <svg id="svg-nssb-gap" role="img" aria-label="Actual vs. budget by year"></svg>
-          </div>
-          <button type="button" class="table-open" data-table="nssb" aria-haspopup="dialog">
-            <span class="table-open-icon" aria-hidden="true">⤢</span> Full data table
-          </button>
-        </div>
-      </figure>
-
-      <figure id="fig-rev" class="panel" data-about="revenue-by-source">
-        <h3>Revenue<span data-dper> per pupil</span> by source</h3>
-        <p class="panel-sub" id="rev-sub"></p>
-        <p class="panel-none" id="rev-none" hidden></p>
-        <div id="rev-body">
-          <ul class="legend" id="legend-rev" aria-label="Revenue sources. Select one or more to show only those."></ul>
-          <svg id="svg-rev" tabindex="0" role="img" data-aria-dper="Stacked columns of revenue{dper} by source for each fiscal year. Use the arrow keys to read each year; the data table below has every value." aria-label="Stacked columns of revenue per pupil by source for each fiscal year. Use the arrow keys to read each year; the data table below has every value."></svg>
-          <div class="tooltip" role="status" hidden></div>
-          <details class="table-view compare-view">
-            <summary>Comparison table</summary>
-            <div class="table-scroll" id="cmp-rev"></div>
-          </details>
-          <button type="button" class="table-open" data-table="rev" aria-haspopup="dialog">
-            <span class="table-open-icon" aria-hidden="true">⤢</span> Full data table
-          </button>
-        </div>
-      </figure>
-    </div>
-
-    <div id="town-panels" class="panels" data-view-only="towns" hidden>
-      <figure id="fig-tspend" class="panel" data-about="town-budgets town-and-school-budgets-overlap-without-lining-up">
-        <h3>General fund spending<span data-per> per resident</span> by function</h3>
-        <p class="panel-sub" id="tspend-sub"></p>
-        <ul class="legend" id="legend-tspend" aria-label="Spending functions. Select one or more to show only those."></ul>
-        <svg id="svg-tspend" tabindex="0" role="img" data-aria-per="Stacked columns of general fund spending{per} by function for each fiscal year. Use the arrow keys to read each year; the data table below has every value." aria-label="Stacked columns of general fund spending per resident by function for each fiscal year. Use the arrow keys to read each year; the data table below has every value."></svg>
-        <div class="tooltip" role="status" hidden></div>
-        <details class="table-view compare-view">
-          <summary>Comparison table</summary>
-          <div class="table-scroll" id="cmp-tspend"></div>
-        </details>
-        <button type="button" class="table-open" data-table="tspend" aria-haspopup="dialog">
-          <span class="table-open-icon" aria-hidden="true">⤢</span> Full data table
-        </button>
-      </figure>
-
-      <figure id="fig-trev" class="panel" data-about="town-budgets revenue-groups">
-        <h3>General fund revenue<span data-per> per resident</span> by source</h3>
-        <p class="panel-sub" id="trev-sub"></p>
-        <ul class="legend" id="legend-trev" aria-label="Revenue sources. Select one or more to show only those."></ul>
-        <svg id="svg-trev" tabindex="0" role="img" data-aria-per="Stacked columns of general fund revenue{per} by source for each fiscal year. Use the arrow keys to read each year; the data table below has every value." aria-label="Stacked columns of general fund revenue per resident by source for each fiscal year. Use the arrow keys to read each year; the data table below has every value."></svg>
-        <div class="tooltip" role="status" hidden></div>
-        <details class="table-view compare-view">
-          <summary>Comparison table</summary>
-          <div class="table-scroll" id="cmp-trev"></div>
-        </details>
-        <button type="button" class="table-open" data-table="trev" aria-haspopup="dialog">
-          <span class="table-open-icon" aria-hidden="true">⤢</span> Full data table
-        </button>
-      </figure>
-
-      <figure id="fig-tres" class="panel" data-about="reserves">
-        <h3>Reserves<span data-per> per resident</span></h3>
-        <p class="panel-sub" id="tres-sub"></p>
-        <ul class="legend" id="legend-tres" aria-label="Reserves. Select one or more to show only those."></ul>
-        <svg id="svg-tres" tabindex="0" role="img" data-aria-per="Stacked columns of stabilization funds and free cash{per} at each fiscal year's end. Use the arrow keys to read each year; the data table below has every value." aria-label="Stacked columns of stabilization funds and free cash per resident at each fiscal year's end. Use the arrow keys to read each year; the data table below has every value."></svg>
-        <div class="tooltip" role="status" hidden></div>
-        <details class="table-view compare-view">
-          <summary>Comparison table</summary>
-          <div class="table-scroll" id="cmp-tres"></div>
-        </details>
-        <button type="button" class="table-open" data-table="tres" aria-haspopup="dialog">
-          <span class="table-open-icon" aria-hidden="true">⤢</span> Full data table
-        </button>
-      </figure>
-
-      <figure id="fig-tfc" class="panel" data-about="where-free-cash-comes-from">
-        <h3>Where free cash comes from<span data-per> per resident</span></h3>
-        <p class="panel-sub" id="tfc-sub"></p>
-        <ul class="legend" id="legend-tfc"></ul>
-        <svg id="svg-tfc" tabindex="0" role="img" aria-label="Stacked columns of what each year's free cash was made of: the year before's free cash not spent, appropriations left unspent, and revenue above its estimates, less shortfalls and adjustments. Use the arrow keys to read each year; the data table below has every value."></svg>
-        <div class="tooltip" role="status" hidden></div>
-        <button type="button" class="table-open" data-table="tfc" aria-haspopup="dialog">
-          <span class="table-open-icon" aria-hidden="true">⤢</span> Full data table
-        </button>
-      </figure>
-
-      <figure id="fig-tlevy" class="panel" data-about="the-property-tax-levy proposition-2-votes">
-        <h3>Property tax levy and its limit<span data-per> per resident</span></h3>
-        <p class="panel-sub" id="tlevy-sub"></p>
-        <ul class="legend" id="legend-tlevy" aria-label="Levy and unused capacity. Select one to show only it."></ul>
-        <svg id="svg-tlevy" tabindex="0" role="img" data-aria-per="Stacked columns of the property tax levy and unused levy capacity{per} for each fiscal year. Use the arrow keys to read each year; the data table below has every value." aria-label="Stacked columns of the property tax levy and unused levy capacity per resident for each fiscal year. Use the arrow keys to read each year; the data table below has every value."></svg>
-        <div class="tooltip" role="status" hidden></div>
-        <details class="table-view compare-view">
-          <summary>Comparison table</summary>
-          <div class="table-scroll" id="cmp-tlevy"></div>
-        </details>
-        <button type="button" class="table-open" data-table="tlevy" aria-haspopup="dialog">
-          <span class="table-open-icon" aria-hidden="true">⤢</span> Full data table
-        </button>
-        <details class="table-view votes-view" id="tvotes">
-          <summary>Proposition 2½ votes</summary>
-          <div class="table-scroll" id="tvotes-table"></div>
-        </details>
-      </figure>
-
-      <figure id="fig-tbill" class="panel" data-about="property">
-        <h3>Average single-family tax bill</h3>
-        <p class="panel-sub" id="tbill-sub"></p>
-        <ul class="legend" id="legend-tbill"></ul>
-        <svg id="svg-tbill" tabindex="0" role="img" aria-label="Line of the average single-family tax bill for each fiscal year. Use the arrow keys to read each year; the data table below has every value."></svg>
-        <div class="tooltip" role="status" hidden></div>
-        <button type="button" class="table-open" data-table="tbill" aria-haspopup="dialog">
-          <span class="table-open-icon" aria-hidden="true">⤢</span> Full data table
-        </button>
-      </figure>
-
-      <figure id="fig-tdebt" class="panel" data-about="long-term-debt">
-        <h3>Long-term debt<span data-per> per resident</span></h3>
-        <p class="panel-sub" id="tdebt-sub"></p>
-        <ul class="legend" id="legend-tdebt" aria-label="Debt outstanding and authorized. Select one to show only it."></ul>
-        <svg id="svg-tdebt" tabindex="0" role="img" data-aria-per="Stacked columns of long-term debt outstanding and debt authorized but not yet borrowed{per} at each fiscal year's end. Use the arrow keys to read each year; the data table below has every value." aria-label="Stacked columns of long-term debt outstanding and debt authorized but not yet borrowed per resident at each fiscal year's end. Use the arrow keys to read each year; the data table below has every value."></svg>
-        <div class="tooltip" role="status" hidden></div>
-        <div class="rating-box" id="trating" hidden>
-          <div class="rating-head">
-            <span class="rating-title">Bond ratings</span>
-            <ul class="legend rating-legend" id="trating-legend" aria-label="Rating agencies"></ul>
-          </div>
-          <svg id="svg-trating" role="img" aria-label="Bond rating by year"></svg>
-        </div>
-        <details class="table-view compare-view">
-          <summary>Comparison table</summary>
-          <div class="table-scroll" id="cmp-tdebt"></div>
-        </details>
-        <button type="button" class="table-open" data-table="tdebt" aria-haspopup="dialog">
-          <span class="table-open-icon" aria-hidden="true">⤢</span> Full data table
-        </button>
-      </figure>
-
-      <figure id="fig-tcap" class="panel" data-about="capital-projects">
-        <h3>Capital projects spending<span data-per> per resident</span> by purpose</h3>
-        <p class="panel-sub" id="tcap-sub"></p>
-        <ul class="legend" id="legend-tcap" aria-label="Capital project purposes. Select one or more to show only those."></ul>
-        <svg id="svg-tcap" tabindex="0" role="img" data-aria-per="Stacked columns of capital projects fund spending{per} by purpose for each fiscal year. Use the arrow keys to read each year; the data table below has every value." aria-label="Stacked columns of capital projects fund spending per resident by purpose for each fiscal year. Use the arrow keys to read each year; the data table below has every value."></svg>
-        <div class="tooltip" role="status" hidden></div>
-        <details class="table-view compare-view">
-          <summary>Comparison table</summary>
-          <div class="table-scroll" id="cmp-tcap"></div>
-        </details>
-        <button type="button" class="table-open" data-table="tcap" aria-haspopup="dialog">
-          <span class="table-open-icon" aria-hidden="true">⤢</span> Full data table
-        </button>
-      </figure>
-
-      <figure id="fig-tval" class="panel" data-about="property">
-        <h3>Assessed value<span data-per> per resident</span> by property type</h3>
-        <p class="panel-sub" id="tval-sub"></p>
-        <ul class="legend" id="legend-tval" aria-label="Property types. Select one or more to show only those."></ul>
-        <svg id="svg-tval" tabindex="0" role="img" data-aria-per="Stacked columns of assessed property value{per} by property type for each fiscal year. Use the arrow keys to read each year; the data table below has every value." aria-label="Stacked columns of assessed property value per resident by property type for each fiscal year. Use the arrow keys to read each year; the data table below has every value."></svg>
-        <div class="tooltip" role="status" hidden></div>
-        <details class="table-view compare-view">
-          <summary>Comparison table</summary>
-          <div class="table-scroll" id="cmp-tval"></div>
-        </details>
-        <button type="button" class="table-open" data-table="tval" aria-haspopup="dialog">
-          <span class="table-open-icon" aria-hidden="true">⤢</span> Full data table
-        </button>
-      </figure>
-
-      <figure id="fig-tpar" class="panel" data-about="property">
-        <h3>Parcels by property type</h3>
-        <p class="panel-sub" id="tpar-sub"></p>
-        <ul class="legend" id="legend-tpar" aria-label="Property types. Select one or more to show only those."></ul>
-        <svg id="svg-tpar" tabindex="0" role="img" aria-label="Stacked columns of parcels by property type for each fiscal year. Use the arrow keys to read each year; the data table below has every value."></svg>
-        <div class="tooltip" role="status" hidden></div>
-        <details class="table-view compare-view">
-          <summary>Comparison table</summary>
-          <div class="table-scroll" id="cmp-tpar"></div>
-        </details>
-        <button type="button" class="table-open" data-table="tpar" aria-haspopup="dialog">
-          <span class="table-open-icon" aria-hidden="true">⤢</span> Full data table
-        </button>
-      </figure>
-
-      <figure id="fig-teqv" class="panel" data-about="equalized-valuation-eqv">
-        <h3>Equalized valuation<span data-per> per resident</span></h3>
-        <p class="panel-sub" id="teqv-sub"></p>
-        <ul class="legend" id="legend-teqv"></ul>
-        <svg id="svg-teqv" tabindex="0" role="img" data-aria-per="Line of equalized valuation{per}, every other fiscal year. Use the arrow keys to read each year; the data table below has every value." aria-label="Line of equalized valuation per resident, every other fiscal year. Use the arrow keys to read each year; the data table below has every value."></svg>
-        <div class="tooltip" role="status" hidden></div>
-        <button type="button" class="table-open" data-table="teqv" aria-haspopup="dialog">
-          <span class="table-open-icon" aria-hidden="true">⤢</span> Full data table
-        </button>
-      </figure>
-
-      <figure id="fig-tpop" class="panel" data-about="population-estimates labor-force">
-        <h3>Population and labor force</h3>
-        <p class="panel-sub" id="tpop-sub"></p>
-        <!-- The unemployment rate first; the residents, labor force and employed behind it a click away -->
-        <div class="toggle-options panel-views" id="tpop-views" role="radiogroup" aria-label="What the chart shows">
-          <label><input type="radio" name="tpop-view" value="rate" checked /><span>Unemployment rate</span></label>
-          <label><input type="radio" name="tpop-view" value="people" /><span>Population and labor force</span></label>
-        </div>
-        <ul class="legend" id="legend-tpop"></ul>
-        <svg id="svg-tpop" tabindex="0" role="img" aria-label="Lines of population, labor force, and employment for each fiscal year. Use the arrow keys to read each year; the data table below has every value."></svg>
-        <div class="tooltip" role="status" hidden></div>
-        <button type="button" class="table-open" data-table="tpop" aria-haspopup="dialog">
-          <span class="table-open-icon" aria-hidden="true">⤢</span> Full data table
-        </button>
-      </figure>
-
-      <figure id="fig-tage" class="panel" data-about="population-by-age-race-and-ethnicity">
-        <h3>Population by age</h3>
-        <p class="panel-sub" id="tage-sub"></p>
-        <ul class="legend" id="legend-tage" aria-label="Age groups. Select one or more to show only those."></ul>
-        <svg id="svg-tage" tabindex="0" role="img" aria-label="Stacked columns of residents' shares by age for each of the Census Bureau's five-year estimates. Use the arrow keys to read each year; the data table below has every value."></svg>
-        <div class="tooltip" role="status" hidden></div>
-        <button type="button" class="table-open" data-table="tage" aria-haspopup="dialog">
-          <span class="table-open-icon" aria-hidden="true">⤢</span> Full data table
-        </button>
-      </figure>
-
-      <figure id="fig-trace" class="panel" data-about="population-by-age-race-and-ethnicity">
-        <h3>Population by race and ethnicity</h3>
-        <p class="panel-sub" id="trace-sub"></p>
-        <ul class="legend" id="legend-trace" aria-label="Race and ethnicity groups. Select one or more to show only those."></ul>
-        <svg id="svg-trace" tabindex="0" role="img" aria-label="Stacked columns of residents' shares by race and Hispanic or Latino origin for each of the Census Bureau's five-year estimates. Use the arrow keys to read each year; the data table below has every value."></svg>
-        <div class="tooltip" role="status" hidden></div>
-        <button type="button" class="table-open" data-table="trace" aria-haspopup="dialog">
-          <span class="table-open-icon" aria-hidden="true">⤢</span> Full data table
-        </button>
-      </figure>
-
-      <figure id="fig-tsex" class="panel" data-about="population-by-age-race-and-ethnicity">
-        <h3>Women in the population</h3>
-        <p class="panel-sub" id="tsex-sub"></p>
-        <ul class="legend" id="legend-tsex" aria-label="Women, with its trend and the comparison"></ul>
-        <svg id="svg-tsex" tabindex="0" role="img" aria-label="Columns of the share of residents who are women for each of the Census Bureau's five-year estimates. Use the arrow keys to read each year; the data table below has every value."></svg>
-        <div class="tooltip" role="status" hidden></div>
-        <button type="button" class="table-open" data-table="tsex" aria-haspopup="dialog">
-          <span class="table-open-icon" aria-hidden="true">⤢</span> Full data table
-        </button>
-      </figure>
-
-      <figure id="fig-tdis" class="panel" data-about="population-by-age-race-and-ethnicity">
-        <h3>Population with a disability</h3>
-        <p class="panel-sub" id="tdis-sub"></p>
-        <ul class="legend" id="legend-tdis" aria-label="Population with a disability, with the trend and the comparison"></ul>
-        <svg id="svg-tdis" tabindex="0" role="img" aria-label="Columns of the share of residents with a disability for each of the Census Bureau's five-year estimates. Use the arrow keys to read each year; the data table below has every value."></svg>
-        <div class="tooltip" role="status" hidden></div>
-        <button type="button" class="table-open" data-table="tdis" aria-haspopup="dialog">
-          <span class="table-open-icon" aria-hidden="true">⤢</span> Full data table
-        </button>
-      </figure>
-    </div>
+    {PANELS.map((p, i) => (
+      <>{i > 0 && " "}<div id={p.id} class="panels" data-view-only={p.view} hidden={p.hidden}>{p.charts.map((c) => {
+        // Each chart from DISTRICT_CHARTS or TOWN_CHARTS. One a note can stand in for keeps the rest in a box, which
+        // goes when the note shows. Astro drops the space after an expression here, so a {" "} puts back the ones
+        // between the parts, and the page is built as the figures written out by hand were
+        const Body = c.none ? "div" : Fragment;
+        return (
+          <> <figure id={`fig-${c.key}`} class="panel" data-about={c.about}>
+            <h3>{c.title.split(/(\{d?per\})/).map((s) => (s === "{dper}" ? <span data-dper> per pupil</span>
+              : s === "{per}" ? <span data-per> per resident</span> : s))}</h3>
+            <p class="panel-sub" id={`${c.key}-sub`}></p>{c.none && (
+              <> <p class="panel-none" id={`${c.key}-none`} hidden></p> </>
+            )}<Body {...(c.none ? { id: `${c.key}-body` } : {})}>{c.views && (
+              <> <Fragment set:html={`<!-- ${c.views.note} -->`} /> <div class="toggle-options panel-views"
+                id={`${c.key}-views`} role="radiogroup" aria-label={c.views.label}>{c.views.options.map((o, k) => (
+                  <> <label><input type="radio" name={`${c.key}-view`} value={o.value}
+                    checked={k === 0} /><span>{o.text}</span></label></>
+                ))} </div></>
+              )}{" "}<ul class="legend" id={`legend-${c.key}`} aria-label={c.legend}></ul>
+              <svg id={`svg-${c.key}`} tabindex="0" role="img"
+                data-aria-dper={c.svg.includes("{dper}") ? c.svg + KEYS : undefined}
+                data-aria-per={c.svg.includes("{per}") ? c.svg + KEYS : undefined} aria-label={asFirst(c)}></svg>
+              <div class="tooltip" role="status" hidden></div>{c.rating && (
+                <>{c.rating.note && <> <Fragment set:html={`<!-- ${c.rating.note} -->`} /></>}{" "}<div
+                  class="rating-box" id={c.rating.box} hidden={c.rating.hidden}> <div class="rating-head">
+                  <span class="rating-title">{c.rating.title}</span>
+                  <ul class="legend rating-legend" id={c.rating.legend} aria-label={c.rating.legendLabel}></ul> </div>
+                  <svg id={c.rating.svg} role="img" aria-label={c.rating.label}></svg> </div></>
+              )}{c.compare && (
+                <> <details class="table-view compare-view"> <summary>Comparison table</summary>{c.compare.map((id) => (
+                  <> <div class="table-scroll" id={`cmp-${id}`}></div></>
+                ))} </details></>
+              )}
+              {" "}<button type="button" class="table-open" data-table={c.key} aria-haspopup="dialog">
+                <span class="table-open-icon" aria-hidden="true">⤢</span> Full data table
+              </button>{c.votes && (
+                <> <details class="table-view votes-view" id={c.votes.id}> <summary>{c.votes.summary}</summary>
+                  <div class="table-scroll" id={`${c.votes.id}-table`}></div> </details></>
+              )}{c.none && " "}</Body>
+          </figure></>
+        );
+      })} </div></>
+    ))}
     </div>
 
     <div id="remember-prompt" class="remember-prompt" role="dialog" aria-labelledby="remember-title" hidden>
