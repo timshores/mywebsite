@@ -1,0 +1,4738 @@
+/* The Municipal spending explorer's styles (src/pages/muni-spending/index.astro imports them). Until #237 they were
+   the page's scoped <style>: Astro marked the page's own markup, and each rule, with a data-astro-cid attribute, so
+   a rule reached only that markup, and everything a script builds (most of the explorer) needed :global(). The
+   attribute also weighed on each selector once per part it marked, so specificity differed from rule to rule.
+   Here every rule is anchored on .explorer (html where the page itself is meant), reaches the explorer's elements
+   whoever built them, and nothing elsewhere on the site. Where the old weights or the old reach decided what a
+   reader saw, a comment says how that is kept. */
+
+.explorer {
+  --surface: var(--paper);
+  --grid: #e9e3d7;
+  --axis: #b9b1a2;
+  --muted: #6d695e;
+  font-variant-numeric: normal;
+}
+
+.explorer.is-loading .panels {
+  opacity: 0.4;
+}
+
+html.modal-open {
+  overflow: hidden;
+}
+
+.explorer .tab-loading {
+  color: var(--muted);
+  font-style: italic;
+  margin: 1rem 0;
+}
+
+/* hidden wins over the display each block sets for itself */
+.explorer [hidden] {
+  display: none !important;
+}
+
+/* Switching tabs: the words and the view that change with the tab fade out, then in */
+/* The same transition both ways: out, then in, 0.56s each (explorer.ts FADE_MS) */
+.explorer .swap,
+.explorer #view-panel {
+  transition: opacity 0.56s ease;
+}
+
+.explorer.is-switching .swap,
+.explorer.is-switching #view-panel {
+  opacity: 0;
+}
+
+/* The words that change with the tab, as a soft pill in the paragraph's own type */
+.explorer span.swap {
+  padding: 0.05em 0.45em;
+  border-radius: 999px;
+  background: #efe9dd;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .explorer .swap,
+  .explorer #view-panel {
+    transition: none;
+  }
+}
+
+.explorer .eyebrow {
+  font-size: 0.85rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 0.35rem;
+}
+
+.explorer .lede {
+  font-size: 1.05rem;
+}
+
+/* The introduction folds away; it starts open */
+.explorer .intro summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.85rem;
+  color: var(--muted);
+  cursor: pointer;
+  list-style: none;
+  margin-bottom: 0.5rem;
+}
+
+.explorer .intro summary::-webkit-details-marker {
+  display: none;
+}
+
+.explorer .intro summary::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border: solid currentColor;
+  border-width: 0 1.5px 1.5px 0;
+  transform: rotate(-45deg);
+  transition: transform 0.12s ease;
+}
+
+.explorer .intro[open] summary::before {
+  transform: rotate(45deg);
+}
+
+.explorer .intro summary:hover {
+  color: var(--ink);
+}
+
+.explorer .intro:not([open]) summary {
+  margin-bottom: 1rem;
+}
+
+/* Controls: one row above everything they scope */
+.explorer .controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.75rem 1.25rem;
+  margin: 1.4rem 0 1.6rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  /* Control boxes are white, the cap bar's standard, so they stand apart from the page when they float */
+  background: #fff;
+}
+
+/* Districts and towns: once the controls scroll away, a one-line summary under the tabs that opens
+   them in place (explorer.ts, the dock). It takes no room in the page; its panel hangs over it. */
+.explorer .controls-dock {
+  position: sticky;
+  top: var(--tabs-h, 3rem);
+  z-index: 29;
+  height: 0;
+}
+
+.explorer .controls-dock-panel {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-top: 0;
+  border-radius: 0 0 12px 12px;
+  box-shadow: 0 8px 18px var(--shadow);
+}
+
+.explorer .controls-dock-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  padding: 0.45rem 0.9rem;
+}
+
+.explorer .controls-dock-sum {
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+  font: inherit;
+  font-size: 0.85rem;
+  color: var(--ink-soft);
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+
+.explorer .controls-dock-sum strong {
+  color: var(--ink);
+}
+
+.explorer .controls-dock-toggle {
+  flex: none;
+  padding: 0.2rem 0.75rem;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--accent);
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.explorer .controls-dock-toggle:hover,
+.explorer .controls-dock-toggle:focus-visible {
+  border-color: var(--accent);
+}
+
+/* Docked open, the controls shrink to a line or two, labels beside them, so the charts below stay in
+   view while they change; the Hide button moves to the corner and the summary steps aside */
+.explorer .controls-dock.is-open .controls-dock-bar {
+  position: absolute;
+  top: 0.4rem;
+  right: 0.9rem;
+  padding: 0;
+}
+
+.explorer .controls-dock.is-open .controls-dock-sum {
+  display: none;
+}
+
+.explorer .controls-dock-body .controls {
+  align-items: center;
+  gap: 0.35rem 1.1rem;
+  margin: 0;
+  padding: 0.4rem 9.5rem 0.45rem 0.9rem;
+  background: none;
+  border: 0;
+  border-radius: 0;
+}
+
+.explorer .controls-dock-body .control {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.76rem;
+}
+
+.explorer .controls-dock-body .control select {
+  font-size: 0.82rem;
+  padding: 0.2rem 0.45rem;
+}
+
+.explorer .controls-dock-body .control .picker-button {
+  width: 13rem;
+  padding-top: 0.2rem;
+  padding-bottom: 0.2rem;
+  font-size: 0.82rem;
+}
+
+.explorer .controls-dock-body .years-control {
+  min-width: 0;
+}
+
+.explorer .controls-dock-body .years-slider {
+  min-height: 0;
+  gap: 0.4rem;
+}
+
+.explorer .controls-dock-body .years-track {
+  flex: none;
+  width: 7rem;
+  min-width: 0;
+}
+
+.explorer .controls-dock-body .years-slider output {
+  min-width: 0;
+  font-size: 0.8rem;
+}
+
+.explorer .controls-dock-body .toggle legend {
+  float: left;
+  margin: 0 0.4rem 0 0;
+  line-height: 1.9;
+}
+
+.explorer .controls-dock-body .toggle-options label > span {
+  padding: 0.2rem 0.55rem;
+  font-size: 0.8rem;
+}
+
+.explorer .controls-dock-body .toggle-options span span {
+  font-size: inherit;
+}
+
+/* Docked, the controls skip the slider ends, their longer notes and the list of related towns and
+   districts */
+.explorer .controls-dock-body .years-ends,
+.explorer .controls-dock-body .controls-note,
+.explorer .controls-dock-body .relations {
+  display: none;
+}
+
+/* A control in the controls row. The cap tab's town menu is a .control too (cap.ts), so that the picker's rules below
+   reach it, but the page's scoped rules never did: :where(.controls) keeps it out here, at .control's own weight */
+.explorer :where(.controls) .control {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--ink-soft);
+  border: 0;
+  min-width: 0;
+}
+
+/* Beside Compare with: the group "Its region" and the like stand for, by name, or all the groups, linking
+   to the groups page; under the menu where it takes the width */
+.explorer .cmp-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.3rem 0.6rem;
+}
+
+.explorer .cmp-name {
+  /* A slot of fixed size, two lines high, for every name a relative choice gives (53 characters at most),
+     so choosing another group doesn't move the controls around it */
+  display: flex;
+  align-items: center;
+  width: 14rem;
+  height: 2.5em;
+  overflow: hidden;
+  font-size: 0.8rem;
+  font-weight: 500;
+  line-height: 1.25;
+}
+
+.explorer .cmp-name.is-group {
+  font-weight: 600;
+}
+
+.explorer .controls-note {
+  flex-basis: 100%;
+  margin: 0.1rem 0 0;
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: var(--ink-soft);
+}
+
+.explorer .controls-note strong {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.explorer :where(.controls) .control select {
+  font: inherit;
+  font-size: 0.95rem;
+  font-weight: 400;
+  color: var(--ink);
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 0.45rem 0.6rem;
+  max-width: 100%;
+}
+
+/* The long menus (lib/massppe/picker.ts): a button showing the choice, and a panel with a
+   search box and collapsible groups. Some names run long; the button keeps a sensible
+   width and the panel shows them in full. */
+.explorer .control .picker {
+  position: relative;
+}
+
+.explorer .control .picker-button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  width: 22rem;
+  max-width: 100%;
+  font: inherit;
+  font-size: 0.95rem;
+  font-weight: 400;
+  color: var(--ink);
+  text-align: left;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 0.45rem 0.6rem;
+  cursor: pointer;
+}
+
+.explorer .control .picker-button:focus-visible,
+.explorer .control .picker-search:focus-visible,
+.explorer .control .picker-group-head:focus-visible,
+.explorer .control .picker-option:focus-visible {
+  outline: 2px dashed var(--accent);
+  outline-offset: 1px;
+}
+
+.explorer .control .picker-value {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.explorer .control .picker-caret {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  margin: -3px 2px 0 0;
+  border: solid var(--ink-soft);
+  border-width: 0 1.5px 1.5px 0;
+  transform: rotate(45deg);
+}
+
+.explorer .control .picker-panel {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  width: min(26rem, calc(100vw - 32px));
+  max-height: min(30rem, 70vh);
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: 0 16px 40px rgba(31, 31, 28, 0.2);
+}
+
+.explorer .control .picker-search {
+  margin: 0.6rem 0.6rem 0.4rem;
+  padding: 0.45rem 0.6rem;
+  font: inherit;
+  font-size: 0.95rem;
+  font-weight: 400;
+  color: var(--ink);
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.explorer .control .picker-groups {
+  overflow-y: auto;
+  padding: 0 0.4rem 0.5rem;
+}
+
+.explorer .control .picker-section {
+  border-top: 1px solid var(--line);
+  margin-top: 0.3rem;
+  padding-top: 0.3rem;
+}
+
+.explorer .control .picker-group-head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--ink);
+  text-align: left;
+  background: none;
+  border: 0;
+  border-radius: 6px;
+  padding: 0.4rem 0.5rem;
+  cursor: pointer;
+}
+
+/* A chevron that turns down when the group opens */
+.explorer .control .picker-group-head::before {
+  content: "";
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border: solid var(--ink-soft);
+  border-width: 0 1.5px 1.5px 0;
+  transform: rotate(-45deg);
+  transition: transform 0.12s ease;
+}
+
+.explorer .control .picker-group-head[aria-expanded="true"]::before {
+  transform: rotate(45deg);
+}
+
+.explorer .control .picker-group-label {
+  flex: 1;
+}
+
+/* A dot on the group that holds the current choice */
+.explorer .control .picker-group-head.has-current .picker-group-label::after {
+  content: "";
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-left: 0.45rem;
+  vertical-align: middle;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.explorer .control .picker-count {
+  font-size: 0.8rem;
+  font-weight: 400;
+  color: var(--muted);
+}
+
+.explorer .control .picker-options {
+  list-style: none;
+  margin: 0 0 0.2rem;
+  padding: 0 0 0 1.25rem;
+}
+
+.explorer .control .picker-option {
+  display: block;
+  width: 100%;
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 400;
+  color: var(--ink);
+  text-align: left;
+  background: none;
+  border: 0;
+  border-radius: 6px;
+  padding: 0.3rem 0.5rem;
+  cursor: pointer;
+}
+
+.explorer .control .picker-group-head:hover,
+.explorer .control .picker-option:hover {
+  background: rgba(31, 31, 28, 0.05);
+}
+
+.explorer .control .picker-option.is-current {
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.explorer .control .picker-option:disabled {
+  color: var(--muted);
+  opacity: 0.6;
+  cursor: default;
+}
+
+.explorer .control .picker-empty {
+  margin: 0.2rem 1rem 0.8rem;
+  font-size: 0.88rem;
+  color: var(--muted);
+}
+
+/* The district menu's foot: former districts, for the few who want them (picker.ts, PickerFoot) */
+.explorer .control .picker-foot {
+  display: block;
+  width: 100%;
+  margin-top: 0.3rem;
+  padding: 0.5rem 1rem 0.35rem;
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 400;
+  color: var(--muted);
+  text-align: left;
+  background: none;
+  border: 0;
+  border-top: 1px solid var(--line);
+  cursor: pointer;
+}
+
+.explorer .control .picker-foot:hover,
+.explorer .control .picker-foot:focus-visible {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  outline: none;
+}
+
+.explorer .toggle legend {
+  padding: 0;
+  margin-bottom: 0.3rem;
+}
+
+
+/* Years: two handles on one track, the first and last years shown (explorer.ts showYears) */
+.explorer .years-control {
+  min-width: min(22rem, 100%);
+}
+
+.explorer .years-slider {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  min-height: 2.2rem;
+}
+
+.explorer .years-track {
+  --a: 0;
+  --b: 1;
+  position: relative;
+  flex: 1;
+  min-width: 8rem;
+  height: 16px;
+}
+
+.explorer .years-track::before,
+.explorer .years-fill {
+  content: "";
+  position: absolute;
+  top: 6px;
+  height: 4px;
+  border-radius: 2px;
+}
+
+.explorer .years-track::before {
+  left: 0;
+  right: 0;
+  background: var(--line);
+}
+
+.explorer .years-fill {
+  left: calc(8px + (100% - 16px) * var(--a));
+  right: calc(8px + (100% - 16px) * (1 - var(--b)));
+  background: var(--accent);
+}
+
+.explorer .years-track input[type="range"] {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 16px;
+  margin: 0;
+  background: none;
+  pointer-events: none;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.explorer .years-track input[type="range"]::-webkit-slider-runnable-track {
+  height: 16px;
+  background: none;
+}
+
+.explorer .years-track input[type="range"]::-moz-range-track {
+  background: none;
+}
+
+.explorer .years-track input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  pointer-events: auto;
+  width: 16px;
+  height: 16px;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+  cursor: pointer;
+}
+
+.explorer .years-track input[type="range"]::-moz-range-thumb {
+  pointer-events: auto;
+  width: 12px;
+  height: 12px;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+  cursor: pointer;
+}
+
+.explorer .years-track input[type="range"]:focus-visible {
+  outline: none;
+}
+
+.explorer .years-track input[type="range"]:focus-visible::-webkit-slider-thumb {
+  outline: 2px dashed var(--accent);
+  outline-offset: 2px;
+}
+
+.explorer .years-track input[type="range"]:focus-visible::-moz-range-thumb {
+  outline: 2px dashed var(--accent);
+  outline-offset: 2px;
+}
+
+/* Where the explorer's own measure begins: a tick on the track, named under it */
+.explorer .years-mark {
+  position: absolute;
+  top: 1px;
+  left: calc(8px + (100% - 16px) * var(--m, 0));
+  width: 2px;
+  height: 14px;
+  margin-left: -1px;
+  background: var(--ink-soft);
+  pointer-events: none;
+}
+
+.explorer .years-mark-label {
+  position: absolute;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.68rem;
+  font-weight: 500;
+  color: var(--ink-soft);
+  white-space: nowrap;
+}
+
+/* The "?" beside the label, nudged from where it sits. It stays position: relative, from the .cw-help rule, as it has
+   always shown: the position: absolute this rule set lost, while scoped, to that later rule of equal weight (#237) */
+.explorer .years-mark .cw-help {
+  top: 15px;
+  left: calc(50% + 3.1rem);
+  pointer-events: auto;
+}
+
+.explorer .district-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+}
+
+/* Swap the focus and the comparison: a small pill beside Compare with. Not .swap, which is the intro's
+   words that change with the tab */
+.explorer .swap-btn {
+  padding: 0.05rem 0.55rem;
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--ink-soft);
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.explorer .swap-btn:hover:not(:disabled) {
+  color: var(--ink);
+  border-color: var(--ink-soft);
+}
+
+.explorer .swap-btn:focus-visible {
+  outline: 2px dashed var(--accent);
+  outline-offset: 2px;
+}
+
+.explorer .swap-btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+/* With no comparison it keeps its place, unseen (and out of reach), so the controls don't shift when it
+   comes and goes */
+.explorer .swap-btn.is-idle {
+  visibility: hidden;
+}
+
+.explorer .entity-note {
+  margin: 0.4rem 0 0;
+  padding: 0.55rem 0.75rem;
+  border-left: 3px solid var(--line);
+  font-size: 0.9rem;
+  color: var(--ink-soft);
+}
+
+.explorer .entity-note .note-source {
+  display: block;
+  margin-top: 0.25rem;
+  font-size: 0.78rem;
+}
+
+.explorer .hist-head {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.explorer .detail-dial.hist-dial {
+  margin-left: 0;
+  align-self: flex-start;
+  padding-left: 0;
+}
+
+.explorer .years-slider .years-two {
+  display: block;
+  font-size: 0.7rem;
+  font-weight: 500;
+  color: var(--ink-soft);
+}
+
+.explorer .years-slider output {
+  min-width: 7.5rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--ink);
+  white-space: nowrap;
+}
+
+.explorer .years-ends {
+  display: flex;
+  justify-content: space-between;
+  margin-right: 8.1rem;
+  font-size: 0.7rem;
+  font-weight: 400;
+  color: var(--muted);
+}
+
+.explorer .toggle-options {
+  display: flex;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--paper);
+}
+
+.explorer .toggle-options label {
+  position: relative;
+  cursor: pointer;
+}
+
+.explorer .toggle-options input {
+  position: absolute;
+  opacity: 0;
+  inset: 0;
+  cursor: pointer;
+}
+
+.explorer .toggle-options span {
+  display: block;
+  padding: 0.45rem 0.8rem;
+  font-size: 0.95rem;
+  font-weight: 400;
+  color: var(--ink-soft);
+}
+
+.explorer .toggle-options span span {
+  display: inline;
+  padding: 0;
+  color: inherit;
+}
+
+.explorer .toggle-options label + label {
+  border-left: 1px solid var(--line);
+}
+
+.explorer .toggle-options input:checked + span {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.explorer .toggle-options input:checked + span span {
+  background: none;
+}
+
+/* A chart's own choice of what it shows, under its description */
+.explorer .panel-views {
+  width: fit-content;
+  margin: 0.55rem 0 0.35rem;
+}
+
+.explorer .panel-views span {
+  padding: 0.3rem 0.75rem;
+  font-size: 0.85rem;
+}
+
+.explorer .toggle-options input:focus-visible + span {
+  outline: 2px dashed var(--accent);
+  outline-offset: -4px;
+}
+
+/* View tabs: an underline marks the open view */
+/* The tabs stay at the top of the screen as the page scrolls */
+.explorer .view-tabs {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  display: flex;
+  gap: 0.25rem;
+  margin-top: 1.4rem;
+  padding-top: 0.35rem;
+  background: var(--paper);
+  border-bottom: 1px solid var(--line);
+}
+
+/* On a narrow screen the tabs scroll sideways inside the bar, and the dial stays in view */
+.explorer .view-tablist {
+  display: flex;
+  gap: 0.25rem;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.explorer .view-tablist::-webkit-scrollbar {
+  display: none;
+}
+
+.explorer .view-tablist [role="tab"] {
+  flex: none;
+}
+
+/* The detail dial: a knob turned left for off, right for on */
+.explorer .detail-dial {
+  margin-left: auto;
+  align-self: center;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex: none;
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--ink-soft);
+  background: none;
+  border: 0;
+  padding: 0.25rem 0.35rem;
+  cursor: pointer;
+}
+
+.explorer .detail-dial:hover {
+  color: var(--ink);
+}
+
+.explorer .detail-dial:focus-visible {
+  outline: 2px dashed var(--accent);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+.explorer .dial-face {
+  position: relative;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 1.5px solid var(--ink-soft);
+  background: radial-gradient(circle at 40% 35%, #fff 0%, #efe8dc 75%);
+  box-shadow: 0 1px 2px rgba(31, 31, 28, 0.25);
+  transform: rotate(50deg);
+  transition: transform 0.25s ease;
+}
+
+.explorer .dial-pointer {
+  position: absolute;
+  top: 2px;
+  left: 50%;
+  width: 3px;
+  height: 9px;
+  border-radius: 2px;
+  background: var(--accent);
+  transform: translateX(-50%);
+}
+
+.explorer .detail-dial[aria-checked="false"] .dial-face {
+  transform: rotate(-50deg);
+}
+
+.explorer .detail-dial[aria-checked="false"] .dial-pointer {
+  background: var(--ink-soft);
+}
+
+.explorer .dial-state {
+  min-width: 1.6em;
+  text-align: left;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .explorer .dial-face {
+    transition: none;
+  }
+}
+
+/* Detail off: the controls, tiles, charts and legends stay; the explanations around them go */
+.explorer.detail-off :is(.intro, .panel-sub, .controls-note, .compare-view, .table-open, .about-links, #entity-meta,
+  .relations, .cw-help, .cw-intro, .map-about, .map-source, .map-table, .cap-note, .cap-table-head, .cap-steps,
+  .cap-questions, [data-detail]) {
+  display: none !important;
+}
+
+/* A heading that folds an explanation away stops folding when Detail off has taken the explanation: no chevron,
+   nothing to click */
+.explorer.detail-off .map-about-fold > summary {
+  cursor: default;
+  pointer-events: none;
+}
+
+.explorer.detail-off .map-about-fold > summary::before {
+  display: none;
+}
+
+/* The campaign's credit: shown when the intro that names it is hidden, by Detail off or folded shut */
+.explorer .cap-credit {
+  display: none;
+  margin: -0.2rem 0 0.8rem;
+  font-size: 0.9rem;
+  color: var(--ink-soft);
+}
+
+.explorer.detail-off .cap-credit,
+.explorer .cap-view:has(#cap-intro:not([open])) .cap-credit {
+  display: block;
+}
+
+.explorer .view-tabs [role="tab"] {
+  font: inherit;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--ink-soft);
+  background: none;
+  border: 0;
+  border-radius: 8px 8px 0 0;
+  padding: 0.55rem 1rem;
+  margin-bottom: -1px;
+  cursor: pointer;
+}
+
+.explorer .view-tabs [role="tab"]:hover {
+  color: var(--ink);
+  background: rgba(255, 255, 255, 0.55);
+}
+
+.explorer .view-tabs [role="tab"][aria-selected="true"] {
+  color: var(--ink);
+  box-shadow: inset 0 -3px 0 var(--accent);
+}
+
+.explorer .view-tabs [role="tab"]:focus-visible {
+  outline: 2px dashed var(--accent);
+  outline-offset: -4px;
+}
+
+.explorer .view-tabs + #view-panel .controls {
+  margin-top: 1rem;
+}
+
+/* Where the tabs would run past the bar's edge, they become a grid of buttons, all in sight,
+   with the dial in the grid's sixth cell. The grid is too tall to keep pinned on a phone, so it
+   scrolls away with the page; the docked controls pin to the top in its place (explorer.ts). */
+@media (max-width: 860px) {
+  .explorer .view-tabs {
+    position: relative;
+    display: block;
+    padding: 0.45rem 0;
+  }
+
+  .explorer .view-tablist {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-auto-rows: 1fr;
+    gap: 0.35rem;
+    overflow: visible;
+  }
+
+  .explorer .view-tabs [role="tab"] {
+    min-height: 2.6rem;
+    margin: 0;
+    padding: 0.3rem 0.5rem;
+    font-size: 0.92rem;
+    line-height: 1.2;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: #fff;
+  }
+
+  .explorer .view-tabs [role="tab"][aria-selected="true"] {
+    color: var(--paper);
+    background: var(--ink);
+    border-color: var(--ink);
+    box-shadow: none;
+  }
+
+  .explorer .view-tabs [role="tab"]:focus-visible {
+    outline-offset: 2px;
+  }
+
+  /* One column wide and one row high, bottom right; the bar is its containing block */
+  .explorer .view-tabs .detail-dial {
+    position: absolute;
+    right: 0;
+    bottom: 0.45rem;
+    width: calc((100% - 0.7rem) / 3);
+    height: calc((100% - 0.9rem - 0.35rem) / 2);
+    justify-content: center;
+    gap: 0.3rem;
+    padding: 0;
+  }
+
+  .explorer .view-tabs .dial-face {
+    flex: none;
+  }
+}
+
+/* Too narrow for the word beside the knob; the knob's turn still shows on or off */
+@media (max-width: 380px) {
+  .explorer .view-tabs .dial-state {
+    display: none;
+  }
+}
+
+.explorer .entity h2 {
+  margin: 0 0 0.25rem;
+}
+
+/* Relations outline: the selected district's towns or town's districts, with tree lines */
+.explorer .relations {
+  flex-basis: 100%;
+  margin-top: 0.2rem;
+  padding-top: 0.8rem;
+  border-top: 1px solid var(--line);
+  font-size: 0.88rem;
+  color: var(--ink-soft);
+}
+
+.explorer .relations .rel-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.2rem 0.6rem;
+  margin-bottom: 0.25rem;
+}
+
+.explorer .relations .rel-head strong {
+  color: var(--ink);
+  font-size: 0.95rem;
+}
+
+.explorer .relations .rel-note {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.explorer .relations .rel-tree {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.explorer .relations .rel-tree li {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.1rem 0.9rem;
+  padding: 0.2rem 0 0.2rem 1.5rem;
+  line-height: 1.45;
+}
+
+/* Tree lines: a trunk down the left, a branch to each row, the trunk stopping at the last */
+.explorer .relations .rel-tree li::before {
+  content: "";
+  position: absolute;
+  left: 0.45rem;
+  top: 0;
+  bottom: 0;
+  border-left: 1px solid var(--axis);
+}
+
+.explorer .relations .rel-tree li:last-child::before {
+  bottom: calc(100% - 0.95rem);
+}
+
+.explorer .relations .rel-tree li::after {
+  content: "";
+  position: absolute;
+  left: 0.45rem;
+  top: 0.95rem;
+  width: 0.7rem;
+  border-top: 1px solid var(--axis);
+}
+
+.explorer .relations .rel-name {
+  min-width: 11rem;
+  color: var(--ink);
+  font-weight: 500;
+}
+
+.explorer .relations .rel-kind {
+  min-width: 6.5rem;
+}
+
+.explorer .relations .rel-amt {
+  min-width: 6.5rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.explorer .relations .rel-extra {
+  flex: 1 1 18rem;
+  color: var(--muted);
+}
+
+.explorer .relations .rel-more {
+  font: inherit;
+  color: var(--accent);
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.explorer .relations .rel-more:focus-visible {
+  outline: 2px dashed var(--accent);
+  outline-offset: 2px;
+}
+
+.explorer .entity p {
+  margin-bottom: 1rem;
+}
+
+/* Stat tiles */
+.explorer .tiles {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1.8rem;
+}
+
+/* Each tile takes three of the row's tracks, label, value, details, so the values and their pies line up
+   card to card however many lines a label wraps to (#182) */
+.explorer .tiles .tile {
+  display: grid;
+  grid-row: span 3;
+  grid-template-rows: subgrid;
+  row-gap: 0;
+  align-content: start;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 0.8rem 0.9rem;
+  transition: background-color 0.12s;
+}
+
+/* The tile under the pointer goes white, as the control panel is (#216) */
+.explorer .tiles .tile:hover,
+.explorer .cap-tiles .tile:hover {
+  background: #fff;
+}
+
+.explorer .tiles .tile-label {
+  font-size: 0.8rem;
+  color: var(--ink-soft);
+  line-height: 1.3;
+}
+
+.explorer .tiles .tile-value {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--ink);
+  margin: 0.2rem 0 0.15rem;
+}
+
+.explorer .tiles .tile-detail {
+  font-size: 0.8rem;
+  color: var(--muted);
+  line-height: 1.35;
+}
+
+/* A small pie of the share a tile names, sized to the value's line so the tile doesn't grow (#181).
+   One muted hue: the share 4.5:1 against the rest, 5.6:1 against the page; the ring outlines the whole */
+.explorer .tiles .tile-value.has-pie {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.explorer .tiles .tile-pie {
+  width: 1em;
+  height: 1em;
+  flex: none;
+}
+
+.explorer .tiles .tile-pie-rest {
+  fill: #dbe6e4;
+}
+
+.explorer .tiles .tile-pie-share {
+  fill: #3f6e73;
+}
+
+/* The comparison's pie, in gold beside the town's green */
+.explorer .tiles .tile-pie.is-cmp .tile-pie-rest {
+  fill: #f1e6c6;
+}
+
+.explorer .tiles .tile-pie.is-cmp .tile-pie-share {
+  fill: #a87b00;
+}
+
+.explorer .tiles .tile-pie.is-cmp .tile-pie-ring {
+  stroke: #a87b00;
+}
+
+/* The town's words, on the green of its pie */
+.explorer .tiles :is(.tile-figure.is-own, .tile-detail.is-own) {
+  width: fit-content;
+  padding: 0 0.3rem;
+  margin-left: -0.3rem;
+  border-radius: 4px;
+  background: #dbe6e4;
+}
+
+/* The comparison's words, on the gold of its pie */
+.explorer .tiles .tile-detail.is-cmp {
+  width: fit-content;
+  padding: 0 0.3rem;
+  margin-left: -0.3rem;
+  border-radius: 4px;
+  background: #f4e6bd;
+  color: var(--ink);
+}
+
+.explorer .tiles .tile-pies {
+  display: inline-flex;
+  gap: 0.3rem;
+}
+
+.explorer .tiles .tile-pie-ring {
+  fill: none;
+  stroke: #3f6e73;
+  stroke-width: 1;
+}
+
+/* Panels */
+.explorer .panels {
+  display: grid;
+  /* minmax(0, …) so a wide open table scrolls inside its box instead of
+     widening the column (and with it every chart) */
+  grid-template-columns: minmax(0, 1fr);
+  gap: 2rem;
+  transition: opacity 0.2s ease;
+}
+
+.explorer .panel {
+  position: relative;
+  margin: 0;
+  min-width: 0;
+}
+
+.explorer .panel h3 {
+  margin-bottom: 0.15rem;
+}
+
+.explorer .panel-sub {
+  font-size: 0.88rem;
+  margin-bottom: 0.5rem;
+}
+
+/* In place of a chart the entity has no data for */
+.explorer .panel-none {
+  font-size: 0.92rem;
+  padding: 0.8rem 1rem;
+  border: 1px dashed var(--line);
+  border-radius: 12px;
+  color: var(--ink-soft);
+}
+
+/* The trend's yearly rise, beside its legend entry */
+.explorer .legend .legend-detail {
+  margin-left: 0.1rem;
+  color: var(--ink);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* A size down from the charts' other text (0.82rem), so more of each legend fits on its first row. It clears
+   Collapse and Enlarge, which float at the panel's top right: with Detail off there's no subtitle between, and
+   a legend beside the float lost the buttons' width on every row (#186) */
+.explorer .legend {
+  clear: right;
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1rem;
+  font-size: 0.76rem;
+  color: var(--ink-soft);
+  margin-bottom: 0.4rem;
+}
+
+.explorer .legend li {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+/* A line's entry (its trend, or a comparison) can run long. Where one would drop to a new row, the explorer
+   starts it in the room left on this one (explorer.ts, fitLegend), and its name and figure flow as text there,
+   a word at a time, so a row runs the chart's full width before the next begins (#185) */
+.explorer .legend li:has(.legend-line) {
+  min-width: 0;
+}
+
+/* The chart's trend, then the comparison, each on a row of its own (#220) */
+.explorer .legend li.legend-row {
+  flex-basis: 100%;
+}
+
+.explorer .legend .legend-btn.legend-line {
+  display: block;
+  min-width: 0;
+  text-align: left;
+}
+
+.explorer .legend .legend-line .key {
+  margin-right: 0.4rem;
+  vertical-align: middle;
+}
+
+/* A trend's name stays on one line with its swatch, "-- Leverett trend" (#187) */
+.explorer .legend .legend-keep {
+  white-space: nowrap;
+}
+
+/* On a phone the figure may break once, between the amount and "a year", each half whole */
+.explorer .legend .legend-whole {
+  white-space: nowrap;
+}
+
+@media (max-width: 520px) {
+  .explorer .legend .legend-detail {
+    white-space: normal;
+  }
+}
+
+/* Stacked-chart legends are toggle buttons that isolate segments */
+.explorer .legend .legend-btn,
+.explorer .legend .legend-reset {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font: inherit;
+  color: var(--ink-soft);
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  padding: 0.15rem 0.55rem 0.15rem 0.45rem;
+  margin-left: -0.45rem;
+  cursor: pointer;
+  transition: background 0.12s ease, border-color 0.12s ease, opacity 0.12s ease;
+}
+
+.explorer .legend .legend-btn:hover {
+  border-color: var(--line);
+  background: rgba(255, 255, 255, 0.7);
+}
+
+.explorer .legend .legend-btn[aria-pressed="true"] {
+  color: var(--ink);
+  border-color: var(--ink-soft);
+  background: #fff;
+}
+
+.explorer .legend .legend-btn.is-off {
+  opacity: 0.5;
+}
+
+.explorer .legend .legend-btn:focus-visible,
+.explorer .legend .legend-reset:focus-visible {
+  outline: 2px dashed var(--accent);
+  outline-offset: 2px;
+}
+
+/* Line entries are on until clicked off; off, they fade and strike through */
+.explorer .legend .legend-btn.legend-line[aria-pressed="true"] {
+  color: var(--ink-soft);
+  border-color: transparent;
+  background: none;
+}
+
+.explorer .legend .legend-btn.legend-line:hover {
+  border-color: var(--line);
+  background: rgba(255, 255, 255, 0.7);
+}
+
+.explorer .legend .legend-line.is-off span:last-child {
+  text-decoration: line-through;
+}
+
+.explorer .legend .legend-reset {
+  color: var(--accent);
+  font-weight: 500;
+  margin-left: 0;
+}
+
+.explorer .legend .legend-reset:hover {
+  border-color: var(--line);
+}
+
+.explorer .panel .key {
+  flex: none;
+  display: inline-block;
+}
+
+.explorer .panel .key.rect {
+  width: 11px;
+  height: 11px;
+  border-radius: 3px;
+  background: var(--c);
+}
+
+.explorer .panel .key.line {
+  width: 16px;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--c);
+}
+
+.explorer .panel .key.dash {
+  width: 16px;
+  height: 2px;
+  background: repeating-linear-gradient(90deg, var(--c) 0 5px, transparent 5px 8px);
+}
+
+/* The comparison: its line, with the dot it carries at each year */
+.explorer .panel .key.linedot {
+  width: 16px;
+  height: 8px;
+  background: radial-gradient(circle, var(--c) 0 3px, transparent 3.5px) center / 8px 8px no-repeat,
+    linear-gradient(var(--c), var(--c)) center / 16px 2px no-repeat;
+}
+
+.explorer .panel .key.hatch {
+  width: 11px;
+  height: 11px;
+  border-radius: 3px;
+  background: repeating-linear-gradient(45deg, var(--c) 0 1px, transparent 1px 4px);
+  box-shadow: inset 0 0 0 1px var(--axis);
+}
+
+.explorer .panel .key.none {
+  width: 16px;
+}
+
+/* A chart's lines, in a legend of their own under it */
+.explorer .legend-below {
+  margin: 0.3rem 0 0.2rem;
+}
+
+/* The votes shown alone: the entry pressed, as a chosen category is */
+.explorer .legend .legend-btn.legend-line.is-alone {
+  color: var(--ink);
+  border-color: var(--ink-soft);
+  background: #fff;
+}
+
+/* The bond rating under the debt chart */
+.explorer .rating-box {
+  margin-top: 0.6rem;
+  border-top: 1px solid var(--grid);
+  padding-top: 0.5rem;
+}
+
+.explorer .rating-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem 0.8rem;
+  font-size: 0.82rem;
+  color: var(--ink-soft);
+}
+
+.explorer .rating-title {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.explorer .rating-legend {
+  margin: 0;
+}
+
+.explorer .rating-box svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+/* Actual vs. budget: the zero line where spending met the budget, and the comparison's dots ringed */
+.explorer .panel .gap-zero {
+  stroke: var(--ink-soft);
+  stroke-width: 1.2;
+}
+
+.explorer .panel .gap-dot {
+  stroke: var(--surface);
+  stroke-width: 1.5;
+}
+
+/* A Prop 2½ vote: the diamond its chart marks the year with */
+.explorer .panel .key.diamond {
+  width: 9px;
+  height: 9px;
+  margin: 0 3.5px;
+  background: var(--c);
+  transform: rotate(45deg);
+}
+
+/* The charts themselves (role img), not the icons in Collapse and Enlarge, which the scoped rules never reached */
+.explorer .panel svg[role="img"] {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+  font-family: "Karla", sans-serif;
+  touch-action: pan-y;
+}
+
+.explorer .panel svg[role="img"]:focus-visible {
+  outline: 2px dashed var(--accent);
+  outline-offset: 4px;
+  border-radius: 6px;
+}
+
+.explorer .panel .gridline {
+  stroke: var(--grid);
+  stroke-width: 1;
+}
+
+.explorer .panel .baseline {
+  stroke: var(--axis);
+  stroke-width: 1;
+}
+
+.explorer .panel .tick {
+  font-size: 12px;
+  fill: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.explorer .panel .cap,
+.explorer .panel .end-label {
+  font-size: 12px;
+  font-weight: 500;
+  fill: var(--ink-soft);
+  font-variant-numeric: tabular-nums;
+}
+
+/* A halo, so the latest value stays readable where a line passes behind it */
+.explorer .panel .cap {
+  paint-order: stroke;
+  stroke: var(--surface);
+  stroke-width: 4px;
+  stroke-linejoin: round;
+}
+
+.explorer .panel .band {
+  fill: var(--ink);
+  opacity: 0.045;
+}
+
+.explorer .panel .hit {
+  fill: transparent;
+  cursor: crosshair;
+  pointer-events: all;
+}
+
+.explorer .panel .col {
+  transition: opacity 0.12s ease;
+}
+
+.explorer .panel svg.has-hover .col:not(.is-hover) {
+  opacity: 0.55;
+}
+
+.explorer .panel svg .col.faded,
+.explorer .panel svg.has-hover .col.faded:not(.is-hover) {
+  opacity: 0.35;
+}
+
+.explorer .panel .hatch-bg {
+  fill: var(--surface);
+}
+
+.explorer .panel .hatch-line {
+  stroke: var(--ink-soft);
+  stroke-width: 1.5;
+}
+
+/* Trend: dashed, on a paper-colored halo that keeps it legible across the columns */
+.explorer .panel .trend-halo {
+  fill: none;
+  stroke: var(--surface);
+  stroke-width: 5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0.85;
+}
+
+.explorer .panel .trend-line {
+  fill: none;
+  stroke-width: 2.25;
+  stroke-dasharray: 7 5;
+  stroke-linecap: round;
+}
+
+/* The census estimates' bands, joining each group's columns */
+.explorer .panel .stack-area {
+  opacity: 0.16;
+}
+
+/* Prop 2½ votes: a stem to the year's amount with an open head, haloed against the columns it crosses, and a diamond
+   on the baseline */
+.explorer .panel .mark-halo {
+  stroke: var(--surface);
+  stroke-width: 4.5;
+  opacity: 0.85;
+}
+
+.explorer .panel .mark-stem {
+  stroke-width: 1.75;
+}
+
+.explorer .panel .mark-head {
+  fill: var(--surface);
+  stroke-width: 2;
+}
+
+.explorer .panel .mark-diamond {
+  stroke: var(--surface);
+  stroke-width: 1.5;
+}
+
+/* The older measure, beside the columns rather than in them */
+.explorer .panel .extra-line {
+  fill: none;
+  stroke-width: 2.25;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.explorer .panel .overlay-line,
+.explorer .panel .series-line {
+  fill: none;
+  stroke-width: 2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+/* With only the trends shown, each trend's name at its end, in its color */
+/* With only the trends shown, the years far apart (the census's estimates): a dot where each estimate is */
+.explorer .panel .trend-dot {
+  stroke: var(--surface);
+  stroke-width: 1.5;
+}
+
+.explorer .panel .trend-label {
+  font-size: 12px;
+  font-weight: 600;
+  paint-order: stroke;
+  stroke: var(--surface);
+  stroke-width: 4px;
+  stroke-linejoin: round;
+}
+
+/* The comparison: near-black, a little thicker than the rest */
+.explorer .panel .overlay-line,
+.explorer .panel [data-key="cmp"] > .series-line {
+  stroke-width: 2.75;
+}
+
+.explorer .panel .dot {
+  stroke: var(--surface);
+  stroke-width: 2;
+}
+
+.explorer .panel .crosshair {
+  stroke: var(--axis);
+  stroke-width: 1;
+}
+
+.explorer .panel .overlay,
+.explorer .panel .trend,
+.explorer .panel .lines {
+  pointer-events: none;
+}
+
+/* Tooltip: value first, label after, line keys */
+/* The hover cards (the charts', the map's, the plots'): white, as the control boxes are, so they stand apart */
+.explorer .tooltip {
+  position: absolute;
+  z-index: 3;
+  min-width: 13rem;
+  max-width: min(25rem, calc(100% - 8px));
+  padding: 0.6rem 0.75rem;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  box-shadow: 0 8px 22px var(--shadow);
+  pointer-events: none;
+  font-size: 0.82rem;
+}
+
+.explorer .tooltip .tip-title {
+  font-weight: 700;
+  color: var(--ink);
+  margin-bottom: 0.3rem;
+  overflow-wrap: anywhere;
+}
+
+.explorer .tooltip .tip-row {
+  display: grid;
+  grid-template-columns: 16px auto minmax(0, 1fr);
+  align-items: baseline;
+  gap: 0.5rem;
+  line-height: 1.5;
+}
+
+.explorer .tooltip .tip-value {
+  font-weight: 600;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  min-width: 4.6rem;
+}
+
+.explorer .tooltip .tip-label {
+  color: var(--ink-soft);
+  overflow-wrap: anywhere;
+}
+
+/* Keys sit beside the first line of a wrapped label */
+.explorer .tooltip .tip-row .key {
+  align-self: start;
+  margin-top: 0.55em;
+}
+
+.explorer .tooltip .tip-row.strong {
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 0.2rem;
+  margin-bottom: 0.2rem;
+}
+
+.explorer .tooltip .tip-note {
+  margin-top: 0.3rem;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+
+/* Table view */
+.explorer .table-view {
+  margin-top: 0.6rem;
+  font-size: 0.85rem;
+}
+
+.explorer .table-view summary {
+  cursor: pointer;
+  color: var(--accent);
+  font-weight: 500;
+  width: max-content;
+}
+
+/* Full data table: a button that opens the overlay */
+.explorer .table-open {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin-top: 0.35rem;
+  padding: 0;
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--accent);
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+
+.explorer .table-open:hover {
+  color: var(--accent-2);
+}
+
+.explorer .table-open:focus-visible {
+  outline: 2px dashed var(--accent);
+  outline-offset: 3px;
+}
+
+.explorer .table-open-icon {
+  font-size: 0.8rem;
+  line-height: 1;
+}
+
+/* Under a chart: Full data table, and the parts of About the data it draws on (#227) */
+.explorer .panel-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: 1.5rem;
+}
+
+.explorer .about-links {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.explorer .panel-foot .about-links {
+  margin-top: 0.35rem;
+}
+
+.explorer .about-links a {
+  color: var(--accent);
+  text-underline-offset: 2px;
+}
+
+.explorer .about-links a:hover {
+  color: var(--accent-2);
+}
+
+/* A chart, the map or the plots, arrived at from About the data: ringed for a moment */
+.explorer .is-arrived {
+  animation: arrived 2s ease-out;
+  border-radius: 6px;
+}
+
+.explorer .is-arrived:focus {
+  outline: none;
+}
+
+@keyframes arrived {
+  0%,
+  35% {
+    box-shadow: 0 0 0 3px var(--paper), 0 0 0 5px var(--accent);
+  }
+
+  100% {
+    box-shadow: 0 0 0 3px var(--paper), 0 0 0 5px transparent;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .explorer .is-arrived {
+    animation: none;
+    box-shadow: 0 0 0 3px var(--paper), 0 0 0 5px var(--accent);
+  }
+}
+
+/* Where a link from About the data lands: clear of the tabs and the controls' summary under them */
+.explorer :is(figure.panel, .map-section, #cw-plots) {
+  scroll-margin-top: calc(var(--tabs-h, 3rem) + 3.25rem);
+}
+
+/* The overlay sizes to the table, past the page's central column, up to the
+   viewport less a 16px margin; only very narrow screens still scroll */
+.explorer .table-dialog {
+  margin: auto;
+  width: fit-content;
+  max-width: calc(100vw - 32px);
+  max-height: calc(100vh - 32px);
+  padding: 0;
+  color: var(--ink);
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  box-shadow: 0 24px 60px rgba(31, 31, 28, 0.28);
+}
+
+.explorer .table-dialog[open] {
+  display: flex;
+  flex-direction: column;
+}
+
+.explorer .table-dialog::backdrop {
+  background: rgba(31, 31, 28, 0.4);
+}
+
+.explorer .dialog-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1.5rem;
+  padding: 1rem 1.1rem 0.7rem 1.25rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.explorer .dialog-head h3 {
+  margin: 0;
+  font-size: 1.05rem;
+  max-width: 60ch;
+}
+
+.explorer .dialog-close {
+  flex: none;
+  width: 2rem;
+  height: 2rem;
+  font: inherit;
+  font-size: 1.4rem;
+  line-height: 1;
+  color: var(--ink-soft);
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.explorer .dialog-close:hover {
+  border-color: var(--line);
+  color: var(--ink);
+}
+
+.explorer .dialog-close:focus-visible {
+  outline: 2px dashed var(--accent);
+  outline-offset: 2px;
+}
+
+.explorer .dialog-body.table-scroll {
+  margin: 0;
+  padding: 0 1.25rem 1rem;
+  overflow: auto;
+}
+
+.explorer .table-dialog .dialog-body table {
+  font-size: 0.82rem;
+}
+
+.explorer .table-dialog .dialog-body thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--paper);
+  min-width: 0;
+  padding-top: 0.7rem;
+  box-shadow: inset 0 -1px 0 var(--line);
+  hyphens: auto;
+  overflow-wrap: break-word;
+}
+
+.explorer .table-dialog .dialog-body th,
+.explorer .table-dialog .dialog-body td {
+  padding: 0.3rem 0.4rem;
+}
+
+/* Comparison table: the report's layout and amber/teal shading */
+.explorer .compare-view td.swatch-col,
+.explorer .compare-view th.swatch-col {
+  width: 1.4rem;
+  min-width: 0;
+  padding-right: 0;
+  text-align: center;
+}
+
+.explorer .compare-view thead th.label-col {
+  text-align: left;
+}
+
+.explorer .compare-view tr.total th,
+.explorer .compare-view tr.total td {
+  border-top: 1px solid var(--ink-soft);
+  font-weight: 600;
+}
+
+.explorer .compare-view tbody th {
+  white-space: normal;
+  min-width: 11rem;
+}
+
+.explorer .compare-view td[title] {
+  cursor: help;
+}
+
+/* The note spans the table's width: it adds nothing to the box's width
+   (width: 0) and stretches to fill it (min-width), but never past the
+   visible scroll area (100cqw), where it stays put as the table scrolls. */
+.explorer .compare-view .table-scroll {
+  container-type: inline-size;
+}
+
+.explorer .compare-view .compare-box {
+  display: inline-block;
+  vertical-align: top;
+}
+
+.explorer .compare-view .compare-legend {
+  margin-top: 0.6rem;
+  width: 0;
+  min-width: min(100%, 100cqw);
+  position: sticky;
+  left: 0;
+}
+
+.explorer .compare-view .compare-legend p {
+  font-size: 0.8rem;
+  color: var(--muted);
+  margin: 0.35rem 0 0;
+}
+
+/* Above and Below, at the table's right edge, under the columns they shade most */
+.explorer .compare-view .chips {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.3rem 1rem;
+  /* A little room at the right, where the scrolling table's edge would otherwise clip the last letter */
+  padding-right: 3px;
+  font-size: 0.82rem;
+  color: var(--ink-soft);
+}
+
+.explorer .compare-view .chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.explorer .compare-view .chip-box {
+  width: 1.6rem;
+  height: 0.9rem;
+  border-radius: 3px;
+  box-shadow: inset 0 0 0 1px rgba(31, 31, 28, 0.08);
+}
+
+.explorer .sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Every table's box scrolls sideways, the map's and the cap tab's too, so a wide table never scrolls the page on a
+   phone (#237) */
+.explorer .table-scroll {
+  overflow-x: auto;
+}
+
+/* The page's own tables: the charts' comparison and full data tables, the votes, the source files. The map and the
+   cap tab style the tables they build, which these never reached while scoped; :where() names the page's places
+   at no weight (#237) */
+.explorer :where(.panel, .table-dialog, .notes) .table-scroll {
+  margin-top: 0.5rem;
+}
+
+.explorer :where(.panel, .table-dialog, .notes) .table-scroll table {
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.explorer :where(.panel, .table-dialog, .notes) .table-scroll caption {
+  text-align: left;
+  color: var(--ink-soft);
+  padding-bottom: 0.4rem;
+}
+
+.explorer :where(.panel, .table-dialog, .notes) .table-scroll th,
+.explorer :where(.panel, .table-dialog, .notes) .table-scroll td {
+  padding: 0.25rem 0.6rem;
+  border-bottom: 1px solid var(--grid);
+  text-align: right;
+}
+
+.explorer :where(.panel, .table-dialog, .notes) .table-scroll thead th {
+  color: var(--ink-soft);
+  font-weight: 500;
+  vertical-align: bottom;
+  white-space: normal;
+  min-width: 5.5rem;
+}
+
+.explorer :where(.panel, .table-dialog, .notes) .table-scroll tbody th {
+  text-align: left;
+  font-weight: 500;
+}
+
+/* The levy chart's Proposition 2½ votes: purposes wrap; the result is said in words */
+.explorer .votes-view td,
+.explorer .votes-view thead th {
+  text-align: left;
+}
+
+.explorer .votes-view td.vote-what {
+  white-space: normal;
+  min-width: 14rem;
+}
+
+.explorer .votes-view td.vote-lost {
+  color: var(--ink-soft);
+}
+
+/* Asks once, after the first change, whether to remember choices; never blocks the page */
+.explorer .remember-prompt {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 20;
+  max-width: min(24rem, calc(100vw - 32px));
+  padding: 1rem 1.1rem;
+  font-size: 0.9rem;
+  color: var(--ink);
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow: 0 16px 40px rgba(31, 31, 28, 0.22);
+}
+
+.explorer .remember-prompt p {
+  margin: 0 0 0.4rem;
+}
+
+.explorer .remember-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.7rem;
+}
+
+.explorer .remember-actions button {
+  font: inherit;
+  padding: 0.45rem 0.95rem;
+  color: var(--ink);
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.explorer .remember-actions #remember-yes {
+  color: var(--paper);
+  background: var(--ink);
+  border-color: var(--ink);
+}
+
+.explorer .remember-actions button:focus-visible,
+.explorer .remember-note .link-button:focus-visible {
+  outline: 2px dashed var(--accent);
+  outline-offset: 2px;
+}
+
+.explorer .remember-note .link-button {
+  font: inherit;
+  padding: 0;
+  color: var(--accent);
+  background: none;
+  border: 0;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+/* The notes have the Data tab to themselves, so no rule above them */
+.explorer .notes {
+  margin-top: 1rem;
+}
+
+/* About the data: its contents in a column beside the notes, held under the tabs as the page scrolls, the
+   part in view marked (notes.ts, #216). --notes-jump is how far below the top of the screen a part lands
+   when its link is followed, clear of the tabs. */
+.explorer .notes-layout {
+  --notes-jump: calc(var(--tabs-h, 3rem) + 1rem);
+  display: grid;
+  grid-template-columns: 13rem minmax(0, 1fr);
+  gap: 2.25rem;
+  align-items: start;
+}
+
+.explorer .notes-body > :first-child {
+  margin-top: 0;
+}
+
+/* The notes' own paragraphs, not the Shown in lines notes.ts adds under them, which the scoped rule never reached */
+.explorer .notes-body > p:not(.notes-uses),
+.explorer .notes-body > p > strong,
+.explorer .notes-body > h3 {
+  scroll-margin-top: var(--notes-jump);
+}
+
+/* A block, not the site's flex nav */
+.explorer .notes-toc {
+  display: block;
+  position: sticky;
+  top: var(--notes-jump);
+  max-height: calc(100vh - var(--notes-jump) - 1rem);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  font-size: 0.84rem;
+  line-height: 1.3;
+}
+
+.explorer .notes-toc-toggle {
+  display: none;
+}
+
+.explorer .notes-toc ol {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border-left: 1px solid var(--line);
+}
+
+.explorer .notes-toc a {
+  display: block;
+  margin-left: -1px;
+  padding: 0.2rem 0 0.2rem 0.75rem;
+  border-left: 2px solid transparent;
+  color: var(--ink-soft);
+  font-weight: 400;
+  text-decoration: none;
+}
+
+.explorer .notes-toc li.is-sub a {
+  padding-left: 1.6rem;
+}
+
+.explorer .notes-toc a:hover {
+  color: var(--ink);
+  text-decoration: underline;
+}
+
+.explorer .notes-toc a[aria-current] {
+  color: var(--ink);
+  font-weight: 600;
+  border-left-color: var(--accent);
+}
+
+/* A narrow screen: the contents fold into a bar under the tabs, naming the part in view, that opens them */
+@media (max-width: 860px) {
+  .explorer .notes-layout {
+    --notes-jump: calc(var(--tabs-h, 3rem) + 3.4rem);
+    display: block;
+  }
+
+  .explorer .notes-toc {
+    top: var(--tabs-h, 3rem);
+    z-index: 20;
+    max-height: none;
+    overflow: visible;
+    margin: 0 0 1rem;
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+  }
+
+  .explorer .notes-toc-toggle {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    width: 100%;
+    min-height: 2.75rem;
+    padding: 0.6rem 0.85rem;
+    font: inherit;
+    text-align: left;
+    color: var(--ink);
+    background: none;
+    border: 0;
+    border-radius: 10px;
+    cursor: pointer;
+  }
+
+  .explorer .notes-toc-label {
+    font-weight: 700;
+  }
+
+  .explorer .notes-toc-label::after {
+    content: " ▾";
+    color: var(--ink-soft);
+  }
+
+  .explorer .notes-toc.is-open .notes-toc-label::after {
+    content: " ▴";
+  }
+
+  .explorer .notes-toc-current {
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    color: var(--ink-soft);
+  }
+
+  .explorer .notes-toc ol {
+    display: none;
+    max-height: min(60vh, 28rem);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    margin: 0 0.85rem 0.6rem;
+  }
+
+  .explorer .notes-toc.is-open ol {
+    display: block;
+  }
+
+  .explorer .notes-toc a {
+    padding-top: 0.45rem;
+    padding-bottom: 0.45rem;
+  }
+}
+
+/* "above" rings the comparison menu: it pulses in and out, then stays, until the reader goes back */
+.explorer .control select.beckon {
+  animation: beckon 1.4s ease-in-out 0.35s both;
+}
+
+@keyframes beckon {
+  0%, 36%, 72% {
+    box-shadow: 0 0 0 2px var(--paper), 0 0 0 4px rgba(182, 92, 61, 0);
+  }
+  18%, 54%, 100% {
+    box-shadow: 0 0 0 2px var(--paper), 0 0 0 4px var(--accent);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .explorer .control select.beckon {
+    animation: none;
+    box-shadow: 0 0 0 2px var(--paper), 0 0 0 4px var(--accent);
+  }
+}
+
+/* Under the comparison menu, back to the table that sent the reader up; out of the flow, so the
+   menu stays put */
+.explorer .control .go-back {
+  position: absolute;
+  top: calc(100% + 0.25rem);
+  left: 0;
+  white-space: nowrap;
+  font: inherit;
+  font-size: 0.82rem;
+  padding: 0;
+  color: var(--accent);
+  background: none;
+  border: 0;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.explorer .explorer-footer {
+  margin-top: 2.5rem;
+  border-top: 1px solid var(--line);
+  padding-top: 0.6rem;
+}
+
+.explorer .explorer-footer .remember-note {
+  font-size: 0.82rem;
+  color: var(--muted);
+  margin: 0;
+}
+
+.explorer .notes p {
+  font-size: 0.92rem;
+}
+
+.explorer .notes strong {
+  color: var(--ink);
+}
+
+/* A section within the one before it, set in a little, with its Shown in line (#228) */
+.explorer .notes .notes-sub {
+  margin-left: 1.25rem;
+}
+
+/* Under a paragraph: the charts, map measures and tabs that draw on it (#227) */
+.explorer .notes .notes-uses {
+  margin-top: -0.35rem;
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
+.explorer .notes .notes-uses-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.explorer .notes .notes-uses a {
+  color: var(--accent);
+  text-underline-offset: 2px;
+}
+
+.explorer .notes .notes-uses a:hover {
+  color: var(--accent-2);
+}
+
+.explorer .source-files-title {
+  margin: 1.6rem 0 0.4rem;
+  font-size: 1.1rem;
+}
+
+.explorer .source-files {
+  border-collapse: collapse;
+  font-size: 0.84rem;
+  margin: 0.4rem 0 1rem;
+  background: #fff;
+}
+
+/* Prose cells wrap, unlike the number tables' */
+.explorer .table-scroll .source-files {
+  width: 100%;
+  white-space: normal;
+}
+
+/* Through the table box, as the number tables' cell rules above are, so these outweigh them: top-aligned heads, not
+   bottom (#237) */
+.explorer .table-scroll .source-files th,
+.explorer .table-scroll .source-files td {
+  text-align: left;
+  vertical-align: top;
+  padding: 0.4rem 0.6rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.explorer .table-scroll .source-files thead th {
+  font-weight: 600;
+  color: var(--ink);
+  border-bottom: 2px solid var(--line);
+}
+
+.explorer .source-files .source-group th {
+  padding-top: 0.8rem;
+  font-weight: 600;
+  color: var(--accent);
+  border-bottom: 1px solid var(--line);
+}
+
+.explorer .source-files td:first-child {
+  white-space: nowrap;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.8rem;
+}
+
+.explorer .source-files .source-date {
+  white-space: nowrap;
+}
+
+.explorer .load-error {
+  color: var(--ink);
+}
+
+@media (max-width: 860px) {
+  .explorer .tiles {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 520px) {
+  .explorer .controls {
+    padding: 0.75rem;
+  }
+
+  /* Under the menu, which takes the width */
+  .explorer .cmp-name {
+    width: auto;
+    height: auto;
+  }
+
+  .explorer :where(.controls) .control,
+  .explorer :where(.controls) .control select,
+  .explorer .control .picker-button {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .explorer .control .picker-panel {
+    width: 100%;
+  }
+
+  .explorer .tiles .tile-value {
+    font-size: 1.3rem;
+  }
+
+}
+
+/* Commonwealth tab: a gallery of plots, each opening full screen */
+.explorer .cw-intro {
+  color: var(--ink-soft);
+  margin: 0.4rem 0 1.2rem;
+}
+
+/* The Commonwealth tab's map (map.ts) */
+.explorer .map-section {
+  position: relative;
+  padding-top: 1.4rem;
+  margin-bottom: 2.2rem;
+}
+
+.explorer .map-title,
+.explorer .cw-plots-title {
+  margin: 0 0 0.6rem;
+}
+
+.explorer .map-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem 1.4rem;
+  margin-bottom: 0.7rem;
+  padding: 0.55rem 0.9rem;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  font-size: 0.82rem;
+  color: var(--ink-soft);
+}
+
+/* Wraps where its buttons don't fit: Grades ran 40px past a 320px screen (#237) */
+.explorer .map-seg {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.explorer .map-seg-label,
+.explorer .map-measure > span {
+  font-weight: 500;
+  margin-right: 0.2rem;
+}
+
+.explorer .map-seg-btn {
+  font: inherit;
+  font-size: 0.82rem;
+  color: var(--ink);
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 0.2rem 0.7rem;
+  cursor: pointer;
+}
+
+.explorer .map-seg-btn[aria-pressed="true"] {
+  color: var(--paper);
+  background: var(--ink);
+  border-color: var(--ink);
+}
+
+/* The Dollars switch, idle for a measure that isn't growth in dollars */
+.explorer .map-seg.is-idle {
+  opacity: 0.45;
+}
+
+.explorer .map-seg-btn:disabled {
+  cursor: not-allowed;
+}
+
+/* The menu shrinks to the width there is: its longest measure would otherwise push a phone's page sideways */
+.explorer .map-measure {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.explorer .map-measure select {
+  min-width: 0;
+  max-width: 100%;
+  flex: 1 1 auto;
+}
+
+/* Narrow, the controls take the full width under Collapse and Enlarge rather than squeezing beside them */
+@media (max-width: 700px) {
+  .explorer .map-box > .map-controls {
+    clear: both;
+  }
+}
+
+/* The end of a row of the map's controls: the next control starts the next row */
+.explorer .map-controls-break {
+  flex-basis: 100%;
+  height: 0;
+  margin-top: -0.6rem;
+}
+
+/* The map's years, on a row of their own: two handles for a change, one and a Play button for a level,
+   as the explorer's own Years slider draws them (#184) */
+.explorer .map-years {
+  flex-basis: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.8rem;
+}
+
+.explorer .map-years-track {
+  --a: 0;
+  --b: 1;
+  position: relative;
+  flex: 1 1 14rem;
+  max-width: 32rem;
+  height: 16px;
+}
+
+.explorer .map-years-track::before,
+.explorer .map-years-fill {
+  content: "";
+  position: absolute;
+  top: 6px;
+  height: 4px;
+  border-radius: 2px;
+}
+
+.explorer .map-years-track::before {
+  left: 0;
+  right: 0;
+  background: var(--line);
+}
+
+.explorer .map-years-fill {
+  left: calc(8px + (100% - 16px) * var(--a));
+  right: calc(8px + (100% - 16px) * (1 - var(--b)));
+  background: var(--accent);
+}
+
+.explorer .map-years-track input[type="range"] {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 16px;
+  margin: 0;
+  background: none;
+  pointer-events: none;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.explorer .map-years-track input[type="range"]::-webkit-slider-runnable-track {
+  height: 16px;
+  background: none;
+}
+
+.explorer .map-years-track input[type="range"]::-moz-range-track {
+  background: none;
+}
+
+.explorer .map-years-track input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  pointer-events: auto;
+  width: 16px;
+  height: 16px;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+  cursor: pointer;
+}
+
+.explorer .map-years-track input[type="range"]::-moz-range-thumb {
+  pointer-events: auto;
+  width: 12px;
+  height: 12px;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+  cursor: pointer;
+}
+
+.explorer .map-years-track input[type="range"]:focus-visible {
+  outline: none;
+}
+
+.explorer .map-years-track input[type="range"]:focus-visible::-webkit-slider-thumb {
+  outline: 2px dashed var(--accent);
+  outline-offset: 2px;
+}
+
+.explorer .map-years-track input[type="range"]:focus-visible::-moz-range-thumb {
+  outline: 2px dashed var(--accent);
+  outline-offset: 2px;
+}
+
+/* The years at the track's ends: a span's first and last; for one year, the scale's first, muted, and the year */
+.explorer .map-years-out,
+.explorer .map-years-from {
+  font-weight: 600;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.explorer .map-years-from.is-scale {
+  font-weight: 400;
+  color: var(--muted);
+}
+
+.explorer .map-play {
+  font: inherit;
+  font-size: 0.82rem;
+  color: var(--ink);
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 0.2rem 0.75rem;
+  cursor: pointer;
+}
+
+.explorer .map-play[aria-pressed="true"] {
+  border-color: var(--ink);
+}
+
+.explorer .map-measure select {
+  font: inherit;
+  font-size: 0.85rem;
+  color: var(--ink);
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 0.3rem 0.5rem;
+}
+
+.explorer .map-about {
+  line-height: 1.6;
+  margin: 0.3rem 0 0.7rem;
+}
+
+/* The measure's name, a heading that folds its explanation away */
+.explorer .map-box {
+  position: relative;
+}
+
+.explorer .map-about-fold > summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  list-style: none;
+}
+
+.explorer .map-about-fold > summary::-webkit-details-marker {
+  display: none;
+}
+
+.explorer .map-about-fold > summary::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border: solid var(--ink-soft);
+  border-width: 0 1.5px 1.5px 0;
+  transform: rotate(-45deg);
+  transition: transform 0.12s ease;
+}
+
+.explorer .map-about-fold[open] > summary::before {
+  transform: rotate(45deg);
+}
+
+.explorer .map-measure-title {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.explorer .map-about-fold:not([open]) {
+  margin-bottom: 0.6rem;
+}
+
+.explorer .is-enlarged .map-about-fold {
+  margin-bottom: 0.5rem;
+}
+
+.explorer .map-figure {
+  position: relative;
+  margin: 0;
+}
+
+.explorer .map-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem 1rem;
+  list-style: none;
+  padding: 0;
+  margin: 0 0 0.5rem;
+  font-size: 0.78rem;
+  color: var(--ink-soft);
+}
+
+.explorer .map-legend li {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+/* Groups within regions: a line for each region, a hairline between, spaced as wrapped lines are (the entries
+   carry the space the row gap would) */
+.explorer .map-legend.by-region {
+  row-gap: 0;
+}
+
+.explorer .map-legend.by-region li {
+  padding-top: 0.15rem;
+  padding-bottom: 0.15rem;
+}
+
+/* Each region's name, once, at the start of its line, wide enough that the sizes after it start together */
+.explorer .map-legend-region {
+  min-width: 6.5rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.explorer .map-legend.by-region .map-legend-break {
+  flex-basis: 100%;
+  height: 0;
+  padding: 0;
+  border-top: 1px solid var(--grid);
+}
+
+.explorer .map-swatch {
+  width: 0.95rem;
+  height: 0.95rem;
+  border-radius: 3px;
+  box-shadow: inset 0 0 0 1px rgba(31, 31, 28, 0.12);
+}
+
+.explorer .map-swatch.nodata {
+  background: repeating-linear-gradient(45deg, #f4f1e8 0 3px, #bdb7aa 3px 5px);
+}
+
+.explorer .map-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.explorer .map-town {
+  stroke: #fff;
+  stroke-width: 1.2;
+  stroke-linejoin: round;
+  fill-rule: evenodd;
+  cursor: pointer;
+}
+
+.explorer .map-svg g:last-of-type .map-town {
+  stroke: var(--ink);
+  stroke-width: 2.4;
+}
+
+/* Pointing to a group, or to the towns without one: the rest fade */
+.explorer .map-shapes .map-town {
+  transition: opacity 0.12s ease;
+}
+
+.explorer .map-svg.is-pointing .map-shapes .map-town {
+  opacity: 0.55;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .explorer .map-shapes .map-town {
+    transition: none;
+  }
+}
+
+/* A group's region on hover: its outside edge in red (the line's inner half is masked off) */
+.explorer .map-ring {
+  pointer-events: none;
+}
+
+.explorer .map-ring path {
+  fill: none;
+  stroke-width: 6;
+  stroke-linejoin: round;
+}
+
+/* The groups' key: each entry points out its group on the map, and lights when the map points to it */
+.explorer .map-group-key {
+  border-radius: 6px;
+  padding: 0.05rem 0.35rem;
+  margin-left: -0.35rem;
+}
+
+.explorer .map-group-key:focus-visible {
+  outline: 2px dashed var(--accent);
+  outline-offset: 1px;
+}
+
+.explorer .map-group-key.is-lit {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.explorer .map-tip-region {
+  color: #b8392b;
+}
+
+.explorer .map-tip {
+  position: absolute;
+  z-index: 5;
+  min-width: 11rem;
+  max-width: 18rem;
+  padding: 0.5rem 0.65rem;
+  font-size: 0.8rem;
+  line-height: 1.45;
+  color: var(--ink);
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: 0 6px 18px var(--shadow);
+  pointer-events: none;
+}
+
+/* Grouped, the groups' figures in the room the state leaves under its western half (map.ts drawGroupTable, #217);
+   a row, or a cell, lights with its group on the map, as the key's entries do */
+.explorer .map-stage {
+  position: relative;
+}
+
+.explorer .map-gtable {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  max-width: 56%;
+  max-height: 46%;
+  overflow: auto;
+  padding: 0.45rem 0.6rem 0.5rem;
+  font-size: 0.78rem;
+  line-height: 1.3;
+  color: var(--ink);
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+
+.explorer .map-gtable table {
+  border-collapse: collapse;
+}
+
+.explorer .map-gtable caption {
+  caption-side: top;
+  text-align: left;
+  font-weight: 700;
+  padding-bottom: 0.3rem;
+}
+
+.explorer .map-gtable th,
+.explorer .map-gtable td {
+  text-align: left;
+  padding: 0.18rem 0.5rem;
+  border-bottom: 1px solid var(--grid);
+  white-space: nowrap;
+}
+
+.explorer .map-gtable thead th {
+  font-weight: 600;
+  color: var(--ink-soft);
+  vertical-align: bottom;
+}
+
+.explorer .map-gtable.map-gtable tbody th {
+  font-weight: 400;
+}
+
+.explorer .map-gtable .num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.explorer .map-gtable td.num > * {
+  vertical-align: middle;
+}
+
+.explorer .map-gtable td .map-swatch {
+  display: inline-block;
+  width: 0.7rem;
+  height: 0.7rem;
+  margin-right: 0.35rem;
+}
+
+/* Within regions, the column heads are sizes, which wrap */
+.explorer .map-gtable .is-grid thead th {
+  white-space: normal;
+  min-width: 3.2rem;
+}
+
+.explorer .map-gtable .is-statewide {
+  color: var(--muted);
+}
+
+.explorer .map-gtable [data-group] {
+  cursor: default;
+}
+
+.explorer .map-gtable [data-group]:focus-visible {
+  outline: 2px dashed var(--accent);
+  outline-offset: -2px;
+}
+
+.explorer .map-gtable .is-lit,
+.explorer .map-gtable .is-lit th {
+  color: var(--paper);
+  background: var(--ink);
+}
+
+.explorer .map-gtable-note {
+  margin: 0.35rem 0 0;
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+
+/* No room beside the state on a narrow screen: under the map */
+@media (max-width: 760px) {
+  .explorer .map-gtable {
+    position: static;
+    max-width: none;
+    max-height: none;
+    margin-top: 0.5rem;
+  }
+}
+
+.explorer .map-table {
+  margin-top: 0.6rem;
+  font-size: 0.85rem;
+}
+
+.explorer .map-table summary {
+  color: var(--accent);
+  cursor: pointer;
+}
+
+.explorer .map-table table {
+  border-collapse: collapse;
+  margin-top: 0.4rem;
+}
+
+.explorer .map-table th,
+.explorer .map-table td {
+  text-align: left;
+  padding: 0.2rem 0.8rem 0.2rem 0;
+  border-bottom: 1px solid var(--grid);
+}
+
+.explorer .map-table .num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.explorer .map-source {
+  margin: 0.5rem 0 0;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.explorer .cw-gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 210px), 1fr));
+  gap: 1rem;
+}
+
+.explorer .cw-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 0.8rem;
+  cursor: pointer;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+.explorer .cw-card:hover,
+.explorer .cw-card:focus-visible {
+  border-color: var(--accent);
+  box-shadow: 0 6px 18px var(--shadow);
+  transform: translateY(-1px);
+}
+
+.explorer .cw-thumb {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 320 / 190;
+  background: #fbf8f1;
+  border-radius: 8px;
+}
+
+.explorer .cw-card-title {
+  font-weight: 700;
+  font-size: 1.02rem;
+}
+
+.explorer .cw-card-blurb {
+  font-size: 0.86rem;
+  color: var(--ink-soft);
+  line-height: 1.4;
+}
+
+.explorer .cw-card-axes {
+  font-size: 0.75rem;
+  color: var(--muted);
+  margin-top: auto;
+  padding-top: 0.2rem;
+}
+
+.explorer .sc-grid line {
+  stroke: var(--grid);
+}
+
+.explorer .sc-tick {
+  font-size: 11px;
+  fill: var(--muted);
+}
+
+/* A reference line's value on the axis, such as the cap's 82.5% */
+.explorer .sc-ref-label {
+  font-size: 12px;
+  font-weight: 700;
+  fill: #c2541f;
+}
+
+/* Axis titles name the measures: the first place a reader looks (scatter.ts TITLE_PX) */
+.explorer .sc-title {
+  font-size: 15px;
+  font-weight: 700;
+  fill: var(--ink);
+}
+
+.explorer .sc-pt {
+  stroke: #fff;
+  stroke-width: 0.6;
+}
+
+.explorer .sc-smooth {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 2;
+}
+
+.explorer .sc-smooth.mini {
+  stroke-width: 1.5;
+}
+
+/* Groups picked out from the legend: the rest fade, the statewide trend steps back, and each group's own trend
+   runs in its color over a ring of the surface (#233) */
+.explorer .sc-pt.is-faded {
+  opacity: 0.16;
+}
+
+.explorer .sc-smooth.all {
+  stroke: var(--ink-soft);
+  stroke-dasharray: 5 3;
+  stroke-width: 1.5;
+}
+
+.explorer .sc-smooth-halo {
+  fill: none;
+  stroke: #fff;
+  stroke-width: 5;
+  stroke-linecap: round;
+}
+
+.explorer .sc-smooth-group {
+  fill: none;
+  stroke-width: 2.5;
+  stroke-linecap: round;
+}
+
+.explorer .sc-label {
+  font-size: 11.5px;
+  font-weight: 700;
+  fill: #8a3f22;
+  paint-order: stroke;
+  stroke: #fff;
+  stroke-width: 3px;
+}
+
+.explorer .sc-leader {
+  stroke: #8a3f22;
+  stroke-width: 0.8;
+}
+
+.explorer .sc-ring {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 1.5;
+  pointer-events: none;
+}
+
+.explorer .cw-dialog {
+  width: 90vw;
+  max-width: none;
+  height: 94vh;
+  max-height: none;
+  margin: auto;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--paper);
+  color: var(--ink);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
+}
+
+.explorer .cw-dialog[open] {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.explorer .cw-dialog::backdrop {
+  background: rgba(31, 31, 28, 0.45);
+}
+
+.explorer .cw-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.9rem 1.2rem 0.4rem;
+}
+
+.explorer .cw-title {
+  font-size: 1.35rem;
+  margin: 0;
+}
+
+.explorer .cw-close {
+  font-size: 1.6rem;
+  line-height: 1;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  color: var(--ink-soft);
+  padding: 0.2rem 0.5rem;
+}
+
+.explorer .cw-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem 1rem;
+  align-items: end;
+  padding: 0 1.2rem 0.8rem;
+}
+
+.explorer .cw-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.explorer .cw-field select,
+.explorer .cw-field input {
+  font: inherit;
+  font-size: 0.88rem;
+  color: var(--ink);
+  padding: 0.35rem 0.5rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  max-width: min(30rem, 100%);
+}
+
+.explorer .cw-check {
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+  font-size: 0.84rem;
+  color: var(--ink-soft);
+  padding-bottom: 0.4rem;
+}
+
+.explorer .cw-body {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  padding: 0.6rem 1.2rem 0.8rem;
+  overflow: hidden;
+}
+
+.explorer .cw-figure {
+  position: relative;
+  margin: 0;
+  min-width: 0;
+}
+
+.explorer .cw-head-tools {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.explorer .cw-drawer-toggle {
+  font: inherit;
+  font-size: 0.85rem;
+  color: var(--ink);
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 0.3rem 0.8rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.explorer .cw-drawer-toggle[aria-expanded="true"] {
+  border-color: var(--accent);
+  background: #fbf1ec;
+}
+
+.explorer .cw-settings {
+  border-bottom: 1px solid var(--line);
+}
+
+.explorer .cw-settings > summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0 1.2rem 0.5rem;
+  font-size: 0.85rem;
+  color: var(--muted);
+  cursor: pointer;
+  list-style: none;
+}
+
+.explorer .cw-settings > summary::-webkit-details-marker {
+  display: none;
+}
+
+.explorer .cw-settings > summary::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border: solid currentColor;
+  border-width: 0 1.5px 1.5px 0;
+  transform: rotate(-45deg);
+  transition: transform 0.12s ease;
+}
+
+.explorer .cw-settings[open] > summary::before {
+  transform: rotate(45deg);
+}
+
+.explorer .cw-finding-row {
+  display: flex;
+  align-items: baseline;
+  gap: 0.8rem;
+  margin-top: 0.3rem;
+}
+
+.explorer .cw-finding {
+  flex: 1;
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+/* The horizontal picker beside the chart, while the settings are open */
+/* The chart, the picker's edge (a handle to drag), and the picker at its chosen width */
+.explorer .cw-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 14px var(--picker-w, 330px);
+  column-gap: 0.6rem;
+}
+
+.explorer .cw-body.picker-closed {
+  grid-template-columns: minmax(0, 1fr) 14px 0;
+}
+
+.explorer .cw-picker-handle {
+  position: relative;
+  align-self: stretch;
+  width: 14px;
+  padding: 0;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  cursor: col-resize;
+  touch-action: none;
+}
+
+/* A grip: two short bars, and a chevron when the list is shut */
+.explorer .cw-picker-handle::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 4px;
+  height: 36px;
+  transform: translate(-50%, -50%);
+  border-left: 1.5px solid var(--axis);
+  border-right: 1.5px solid var(--axis);
+}
+
+.explorer .cw-body.picker-closed .cw-picker-handle {
+  cursor: pointer;
+  background: #f3eee3;
+}
+
+.explorer .cw-body.picker-closed .cw-picker-handle::before {
+  width: 7px;
+  height: 7px;
+  border: solid var(--ink-soft);
+  border-width: 0 0 1.5px 1.5px;
+  transform: translate(-30%, -50%) rotate(45deg);
+}
+
+.explorer .cw-picker-handle:hover,
+.explorer .cw-picker-handle:focus-visible {
+  background: #efe7d8;
+}
+
+.explorer .cw-picker {
+  min-height: 0;
+  min-width: 0;
+  overflow-y: auto;
+  border-left: 1px solid var(--line);
+  padding-left: 1rem;
+}
+
+.explorer .cw-picker h3 {
+  font-size: 1rem;
+  margin: 0 0 0.2rem;
+}
+
+.explorer .cw-picker-sub {
+  font-size: 0.74rem;
+  line-height: 1.4;
+  color: var(--muted);
+  margin: 0 0 0.5rem;
+}
+
+/* The Vertical label reads as a heading, like the Horizontal list's */
+.explorer .cw-field-axis > span {
+  font-family: "Besley", serif;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+/* Cautions: the pitfalls a pair falls into, under the finding */
+.explorer .cw-cautions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.45rem;
+  margin-top: 0.35rem;
+  font-size: 0.8rem;
+}
+
+.explorer .cw-cautions-lead {
+  color: var(--ink-soft);
+}
+
+.explorer .cw-caution {
+  font: inherit;
+  font-size: 0.78rem;
+  color: #8a3f22;
+  background: #fbf1ec;
+  border: 1px solid #ecc8b8;
+  border-radius: 999px;
+  padding: 0.12rem 0.6rem;
+  cursor: pointer;
+}
+
+.explorer .cw-caution::before {
+  content: "⚠ ";
+}
+
+.explorer .cw-caution.quiet {
+  color: var(--ink-soft);
+  background: #fff;
+  border-color: var(--line);
+}
+
+.explorer .cw-caution.quiet::before {
+  content: "";
+}
+
+/* A pair that counts the same thing: marked and set back in the Horizontal list */
+.explorer .cw-bar.is-built {
+  color: var(--muted);
+}
+
+.explorer .cw-built {
+  color: #8a3f22;
+}
+
+.explorer .cw-bar:disabled {
+  cursor: default;
+  color: var(--muted);
+}
+
+
+
+
+.explorer .cw-sub {
+  width: min(760px, 94vw);
+  max-width: none;
+  max-height: 86vh;
+  margin: auto;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--paper);
+  color: var(--ink);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+.explorer .cw-sub[open] {
+  display: flex;
+  flex-direction: column;
+}
+
+.explorer .cw-sub::backdrop {
+  background: rgba(31, 31, 28, 0.35);
+}
+
+.explorer .cw-sub-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0 1.2rem 1.2rem;
+}
+
+.explorer .cw-sub-body .cap-steps-table {
+  margin: 0.2rem 0 0.9rem;
+  font-size: 0.84rem;
+}
+
+.explorer .cw-sub-body .cap-steps-table th,
+.explorer .cw-sub-body .cap-steps-table td {
+  padding: 0.22rem 0.6rem;
+}
+
+.explorer .cw-sub-body h4 {
+  font-size: 0.95rem;
+  margin: 1rem 0 0.3rem;
+}
+
+.explorer .cw-sub-body h4:first-child {
+  margin-top: 0.2rem;
+}
+
+.explorer .cw-sub-body p {
+  font-size: 0.9rem;
+  line-height: 1.55;
+  color: var(--ink-soft);
+  margin: 0 0 0.6rem;
+}
+
+.explorer .cw-sub-note {
+  font-size: 0.85rem;
+  color: var(--muted);
+  margin: 0 0 0.6rem;
+}
+
+
+
+
+.explorer .cw-bars-key {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 0.5rem;
+  display: grid;
+  gap: 0.15rem;
+  font-size: 0.72rem;
+  line-height: 1.3;
+  color: var(--ink-soft);
+}
+
+.explorer .cw-bars-key li {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.explorer .cw-bars-swatch {
+  flex: none;
+  width: 12px;
+  height: 6px;
+  border-radius: 3px;
+  background: #2a78d6;
+}
+
+.explorer .cw-bars-swatch.neg {
+  background: #eb6834;
+}
+
+.explorer .cw-help {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  width: 1.05rem;
+  height: 1.05rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--ink-soft);
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: #fff;
+  cursor: help;
+}
+
+.explorer .cw-help:hover::after,
+.explorer .cw-help:focus::after {
+  content: attr(data-tip);
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 50%;
+  /* --tip-dx keeps it inside the window (explorer.ts, placeTip) */
+  transform: translateX(calc(-50% + var(--tip-dx, 0px)));
+  z-index: 5;
+  width: 16rem;
+  padding: 0.5rem 0.65rem;
+  font-size: 0.8rem;
+  font-weight: 400;
+  line-height: 1.4;
+  color: var(--ink);
+  text-align: left;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: 0 6px 18px var(--shadow);
+  white-space: normal;
+}
+
+/* Measure names stand out wherever text describes them */
+.explorer .cw-var {
+  font-weight: 700;
+  color: var(--ink);
+}
+
+/* In an enlarged chart's window, a note with no room below opens above its "?" (explorer.ts, placeTip) */
+.explorer .cw-help.tip-above:hover::after,
+.explorer .cw-help.tip-above:focus::after {
+  top: auto;
+  bottom: calc(100% + 6px);
+}
+
+/* A longer note: wider, anchored at the "?", paragraphs kept */
+.explorer .cw-help.wide:hover::after,
+.explorer .cw-help.wide:focus::after {
+  left: 0;
+  transform: translateX(var(--tip-dx, 0px));
+  width: min(28rem, 80vw);
+  white-space: pre-line;
+}
+
+.explorer .cw-chart {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* A legend entry hovered or focused: its marks in the chart stay, the rest fade (explorer.ts, spotlight) */
+.explorer svg [data-key] {
+  transition: opacity 0.12s ease;
+}
+
+.explorer svg.is-spotlit [data-key]:not(.is-lit) {
+  opacity: 0.15;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .explorer svg [data-key] {
+    transition: none;
+  }
+}
+
+/* Collapse and Enlarge: a pair at each chart's top right, and the window Enlarge opens (enlarge.ts) */
+.explorer .enlarge-tools {
+  float: right;
+  display: inline-flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 0.3rem 0.4rem;
+  margin: 0.15rem 0 0.3rem 0.8rem;
+}
+
+.explorer .enlarge-open,
+.explorer .collapse-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.2rem 0.6rem;
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--ink-soft);
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+/* Comps and Trends only, chart by chart, together first in the row, the same place on every chart */
+.explorer .chart-dials {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Each in the Detail dial's look (explorer.ts borrows its styles), smaller */
+.explorer .chart-dial {
+  margin: 0 0.15rem 0 0;
+  padding: 0 0.2rem;
+  gap: 0.35rem;
+  font-size: 0.8rem;
+}
+
+.explorer .chart-dial .dial-face {
+  width: 20px;
+  height: 20px;
+}
+
+.explorer .chart-dial .dial-pointer {
+  top: 1px;
+  width: 2.5px;
+  height: 7px;
+}
+
+.explorer .chart-dial[aria-disabled="true"] {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.explorer .chart-dial[aria-disabled="true"]:hover {
+  color: var(--ink-soft);
+}
+
+/* On a phone the three take a row of their own, above the heading, and fit it */
+@media (max-width: 520px) {
+  .explorer .enlarge-tools {
+    float: none;
+    display: flex;
+    margin: 0 0 0.35rem;
+  }
+
+  .explorer .enlarge-open,
+  .explorer .collapse-toggle {
+    padding: 0.2rem 0.45rem;
+  }
+
+  /* The dials a row of their own, over Collapse and Enlarge */
+  .explorer .chart-dials {
+    flex: 1 0 100%;
+    justify-content: flex-end;
+  }
+}
+
+.explorer .enlarge-open svg,
+.explorer .collapse-toggle svg {
+  width: 0.85rem;
+  height: 0.85rem;
+}
+
+/* Folded: the heading and the pair stay; everything else in the chart's box goes, and Enlarge with it,
+   since there's nothing to enlarge. In the window, there's nothing to fold. */
+.explorer .is-collapsed {
+  display: flow-root;
+}
+
+.explorer .is-collapsed > :not(h2, h3, h4, .enlarge-tools),
+.explorer .is-collapsed .enlarge-open,
+.explorer .is-collapsed .chart-dials,
+.explorer .is-enlarged .collapse-toggle {
+  display: none !important;
+}
+
+/* Nothing to enlarge, or to show the trends of, where a note stands in for the chart */
+.explorer figure.panel:has(> .panel-none:not([hidden])) :is(.enlarge-open, .chart-dials) {
+  display: none;
+}
+
+.explorer .enlarge-open:hover,
+.explorer .enlarge-open:focus-visible,
+.explorer .collapse-toggle:hover,
+.explorer .collapse-toggle:focus-visible {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.explorer .is-enlarged .enlarge-open {
+  display: none;
+}
+
+.explorer .enlarge-dialog {
+  width: min(1500px, 96vw);
+  max-width: none;
+  max-height: 94vh;
+  margin: auto;
+  padding: 0;
+  color: var(--ink);
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  overflow: hidden;
+}
+
+.explorer .enlarge-dialog::backdrop {
+  background: rgba(31, 31, 28, 0.35);
+}
+
+.explorer .enlarge-dialog[open] {
+  display: flex;
+  flex-direction: column;
+}
+
+.explorer .enlarge-body {
+  box-sizing: border-box;
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: 1.3rem 1.8rem 1.4rem;
+  overflow: auto;
+}
+
+/* The tab's controls, brought along across the top of the window, in their docked form */
+.explorer .enlarge-controls {
+  flex: none;
+  padding: 0.45rem 3.2rem 0.45rem 1.8rem;
+  background: #fff;
+  border-bottom: 1px solid var(--line);
+}
+
+.explorer .enlarge-controls .controls {
+  padding: 0;
+}
+
+.explorer .enlarge-controls .cap-scen-row {
+  position: static;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  box-shadow: none;
+  background: none;
+}
+
+.explorer .enlarge-body > .is-enlarged {
+  margin: 0 auto;
+}
+
+/* Enlarged, text runs a little wider, leaving the chart more of the height */
+.explorer .enlarge-close {
+  position: absolute;
+  top: 0.45rem;
+  right: 0.6rem;
+  z-index: 2;
+  width: 2rem;
+  height: 2rem;
+  font: inherit;
+  font-size: 1.4rem;
+  line-height: 1;
+  color: var(--ink-soft);
+  background: none;
+  border: 0;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.explorer .enlarge-close:hover,
+.explorer .enlarge-close:focus-visible {
+  color: var(--accent);
+}
+
+.explorer .cw-legend {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 0.4rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem 1rem;
+  font-size: 0.82rem;
+  color: var(--ink-soft);
+}
+
+.explorer .cw-legend li {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.explorer .cw-key {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  background: var(--c);
+}
+
+.explorer .cw-key.circle {
+  border-radius: 50%;
+}
+
+.explorer .cw-key.triangle {
+  width: 12px;
+  clip-path: polygon(50% 0, 100% 100%, 0 100%);
+}
+
+.explorer .cw-key.smooth {
+  width: 18px;
+  height: 2px;
+  background: var(--c, var(--ink));
+}
+
+/* The statewide trend, under the picked groups' own */
+.explorer .cw-key.smooth.all {
+  background: repeating-linear-gradient(90deg, var(--ink-soft) 0 5px, transparent 5px 8px);
+}
+
+/* A highlight's groups, each a toggle that picks it out (#233) */
+.explorer .cw-key-btn {
+  font: inherit;
+  color: inherit;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.1rem 0.5rem;
+  margin: 0 -0.5rem;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.explorer .cw-key-btn:hover:not(:disabled) {
+  border-color: var(--line);
+  background: #fff;
+}
+
+.explorer .cw-key-btn.is-on {
+  color: var(--ink);
+  border-color: var(--line);
+  background: #fff;
+  margin: 0;
+}
+
+.explorer .cw-key-btn:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
+.explorer .cw-key-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.explorer .cw-legend.has-focus .cw-key-btn:not(.is-on) {
+  opacity: 0.6;
+}
+
+.explorer .cw-key-rho {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.explorer .cw-legend-note {
+  color: var(--muted);
+  font-style: italic;
+}
+
+.explorer .cw-legend-clear {
+  font: inherit;
+  color: var(--accent);
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.explorer .cw-caption {
+  font-size: 0.8rem;
+  color: var(--muted);
+  margin-top: 0.4rem;
+  line-height: 1.45;
+}
+
+.explorer .cw-tip {
+  position: absolute;
+  z-index: 2;
+  pointer-events: none;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 0.45rem 0.6rem;
+  font-size: 0.82rem;
+  line-height: 1.4;
+  box-shadow: 0 6px 18px var(--shadow);
+  max-width: 18rem;
+  overflow-wrap: anywhere;
+}
+
+.explorer .cw-tip-towns,
+.explorer .cw-tip-hint {
+  color: var(--muted);
+  font-size: 0.76rem;
+  margin-top: 0.2rem;
+}
+
+.explorer .cw-table {
+  font-size: 0.84rem;
+}
+
+.explorer .cw-table table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+.explorer .cw-table th,
+.explorer .cw-table td {
+  text-align: left;
+  padding: 0.2rem 0.5rem;
+  border-bottom: 1px solid var(--grid);
+}
+
+.explorer .cw-table td {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+
+
+
+.explorer .cw-bars {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 0.05rem;
+}
+
+.explorer .cw-bar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 64px 2.6rem;
+  align-items: center;
+  gap: 0.45rem;
+  width: 100%;
+  font: inherit;
+  font-size: 0.76rem;
+  line-height: 1.25;
+  text-align: left;
+  color: var(--ink);
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  padding: 0.14rem 0.3rem;
+  cursor: pointer;
+}
+
+.explorer .cw-bar-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.explorer .cw-bar:hover {
+  background: #f3eee3;
+}
+
+.explorer .cw-bar.is-current {
+  border-color: var(--accent);
+  background: #fbf1ec;
+}
+
+.explorer .cw-bar-track {
+  position: relative;
+  height: 6px;
+  background: #efe9dd;
+  border-radius: 4px;
+}
+
+.explorer .cw-bar-track::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: -2px;
+  bottom: -2px;
+  width: 1px;
+  background: var(--axis);
+}
+
+.explorer .cw-bar-fill {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  background: #2a78d6;
+  border-radius: 0 4px 4px 0;
+}
+
+.explorer .cw-bar-fill.neg {
+  left: auto;
+  right: 50%;
+  background: #eb6834;
+  border-radius: 4px 0 0 4px;
+}
+
+.explorer .cw-bar-value {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+
+@media (max-width: 900px) {
+  .explorer .cw-body {
+    padding: 0.5rem 0.8rem 0.6rem;
+  }
+
+  .explorer .cw-finding-row {
+    flex-wrap: wrap;
+    gap: 0.3rem;
+  }
+
+  .explorer .cw-body,
+  .explorer .cw-body.picker-closed {
+    grid-template-columns: minmax(0, 1fr);
+    overflow-y: auto;
+  }
+
+  .explorer .cw-picker-handle {
+    display: none;
+  }
+
+  .explorer .cw-picker {
+    overflow: visible;
+    border-left: 0;
+    border-top: 1px solid var(--line);
+    padding: 0.8rem 0 0;
+  }
+
+  .explorer .cw-controls {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    padding: 0.3rem 1rem 0.7rem;
+  }
+
+  .explorer .cw-controls > :nth-child(-n + 2),
+  .explorer .cw-controls .cw-check,
+  .explorer .cw-controls .cw-find {
+    grid-column: 1 / -1;
+  }
+
+  .explorer .cw-field select,
+  .explorer .cw-field input {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .explorer .cw-check {
+    padding-bottom: 0;
+  }
+
+  .explorer .cw-dialog {
+    width: 100vw;
+    height: 100dvh;
+    border-radius: 0;
+  }
+}
+
+/* The 82.5% cap tab */
+.explorer .cap-title {
+  font-size: 1.6rem;
+  margin: 0.4rem 0 0.6rem;
+}
+
+.explorer .cap-lede,
+.explorer .cap-method {
+  line-height: 1.6;
+}
+
+.explorer .cap-method {
+  font-size: 0.9rem;
+  color: var(--ink-soft);
+}
+
+.explorer .cap-questions ul {
+  padding-left: 1.2rem;
+  line-height: 1.55;
+}
+
+.explorer .cap-questions li + li {
+  margin-top: 0.6rem;
+}
+
+.explorer .cap-section {
+  margin: 1.6rem 0;
+}
+
+.explorer .cap-section h3 {
+  font-size: 1.15rem;
+  margin: 0 0 0.6rem;
+}
+
+.explorer .cap-section p {
+  line-height: 1.6;
+}
+
+.explorer .cap-note {
+  font-size: 0.9rem;
+  color: var(--ink-soft);
+}
+
+.explorer .cap-year {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 1rem 0 0.4rem;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.explorer .cap-year-btn {
+  font: inherit;
+  font-size: 0.85rem;
+  color: var(--ink);
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 0.25rem 0.75rem;
+  cursor: pointer;
+}
+
+.explorer .cap-year-btn.is-on {
+  color: var(--paper);
+  background: var(--ink);
+  border-color: var(--ink);
+}
+
+.explorer .cap-tiles {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+/* As the explorer's tiles: label, value, and details line up across a row (#182) */
+.explorer .cap-tiles .tile {
+  display: grid;
+  grid-row: span 3;
+  grid-template-rows: subgrid;
+  row-gap: 0;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 0.8rem 0.9rem;
+  transition: background-color 0.12s;
+}
+
+.explorer .cap-tiles .tile-label {
+  font-size: 0.8rem;
+  color: var(--ink-soft);
+}
+
+.explorer .cap-tiles .tile-value {
+  font-size: 1.45rem;
+  font-weight: 700;
+  margin: 0.2rem 0 0.15rem;
+}
+
+.explorer .cap-tiles .tile-detail {
+  font-size: 0.8rem;
+  color: var(--muted);
+  line-height: 1.35;
+}
+
+/* The cap to compare with: floats under the tabs as the page scrolls */
+.explorer .cap-scen-row {
+  position: sticky;
+  top: calc(var(--tabs-h, 3rem) + 0.4rem);
+  z-index: 25;
+  box-shadow: 0 6px 16px var(--shadow);
+  margin: 1rem 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem 0.7rem;
+  padding: 0.4rem 0.75rem;
+  font-size: 0.82rem;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fff;
+}
+
+.explorer .cap-scen-lead {
+  font-weight: 600;
+}
+
+.explorer .cap-radio {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  cursor: pointer;
+}
+
+.explorer .cap-scen-row input[type="range"] {
+  accent-color: var(--accent);
+}
+
+.explorer .cap-slider {
+  position: relative;
+  display: inline-block;
+  width: min(260px, 100%);
+  padding-bottom: 1rem;
+}
+
+.explorer .cap-slider input[type="range"] {
+  width: 100%;
+  margin: 0;
+}
+
+/* The thumb is about 16px wide, so its center runs from 8px to the width less 8px */
+.explorer .cap-slider-mark {
+  position: absolute;
+  top: 1.15rem;
+  left: calc(8px + (100% - 16px) * var(--at));
+  transform: translateX(-0.4em);
+  font-size: 0.68rem;
+  line-height: 1;
+  color: var(--ink-soft);
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+/* The floating bar: the year, set off at the left, then the cap, all on one line in small type */
+.explorer .cap-scen-row .cap-year {
+  gap: 0.3rem;
+  margin: 0;
+  padding-right: 0.7rem;
+  font-size: 0.78rem;
+  border-right: 1px solid var(--line);
+}
+
+.explorer .cap-scen-row .cap-year-btn {
+  padding: 0.12rem 0.55rem;
+  font-size: 0.78rem;
+}
+
+.explorer .cap-scen-row .cap-radio {
+  gap: 0.25rem;
+}
+
+.explorer .cap-scen-row .cap-slider {
+  width: 150px;
+  padding-bottom: 0.8rem;
+}
+
+.explorer .cap-scen-row .cap-slider-mark {
+  top: 1.05rem;
+  font-size: 0.62rem;
+}
+
+.explorer .cap-scen-row .cap-level {
+  min-width: 2.8rem;
+}
+
+.explorer .cap-color-row {
+  display: flex;
+  gap: 0.3rem;
+}
+
+/* The cap chart's plot: its title shows only enlarged; zoom buttons over its top right */
+.explorer .cap-plot {
+  position: relative;
+}
+
+.explorer .cap-plot-title {
+  display: none;
+}
+
+.explorer .is-enlarged .cap-plot-title {
+  display: block;
+  margin: 0 0 0.5rem;
+}
+
+.explorer .cap-figure {
+  position: relative;
+}
+
+.explorer .cap-zoom {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.3rem;
+  margin: 0 0 0.3rem;
+}
+
+.explorer .cap-zoom-hint {
+  margin-right: 0.3rem;
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.explorer .cap-zoom-btn {
+  min-width: 1.9rem;
+  padding: 0.15rem 0.5rem;
+  font: inherit;
+  font-size: 0.82rem;
+  color: var(--ink);
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.explorer .cap-zoom-btn:hover,
+.explorer .cap-zoom-btn:focus-visible {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.explorer .cap-zoom.is-zoomed .cap-zoom-btn:last-child {
+  color: var(--paper);
+  background: var(--ink);
+  border-color: var(--ink);
+}
+
+.explorer svg.cap-chart {
+  cursor: grab;
+  touch-action: none;
+}
+
+.explorer svg.cap-chart.is-dragging {
+  cursor: grabbing;
+}
+
+/* A "?": a button for a window, or a link to a page of its own (fiscal effort) */
+.explorer .cap-help {
+  text-decoration: none;
+  display: inline-grid;
+  place-items: center;
+  width: 1.1rem;
+  height: 1.1rem;
+  padding: 0;
+  margin-left: 0.15rem;
+  font: inherit;
+  font-size: 0.7rem;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--ink-soft);
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  cursor: pointer;
+  vertical-align: middle;
+}
+
+/* A "?" note in the cap tab's table (cap.ts tipButton) */
+.explorer .cap-tip {
+  position: fixed;
+  z-index: 60;
+  max-width: min(24rem, calc(100vw - 16px));
+  padding: 0.55rem 0.7rem;
+  font-size: 0.82rem;
+  font-weight: 400;
+  line-height: 1.45;
+  color: var(--ink);
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: 0 6px 18px var(--shadow);
+  pointer-events: none;
+}
+
+.explorer .cap-help:hover,
+.explorer .cap-help:focus-visible {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.explorer .cap-steps-table thead th {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--ink-soft);
+}
+
+.explorer .cap-steps-table tr.total th,
+.explorer .cap-steps-table tr.total td {
+  font-weight: 700;
+  border-top: 2px solid var(--line);
+}
+
+.explorer .cap-cell-note {
+  display: block;
+  font-size: 0.74rem;
+  font-weight: 400;
+  color: var(--muted);
+  white-space: normal;
+}
+
+.explorer .cap-steps-table th[scope="row"] {
+  min-width: 13rem;
+}
+
+.explorer .cap-scen-note {
+  margin-top: 0.9rem;
+}
+
+.explorer .cap-scenario h3 {
+  margin-bottom: 0.6rem;
+}
+
+/* The cap tab's explanation folds like the introductions, with the summary as its heading */
+.explorer .cap-fold > summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--ink);
+  margin-bottom: 0.6rem;
+  cursor: pointer;
+  list-style: none;
+}
+
+.explorer .cap-fold > summary::-webkit-details-marker {
+  display: none;
+}
+
+.explorer .cap-fold > summary::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border: solid var(--ink-soft);
+  border-width: 0 1.5px 1.5px 0;
+  transform: rotate(-45deg);
+  transition: transform 0.12s ease;
+}
+
+.explorer .cap-fold[open] > summary::before {
+  transform: rotate(45deg);
+}
+
+.explorer .cap-years-chart {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.explorer .cap-years-grid {
+  stroke: var(--grid);
+}
+
+.explorer .cap-years-chart rect[fill]:hover {
+  opacity: 0.8;
+}
+
+.explorer .cap-table-head {
+  font-weight: 600;
+  margin: 0 0 0.4rem;
+}
+
+.explorer .cap-steps-table tr.minimum th,
+.explorer .cap-steps-table tr.minimum td {
+  background: #fbf6ea;
+}
+
+.explorer .cap-level {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  min-width: 3.5rem;
+}
+
+.explorer .cap-pick {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  max-width: 24rem;
+  margin-bottom: 0.8rem;
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--ink-soft);
+}
+
+.explorer .cap-steps-table {
+  border-collapse: collapse;
+  width: 100%;
+  max-width: 52rem;
+  font-size: 0.9rem;
+}
+
+.explorer .cap-steps-table th,
+.explorer .cap-steps-table td {
+  text-align: left;
+  padding: 0.4rem 0.6rem;
+  border-bottom: 1px solid var(--grid);
+  vertical-align: top;
+}
+
+.explorer .cap-steps-table th {
+  font-weight: 500;
+}
+
+.explorer .cap-steps-table .num,
+.explorer .cap-fifths-table .num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.explorer .cap-steps-table .note {
+  color: var(--muted);
+  font-size: 0.84rem;
+}
+
+/* The answer the table builds to, in the cap's own purple */
+.explorer .cap-verdict {
+  margin: 1rem 0 0.4rem;
+  padding: 0.85rem 1.1rem;
+  font-size: 1.05rem;
+  font-weight: 600;
+  line-height: 1.5;
+  color: #2b2160;
+  background: #ebe6fc;
+  border-left: 5px solid #6250d6;
+  border-radius: 8px;
+}
+
+.explorer .cap-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem 1rem;
+  margin-bottom: 0.6rem;
+}
+
+.explorer .cap-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  font-size: 0.78rem;
+  color: var(--muted);
+  max-width: 100%;
+}
+
+.explorer .cap-field select {
+  font: inherit;
+  font-size: 0.88rem;
+  color: var(--ink);
+  padding: 0.35rem 0.5rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  max-width: 100%;
+}
+
+.explorer .cap-figure {
+  position: relative;
+  margin: 0;
+}
+
+.explorer .cap-chart {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.explorer .sc-ref {
+  stroke: var(--ink-soft);
+  stroke-width: 1;
+  stroke-dasharray: 4 3;
+}
+
+.explorer .cap-fifths-table {
+  border-collapse: collapse;
+  font-size: 0.88rem;
+  min-width: 100%;
+}
+
+.explorer .cap-fifths-table th,
+.explorer .cap-fifths-table td {
+  padding: 0.4rem 0.6rem;
+  border-bottom: 1px solid var(--grid);
+  text-align: left;
+}
+
+.explorer .cap-fifths-table thead th {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--ink-soft);
+  vertical-align: bottom;
+}
+
+@media (max-width: 760px) {
+  .explorer .cap-tiles {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
