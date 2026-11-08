@@ -31,6 +31,11 @@ export const vn = (s: string) => el("strong", "cw-var", s);
 /** "spending per pupil" -> "Spending per pupil" */
 export const capital = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
+/** "Spending per pupil" -> "spending per pupil", to run inside a sentence. Labels are in sentence case, so only the
+ * first letter changes, and not when the label opens on a name or an initialism: "Chapter 70 state aid", "FTE" (#241) */
+const NAMED = /^(Chapter|Prop|Amherst|Massachusetts|Inner Core|Gateway Cities|Hispanic|Asian|Black|White)\b/;
+export const lower = (s: string) => (NAMED.test(s) || /^[A-Z][A-Z0-9]/.test(s) ? s : s.charAt(0).toLowerCase() + s.slice(1));
+
 /** A window over the page, as the plots and the cap tab open for help, cautions and tables: its heading and a close
  * button, closing too on a click outside it; put in holder, so it takes the page's colors */
 export function modal(id: string, title: string, holder: Element): { dialog: HTMLDialogElement; body: HTMLDivElement } {

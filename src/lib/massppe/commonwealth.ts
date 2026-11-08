@@ -6,7 +6,7 @@
 import { change, compact, count, pct, rho, round, signFor, usd } from "./format";
 import { spearman } from "./stats";
 import { pointsAtGroup, scatter, type Group, type Point } from "./scatter";
-import { addStyles, capital, el, modal, placeTip, svgEl, vn } from "./dom";
+import { addStyles, capital, el, lower, modal, placeTip, svgEl, vn } from "./dom";
 import { AMBER, BLUE, FIFTH_RAMP, GREEN, RED, REGION_HUES, VIOLET } from "./palette";
 import type { CommunityType } from "./data";
 import { checkPair, sharedParts, type Caution, type Words } from "./cautions";
@@ -597,7 +597,7 @@ export function startCommonwealth(root: HTMLElement, data: CwData, opts: {
     const room = body.clientHeight - pad - legend.offsetHeight - findingRow.offsetHeight - cautionRow.offsetHeight -
       caption.offsetHeight - 28;
     const height = Math.round(Math.max(220, Math.min(room, width * 0.75)));
-    svg.setAttribute("aria-label", `Scatterplot of ${yv.label.toLowerCase()} against ${xv.label.toLowerCase()} for ` +
+    svg.setAttribute("aria-label", `Scatterplot of ${lower(yv.label)} against ${lower(xv.label)} for ` +
       `${pts.length} districts, FY${v.fy}` + (focus.length ? `, picking out ${focus.map((g) => hl.groups[g].label).join(" and ")} ` +
       "with a trend of their own" : "") + ". The data table lists every value.");
     scatter(svg, pts, {
@@ -767,7 +767,7 @@ export function startCommonwealth(root: HTMLElement, data: CwData, opts: {
       r.append(th, el("td", undefined, fmt(yv.unit, p.y)), el("td", undefined, fmt(xv.unit, p.x)));
     }
     tableHolder.replaceChildren(t);
-    tableTitle.replaceChildren(vn(capital(yv.label)), " and ", vn(xv.label.toLowerCase()), `, FY${v.fy}: ${pts.length} districts, highest first.`);
+    tableTitle.replaceChildren(vn(capital(yv.label)), " and ", vn(lower(xv.label)), `, FY${v.fy}: ${pts.length} districts, highest first.`);
   }
 
   /** The picker: every other measure, closest first */

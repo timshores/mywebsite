@@ -7,7 +7,7 @@
 // target min(yield x f, cap x foundation budget). f is 1 at 82.5%; at 100% and with no cap
 // this reproduces Michael Naughton and Tupper Brown's FY2026 targets to the dollar.
 
-import { addStyles, capital, el, modal, placeTip, pointsAt, svgEl, vn } from "./dom";
+import { addStyles, capital, el, lower, modal, placeTip, pointsAt, svgEl, vn } from "./dom";
 import { change as changePct, compact, digits, pct, rho as rhoText, round, signFor, total, usd } from "./format";
 import { median, spearman } from "./stats";
 import { groupedPicker } from "./picker";
@@ -879,7 +879,7 @@ export function startCap(root: HTMLElement, data: CapData, opts: { town: string 
     const f5 = fifthsBy(xKey);
     const where = up.length
       ? [` Of the ${up.length} towns that today's cap saves money, ${up.filter((x) => f5.get(x.id) === 4).length} are in ` +
-        "the top fifth by ", vn(xo.label.toLowerCase()), `, and ${up.filter((x) => (f5.get(x.id) ?? 4) <= 2).length} are ` +
+        "the top fifth by ", vn(lower(xo.label)), `, and ${up.filter((x) => (f5.get(x.id) ?? 4) <= 2).length} are ` +
         "in the bottom three fifths."]
       : [];
     const capped = towns.filter((x) => x.capped && x.foundation);
@@ -897,7 +897,7 @@ export function startCap(root: HTMLElement, data: CapData, opts: { town: string 
       cey_pc: [": property and income together as the formula weighs them, but counted per resident instead of against " +
         "what the town's schools need.", ...where],
     };
-    chartContext.replaceChildren("Across, ", vn(xo.title.charAt(0).toLowerCase() + xo.title.slice(1)), ...lead[xKey],
+    chartContext.replaceChildren("Across, ", vn(lower(xo.title)), ...lead[xKey],
       " This measure's rank correlation with the ", vn("change per household"),
       ` is ρ = ${rhoText(rhos[place].r)}, ${rank} of the four measures here.`);
 
@@ -913,7 +913,7 @@ export function startCap(root: HTMLElement, data: CapData, opts: { town: string 
     const room = chartRoom(plotBox);
     const width = Math.max(300, Math.floor(room ? room.width : figure.clientWidth || 800));
     const height = room ? Math.max(240, Math.floor(room.height)) : Math.round(Math.min(460, Math.max(280, width * 0.5)));
-    svg.setAttribute("aria-label", `Scatterplot of the change in target per household against ${xo.title.toLowerCase()} for ${pts.length} towns, FY${y.fy}.`);
+    svg.setAttribute("aria-label", `Scatterplot of the change in target per household against ${lower(xo.title)} for ${pts.length} towns, FY${y.fy}.`);
     drawPlot = () => {
       plotView = scatter(svg, pts, {
       width, height, logX: true, xFmt: xo.axis, yFmt: signed, domain: zoom ?? undefined,

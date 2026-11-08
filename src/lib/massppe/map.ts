@@ -7,7 +7,7 @@
 // Once the measures' years arrive (map-years.json), a change can be measured between any two years,
 // and a level shown for any year, or played from the first year to the latest.
 
-import { addStyles, el, svgEl } from "./dom";
+import { addStyles, el, lower, svgEl } from "./dom";
 import { enlargeButton } from "./enlarge";
 import { asShown, change, count, measured, pct, usd, yearly } from "./format";
 import { median, quantile } from "./stats";
@@ -987,7 +987,7 @@ export function startMap(root: HTMLElement, data: MapData, opts: {
         groupOf: at.groupOf, regions: at.regions, regionOf: at.regionOf, sizes: at.sizes, sizeOf: at.sizeOf });
     }
     const when = y ? (measure.years === "range" ? `, FY${y.from} to FY${y.to}` : `, FY${y.to}`) : "";
-    svg.setAttribute("aria-label", `Map of Massachusetts's 351 cities and towns, colored by ${measure.label.toLowerCase()}${when}` +
+    svg.setAttribute("aria-label", `Map of Massachusetts's 351 cities and towns, colored by ${lower(measure.label)}${when}` +
       (onTowns ? "." : ` of the ${{ elem: "district serving their elementary grades", high: "district serving their secondary grades",
         all: "districts serving all their grades" }[grades]}.`) + " The table below has every value.");
     drawTable(shown);
@@ -1081,7 +1081,7 @@ export function startMap(root: HTMLElement, data: MapData, opts: {
   /** What each town shows, grouped */
   function groupNote(g: Grouping, onTowns: boolean) {
     const of = onTowns ? "its group" : "its district's group";
-    return ` Grouped by ${g.label.toLowerCase()}, each town shows ${of}'s figure: its ${onTowns ? "towns" : "districts"} ` +
+    return ` Grouped by ${lower(g.label)}, each town shows ${of}'s figure: its ${onTowns ? "towns" : "districts"} ` +
       "pooled, as the explorer's comparisons pool them. Point to a town to see its whole group; select it to open the group." +
       (onTowns ? "" : " A town split between two districts takes the group of the one for its younger grades, usually its own.");
   }
@@ -1125,9 +1125,9 @@ export function startMap(root: HTMLElement, data: MapData, opts: {
       const id = groupOf(t);
       paths.get(t.id)!.setAttribute("fill", id ? color(id) : NO_DATA);
     }
-    measureTitle.textContent = `${onTowns ? "Each town's" : "Each district's"} group: ${g.label.toLowerCase()}`;
+    measureTitle.textContent = `${onTowns ? "Each town's" : "Each district's"} group: ${lower(g.label)}`;
     about.replaceChildren(`The groups the explorer compares ${onTowns ? "towns" : "districts"} with, by ` +
-      `${g.label.toLowerCase()}: each town takes ${onTowns ? "its own" : "its district's"} group. Point to a group, on the map or ` +
+      `${lower(g.label)}: each town takes ${onTowns ? "its own" : "its district's"} group. Point to a group, on the map or ` +
       "in the key, to see all of it; select it in the key to keep it lit and open its page. Select a town to open " +
       `${onTowns ? "it" : "its district"}, and pick a measure to color each group by its figure.`);
     if (regions) about.append(" Each region has its own hue, light to dark from the smallest group to the largest; pointing " +
@@ -1173,7 +1173,7 @@ export function startMap(root: HTMLElement, data: MapData, opts: {
     })()]), ...(data.towns.some((t) => !groupOf(t))
       ? [...(regions ? [rule()] : []), noneKey(((n) => `${noGroup(groupOf, onTowns)} (${n} ${n === 1 ? "town" : "towns"})`)(data.towns.filter((t) => !groupOf(t)).length))] : []));
     svg.setAttribute("aria-label", `Map of Massachusetts's 351 cities and towns, colored by ${onTowns ? "their" : "their districts'"} ` +
-      `group by ${g.label.toLowerCase()}. The table below lists each.`);
+      `group by ${lower(g.label)}. The table below lists each.`);
     tableSum.textContent = "Every town, by group";
     const t = el("table");
     t.createTHead().insertRow().append(el("th", undefined, "Town"), el("th", undefined, "Group"));

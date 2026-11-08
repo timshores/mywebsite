@@ -31,7 +31,8 @@ export interface Series {
  * top line; where a name would run into the axis, it moves too. Where lines run too close together for a name beside
  * its own, it steps past the lines crowding it, to the nearest gap above or below, at an end or the middle, its color
  * saying whose it is. Each lands where it's clear of the lines, the plot's edges, and the names already placed, or as
- * near that as the chart allows; one with no spot clear of the names already placed is left off. */
+ * near that as the chart allows; one with no spot clear of the names already placed is left off, as is one wider than
+ * the chart even in its short form (#241). */
 function trendLabels(svg: SVGSVGElement, ax: Axis, trends: Series[]) {
   const bottom = MARGIN.top + ax.plotH;
   const lines = trends.filter((s) => s.endLabel).map((s) => {
@@ -68,6 +69,11 @@ function trendLabels(svg: SVGSVGElement, ax: Axis, trends: Series[]) {
     // A name that would take more than half the plot gives way to its short form
     let w = measure(l.s.endLabel!);
     if (l.s.endShort && w > ax.plotW / 2) w = measure(l.s.endShort);
+    // One wider than the chart would run off its edge, as on a phone; the legend and the tooltip still name the line
+    if (w > ax.frame.width - 4) {
+      tx.remove();
+      continue;
+    }
     const mid = (l.x0 + l.x1) / 2;
     const ends: Anchor[] = lines.some((o) => o !== l && crosses(l, o)) && !onTop(l, l.x1) ? ["start", "end"] : ["end", "start"];
     const xAt = (a: Anchor) => (a === "end" ? l.x1 : a === "start" ? l.x0 : mid);

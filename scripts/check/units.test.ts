@@ -4,6 +4,7 @@ import * as f from "../../src/lib/massppe/format";
 import { cagr, linearFit, median, quantile, spearman } from "../../src/lib/massppe/stats";
 import { endsOn, trendOn, type MapSeries } from "../../src/lib/massppe/series";
 import { checkPair, sharedParts } from "../../src/lib/massppe/cautions";
+import { lower } from "../../src/lib/massppe/dom";
 
 // The map's year-by-year figures need only its years (series.ts)
 const S = { years: [2020, 2021, 2022, 2023] } as unknown as MapSeries;
@@ -83,4 +84,9 @@ export const cases: [string, unknown, unknown][] = [
   ["sharedParts none", JSON.stringify(sharedParts("soc", "el")), "[]"],
   ["checkPair two views", checkPair({ x: "el", y: "soc", fy: 2025, log: false }, { short: "students of color" },
     { short: "English learners" }, [], []).map((c) => c.label).join(" | "), "Two views of the same thing | Few districts"],
+  // A label inside a sentence (dom.ts): the first letter lowercased, but not a name's or an initialism's (#241)
+  ["lower", lower("Spending per pupil"), "spending per pupil"],
+  ["lower keeps a name", lower("Chapter 70 state aid"), "Chapter 70 state aid"],
+  ["lower keeps an initialism", lower("FY2025 dollars"), "FY2025 dollars"],
+  ["lower keeps a name inside", lower("Paid back by the state (Circuit Breaker)"), "paid back by the state (Circuit Breaker)"],
 ];

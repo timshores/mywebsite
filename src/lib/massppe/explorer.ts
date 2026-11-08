@@ -8,7 +8,7 @@
 // compresses (it sends .json uncompressed).
 
 import { gapColumns, lines, markKey, niceTicks, niceTicksRange, ratingSteps, stackedColumns, type Marks, type Panel, type Series, type Val } from "./charts";
-import { capital, svgEl, text } from "./dom";
+import { capital, lower, svgEl, text } from "./dom";
 import { cagr, linearFit } from "./stats";
 import { andList, change, compact, measured as fte, pct, points, signFor, total as amount, usd } from "./format";
 import { closeEnlarged, enlargeButton } from "./enlarge";
@@ -595,7 +595,7 @@ const fmtUsd = (v: number) => compact(v, "$");
 
 /** "teachers", "3 selected categories", or null when everything shows. */
 const selectionName = (shown: Series[], all: Series[], noun: string) =>
-  shown.length === all.length ? null : shown.length === 1 ? shown[0].label.toLowerCase() : `${shown.length} selected ${noun}`;
+  shown.length === all.length ? null : shown.length === 1 ? lower(shown[0].label) : `${shown.length} selected ${noun}`;
 
 /** Revenue averages cover only their regional districts, and say so. */
 const revName = (c: Entity) => (c.kind === "district" ? c.name : `${c.name} (regional districts)`);
@@ -2069,11 +2069,12 @@ export async function startExplorer() {
     if (!STACKED.has(key) || !trendsAlone.has(key) || !hasTrends.get(key)) return content;
     const total = content.rows.find((r) => r.strong);
     if (!total) return content;
-    const own = content.rows.find((r) => r.role === "trend");
-    const cmp = content.rows.find((r) => r.role === "cmp");
+    // Every trend's row and every comparison's, where a chart gives each measure its own (#241)
+    const own = content.rows.filter((r) => r.role === "trend");
+    const cmp = content.rows.filter((r) => r.role === "cmp");
     const ct = cmpTrends.get(key);
-    const cmpTrend = cmp && ct?.trend ? trendRow(ct.trend, i, ct.value, ct.step).map((r) => ({ ...r, color: COMPARE_COLOR })) : [];
-    return { ...content, rows: [total, ...(own ? [own] : []), ...(cmp ? [cmp] : []), ...cmpTrend] };
+    const cmpTrend = cmp.length && ct?.trend ? trendRow(ct.trend, i, ct.value, ct.step).map((r) => ({ ...r, color: COMPARE_COLOR })) : [];
+    return { ...content, rows: [total, ...own, ...cmp, ...cmpTrend] };
   }
 
   function setHover(i: number | null, source: SVGSVGElement | null) {
@@ -2190,7 +2191,8 @@ export async function startExplorer() {
     if (!trend || v == null) return [];
     const prev = trend.values[i - 1];
     const step = prev == null ? "" : `, ${signed(v - prev, stepFmt)}${prev > 0 ? ` (${signedPct((v - prev) / prev)})` : ""} on FY${years[i - 1]}`;
-    return [{ value: fmt(v), label: trend.label + step, color: TREND_COLOR, mark: "dash", role: "trend" }];
+    // In the trend's own color: the trend's, or a measure's where each has its own (#241)
+    return [{ value: fmt(v), label: trend.label + step, color: trend.color, mark: "dash", role: "trend" }];
   };
   let refocus: { panel: StackPanel; key: string } | null = null;
 
@@ -2968,8 +2970,8 @@ export async function startExplorer() {
             "vocational programs (occupational day). Each is per pupil in that program, so they don't add up to the total." },
           ...programs.map((p) => ({ label: p.label, color: p.color, mark: "dash" as const, spot: `line:${p.key}` }))] : []),
       ],
-      table: { caption: `Spending${whole ? "" : " per in-district FTE pupil"}`, rowLabel: "Category", units: ` (${dollarsNote.toLowerCase()})`, per: tableOpts.per },
-      full: { caption: `Spending${whole ? "" : " per in-district FTE pupil"} by year, ${e.name} (${dollarsNote.toLowerCase()})`, more: [
+      table: { caption: `Spending${whole ? "" : " per in-district FTE pupil"}`, rowLabel: "Category", units: ` (${lower(dollarsNote)})`, per: tableOpts.per },
+      full: { caption: `Spending${whole ? "" : " per in-district FTE pupil"} by year, ${e.name} (${lower(dollarsNote)})`, more: [
         ...(dayAll && hasLine(dayAll) ? [{ label: `${DAY_LABEL} (day program)`, values: dayAll.values, fmt: usd }] : []),
         ...(cDayAll && hasLine(cDayAll) ? [{ label: cDayAll.label, values: cDayAll.values, fmt: usd }] : []),
       ] },
@@ -2980,7 +2982,7 @@ export async function startExplorer() {
       const cDayProg = (k: DayKey) => (c?.day?.[k] && c.kind === "district" ? dayValues(c, c.day[k]) : null);
       const progRows = whole ? [] : PROGRAM_SERIES.flatMap((p) => (e.day![p.key] && hasLine({ ...p, values: e.day![p.key]! })
         ? [{ label: p.label, color: p.color, mark: "dash" as const, values: dayValues(e, e.day![p.key])!, base: cDayProg(p.key) }] : []));
-      compareTable(dayHolder, `${DAY_LABEL}: day-program spending${whole ? "" : " per pupil"}, ${e.name} (${dollarsNote.toLowerCase()})`, "Program",
+      compareTable(dayHolder, `${DAY_LABEL}: day-program spending${whole ? "" : " per pupil"}, ${e.name} (${lower(dollarsNote)})`, "Program",
         [...progRows, { label: "Total, all day programs", color: "", mark: "dash" as const, values: dayAll.values, base: cDayAll?.values ?? null, total: true }],
         "usd", c, { ...tableOpts, start: dayEnds[0], end: dayEnds[1] });
     } else dayHolder.replaceChildren();
@@ -3035,7 +3037,7 @@ export async function startExplorer() {
       { ...frame(width < 520 ? 220 : 260, whole ? "Payments" : "Per out-of-district FTE", "Per pupil"), trendsOnly: oodTv.only },
       [ood], oodOverlay, niceTicks(oodMax * 1.04), fmtUsd, setHover, { value: ood.values[last], text: usd }, [], oodTv.trends);
     legend($("legend-ood"), [{ label: ood.label, color: OOD_COLOR, mark: "rect" as const, spot: ood.key }, ...lineLegend(oodTrendAll, oodOverlayAll)], "ood");
-    const oodCaption = `Payments to out-of-district schools${whole ? "" : " per out-of-district FTE pupil"}, ${e.name} (${dollarsNote.toLowerCase()})`;
+    const oodCaption = `Payments to out-of-district schools${whole ? "" : " per out-of-district FTE pupil"}, ${e.name} (${lower(dollarsNote)})`;
     compareTable($("cmp-ood"), oodCaption, "Measure",
       [{ label: ood.label, color: OOD_COLOR, mark: "rect", values: ood.values, base: cOod?.values ?? null }], "usd", c, tableOpts);
     fullTables.ood = { caption: oodCaption, cols: [
@@ -3075,7 +3077,7 @@ export async function startExplorer() {
       "for which DESE's reports give no pupils (Common Core of Data). It is a head count from a different agency, so " +
       "it differs a little from DESE's counts. Averages are per district."));
     // Each count can be picked alone, with its trend and the comparison's; the earlier counts have no trend
-    const en = measureLines("enroll", enroll.map((s) => ({ ...s, what: s.label.toLowerCase(), ...(s.dash ? { trend: false as const } : {}) })),
+    const en = measureLines("enroll", enroll.map((s) => ({ ...s, what: lower(s.label), ...(s.dash ? { trend: false as const } : {}) })),
       c ? (x) => cEnroll?.find((y) => y.key === x.key)?.values : null,
       { own: e.name, cmp: cName, cmpLabel: (x) => `${cName}, ${x.what}`, cmpEntry: `${cName}${c?.kind === "average" ? ", per district" : ""}` }, fte);
     if (en.fitted) $("enroll-sub").append(" Scale fitted to the selection.");
@@ -3126,7 +3128,16 @@ export async function startExplorer() {
       (whole ? " Pupils are foundation enrollment." : "") +
       (nssSel ? " Scale fitted to the selection." : ` Column height is actual net school spending${pp}.`) +
       (unreported.length ? ` Faded: DESE has not reported FY${unreported.join(", FY")} actual spending.` : "");
-    const nssTv = trendView("nss", nssTrend, nssOverlayAll, cName);
+    // With only the trends shown, each component its own trend, in its color, and the comparison's of each, as the
+    // charts of several measures do (#241); otherwise the total's trend
+    const perMeasure = trendsAlone.has("nss") && nssShown.some(hasLine);
+    const ownTrends = nssShown.filter(hasLine).map((s) => ((values) => ({ key: s.key, label: `${e.name} trend, ${lower(s.label)}`,
+      color: s.color, values, ...trendEnds(trendName(e.name, lower(s.label)), `${s.label} trend`, values, usd) }))(linearTrend(s.values)));
+    const cmpTrendsEach = c && cNss ? visible(cNss, "nss").filter(hasLine).map((s) => ((ct) => ({ ...ct, key: `cmptrend:${s.key}`,
+      ...trendEnds(trendName(cName, lower(s.label)), `Comparison ${lower(s.label)} trend`, ct.values, usd) }))(
+      cmpTrendOf({ ...s, label: `${cName}, ${lower(s.label)}` }))) : [];
+    if (perMeasure) cmpTrends.set("nss", { trend: null, value: usd, step: usd });
+    const nssTv = perMeasure ? trendsOf("nss", ownTrends, cmpTrendsEach, !!nssOverlayAll) : trendView("nss", nssTrend, nssOverlayAll, cName);
     const p3 = stackedColumns($("svg-nss") as unknown as SVGSVGElement,
       { ...frame(tall, `Net school spending${pp}`, `Spending${pp}`), trendsOnly: nssTv.only }, nssShown, nssOverlay,
       nssSel ? fitTicks(nssShown, nssOverlay?.values ?? null) : dollarTicks, fmtUsd, setHover,
@@ -3134,13 +3145,17 @@ export async function startExplorer() {
     // The hatch only appears when a shortfall sits on top of other segments
     const hasShortfall = showsAbove && nssShown.length > 1 && nss[2].values.some((v) => v != null && v < 0);
     legend($("legend-nss"), [
-      ...nss.map((s) => ({ key: s.key, label: s.label, color: s.color, mark: "rect" as const })),
+      // With only the trends shown, each component's entry gives its trend's yearly figure (#241)
+      ...nss.map((s) => ({ key: s.key, label: s.label, color: s.color, mark: "rect" as const,
+        detail: perMeasure && nssShown.includes(s) && hasLine(s) ? trendDetail(linearTrend(s.values), usd) : undefined })),
       ...(hasShortfall ? [{ label: "Below required (shortfall)", color: "#524f45", mark: "hatch" as const, spot: "shortfall" }] : []),
-      ...lineLegend(nssTrendAll, nssOverlayAll),
+      ...(perMeasure
+        ? (nssOverlayAll ? [{ label: cName, color: COMPARE_COLOR, mark: "linedot" as const, line: "cmp" as const }] : [])
+        : lineLegend(nssTrendAll, nssOverlayAll)),
     ], "nss");
-    compareTable($("cmp-nss"), `Chapter 70 aid and net school spending${whole ? "" : " per foundation pupil"}${nssSel ? `, ${nssSel}` : ""}, ${e.name} (${dollarsNote.toLowerCase()})`, "Component",
+    compareTable($("cmp-nss"), `Chapter 70 aid and net school spending${whole ? "" : " per foundation pupil"}${nssSel ? `, ${nssSel}` : ""}, ${e.name} (${lower(dollarsNote)})`, "Component",
       cmpRows(nssShown, cNss, nssSel, nssTotal, cNssTotal, nssShownTotal, cNssShownTotal, "Actual net school spending"), "usd", c, tableOpts);
-    fullTables.nss = { caption: `Chapter 70 aid and net school spending${whole ? "" : " per foundation pupil"}, ${e.name} (${dollarsNote.toLowerCase()})`, cols: [
+    fullTables.nss = { caption: `Chapter 70 aid and net school spending${whole ? "" : " per foundation pupil"}, ${e.name} (${lower(dollarsNote)})`, cols: [
       ...nss.map((s) => ({ label: s.label, values: s.values, fmt: usd })),
       { label: "Actual net school spending", values: nssTotal, fmt: usd },
       ...(c ? [{ label: `${cName}, actual net school spending`, values: cNssTotal!, fmt: usd }] : []),
@@ -3158,8 +3173,11 @@ export async function startExplorer() {
             { value: usd(required), label: "Required net school spending" },
             { value: nss[1].values[i] != null ? usd(nss[1].values[i]!) : "–", label: nss[1].label, color: nss[1].color, mark: "line" as const },
             { value: nss[0].values[i] != null ? usd(nss[0].values[i]!) : "–", label: nss[0].label, color: nss[0].color, mark: "line" as const },
-            ...trendRow(nssTrend, i),
-            ...(nssOverlay && nssOverlay.values[i] != null ? [{ value: usd(nssOverlay.values[i]!), label: nssOverlay.label, color: COMPARE_COLOR, mark: "linedot" as const, role: "cmp" as const }] : []),
+            // Each component's trend and the comparison's, with only the trends shown; else the total's (#241)
+            ...(perMeasure ? nssTv.trends.filter((t) => !t.key.startsWith("cmptrend")).flatMap((t) => trendRow(t, i)) : trendRow(nssTrend, i)),
+            ...(perMeasure
+              ? nssTv.trends.filter((t) => t.key.startsWith("cmptrend")).flatMap((t) => trendRow(t, i)).map((r) => ({ ...r, role: "cmp" as const }))
+              : nssOverlay && nssOverlay.values[i] != null ? [{ value: usd(nssOverlay.values[i]!), label: nssOverlay.label, color: COMPARE_COLOR, mark: "linedot" as const, role: "cmp" as const }] : []),
           ],
         };
       },
@@ -3235,7 +3253,7 @@ export async function startExplorer() {
       return li;
     };
     $("nssb-gap-legend").replaceChildren(key("rect", ACTUAL_COLOR, e.name));
-    fullTables.nssb = { caption: `Budgeted and actual net school spending${whole ? "" : " per foundation pupil"}, ${e.name} (${dollarsNote.toLowerCase()})`, cols: [
+    fullTables.nssb = { caption: `Budgeted and actual net school spending${whole ? "" : " per foundation pupil"}, ${e.name} (${lower(dollarsNote)})`, cols: [
       ...bLines.map((x) => ({ label: x.label, values: x.values, fmt: usd })),
       { label: "Actual vs. budget", values: gap, fmt: (v: number) => signedPct(v / 100) },
     ] };
@@ -3286,9 +3304,9 @@ export async function startExplorer() {
           : `${dollarsNote} per in-district FTE pupil${e.kind === "district" ? "" : `, pooled over its ${e.rev_members} regional districts`}. `) +
         `Census figures through FY${revYears.latest}.` +
         (c && !cRev ? ` ${capital(refName(c))} has no revenue chart to compare.` : "") + fitted],
-      table: { caption: `Revenue${whole ? "" : " per in-district FTE pupil"}`, rowLabel: "Source", units: ` (${dollarsNote.toLowerCase()})`,
+      table: { caption: `Revenue${whole ? "" : " per in-district FTE pupil"}`, rowLabel: "Source", units: ` (${lower(dollarsNote)})`,
         per: tableOpts.per, noCmpNote: c ? `${capital(refName(c))} has no revenue figures to shade this table against.` : undefined },
-      full: { caption: `Revenue${whole ? "" : " per in-district FTE pupil"} by year, ${e.name} (${dollarsNote.toLowerCase()})` },
+      full: { caption: `Revenue${whole ? "" : " per in-district FTE pupil"} by year, ${e.name} (${lower(dollarsNote)})` },
     });
     return { panel: p.panel, figure: $("fig-rev"), tip: p.tip };
   }
@@ -3350,9 +3368,9 @@ export async function startExplorer() {
           "when a district's instruction and tuition costs rise by more than a quarter over the year before.\n\nThe " +
           "line puts each payment with the year of the costs it repays, so it lines up with the columns: FY2024's " +
           "point is what the state paid in FY2025 for FY2024's claim, and any extraordinary relief paid in FY2024." }] : [],
-      table: { caption: `Special education spending${perAll}`, rowLabel: "Category", units: ` (${dollarsNote.toLowerCase()})`, per: tableOpts.per,
+      table: { caption: `Special education spending${perAll}`, rowLabel: "Category", units: ` (${lower(dollarsNote)})`, per: tableOpts.per,
         noCmpNote: c && !cSped ? `${capital(refName(c))} has no special education figures to shade this table against.` : undefined },
-      full: { caption: `Special education spending${perAll} by year, with the Circuit Breaker, ${e.name} (${dollarsNote.toLowerCase()})`,
+      full: { caption: `Special education spending${perAll} by year, with the Circuit Breaker, ${e.name} (${lower(dollarsNote)})`,
         mid: [{ label: "Share of all spending", values: share, fmt: (v: number) => `${v.toFixed(1)}%` }],
         more: ecb && cbAll ? [
           { label: "Paid back by the state, for the year's costs", values: cbAll.values, fmt: usd },
@@ -3635,7 +3653,7 @@ export async function startExplorer() {
   /** A stacked town chart, as stackPanel draws it: the town view's height, units, Per choice and help (#237) */
   function townStack(s: TownStack, dollarsNote: string) {
     const fmt = s.fmt ?? usd;
-    const units = s.kind === "count" ? "" : ` (${dollarsNote.toLowerCase()})`;
+    const units = s.kind === "count" ? "" : ` (${lower(dollarsNote)})`;
     const vm = s.votes;
     const extra = s.extra ? drawn(s.key, s.extra.line, s.extra.series) : null;
     return stackPanel({
@@ -4113,7 +4131,7 @@ export async function startExplorer() {
       // As on the other charts: the trend, then the comparison
       ...lineLegend(fcTrend, overlayAll, usd),
     ], "tfc");
-    fullTables.tfc = { caption: `Where free cash comes from${perP}, ${t.name} (${dollarsNote.toLowerCase()})`, cols: [
+    fullTables.tfc = { caption: `Where free cash comes from${perP}, ${t.name} (${lower(dollarsNote)})`, cols: [
       ...fcAll.map((s) => ({ label: s.label, values: s.values, fmt: usd })),
       { label: "Free cash identified", values: deflate(per(t.fc_identified!, kT)), fmt: usd },
       ...(c?.fc_identified ? [{ label: `${c.name}, free cash identified`, values: deflate(per(c.fc_identified, kC!)), fmt: usd }] : []),
@@ -4253,7 +4271,7 @@ export async function startExplorer() {
       (rate != null && t.sf_bill?.[bIdx] != null ? ` In FY${years[bIdx]}, ${t.kind === "town" ? `${t.name}'s` : "the"} bill ` +
         `was ${usd(t.sf_bill[bIdx]!)} at $${rate.toFixed(2)} per $1,000 of value` +
         (t.sf_bill_income?.[bIdx] != null ? `, ${pct(t.sf_bill_income[bIdx]!)} of income per capita.` : ".") : "");
-    fullTables.tbill = { caption: `Average single-family tax bill, ${t.name} (${dollarsNote.toLowerCase()})`, cols: [
+    fullTables.tbill = { caption: `Average single-family tax bill, ${t.name} (${lower(dollarsNote)})`, cols: [
       { label: "Bill", values: deflate(t.sf_bill!), fmt: usd },
       { label: "Rate per $1,000", values: t.sf_rate ?? [], fmt: (v) => `$${v.toFixed(2)}` },
       { label: "Share of income per capita", values: t.sf_bill_income ?? [], fmt: (v) => `${(v * 100).toFixed(1)}%` },
@@ -4333,7 +4351,7 @@ export async function startExplorer() {
         `${usd(base * k.property_pct / 100)} from property, ${k.property_pct}% of its January ${k.eqv_year} equalized ` +
         `valuation, plus ${k.income_pct}% of its residents' ` +
         `${k.income_year} income, up to ${k.cap}% of its foundation budget.` : "");
-    fullTables.teqv = { caption: `Equalized valuation, ${t.name} (${dollarsNote.toLowerCase()})`, cols: [
+    fullTables.teqv = { caption: `Equalized valuation, ${t.name} (${lower(dollarsNote)})`, cols: [
       { label: inTotal ? (t.kind === "town" ? "Total" : "Average town") : `Per ${perWord}`, values: deflate(per(t.eqv!, kT)), fmt: usd },
       { label: t.kind === "town" ? "In all (nominal)" : "Towns combined (nominal)", values: t.eqv_total ?? [], fmt: (v) => amount(v) },
       ...(c?.eqv ? [{ label: `${c.name}${inTotal ? ", total" : `, per ${perWord}`}`, values: deflate(per(c.eqv, kC!)), fmt: usd }] : []),
