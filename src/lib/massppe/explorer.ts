@@ -7,7 +7,8 @@
 // rather than fetched, the data ships as hashed JavaScript chunks, which the host
 // compresses (it sends .json uncompressed).
 
-import { compact, gapColumns, lines, niceTicks, niceTicksRange, ratingSteps, signFor, stackedColumns, svgEl, type Marks, type Panel, type Series, type Val } from "./charts";
+import { gapColumns, lines, niceTicks, niceTicksRange, ratingSteps, stackedColumns, svgEl, type Marks, type Panel, type Series, type Val } from "./charts";
+import { andList, change, compact, measured as fte, pct, points, signFor, total as amount, usd } from "./format";
 import { closeEnlarged, enlargeButton } from "./enlarge";
 import type { CapData } from "./cap";
 import type { CwData } from "./commonwealth";
@@ -301,12 +302,12 @@ const FIFTH_NAMES = ["", "Lowest", "Second", "Middle", "Fourth", "Highest"];
 /** "Middle income fifth: $47,294 per resident, 2023", for a district's or town's heading */
 function incomeText(i: IncomeFifth | undefined, district: boolean) {
   if (!i) return "";
-  return `${FIFTH_NAMES[i.fifth]} income fifth: $${i.income_pc.toLocaleString("en-US")} per resident${district ? " of its towns" : ""}, ${i.year}`;
+  return `${FIFTH_NAMES[i.fifth]} income fifth: ${usd(i.income_pc)} per resident${district ? " of its towns" : ""}, ${i.year}`;
 }
 /** "Rural, 4.2 students per square mile": the community type, for a district's or town's heading */
 function communityText(c: Community | undefined, per: "students" | "residents") {
   if (!c) return "";
-  const n = c.density < 100 ? c.density.toFixed(per === "students" ? 1 : 0) : Math.round(c.density).toLocaleString("en-US");
+  const n = fte(c.density);
   const name = { core: "Inner Core", gateway: "Gateway City", rural: "Rural", suburban: "Suburban or other" }[c.type];
   return `${name}, ${n} ${per} per square mile`;
 }
@@ -554,25 +555,8 @@ function shade(delta: number | null, bins: number[]) {
   return delta > 0 ? ABOVE_SHADES[idx] : BELOW_SHADES[idx];
 }
 
-// Signs follow the figure as printed: one that rounds to zero has none (charts.ts signFor)
-const usd = (v: number) => {
-  const s = Math.abs(Math.round(v)).toLocaleString("en-US");
-  return `${signFor(v, s)}$${s}`;
-};
-const fte = (v: number) => (v >= 100 ? Math.round(v).toLocaleString("en-US") : v.toFixed(1));
-const pct = (v: number) => {
-  const s = Math.abs(v * 100).toFixed(1);
-  return `${signFor(v, s, true)}${s}%`;
-};
-const millions = (v: number) => `$${(v / 1e6).toFixed(v >= 1e8 ? 0 : 1)} million`;
-/** "$423 million", "$4.2 billion" */
-const amount = (v: number) => (v >= 1e9 ? `$${(v / 1e9).toFixed(1)} billion` : millions(v));
-/** A total: "$4.2 million", or whole dollars under a million, "−$310,250" */
-const whole$ = (v: number) => (Math.abs(v) >= 1e6 ? `${signFor(v, amount(Math.abs(v)))}${amount(Math.abs(v))}` : usd(v));
 const sentence = (s: string) => s.charAt(0) + s.slice(1).toLowerCase();
 const capital = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
-/** "a", "a and b", "a, b, and c" */
-const andList = (xs: string[]) => (xs.length < 3 ? xs.join(" and ") : `${xs.slice(0, -1).join(", ")}, and ${xs[xs.length - 1]}`);
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 
@@ -626,7 +610,7 @@ function trendRate(trend: Values) {
 
 /** A change, signed, in the panel's own format: +$521, −12 */
 const signed = (v: number, fmt: (v: number) => string) => `${signFor(v, fmt(Math.abs(v)), true)}${fmt(Math.abs(v))}`;
-const signedPct = (v: number) => pct(v);
+const signedPct = (v: number) => change(v);
 
 export async function startExplorer() {
   const root = $("explorer");
@@ -2289,12 +2273,12 @@ export async function startExplorer() {
     };
     const growth = (r: CmpRow, n: number) => {
       const g = cagr(r.values[end - n], r.values[end], n);
-      const td = text("td", g == null ? "—" : pct(g));
+      const td = text("td", g == null ? "—" : change(g));
       const gb = r.base ? cagr(r.base[end - n], r.base[end], n) : null;
       if (g != null && gb != null && cName) {
         const delta = g - gb;
         const bg = shade(gapShown(delta, 1), SHADE_BINS_PP);
-        td.title = `${cName}: ${pct(gb)} (${signFor(delta, gapText(delta, 1), true)}${gapText(delta, 1)} pp)`;
+        td.title = `${cName}: ${change(gb)} (${signFor(delta, gapText(delta, 1), true)}${gapText(delta, 1)} pp)`;
         if (bg) {
           td.style.background = bg;
           td.append(sr(delta > 0));
@@ -2404,7 +2388,7 @@ export async function startExplorer() {
   const stackTop = (series: Series[], i: number) => series.reduce((a, s) => a + Math.max(0, s.values[i] ?? 0), 0);
   const fmtUsd = (v: number) => compact(v, "$");
   const yoy = (vals: Values, i: number) =>
-    i > 0 && vals[i] != null && vals[i - 1] ? `${pct(vals[i]! / vals[i - 1]! - 1)} from FY${years[i - 1]}` : undefined;
+    i > 0 && vals[i] != null && vals[i - 1] ? `${change(vals[i]! / vals[i - 1]! - 1)} from FY${years[i - 1]}` : undefined;
   /** Tooltip for a stacked panel: the total (or the isolated selection), its segments, the comparison. */
   const stackTip = (i: number, shown: Series[], sel: string | null, shownTotal: Values, total: Values,
     overlay: Series | null, trend: Series | null, totalLabel: string, noun: string, fmt: (v: number) => string = usd): TipContent => {
@@ -2542,7 +2526,7 @@ export async function startExplorer() {
     // Per pupil, or with Totals on, the district's whole dollars (an average's average district's)
     const whole = state.dper === "total";
     const pp = whole ? "" : " per pupil";
-    const money = whole ? whole$ : usd;
+    const money = whole ? amount : usd;
     const wholeNote = !whole ? "" : e.kind === "district" ? " In total: each year's figure per pupil times its pupils."
       : " In total, for the average district: the group's figure per pupil times its average enrollment.";
     const tableOpts = { per: whole ? "" : "pupil" };
@@ -2629,7 +2613,7 @@ export async function startExplorer() {
     const dayRate = dayAll ? trendRate(linearTrend(dayAll.values)) : null;
     const dayEnds = dayAll ? [firstAt(dayAll.values), lastAt(dayAll.values)] : [-1, -1];
     const dayGrowth = dayRate?.rate != null
-      ? `${pct(dayRate.rate)} a year on trend, FY${years[dayEnds[0]]}–FY${years[dayEnds[1]]}${real ? ", after inflation" : ", before inflation"}` : "";
+      ? `${change(dayRate.rate)} a year on trend, FY${years[dayEnds[0]]}–FY${years[dayEnds[1]]}${real ? ", after inflation" : ", before inflation"}` : "";
     const colFirst = firstAt(ppeTotal);
 
     // Tiles (always whole totals, whatever the legend isolates). With Since 1990 on, growth counts from
@@ -2646,7 +2630,7 @@ export async function startExplorer() {
       ? tile(`Spending${pp}, FY${years[dayEnds[1]]}`, money(dayAll.values[dayEnds[1]]!), [dayGrowth, DAY_LABEL,
         c && cDayAll?.values[dayEnds[1]] != null ? `${cName}: ${money(cDayAll.values[dayEnds[1]]!)}` : ""])
       : tile(`Spending${pp}, FY${years[tl]}`, ppeTotal[tl] != null ? money(ppeTotal[tl]!) : "–", [
-        g != null ? `${pct(g)} a year on trend since FY${years[Math.max(0, colFirst)]}${real ? ", after inflation" : ", before inflation"}` : "",
+        g != null ? `${change(g)} a year on trend since FY${years[Math.max(0, colFirst)]}${real ? ", after inflation" : ", before inflation"}` : "",
         c && cPpeTotal?.[tl] != null ? `${cName}: ${money(cPpeTotal[tl]!)}` : "",
         dayGrowth && colFirst > 0 ? `Older measure: ${dayGrowth}` : "",
       ]);
@@ -2660,8 +2644,8 @@ export async function startExplorer() {
     // The comparison's aid, with the share of its spending its gold pie shows
     const cAid = cNss?.[0].values[tl] ?? null;
     const cAidShare = cAid != null && cNssTotal?.[tl] ? cAid / cNssTotal[tl]! : null;
-    const aidLine = aidShare != null ? `${Math.round(aidShare * 100)}% of actual net school spending` : "";
-    const cAidLine = cAid != null ? `${cName}: ${money(cAid)}${cAidShare != null ? `, ${Math.round(cAidShare * 100)}% of its spending` : ""}` : "";
+    const aidLine = aidShare != null ? `${pct(aidShare)} of actual net school spending` : "";
+    const cAidLine = cAid != null ? `${cName}: ${money(cAid)}${cAidShare != null ? `, ${pct(cAidShare)} of its spending` : ""}` : "";
     $("tiles").replaceChildren(
       spendTile,
       earlyPupils
@@ -2669,7 +2653,7 @@ export async function startExplorer() {
         : tile(`In-district enrollment, FY${years[tl]}`, e.enroll.in_district[tl] != null ? `${fte(e.enroll.in_district[tl]!)} pupils` : "–", [
           // The first FTE a visitor meets; the charts below use the abbreviation
           "Full-time equivalents (FTE)",
-          enrollChange != null ? `${pct(enrollChange)} since FY${years[enrollFirst]}` : "",
+          enrollChange != null ? `${change(enrollChange)} since FY${years[enrollFirst]}` : "",
           e.kind === "district" ? "" : "Average per district",
         ]),
       tile(`Chapter 70 aid${whole ? "" : " per foundation pupil"}, FY${years[tl]}`, aid != null ? money(aid) : "–", [aidLine, cAidLine],
@@ -2876,7 +2860,6 @@ export async function startExplorer() {
     // against the budget each year, and the comparison's (the export pools an average's: budget_fields)
     let p7: Panel | null = null;
     let nssbTip: ((i: number) => TipContent) | null = null;
-    const points = (v: number) => `${v.toFixed(Math.abs(v) < 0.1 ? 2 : 1)} points`;
     {
       const budget = e.nss_budget ? deflate(inDollars(e.nss_budget, e, "foundation")) : null;
       const has = !!budget?.some((v) => v != null);
@@ -2907,7 +2890,7 @@ export async function startExplorer() {
         $("nssb-sub").replaceChildren(
           `${dollarsNote}${whole ? "" : " per foundation pupil"}.${wholeNote}` +
           (gAt >= 0 ? ` In FY${years[gAt]}, ${district ? e.name : "its districts"} spent ${moreLess(gap[gAt]!)} than ${district ? "it" : "they"} budgeted.` : "") +
-          (nx?.vs_actual != null ? ` FY${nx.fy}'s budget${district ? "" : "s"}${district && nx.budget != null ? `, ${whole$(nx.budget)},` : ""} ` +
+          (nx?.vs_actual != null ? ` FY${nx.fy}'s budget${district ? "" : "s"}${district && nx.budget != null ? `, ${amount(nx.budget)},` : ""} ` +
             `${district ? "is" : "are"} ${moreLess(nx.vs_actual)} than FY${nx.fy - 1}'s spending` +
             (nx.vs_budget != null ? ` and ${moreLess(nx.vs_budget)} than FY${nx.fy - 1}'s budget` : "") + "." : "") + " ",
           helpTip("Net school spending is what the state counts toward a district's minimum: its own spending on its " +
@@ -3138,7 +3121,7 @@ export async function startExplorer() {
       for (const id of ["fig-srace", "fig-sgroups"]) $(id).hidden = !st;
       if (st) {
         const cSt = c?.students ?? null;
-        const pctFmt = (v: number) => `${v < 10 ? v.toFixed(1) : Math.round(v)}%`;
+        const pctFmt = (v: number) => pct(v / 100);
         const whose = e.kind === "district" ? `${e.name}'s` : "its districts'";
         const studentsLabel = e.kind === "district" ? "Students" : "Students, average per district";
         const yearsNote = `Each school year sits at its fiscal year: October 1, ${meta.latest - 1}, at FY${meta.latest}.`;
@@ -3479,7 +3462,7 @@ export async function startExplorer() {
       name.append(r.name);
       li.append(name);
       if (r.kind != null) li.append(text("span", r.kind, "rel-kind"));
-      if (r.amount !== undefined) li.append(text("span", r.amount != null ? millions(r.amount) : "–", "rel-amt"));
+      if (r.amount !== undefined) li.append(text("span", r.amount != null ? amount(r.amount) : "–", "rel-amt"));
       if (r.extra) {
         const extra = document.createElement("span");
         extra.className = "rel-extra";
@@ -3494,7 +3477,6 @@ export async function startExplorer() {
   // ---- Town view ----
   const count = (v: number) => Math.round(v).toLocaleString("en-US");
   const share = (part: Val, whole: Val) => (part != null && whole ? part / whole : null);
-  const percent = (v: number) => `${Math.round(v * 100)}%`;
   /** Index of the latest year with a value, for towns that have not filed recently. */
   const lastWith = (vals: Values) => {
     for (let i = vals.length - 1; i >= 0; i--) if (vals[i] != null) return i;
@@ -3600,14 +3582,14 @@ export async function startExplorer() {
       // Parcels: each type's share of all of them beside its count
       const t = s.shares && total[i] ? { ...t0, rows: t0.rows.map((r) => {
         const part = shown.find((x) => x.label === r.label);
-        return part && part.values[i] != null ? { ...r, value: `${r.value} (${percent(part.values[i]! / total[i]!)})` } : r;
+        return part && part.values[i] != null ? { ...r, value: `${r.value} (${pct(part.values[i]! / total[i]!)})` } : r;
       }) } : t0;
       const more = [
         ...(extra && extra.values[i] != null ? [{ value: fmt(extra.values[i]!), label: extra.label, color: extra.color, mark: "line" as const }] : []),
         ...(s.tipRows?.(i) ?? []),
         ...(passed.length ? [
           ...(vm!.amount[i] != null ? [{ value: fmt(vm!.amount[i]!), label: vm!.label, color: VOTE_COLOR, mark: "diamond" as const }] : []),
-          ...passed.slice(0, 5).map(([, kind, amt, what], k) => ({ value: amt != null ? whole$(amt) : "–",
+          ...passed.slice(0, 5).map(([, kind, amt, what], k) => ({ value: amt != null ? amount(amt) : "–",
             label: `${VOTE_WORDS[kind] ?? kind} passed${what ? `: ${what}` : ""}`,
             ...(k === 0 && vm!.amount[i] == null ? { color: VOTE_COLOR, mark: "diamond" as const } : {}) })),
           ...(passed.length > 5 ? [{ value: "", label: `and ${passed.length - 5} more, listed under the levy chart` }] : []),
@@ -3723,7 +3705,7 @@ export async function startExplorer() {
     const perWord = PER_WORD[state.per];
     const inTotal = state.per === "total";
     const perP = inTotal ? "" : ` per ${perWord}`;
-    const money = inTotal ? whole$ : usd;
+    const money = inTotal ? amount : usd;
     // Titles and chart descriptions name the unit the Per choice picks
     document.querySelectorAll("[data-per]").forEach((n) => (n.textContent = perP));
     document.querySelectorAll("[data-aria-per]").forEach((n) =>
@@ -3801,8 +3783,8 @@ export async function startExplorer() {
     const cEduShare = cSpend ? share(cSpend[0].values[end], cSpendTotal![end]) : null;
     const taxShare = share(rev[0].values[end], revTotal[end]);
     const cTaxShare = cRev ? share(cRev[0].values[end], cRevTotal![end]) : null;
-    const cEduLine = c && cEduShare != null ? `${c.name}: ${percent(cEduShare)}` : "";
-    const cTaxLine = c && cTaxShare != null ? `${c.name}: ${percent(cTaxShare)}` : "";
+    const cEduLine = c && cEduShare != null ? `${c.name}: ${pct(cEduShare)}` : "";
+    const cTaxLine = c && cTaxShare != null ? `${c.name}: ${pct(cTaxShare)}` : "";
     const popChange = t.pop[0] && popNow ? popNow / t.pop[0] - 1 : null;
     const allDollars = deflate(t.spend_total)[end];
 
@@ -3835,15 +3817,15 @@ export async function startExplorer() {
       "estimate of what all that property would sell for, set every two years and adjusted for how closely each town's " +
       "assessments follow the market, so towns can be compared; Chapter 70 and other state formulas use it.";
     // The single-family share of parcels, the town's and the comparison's
-    const singleLine = hasProp && singles(par, pEnd) != null ? `${percent(singles(par, pEnd)!)} single-family homes` : "";
-    const cSingleLine = hasProp && cHasProp && singles(parcelSeries(c!), pEnd) != null ? `${c!.name}: ${percent(singles(parcelSeries(c!), pEnd)!)}` : "";
+    const singleLine = hasProp && singles(par, pEnd) != null ? `${pct(singles(par, pEnd)!)} single-family homes` : "";
+    const cSingleLine = hasProp && cHasProp && singles(parcelSeries(c!), pEnd) != null ? `${c!.name}: ${pct(singles(parcelSeries(c!), pEnd)!)}` : "";
     // The comparison's bill, with the share of income its gold pie shows
     const cBillLine = c?.sf_bill?.[bIdx] != null ? `${c.name}: ${usd(deflate(c.sf_bill)[bIdx]!)}` +
-      (c.sf_bill_income?.[bIdx] != null ? `, ${percent(c.sf_bill_income[bIdx]!)} of income` : "") : "";
+      (c.sf_bill_income?.[bIdx] != null ? `, ${pct(c.sf_bill_income[bIdx]!)} of income` : "") : "";
     const propTiles = !hasProp ? [] : [
       tile(`Assessed value${perP}, FY${years[pEnd]}`, valTotal[pEnd] != null ? money(valTotal[pEnd]!) : "–", [
         !inTotal && t.kind === "town" && t.value_total?.[pEnd] != null ? `${amount(t.value_total[pEnd]!)} in all` : "",
-        homes(val, pEnd) != null ? `Residential: ${percent(homes(val, pEnd)!)} of it` : "",
+        homes(val, pEnd) != null ? `Residential: ${pct(homes(val, pEnd)!)} of it` : "",
         cVal && totals(cVal)[pEnd] != null ? `${c!.name}: ${money(totals(cVal)[pEnd]!)}` : "",
       ], null, valuesNote),
       tile(`Equalized valuation${perP}, January ${years[eIdx] - 1}`,
@@ -3857,34 +3839,34 @@ export async function startExplorer() {
       ], singles(par, pEnd) != null ? { v: singles(par, pEnd)!, title: `Single-family homes: ${singleLine}`, own: singleLine,
         cmp: cSingleLine ? { v: singles(parcelSeries(c!), pEnd)!, title: cSingleLine, detail: cSingleLine } : null } : null),
       tile(`Average single-family tax bill, FY${years[bIdx]}`, t.sf_bill![bIdx] != null ? usd(deflate(t.sf_bill!)[bIdx]!) : "–", [
-        t.sf_bill_income?.[bIdx] != null ? `${percent(t.sf_bill_income[bIdx]!)} of income per capita` : "",
+        t.sf_bill_income?.[bIdx] != null ? `${pct(t.sf_bill_income[bIdx]!)} of income per capita` : "",
         cBillLine,
       ], t.sf_bill_income?.[bIdx] != null
-        ? { v: t.sf_bill_income[bIdx]!, title: `The tax bill: ${percent(t.sf_bill_income[bIdx]!)} of income per capita`,
-          own: `${percent(t.sf_bill_income[bIdx]!)} of income per capita`,
-          cmp: c?.sf_bill_income?.[bIdx] != null ? { v: c.sf_bill_income[bIdx]!, title: `${c.name}: ${percent(c.sf_bill_income[bIdx]!)}`,
+        ? { v: t.sf_bill_income[bIdx]!, title: `The tax bill: ${pct(t.sf_bill_income[bIdx]!)} of income per capita`,
+          own: `${pct(t.sf_bill_income[bIdx]!)} of income per capita`,
+          cmp: c?.sf_bill_income?.[bIdx] != null ? { v: c.sf_bill_income[bIdx]!, title: `${c.name}: ${pct(c.sf_bill_income[bIdx]!)}`,
             detail: cBillLine } : null } : null),
     ];
     $("tiles").replaceChildren(
       tile(`General fund spending${perP}, FY${fy}`, spendTotal[end] != null ? money(spendTotal[end]!) : "–", [
         // Since the first year with a figure: per household begins with the first household count, FY2009
-        g != null ? `${pct(g)} a year on trend since FY${years[Math.max(0, firstAt(spendTotal))]}${real ? ", after inflation" : ", before inflation"}` : "",
-        !inTotal && t.kind === "town" && allDollars != null ? `${millions(allDollars)} in all` : "",
+        g != null ? `${change(g)} a year on trend since FY${years[Math.max(0, firstAt(spendTotal))]}${real ? ", after inflation" : ", before inflation"}` : "",
+        !inTotal && t.kind === "town" && allDollars != null ? `${amount(allDollars)} in all` : "",
         inTotal && t.kind === "average" ? "For the average town" : "",
         c && cSpendTotal?.[end] != null ? `${c.name}: ${money(cSpendTotal[end]!)}` : "",
       ]),
-      tile(`Education's share of spending, FY${fy}`, eduShare != null ? percent(eduShare) : "–", [
+      tile(`Education's share of spending, FY${fy}`, eduShare != null ? pct(eduShare) : "–", [
         spend[0].values[end] != null ? `${money(spend[0].values[end]!)}${perP}` : "",
         cEduLine,
-      ], eduShare != null ? { v: eduShare, title: `Education: ${percent(eduShare)} of general fund spending`,
+      ], eduShare != null ? { v: eduShare, title: `Education: ${pct(eduShare)} of general fund spending`,
         cmp: c && cEduShare != null ? { v: cEduShare, title: cEduLine, detail: cEduLine } : null } : null),
-      tile(`Taxes' share of revenue, FY${fy}`, taxShare != null ? percent(taxShare) : "–", [
+      tile(`Taxes' share of revenue, FY${fy}`, taxShare != null ? pct(taxShare) : "–", [
         rev[0].values[end] != null ? `${money(rev[0].values[end]!)}${perP}` : "",
         cTaxLine,
-      ], taxShare != null ? { v: taxShare, title: `Taxes: ${percent(taxShare)} of general fund revenue`,
+      ], taxShare != null ? { v: taxShare, title: `Taxes: ${pct(taxShare)} of general fund revenue`,
         cmp: c && cTaxShare != null ? { v: cTaxShare, title: cTaxLine, detail: cTaxLine } : null } : null),
       tile(`${t.kind === "town" ? "Population" : "Combined population"}, July ${years[last] - 1}`, popNow != null ? count(popNow) : "–", [
-        popChange != null ? `${pct(popChange)} since July ${years[0] - 1}` : "",
+        popChange != null ? `${change(popChange)} since July ${years[0] - 1}` : "",
         t.kind === "average" ? "Census Bureau estimates" : peerLabel ? `Population group: ${peerLabel}` : "Not in a population group",
       ]),
       ...propTiles,
@@ -3939,8 +3921,8 @@ export async function startExplorer() {
         key: "tres", name: t.name, series: res, cSeries: cRes, cmp: cRes ? c : null, noun: "reserves", rowLabel: "Reserve",
         caption: `Reserves${perP}`, yShort: `Reserves${perP}`, totalLabel: `Total${perP}`, end: lastWith(totals(res)), width,
         sub: `${dollarsNote}${perP}, at each fiscal year's end.` + (r && rp != null
-          ? ` At the end of FY${r.fy}, ${who} held ${whole$(r.free_cash)} in free cash and ${whole$(r.stab + r.sp_stab)} in ` +
-            `stabilization funds, ${percent(rp)} of ${t.kind === "town" ? "its" : "their"} operating budget${t.kind === "town" ? "" : "s"}.` : ""),
+          ? ` At the end of FY${r.fy}, ${who} held ${amount(r.free_cash)} in free cash and ${amount(r.stab + r.sp_stab)} in ` +
+            `stabilization funds, ${pct(rp)} of ${t.kind === "town" ? "its" : "their"} operating budget${t.kind === "town" ? "" : "s"}.` : ""),
         help: "Free cash is what a town's general fund had left at the end of a fiscal year, from revenue above its estimates " +
           "and appropriations it didn't spend, less what it is still owed, such as unpaid property taxes. The state certifies it " +
           "from the town's June 30 balance sheet, and town meeting or the council can then spend it.\n\nStabilization funds are " +
@@ -3949,7 +3931,7 @@ export async function startExplorer() {
         missing: "Not reported to the state",
         tipRows: (i) => {
           const s = resShare(t, i);
-          return s != null ? [{ value: percent(s), label: "Of the operating budget" }] : [];
+          return s != null ? [{ value: pct(s), label: "Of the operating budget" }] : [];
         },
       }, dollarsNote);
       fiscalPanels.push({ panel: p9.panel, figure: $("fig-tres"), tip: p9.tip });
@@ -3998,8 +3980,8 @@ export async function startExplorer() {
         const top3 = l ? FC_SERIES.filter((q) => q.key !== "adjust" && l[q.key] > 0).sort((x, y) => l[y.key] - l[x.key]).slice(0, 3) : [];
         $("tfc-sub").replaceChildren(`${dollarsNote}${perP}, each year's free cash as the state calculates it from the town's ` +
           "June 30 balance sheet; shortfalls and adjustments take some back (hatched)." + (fcSel ? " Scale fitted to the selection." : "") +
-          (l && top3.length ? ` For FY${l.fy}, ${t.kind === "town" ? `${t.name}'s` : "these towns'"} ${whole$(l.identified)} came ` +
-            `mostly from ${andList(top3.map((q) => `${whole$(l[q.key])} ${q.words}`))}.` : "") + " ",
+          (l && top3.length ? ` For FY${l.fy}, ${t.kind === "town" ? `${t.name}'s` : "these towns'"} ${amount(l.identified)} came ` +
+            `mostly from ${andList(top3.map((q) => `${amount(l[q.key])} ${q.words}`))}.` : "") + " ",
           helpTip("Local receipts are what a town collects besides the property tax and state aid: motor vehicle excise, " +
             "fees, permits, interest, and the like. Budgets estimate them conservatively, as the state advises, so most towns " +
             "collect more. State aid above the estimate is aid that came in above the state's own estimate for the year. " +
@@ -4043,7 +4025,7 @@ export async function startExplorer() {
         key: "tdebt", name: t.name, series: debt, cSeries: cDebt, cmp: cDebt ? c : null, noun: "parts", rowLabel: "Debt",
         caption: `Long-term debt${perP}`, yShort: `Debt${perP}`, totalLabel: `Total${perP}`, end: lastWith(totals(debt)), width,
         sub: `${dollarsNote}${perP}, at each fiscal year's end.` +
-          (dl && dl.budget ? ` In FY${dl.fy}, ${who} owed ${whole$(dl.outstanding)}, and general fund debt service was ` +
+          (dl && dl.budget ? ` In FY${dl.fy}, ${who} owed ${amount(dl.outstanding)}, and general fund debt service was ` +
             `${(dl.service / dl.budget * 100).toFixed(1)}% of the operating budget.` : "") +
           (sp || md ? ` ${t.name}'s bonds: ${[sp ? `S&P ${sp[1]} (${sp[0]})` : "", md ? `Moody's ${md[1]} (${md[0]})` : ""].filter(Boolean).join(", ")}.` : ""),
         help: "Debt outstanding is what the town owes on its long-term bonds at the fiscal year's end, from Schedule A. " +
@@ -4087,7 +4069,7 @@ export async function startExplorer() {
       const max = t.levy_max?.[lEnd];
       const used = raised != null && max ? `In FY${years[lEnd]}, ${t.kind === "town" ? t.name : "these towns"} raised ` +
         `${amount(raised)} of a ${amount(max)} limit, leaving ${max - raised >= 1e6 ? amount(max - raised) : usd(max - raised)} ` +
-        `(${percent((max - raised) / max)}) unused.` : "";
+        `(${pct((max - raised) / max)}) unused.` : "";
       const o = t.override_latest;
       const op = overridePct(o);
       const v = t.votes;
@@ -4100,7 +4082,7 @@ export async function startExplorer() {
         caption: `Property tax levy and its limit${perP}`, yShort: `Levy${perP}`, totalLabel: `Levy limit${perP}`, end: lEnd, width,
         sub: `${dollarsNote}${perP}. Proposition 2½ limits each town's levy; the stack's full height is the limit, ` +
           `with voter-approved debt exclusions. ${used}` +
-          (o && op != null ? ` Override capacity, the room between the limit and the ceiling, was ${percent(op)} of the ceiling in FY${o.fy}.` : "") +
+          (o && op != null ? ` Override capacity, the room between the limit and the ceiling, was ${pct(op)} of the ceiling in FY${o.fy}.` : "") +
           (voteBits.length ? ` Since FY${years[0]}, ${t.kind === "town" ? `${t.name}'s voters` : "voters in these towns"} passed ${voteBits.join(", ")}.` : ""),
         extra: t.levy_ceiling_pr ? {
           series: { key: "ceiling", label: "Levy ceiling", color: CEILING_COLOR, dash: "2 4", values: deflate(per(t.levy_ceiling_pr, kT)) },
@@ -4135,7 +4117,7 @@ export async function startExplorer() {
         "value over single-family homes, times the tax rate." +
         (rate != null && t.sf_bill?.[bIdx] != null ? ` In FY${years[bIdx]}, ${t.kind === "town" ? `${t.name}'s` : "the"} bill ` +
           `was ${usd(t.sf_bill[bIdx]!)} at $${rate.toFixed(2)} per $1,000 of value` +
-          (t.sf_bill_income?.[bIdx] != null ? `, ${percent(t.sf_bill_income[bIdx]!)} of income per capita.` : ".") : "");
+          (t.sf_bill_income?.[bIdx] != null ? `, ${pct(t.sf_bill_income[bIdx]!)} of income per capita.` : ".") : "");
       fullTables.tbill = { caption: `Average single-family tax bill, ${t.name} (${dollarsNote.toLowerCase()})`, cols: [
         { label: "Bill", values: deflate(t.sf_bill!), fmt: usd },
         { label: "Rate per $1,000", values: t.sf_rate ?? [], fmt: (v) => `$${v.toFixed(2)}` },
@@ -4240,7 +4222,6 @@ export async function startExplorer() {
     document.querySelectorAll<HTMLInputElement>('input[name="tpop-view"]').forEach((r) => (r.checked = r.value === (rateView ? "rate" : "people")));
     const pctOne = (v: number) => `${v.toFixed(1)}%`;
     // A rate's yearly change is often under a tenth of a point
-    const points = (v: number) => `${v.toFixed(Math.abs(v) < 0.1 ? 2 : 1)} points`;
     const lAt = lab ? lastAt(lab.rate) : -1;
     const whose = t.kind === "town" ? `${t.name}'s` : "these towns'";
     const laborHelp = "The labor force is the residents 16 and older who are working or looking for work, and the employed " +
@@ -4321,13 +4302,12 @@ export async function startExplorer() {
     $("fig-tdis").hidden = !dm?.disability.some((v) => v != null);
     if (dm) {
       type Demo = Record<DemoKey, Values>;
-      const pctFmt = (v: number) => `${v < 10 ? v.toFixed(1) : Math.round(v)}%`;
+      const pctFmt = (v: number) => pct(v / 100);
       const releases = years.filter((_, i) => dm.population[i] != null);
       const span = (i: number) => `${years[i] - 5}–${years[i] - 1}`;
       const residents = t.kind === "town" ? "Population" : "Population, combined";
       // A share's trend: its yearly change in points, and that as a percent of the share
-      const sharePoints = (v: number) => `${v.toFixed(Math.abs(v) < 0.1 ? 2 : 1)} points`;
-      const pointsDetail = (values: Values) => ((r) => (r ? `${signed(r.perYear, sharePoints)}` +
+      const pointsDetail = (values: Values) => ((r) => (r ? `${signed(r.perYear, points)}` +
         `${r.rate != null ? ` (${signedPct(r.rate)})` : ""} a year` : undefined))(trendRate(values));
       /** One panel: each group's count over the residents it's a share of (base), or, missing, why a release has none */
       const demoStack = (key: "tage" | "trace" | "tsex" | "tdis", defs: readonly { key: string; label: string; color: string; of: (d: Demo) => Values }[],
@@ -4350,10 +4330,10 @@ export async function startExplorer() {
           values: totals(single ? cSeries : visible(cSeries, key)) } : null;
         const overlay = drawn(key, "cmp", overlayAll);
         // Its trend once a group is chosen: a share's line across the releases
-        const trendAll = sel ? trendOf(t.name, sel, shownTotal, sharePoints) : null;
+        const trendAll = sel ? trendOf(t.name, sel, shownTotal, points) : null;
         const trend = trendAll ? drawn(key, "trend", trendAll) : null;
         $(`${key}-sub`).replaceChildren(sub + (sel && !single ? " Scale fitted to the selection." : "") + " ", helpTip(help));
-        const tv = trendView(key, trend, overlayAll, c?.name ?? "", sharePoints, pctFmt);
+        const tv = trendView(key, trend, overlayAll, c?.name ?? "", points, pctFmt);
         const panel = stackedColumns($(`svg-${key}`) as unknown as SVGSVGElement,
           { width, height: width < 520 ? 240 : 280, years, yTitle: caption, yTitleShort: "Share", sparse: true, trendsOnly: tv.only }, shown, overlay,
           sel ? fitTicks(shown, overlay?.values ?? null) : [0, 25, 50, 75, 100], (v) => `${v}%`, setHover,
@@ -4379,7 +4359,7 @@ export async function startExplorer() {
           const [p0, p1] = [years.indexOf(before), years.indexOf(after)];
           const rows = shown.filter((x) => x.values[p0] != null && x.values[p1] != null).reverse()
             .map((x) => ({ value: `${pctFmt(x.values[p0]!)} → ${pctFmt(x.values[p1]!)}`, color: x.color, mark: "rect" as const,
-              label: `${x.label}, ${signed(x.values[p1]! - x.values[p0]!, (v) => `${v.toFixed(1)} points`)}` }));
+              label: `${x.label}, ${signed(x.values[p1]! - x.values[p0]!, points)}` }));
           return { title: `${span(p0)} to ${span(p1)}`, rows: rows.length ? rows : [none] };
         };
         // With only the trends shown, the groups picked together, and the comparison's (#225); between two
@@ -4393,9 +4373,9 @@ export async function startExplorer() {
           const [p0, p1] = ends;
           const row = (v: Values, label: string, extra: Partial<TipRow>): TipRow[] => (v[p0] == null || v[p1] == null ? [] : [{
             value: p0 === p1 ? pctFmt(v[p0]!) : `${pctFmt(v[p0]!)} → ${pctFmt(v[p1]!)}`,
-            label: p0 === p1 ? label : `${label}, ${signed(v[p1]! - v[p0]!, (x) => `${x.toFixed(1)} points`)}`, ...extra }]);
+            label: p0 === p1 ? label : `${label}, ${signed(v[p1]! - v[p0]!, points)}`, ...extra }]);
           // The trends run through every year, so their figures are the hovered year's
-          const rows = [...row(shownTotal, capital(sel!), { strong: true }), ...trendRow(trend, i, pctFmt, sharePoints),
+          const rows = [...row(shownTotal, capital(sel!), { strong: true }), ...trendRow(trend, i, pctFmt, points),
             ...(overlay ? row(overlay.values, overlay.label, { color: COMPARE_COLOR, mark: "linedot" }) : [])];
           return { title: p0 === p1 ? `${span(p0)}, at FY${years[p0]}` : `${span(p0)} to ${span(p1)}`, rows: rows.length ? rows : [none] };
         };

@@ -8,6 +8,8 @@
 // and a level shown for any year, or played from the first year to the latest.
 
 import { enlargeButton } from "./enlarge";
+import { asShown, change, count, measured, pct, usd, yearly } from "./format";
+import { median } from "./stats";
 
 /** [value, year] for a level; [value, first year, last year] for a change */
 type Val = number[];
@@ -102,16 +104,13 @@ const TREND_NOTE = "The trend is the straight line that best fits every year's v
   "moves it less than it would move growth measured from the first year's value to the last year's, and the line " +
   "doesn't always start on the first year's value.";
 
-/** The sign of a figure as shown: none for one that rounds to zero, which has no direction */
-const sign = (shown: number) => (shown > 0 ? "+" : shown < 0 ? "−" : "");
-const tenth = (v: number) => Math.round(v * 1000) / 10;
-const yearly = (v: number) => `${sign(tenth(v))}${Math.abs(tenth(v)).toFixed(1)}% a year`;
-const yearlyShort = (v: number) => `${sign(tenth(v))}${Math.abs(tenth(v)).toFixed(1)}%`;
-const change = (v: number) => `${sign(Math.round(v * 100))}${Math.abs(Math.round(v * 100))}%`;
-const share = (v: number) => `${(v * 100).toFixed(Math.abs(v) < 0.1 ? 1 : 0)}%`;
-const money = (v: number) => `${sign(Math.round(v))}$${Math.abs(Math.round(v)).toLocaleString("en-US")}`;
-const dollars = (v: number) => `$${Math.round(v).toLocaleString("en-US")}`;
-const dense = (v: number) => (v < 100 ? v.toFixed(1) : Math.round(v).toLocaleString("en-US"));
+// The figures as format.ts writes them (#237): growth and changes signed to a tenth of a percent, shares to a tenth,
+// dollars whole, density to a tenth under 100. A legend's cut points are round numbers, as an axis's ticks are.
+const yearlyShort = (v: number) => change(v);
+const share = (v: number) => pct(v);
+const money = (v: number) => usd(v, true);
+const dollars = (v: number) => usd(v);
+const dense = (v: number) => measured(v);
 const denseShort = (v: number) => (v < 10 && v % 1 ? v.toFixed(1) : Math.round(v).toLocaleString("en-US"));
 const none = () => "";
 /** The American Community Survey release a fiscal year's figure comes from: the five years ending the year before */
@@ -225,9 +224,9 @@ const TOWN_MEASURES: Measure[] = [
     about: (m, real, y) => `Each town's long-term debt outstanding at the end of FY${y.to}, per resident, in nominal dollars.`,
   },
   {
-    key: "overrides", label: "Prop 2½ overrides passed since FY2005", kind: "level", fmt: (v) => String(Math.round(v)),
+    key: "overrides", label: "Prop 2½ overrides passed since FY2005", kind: "level", fmt: count,
     notes: ["proposition-2-votes"],
-    short: (v) => String(Math.round(v)), cuts: [0, 1, 3, 6], over: true,
+    short: count, cuts: [0, 1, 3, 6], over: true,
     classes: ["None", "One", "Two or three", "Four to six", "Seven or more"],
     about: (m) => "How many Proposition 2½ overrides each town's voters passed from FY2005 on, as the Division of Local " +
       `Services records them; debt and capital exclusions aren't counted.`,
@@ -293,7 +292,7 @@ const DISTRICT_MEASURES: Measure[] = [
     notes: ["budgets"],
     // Fixed cuts, the same every year, with a class past 5% either way (#223)
     cuts: [-0.05, -0.02, -0.005, 0.005, 0.02, 0.05],
-    classes: ["Below −5%", "−5% to −2%", "−2% to −0.5%", "−0.5% to +0.5%", "+0.5% to +2%", "+2% to +5%", "+5% and up"],
+    classes: ["Below −5.0%", "−5.0% to −2.0%", "−2.0% to −0.5%", "−0.5% to +0.5%", "+0.5% to +2.0%", "+2.0% to +5.0%", "+5.0% and up"],
     about: (m, real, y) => `How far each district's net school spending in FY${y.to} came from the budget it reported to DESE, ` +
       "as a share of that budget: orange districts spent less than they budgeted, blue more, and gray within half a " +
       "percent either way. Budgets begin with FY2011.",
@@ -431,13 +430,6 @@ function cuts(kind: Measure["kind"], values: number[]): number[] {
     out.push(out.length && n <= out[out.length - 1] ? out[out.length - 1] : n);
   }
   return out;
-}
-/** A figure as its words give it: the number its format prints, read back ("+2.0% a year" is 0.02), so a color is
- * the class of the figure a reader sees (#231) */
-function asShown(fmt: (v: number) => string, v: number) {
-  const s = fmt(v);
-  const n = Number(s.replace(/−/g, "-").replace(/[^\d.-]/g, ""));
-  return /\d/.test(s) && Number.isFinite(n) ? (s.includes("%") ? n / 100 : n) : v;
 }
 // Each class runs from its cut up to the next, [a, b): a figure shown equal to a cut takes the class above it. The
 // cuts carry float error (1.5 × 10⁻¹ is 0.15000000000000002), so the test allows a hair under.
@@ -1095,7 +1087,7 @@ export function startMap(root: HTMLElement, data: MapData, opts: {
       : measure.kind === "change" ? (up === n ? `In all ${n} ${what}, ${measure.subject} grew` : up === 0 ? `In none of the ${n} ${what} did ${measure.subject} grow`
         : `In ${up} of ${n} ${what}, ${measure.subject} grew`) + (measure.dollars && real ? " faster than prices" : "") +
         (up === n || up === 0 ? "." : `; in the other ${n - up}, it did not.`)
-      : `The median across ${n} ${what} is ${measure.fmt(quantile(values, 0.5))}${measure.unit ?? ""}.`));
+      : `The median across ${n} ${what} is ${measure.fmt(median(values))}${measure.unit ?? ""}.`));
     if (bySeries && measure.years === "year" && ys.length > 1) {
       about.append(` Each color covers the same range in every year, FY${ys[0]} to FY${ys[ys.length - 1]}.`);
     }

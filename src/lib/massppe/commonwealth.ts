@@ -3,7 +3,8 @@
 // and the factors are ranked by how closely they line up with the vertical measure.
 // Data: src/data/massppe/commonwealth.json (export_explorer_data.commonwealth_data).
 
-import { signFor } from "./charts";
+import { change, compact, count, pct, rho, round, signFor, usd } from "./format";
+import { median } from "./stats";
 import { loess, pearson, scatter, spearman, type Group, type Point } from "./scatter";
 
 type Values = (number | null)[];
@@ -28,7 +29,8 @@ export interface CwData {
   districts: Row[];
 }
 
-type Unit = "pct" | "usd" | "count";
+/** A share in percent, a change in percent (signed), dollars, or a count */
+type Unit = "pct" | "chg" | "usd" | "count";
 type SourceKey = keyof typeof SOURCES;
 interface Var { key: string; label: string; short: string; unit: Unit; role: "outcome" | "factor"; src: SourceKey[]; log?: boolean;
   /** The picker's group for a factor that isn't size or the towns' wealth: who the students are */
@@ -63,7 +65,7 @@ const VARS: Var[] = [
   { key: "rlc_pfe", label: "Required local contribution per foundation pupil", short: "required local contribution per pupil", unit: "usd", role: "outcome", src: ["c70"] },
   { key: "ood_pp", label: "Spending per out-of-district pupil", short: "spending per out-of-district pupil", unit: "usd", role: "outcome", src: ["ppe"], log: true },
   { key: "sped_share", label: "Special education's share of spending", short: "special education's share", unit: "pct", role: "outcome", src: ["sped"] },
-  { key: "gap", label: "Actual vs. budget, net school spending", short: "actual vs. budget", unit: "pct", role: "outcome", src: ["budgets"] },
+  { key: "gap", label: "Actual vs. budget, net school spending", short: "actual vs. budget", unit: "chg", role: "outcome", src: ["budgets"] },
   { key: "fe", label: "Foundation enrollment", short: "foundation enrollment", unit: "count", role: "factor", src: ["c70"], log: true },
   { key: "fte", label: "In-district FTE pupils", short: "in-district pupils", unit: "count", role: "factor", src: ["ppe"], log: true },
   { key: "eqv_res", label: "Equalized property value per resident of its towns", short: "property value per resident (EQV)", unit: "usd", role: "factor", src: ["eqv", "pop"], log: true },
@@ -246,7 +248,6 @@ const PRESETS: Preset[] = [
   },
 ];
 
-const pct = (v: number) => `${signFor(v, String(Math.abs(Math.round(v * 100))))}${Math.abs(Math.round(v * 100))}%`;
 /** A measure's name, bold wherever text describes it */
 const vn = (s: string) => el("strong", "cw-var", s);
 /** Text with its *starred* measure names in bold */
@@ -265,19 +266,15 @@ const SAME_THING: { pair: [string, string]; text: () => Rich }[] = [
     "learners are also students of color, so the same students count toward both shares. They share no number, but part " +
     "of their ρ comes from that overlap, not from anything districts do."] },
 ];
-const fmt = (u: Unit, v: number) =>
-  u === "pct" ? pct(v) : u === "usd" ? `$${Math.round(v).toLocaleString("en-US")}` : Math.round(v).toLocaleString("en-US");
-const short = (n: number, d: number) => String(Number((n).toFixed(d)));
+// Each unit's figures as format.ts writes them (#237): a share to a tenth of a percent, a change signed, dollars and
+// counts whole. An axis's ticks are round numbers, with a decimal only where a tick needs one.
+const fmt = (u: Unit, v: number) => (u === "pct" ? pct(v) : u === "chg" ? change(v) : u === "usd" ? usd(v) : count(v));
 const axisFmt = (u: Unit) => (v: number) => {
-  if (u === "pct") return pct(v);
-  const p = u === "usd" ? "$" : "";
-  const a = Math.abs(v);
-  if (a >= 1e6) return `${p}${short(v / 1e6, 1)}M`;
-  if (a >= 1e3) return `${p}${short(v / 1e3, a >= 1e4 ? 0 : 1)}K`;
-  return `${p}${short(v, 0)}`;
+  if (u === "usd" || u === "count") return compact(v, u === "usd" ? "$" : "");
+  const s = String(Math.abs(round(v * 100, 1)));
+  return `${signFor(v, s, u === "chg")}${s}%`;
 };
 const capital = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
-const rho = (r: number) => `${signFor(r, Math.abs(r).toFixed(2))}${Math.abs(r).toFixed(2)}`;
 function el<K extends keyof HTMLElementTagNameMap>(tag: K, cls?: string, text?: string): HTMLElementTagNameMap[K] {
   const n = document.createElement(tag);
   if (cls) n.className = cls;
@@ -437,9 +434,9 @@ export function startCommonwealth(root: HTMLElement, data: CwData, opts: {
     const within = [...byRegion.values()].filter((ix) => ix.length >= 15)
       .map((ix) => spearman(ix.map((i) => xs[i]), ix.map((i) => ys[i])) ?? 0);
     if (within.length >= 3) {
-      const med = [...within.map(Math.abs)].sort((a, b) => a - b)[Math.floor(within.length / 2)];
+      const med = median(within.map(Math.abs));
       // The median within regions, with its sign, for the text
-      const medSigned = [...within].sort((a, b) => a - b)[Math.floor(within.length / 2)];
+      const medSigned = median(within);
       const against = within.filter((r) => Math.abs(r) >= 0.1 && Math.sign(r) !== Math.sign(rs)).length;
       if (med - Math.abs(rs) >= 0.2) {
         out.push({ label: "Regions sit apart", text: [`Within each region the pattern is stronger (median ρ about ` +
@@ -926,7 +923,7 @@ export function startCommonwealth(root: HTMLElement, data: CwData, opts: {
     // Left out: the districts too large or small to compare, unless all are asked for, and those a log scale can't place
     const out = v.all ? [] : ["Boston", "Provincetown", `districts with fewer than ${MIN_FE} foundation pupils`];
     if (offScale.n) {
-      out.push(`${offScale.n} ${offScale.n === 1 ? "district" : "districts"} with ${xv.short} at ${fmt(xv.unit, 0)}` +
+      out.push(`${offScale.n} ${offScale.n === 1 ? "district" : "districts"} with ${xv.short} at ${axisFmt(xv.unit)(0)}` +
         `${offScale.below ? " or below" : ""}, which a log scale can't place`);
     }
     const omitted = !out.length ? "" : ` Left out: ${out.length < 3 ? out.join(" and ")

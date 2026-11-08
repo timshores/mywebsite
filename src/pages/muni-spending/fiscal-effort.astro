@@ -1,5 +1,6 @@
 ---
 import Layout from "../../layouts/Layout.astro";
+import { digits, pct, usd } from "../../lib/massppe/format";
 // What "the same fiscal effort" means, worked through for two towns with one house each and a school they
 // share. It was a window on the cap tab, whose "?" beside "fiscal effort" links here (cap.ts, helpLink).
 // Fixed numbers, so the page is built whole; Tim will revise it.
@@ -11,10 +12,8 @@ const pEx = school / 2 / (2 * house);
 const iEx = school / 2 / (incomes[0] + incomes[1]);
 const cey = incomes.map((inc) => house * pEx + inc * iEx);
 
-// As the cap tab formats them (cap.ts)
-const usd = (v: number) => `${v < 0 ? "−" : ""}$${Math.abs(Math.round(v)).toLocaleString("en-US")}`;
-const pct = (v: number, d = 0) => `${(v * 100).toFixed(d)}%`;
-const rate = (v: number) => `${(v * 100).toFixed(3)}%`;
+// As the cap tab writes them (format.ts, cap.ts): the effort percentages to three decimals, as DESE gives them
+const rate = (v: number) => `${digits(v * 100, 3)}%`;
 
 const rows: { label: string; cells: string[]; total?: boolean }[] = [
   { label: "House, assessed", cells: [usd(house), usd(house)] },

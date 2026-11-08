@@ -7,7 +7,9 @@
 // target min(yield x f, cap x foundation budget). f is 1 at 82.5%; at 100% and with no cap
 // this reproduces Michael Naughton and Tupper Brown's FY2026 targets to the dollar.
 
-import { signFor, svgEl } from "./charts";
+import { svgEl } from "./charts";
+import { change as changePct, compact, digits, pct, rho as rhoText, round, signFor, total, usd } from "./format";
+import { median } from "./stats";
 import { groupedPicker } from "./picker";
 import { chartRoom, enlargeButton, isEnlarged } from "./enlarge";
 import { scatter, spearman, ticksFor, type Group, type Point, type ScatterView } from "./scatter";
@@ -43,18 +45,15 @@ interface History {
 
 export interface CapData { meta: { latest: number; spending?: Spending }; years: Record<string, CapYear>; history?: History | null }
 
-// Signs follow the figure as printed: one that rounds to zero has none (charts.ts signFor)
-const usd = (v: number) => `${signFor(v, String(Math.round(Math.abs(v))))}$${Math.abs(Math.round(v)).toLocaleString("en-US")}`;
-const signed = (v: number) => `${signFor(v, String(Math.round(Math.abs(v))), true)}$${Math.abs(Math.round(v)).toLocaleString("en-US")}`;
-const big = (v: number) => (Math.abs(v) >= 1e9 ? `$${(Math.abs(v) / 1e9).toFixed(2)} billion` : `$${(Math.abs(v) / 1e6).toFixed(1)} million`);
-const pct = (v: number, d = 0) => `${(v * 100).toFixed(d)}%`;
-const rate = (v: number) => `${(v * 100).toFixed(3)}%`;
-const capPct = (c: number) => `${Number((c * 100).toFixed(1))}%`;
-const median = (xs: number[]) => {
-  const s = [...xs].sort((a, b) => a - b);
-  const m = s.length >> 1;
-  return s.length ? (s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2) : NaN;
-};
+// The figures as format.ts writes them (#237): dollars whole, totals in three significant digits, shares to a tenth
+// of a percent. The state's own rates keep the form DESE gives them: the statewide effort percentages to three
+// decimals, the growth factor to two, the cap as the law states it (82.5%).
+const signed = (v: number) => usd(v, true);
+const big = (v: number) => total(Math.abs(v));
+const rate = (v: number) => `${digits(v * 100, 3)}%`;
+const capPct = (c: number) => `${round(c * 100, 1)}%`;
+/** An axis tick in percent: a round number, with a decimal only where the tick needs one */
+const pctTick = (v: number) => `${round(v * 100, 1)}%`;
 function el<K extends keyof HTMLElementTagNameMap>(tag: K, cls?: string, text?: string): HTMLElementTagNameMap[K] {
   const n = document.createElement(tag);
   if (cls) n.className = cls;
@@ -90,14 +89,14 @@ type XKey = "cey_pct" | "eqv_pc" | "income_pc" | "cey_pc";
 /** Across the chart: ways to measure a town's wealth, each with what it shows in the text beside it */
 const X_OPTIONS: Record<XKey, { label: string; title: string; short: string; fmt: (v: number) => string; axis: (v: number) => string }> = {
   cey_pct: { label: "Wealth for the size of its schools", title: "Combined effort yield ÷ foundation budget", short: "Yield ÷ foundation",
-    fmt: (v) => pct(v), axis: (v) => pct(v) },
+    fmt: (v) => pct(v), axis: pctTick },
   eqv_pc: { label: "Property value per resident", title: "Equalized property value per resident", short: "Property value per resident",
-    fmt: usd, axis: (v) => (v >= 1e6 ? `$${(v / 1e6).toFixed(1)}M` : `$${Math.round(v / 1000)}K`) },
+    fmt: usd, axis: (v) => compact(v, "$") },
   income_pc: { label: "Income per resident", title: "Income per resident", short: "Income per resident",
-    fmt: usd, axis: (v) => `$${Math.round(v / 1000)}K` },
+    fmt: usd, axis: (v) => compact(v, "$") },
   // Wealth as the formula measures it, Naughton and Brown's horizontal axis
   cey_pc: { label: "Property and income per resident", title: "Combined effort yield per resident", short: "Yield per resident",
-    fmt: usd, axis: (v) => `$${v >= 1e4 ? `${Math.round(v / 1000)}K` : Math.round(v).toLocaleString("en-US")}` },
+    fmt: usd, axis: (v) => compact(v, "$") },
 };
 const xOf = (x: CapTown, k: XKey): number | null => {
   switch (k) {
@@ -756,8 +755,7 @@ export function startCap(root: HTMLElement, data: CapData, opts: { town: string 
       yearsSvg.replaceChildren();
       yearsSvg.setAttribute("viewBox", `0 0 ${width} ${height}`);
       yearsSvg.setAttribute("aria-label", `Columns of how ${t.name}'s target would change ${scenName}, each year FY${first} to FY${lastFy}.`);
-      const money = (v: number) => (Math.abs(v) >= 1e6 ? `${signFor(v, (Math.abs(v) / 1e6).toFixed(1))}$${(Math.abs(v) / 1e6).toFixed(1)}M`
-        : `${signFor(v, String(Math.round(Math.abs(v) / 1000)))}$${Math.round(Math.abs(v) / 1000)}K`);
+      const money = (v: number) => compact(v, "$");
       for (const tk of ticks) {
         svgEl("line", { x1: m.left, x2: m.left + pw, y1: sy(tk), y2: sy(tk), class: tk === 0 ? "sc-ref" : "cap-years-grid" }, yearsSvg);
         const lab = svgEl("text", { x: m.left - 8, y: sy(tk), dy: "0.32em", "text-anchor": "end", class: "sc-tick" }, yearsSvg);
@@ -844,7 +842,7 @@ export function startCap(root: HTMLElement, data: CapData, opts: { town: string 
     };
     chartContext.replaceChildren("Across, ", vn(xo.title.charAt(0).toLowerCase() + xo.title.slice(1)), ...lead[xKey],
       " This measure's rank correlation with the ", vn("change per household"),
-      ` is ρ = ${rhos[place].r.toFixed(2)}, ${rank} of the four measures here.`);
+      ` is ρ = ${rhoText(rhos[place].r)}, ${rank} of the four measures here.`);
 
     const pts: Point[] = [];
     for (const x of towns) {
@@ -923,8 +921,8 @@ export function startCap(root: HTMLElement, data: CapData, opts: { town: string 
         el("td", "num", `${signFor(sum, big(sum), true)}${big(sum)}`),
         el("td", "num", signed(median(part.map(({ x }) => change(x) / (x.pop || 1))))),
         el("td", "num", (() => {
-          const v = median(part.map(({ x }) => change(x) / x.income)) * 100;
-          return `${signFor(v, Math.abs(v).toFixed(2), true)}${Math.abs(v).toFixed(2)}%`;
+          // A share of income that runs well under 1%, so to two decimals
+          return changePct(median(part.map(({ x }) => change(x) / x.income)), 2);
         })()));
     }
     const scroll = Object.assign(el("div", "table-scroll"), { tabIndex: 0 });

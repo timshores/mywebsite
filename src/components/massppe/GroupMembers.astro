@@ -10,6 +10,7 @@ import groups from "../../data/massppe/groups.json";
 import explorer from "../../data/massppe/explorer.json";
 import towns from "../../data/massppe/towns.json";
 import mapData from "../../data/massppe/map.json";
+import { andList, pct } from "../../lib/massppe/format";
 
 type Group = { id: string; name: string; scope: string; members: { id: string; name: string }[] };
 const all = groups as Record<"districts" | "towns", Group[]>;
@@ -41,8 +42,6 @@ const sizes = SIZES.map((k) => {
   const name = c.label.split(" (")[0];
   return `${name} ${lo === 0 ? `up to ${num(hi!)}` : hi == null ? `over ${num(lo! - 1)}` : `${num(lo!)}–${num(hi)}`}`;
 }).join(", ");
-const and = (xs: string[]) => (xs.length < 2 ? xs.join("") : `${xs.slice(0, -1).join(", ")} and ${xs[xs.length - 1]}`);
-const pct = (x: number) => `${Math.round(x * 100)}%`;
 // The very large districts, largest first, and their share of the pupils in traditional districts
 type ListedDistrict = { id: string; name: string; type: string; cohort: string | null; region: string | null; fte: number };
 const traditional = (explorer.districts as ListedDistrict[]).filter((d) => d.type === "traditional");
@@ -54,7 +53,7 @@ const pooledN = traditional.length - big.length;
 const regionNames = meta.regions as Record<string, string>;
 // Which of them each region leaves out, in the explorer's order of regions
 const byRegion = Object.entries(regionNames).map(([rk, rl]) => [rl, big.filter((d) => d.region === rk).map((d) => d.name)] as const)
-  .filter(([, names]) => names.length).map(([rl, names]) => `${and(names)} in ${rl === "Boston area" ? "the Boston area" : rl}`).join("; ");
+  .filter(([, names]) => names.length).map(([rl, names]) => `${andList(names)} in ${rl === "Boston area" ? "the Boston area" : rl}`).join("; ");
 // The cities set apart on the Towns tab, and their share of the state's residents
 const apart = towns.meta.apart as string[];
 const townFiles = import.meta.glob<{ default: { towns: { kind: string; name: string; pop: (number | null)[] }[] } }>(
@@ -83,7 +82,7 @@ const KINDS: Record<"districts" | "towns", [string, string, string][]> = {
     ["state", "Statewide", `Two statewide averages of the traditional districts, those run by a city or town, or by ` +
       `several towns together, rather than vocational schools or charter schools: one without the ${big.length} very ` +
       `large ones, those with more than 10,000 in-district pupils, and one with them. The ${big.length} are ` +
-      `${and(big.map((d) => d.name))}. Together they teach ${bigShare} of the pupils in traditional districts, so in an ` +
+      `${andList(big.map((d) => d.name))}. Together they teach ${bigShare} of the pupils in traditional districts, so in an ` +
       `average weighted by pupils they carry ${bigShare} of its weight between them, ${big[0].name} ${largestShare} on ` +
       `its own. The average without them, the explorer's usual comparison, follows ${REPORT}, which left Springfield ` +
       `out of its Western MA average; it covers the other ${pooledN}. The average with them covers all ` +
@@ -116,7 +115,7 @@ const KINDS: Record<"districts" | "towns", [string, string, string][]> = {
   ],
   towns: [
     ["state", "Statewide", `Two statewide averages: one without the ${apart.length} cities whose school districts have ` +
-      `more than 10,000 pupils, and one with them. The ${apart.length} are ${and(apart)}. They're home to ` +
+      `more than 10,000 pupils, and one with them. The ${apart.length} are ${andList(apart)}. They're home to ` +
       `${apartShare} of the state's residents, so in an average that pools dollars and residents they carry ` +
       `${apartShare} of its weight. The average without them, the explorer's usual comparison, covers the other ` +
       `${latestPop.length - apart.length}; the average with them, all ${latestPop.length}. Each average pools its towns: their ` +

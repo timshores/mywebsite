@@ -184,25 +184,6 @@ export function niceTicks(max: number, count = 5): number[] {
   return niceTicksRange(0, max, count);
 }
 
-/** The sign a figure takes as printed: none when nothing but zeros shows, since a figure that rounds to
- * zero has no direction; with plus, "+" before a rise */
-export const signFor = (v: number, shown: string, plus = false) =>
-  (!/[1-9]/.test(shown) ? "" : v < 0 ? "−" : plus && v > 0 ? "+" : "");
-
-export function compact(v: number, prefix = ""): string {
-  if (v === 0) return `${prefix}0`;
-  const a = Math.abs(v);
-  // Thousands, millions or billions, one decimal where the number needs it
-  for (const [unit, size] of [["B", 1e9], ["M", 1e6], ["K", 1e3]] as const) {
-    if (a >= size) {
-      const k = a / size;
-      const shown = `${Number.isInteger(k) ? k : k.toFixed(1)}`;
-      return `${signFor(v, shown)}${prefix}${shown}${unit}`;
-    }
-  }
-  return `${signFor(v, String(Math.round(a)))}${prefix}${Math.round(a)}`;
-}
-
 export class Axis {
   readonly n: number;
   readonly step: number;
