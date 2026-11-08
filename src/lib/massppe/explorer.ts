@@ -2600,15 +2600,16 @@ export async function startExplorer() {
     remember();
   }
 
-  function renderDistricts() {
+  /** One chart's part in the hover: its drawing, its figure, and its hover card for a year */
+  interface PanelEntry { panel: Panel; figure: HTMLElement; tip: (i: number) => TipContent }
+  const entries = (xs: (PanelEntry | null)[]) => xs.filter((p): p is PanelEntry => !!p);
+
+  /** What every district chart of one drawing shares (#237: renderDistricts' 780 lines set these, and each chart's
+   * drawing and hover card, as locals): the district or average and its comparison, the units the controls pick,
+   * the series several parts use, and the dollar scale the spending and net school spending charts share */
+  function districtView() {
     const e = win(entity(state.d)!);
     const c = comparisonFor(e);
-    // The menu follows the state, as the town view's does: a swap sets "Another district or group"
-    compareSelect.value = state.cmp;
-    markSelf(compareSelect, e);
-    groupLink($<HTMLAnchorElement>("cmp-name"), c && RELATIVE_COMPARES.has(state.cmp) ? c : null);
-    // A former district can't be a comparison, so it can't swap places with one
-    swapButton($<HTMLButtonElement>("swap-district"), e.name, c, !!c && listed.has(c.id) && !isFormer(state.d));
     const histOn = state.hist === "on" && !!H;
     const real = state.usd !== "nominal";
     const dollarsNote = real ? `FY${state.usd} dollars` : "Nominal dollars";
@@ -2620,6 +2621,65 @@ export async function startExplorer() {
     const wholeNote = !whole ? "" : e.kind === "district" ? " In total: each year's figure per pupil times its pupils."
       : " In total, for the average district: the group's figure per pupil times its average enrollment.";
     const tableOpts = { per: whole ? "" : "pupil" };
+
+    // Series
+    const ppe = ppeSeries(e);
+    const nss = nssSeries(e);
+    const enroll = enrollSeries(e);
+    const cPpe = c ? ppeSeries(c) : null;
+    const cNss = c ? nssSeries(c) : null;
+    const cEnroll = c ? enrollSeries(c) : null;
+    const ppeTotal = totals(ppe);
+    const nssTotal = actualNss(nss);
+    const cPpeTotal = cPpe ? totals(cPpe) : null;
+    const cNssTotal = cNss ? actualNss(cNss) : null;
+    const cName = c ? c.name : "";
+
+    // The older measure, with Since 1990 on: the day-program line, the comparison's, and a district's
+    // programs. With Totals on, the line is the day-program total times DESE's average membership.
+    const dayValues = (x: Entity, v: Values | undefined): Values | null => {
+      if (!v) return null;
+      const n = x.day_memb;
+      return deflate(whole ? v.map((y, i) => (y == null || n?.[i] == null ? null : y * n[i]!)) : v);
+    };
+    const dayAll: Series | null = histOn && e.day ? { key: "day", label: DAY_LABEL, color: DAY_COLOR, dash: DAY_DASH,
+      values: dayValues(e, e.day.total)! } : null;
+    const cDayAll: Series | null = histOn && c?.day ? { key: "cday", label: `${cName}, older measure`, color: COMPARE_COLOR,
+      dash: DAY_DASH, values: dayValues(c, c.day.total)! } : null;
+    const hasPrograms = !!(histOn && e.kind === "district" && e.day && PROGRAM_SERIES.some((p) => hasLine({ ...p, values: e.day![p.key] ?? [] })));
+    const programs: Series[] = hasPrograms && showPrograms && !whole
+      ? PROGRAM_SERIES.flatMap((p) => (e.day![p.key] ? [{ key: p.key, label: p.label, color: p.color, dash: "2 3", values: dayValues(e, e.day![p.key])! }] : []))
+      : [];
+    const dayRate = dayAll ? trendRate(linearTrend(dayAll.values)) : null;
+    const dayEnds = dayAll ? [firstAt(dayAll.values), lastAt(dayAll.values)] : [-1, -1];
+    const dayGrowth = dayRate?.rate != null
+      ? `${change(dayRate.rate)} a year on trend, FY${years[dayEnds[0]]}–FY${years[dayEnds[1]]}${real ? ", after inflation" : ", before inflation"}` : "";
+    const colFirst = firstAt(ppeTotal);
+
+    // Shared dollar scale for both dollar panels while nothing is isolated
+    let dollarMax = 0;
+    years.forEach((_, i) => {
+      dollarMax = Math.max(dollarMax, stackTop(ppe, i), stackTop(nss, i), cPpeTotal?.[i] ?? 0, cNssTotal?.[i] ?? 0,
+        dayAll?.values[i] ?? 0, cDayAll?.values[i] ?? 0, ...programs.map((p) => p.values[i] ?? 0));
+    });
+    const dollarTicks = niceTicks(dollarMax * 1.04);
+    return { e, c, cName, histOn, real, dollarsNote, perDistrict, whole, pp, money, wholeNote, tableOpts, ppe, nss, enroll, cPpe, cNss,
+      cEnroll, ppeTotal, nssTotal, cPpeTotal, cNssTotal, dayValues, dayAll, cDayAll, hasPrograms, programs, dayEnds, dayGrowth, colFirst,
+      dollarTicks };
+  }
+  /** ...and the charts' width, measured once the heading and tiles are in */
+  type DistrictCtx = ReturnType<typeof districtView> & { width: number; tall: number;
+    frame: (height: number, yTitle: string, yTitleShort?: string) => { width: number; height: number; years: number[]; yTitle: string; yTitleShort?: string } };
+
+  /** The menus, which follow the state, and the heading: the district's name, what it is, its towns */
+  function districtHeading(ctx: ReturnType<typeof districtView>) {
+    const { e, c, histOn, whole, pp } = ctx;
+    // The menu follows the state, as the town view's does: a swap sets "Another district or group"
+    compareSelect.value = state.cmp;
+    markSelf(compareSelect, e);
+    groupLink($<HTMLAnchorElement>("cmp-name"), c && RELATIVE_COMPARES.has(state.cmp) ? c : null);
+    // A former district can't be a comparison, so it can't swap places with one
+    swapButton($<HTMLButtonElement>("swap-district"), e.name, c, !!c && listed.has(c.id) && !isFormer(state.d));
     document.querySelectorAll("[data-dper]").forEach((n) => (n.textContent = pp));
     document.querySelectorAll("[data-aria-dper]").forEach((n) =>
       n.setAttribute("aria-label", n.getAttribute("data-aria-dper")!.replace("{dper}", whole ? "" : ["svg-nss", "svg-nssb"].includes(n.id) ? " per foundation pupil" : " per pupil")));
@@ -2671,41 +2731,10 @@ export async function startExplorer() {
         extra: t.also.length ? [e.former ? "now in" : "also funds", t.also.map((a) => districtName(a, true))] : null,
       })),
     } : null);
+  }
 
-    // Series
-    const ppe = ppeSeries(e);
-    const nss = nssSeries(e);
-    const enroll = enrollSeries(e);
-    const cPpe = c ? ppeSeries(c) : null;
-    const cNss = c ? nssSeries(c) : null;
-    const cEnroll = c ? enrollSeries(c) : null;
-    const ppeTotal = totals(ppe);
-    const nssTotal = actualNss(nss);
-    const cPpeTotal = cPpe ? totals(cPpe) : null;
-    const cNssTotal = cNss ? actualNss(cNss) : null;
-    const cName = c ? c.name : "";
-
-    // The older measure, with Since 1990 on: the day-program line, the comparison's, and a district's
-    // programs. With Totals on, the line is the day-program total times DESE's average membership.
-    const dayValues = (x: Entity, v: Values | undefined): Values | null => {
-      if (!v) return null;
-      const n = x.day_memb;
-      return deflate(whole ? v.map((y, i) => (y == null || n?.[i] == null ? null : y * n[i]!)) : v);
-    };
-    const dayAll: Series | null = histOn && e.day ? { key: "day", label: DAY_LABEL, color: DAY_COLOR, dash: DAY_DASH,
-      values: dayValues(e, e.day.total)! } : null;
-    const cDayAll: Series | null = histOn && c?.day ? { key: "cday", label: `${cName}, older measure`, color: COMPARE_COLOR,
-      dash: DAY_DASH, values: dayValues(c, c.day.total)! } : null;
-    const hasPrograms = !!(histOn && e.kind === "district" && e.day && PROGRAM_SERIES.some((p) => hasLine({ ...p, values: e.day![p.key] ?? [] })));
-    const programs: Series[] = hasPrograms && showPrograms && !whole
-      ? PROGRAM_SERIES.flatMap((p) => (e.day![p.key] ? [{ key: p.key, label: p.label, color: p.color, dash: "2 3", values: dayValues(e, e.day![p.key])! }] : []))
-      : [];
-    const dayRate = dayAll ? trendRate(linearTrend(dayAll.values)) : null;
-    const dayEnds = dayAll ? [firstAt(dayAll.values), lastAt(dayAll.values)] : [-1, -1];
-    const dayGrowth = dayRate?.rate != null
-      ? `${change(dayRate.rate)} a year on trend, FY${years[dayEnds[0]]}–FY${years[dayEnds[1]]}${real ? ", after inflation" : ", before inflation"}` : "";
-    const colFirst = firstAt(ppeTotal);
-
+  function districtTiles(ctx: ReturnType<typeof districtView>) {
+    const { e, c, cName, histOn, real, whole, pp, money, nss, cNss, ppeTotal, nssTotal, cPpeTotal, cNssTotal, dayAll, cDayAll, dayEnds, dayGrowth, colFirst } = ctx;
     // Tiles (always whole totals, whatever the legend isolates). With Since 1990 on, growth counts from
     // the first year with figures, and a window before FY2005 shows the older measure. A former district's
     // are for its last year in the window.
@@ -2755,20 +2784,26 @@ export async function startExplorer() {
         cNss && cNss[2].values[tl] != null ? `${cName}: ${money(cNss[2].values[tl]!)}` : "",
       ]),
     );
+  }
 
-    // Shared dollar scale for both dollar panels while nothing is isolated
-    let dollarMax = 0;
-    years.forEach((_, i) => {
-      dollarMax = Math.max(dollarMax, stackTop(ppe, i), stackTop(nss, i), cPpeTotal?.[i] ?? 0, cNssTotal?.[i] ?? 0,
-        dayAll?.values[i] ?? 0, cDayAll?.values[i] ?? 0, ...programs.map((p) => p.values[i] ?? 0));
-    });
-    const dollarTicks = niceTicks(dollarMax * 1.04);
-
+  function renderDistricts() {
+    const view = districtView();
+    districtHeading(view);
+    districtTiles(view);
     const width = panelBox().clientWidth;
     lastWidth = width;
-    const tall = width < 520 ? 260 : 320;
-    const frame = (height: number, yTitle: string, yTitleShort?: string) => ({ width, height, years, yTitle, yTitleShort });
+    const ctx: DistrictCtx = { ...view, width, tall: width < 520 ? 260 : 320,
+      frame: (height, yTitle, yTitleShort) => ({ width, height, years, yTitle, yTitleShort }) };
+    // Drawn in the order they always were, and listed for the hover as they always were
+    const ppe = ppePanel(ctx), ood = oodPanel(ctx), enroll = enrollPanel(ctx), nss = nssPanel(ctx), nssb = nssbPanel(ctx),
+      rev = revPanel(ctx), sped = spedPanel(ctx), [srace, sgroups] = studentPanels(ctx);
+    panels = entries([ppe, enroll, nss, rev, ood, nssb, srace, sgroups, sped]);
+    if (hovered != null) setHover(null, null);
+  }
 
+  /** Spending by category, with Since 1990 on the older measure's lines and its own table */
+  function ppePanel(ctx: DistrictCtx): PanelEntry {
+    const { e, c, histOn, dollarsNote, whole, pp, wholeNote, tableOpts, ppe, cPpe, ppeTotal, dayValues, dayAll, cDayAll, hasPrograms, programs, dayEnds, dayGrowth, dollarTicks, width, tall } = ctx;
     // Panel 1: spending by category. The older measure's lines are totals, so they leave the chart while categories
     // are picked: what the legend picks, ahead of the chart
     const ppeSel = selectionName(visible(ppe, "ppe"), ppe, "categories");
@@ -2813,7 +2848,28 @@ export async function startExplorer() {
         [...progRows, { label: "Total, all day programs", color: "", mark: "dash" as const, values: dayAll.values, base: cDayAll?.values ?? null, total: true }],
         "usd", c, { ...tableOpts, start: dayEnds[0], end: dayEnds[1] });
     } else dayHolder.replaceChildren();
+    return {
+      panel: p1.panel, figure: $("fig-ppe"),
+      tip: (i) => {
+        const t = p1.tip(i);
+        // The older measure's lines, under the columns' figures; alone, before FY2005
+        const at = (x: Series | null) => (x && x.values[i] != null ? x.values[i]! : null);
+        const rows: TipRow[] = [
+          ...(at(dayShown) != null ? [{ value: usd(at(dayShown)!), label: `${DAY_LABEL} (day program)`, color: DAY_COLOR, mark: "dash" as const,
+            strong: ppeTotal[i] == null }] : []),
+          ...programs.filter((p) => at(p) != null).map((p) => ({ value: usd(at(p)!), label: p.label, color: p.color, mark: "dash" as const })),
+          ...(at(cDayShown) != null ? [{ value: usd(at(cDayShown)!), label: cDayShown!.label, color: COMPARE_COLOR, mark: "dash" as const }] : []),
+        ];
+        if (!rows.length) return t;
+        if (ppeTotal[i] == null) return { title: t.title, rows, note: dayShown ? yoy(dayShown.values, i) : undefined };
+        return { ...t, rows: [...t.rows, ...rows] };
+      },
+    };
+  }
 
+  /** Spending on out-of-district FTE */
+  function oodPanel(ctx: DistrictCtx): PanelEntry {
+    const { e, c, cName, dollarsNote, perDistrict, whole, tableOpts, width, frame } = ctx;
     // Spending on out-of-district FTE: what the district pays to educate its own pupils in other schools, per
     // out-of-district FTE pupil, or with Totals on, in dollars. DESE's totals give it (export: ood_series).
     const oodOf = (x: Entity): Series => {
@@ -2861,7 +2917,12 @@ export async function startExplorer() {
       ],
       note: yoy(ood.values, i),
     });
+    return { panel: p5, figure: $("fig-ood"), tip: oodTip };
+  }
 
+  /** Enrollment, counted three ways */
+  function enrollPanel(ctx: DistrictCtx): PanelEntry {
+    const { e, c, cName, histOn, perDistrict, enroll, cEnroll, width, frame } = ctx;
     // Panel 2: enrollment
     $("enroll-sub").replaceChildren(`Pupils counted three ways${perDistrict}. `, helpTip(
       "In-district FTE: the pupils taught in the district's own schools, including those who come from other towns by " +
@@ -2892,7 +2953,25 @@ export async function startExplorer() {
           base: cEnroll?.find((x) => x.key === s.key)?.values ?? null })),
       "fte", c);
     fullTables.enroll = { caption: `Enrollment, ${e.name}${perDistrict}`, cols: enroll.map((s) => ({ label: s.label, values: s.values, fmt: fte })) };
+    return {
+      panel: p2, figure: $("fig-enroll"),
+      tip: (i) => ({
+        title: `FY${years[i]}`,
+        rows: [
+          ...en.shown.filter((s) => s.values[i] != null)
+            .map((s) => ({ value: fte(s.values[i]!), label: s.label, color: s.color, mark: s.dash ? "dash" as const : "line" as const })),
+          ...trendRow(en.one ? en.trend : null, i, fte),
+          ...(hiddenLines.enroll.has("cmp") ? [] : en.cmpShown.filter((s) => s.values[i] != null)
+            .map((s) => ({ value: fte(s.values[i]!), label: s.label, color: COMPARE_COLOR, mark: "linedot" as const }))),
+        ],
+        note: perDistrict ? "Average per district" : undefined,
+      }),
+    };
+  }
 
+  /** Chapter 70 aid and net school spending */
+  function nssPanel(ctx: DistrictCtx): PanelEntry {
+    const { e, c, cName, dollarsNote, whole, pp, wholeNote, tableOpts, nss, cNss, nssTotal, cNssTotal, dollarTicks, tall, frame } = ctx;
     // Panel 3: Chapter 70 and net school spending
     const nssShown = visible(nss, "nss");
     const nssSel = selectionName(nssShown, nss, "components");
@@ -2930,95 +3009,119 @@ export async function startExplorer() {
       { label: "Actual net school spending", values: nssTotal, fmt: usd },
       ...(c ? [{ label: `${cName}, actual net school spending`, values: cNssTotal!, fmt: usd }] : []),
     ] };
+    return {
+      panel: p3, figure: $("fig-nss"),
+      tip: (i) => {
+        const required = (nss[0].values[i] ?? 0) + (nss[1].values[i] ?? 0);
+        const reported = nss[2].values[i] != null;
+        return {
+          title: `FY${years[i]}`,
+          rows: [
+            { value: reported ? usd(nssTotal[i]!) : "Not reported", label: "Actual net school spending", strong: true },
+            ...(reported ? [{ value: usd(nss[2].values[i]!), label: nss[2].values[i]! < 0 ? "Below required" : nss[2].label, color: nss[2].color, mark: "line" as const }] : []),
+            { value: usd(required), label: "Required net school spending" },
+            { value: nss[1].values[i] != null ? usd(nss[1].values[i]!) : "–", label: nss[1].label, color: nss[1].color, mark: "line" as const },
+            { value: nss[0].values[i] != null ? usd(nss[0].values[i]!) : "–", label: nss[0].label, color: nss[0].color, mark: "line" as const },
+            ...trendRow(nssTrend, i),
+            ...(nssOverlay && nssOverlay.values[i] != null ? [{ value: usd(nssOverlay.values[i]!), label: nssOverlay.label, color: COMPARE_COLOR, mark: "linedot" as const, role: "cmp" as const }] : []),
+          ],
+        };
+      },
+    };
+  }
 
+  /** Budgeted and actual net school spending, or null where DESE gives no budgets */
+  function nssbPanel(ctx: DistrictCtx): PanelEntry | null {
+    const { e, dollarsNote, whole, pp, money, wholeNote, nss, nssTotal, width, tall, frame } = ctx;
     // Budgeted and actual net school spending: the budget each district reports to DESE for the coming year, on its
     // End-of-Year Report, against what it then spent and the state's minimum; under the chart, actual spending
     // against the budget each year, and the comparison's (the export pools an average's: budget_fields)
-    let p7: Panel | null = null;
-    let nssbTip: ((i: number) => TipContent) | null = null;
-    {
-      const budget = e.nss_budget ? deflate(inDollars(e.nss_budget, e, "foundation")) : null;
-      const has = !!budget?.some((v) => v != null);
-      $("nssb-body").hidden = !has;
-      $("nssb-none").hidden = has;
-      if (!has) {
-        $("nssb-sub").textContent = "";
-        $("nssb-none").textContent = e.type === "charter"
-          ? "Charter schools have no net school spending requirement, so DESE's compliance reports don't include them."
-          : `DESE's compliance reports give no budgets for ${e.name}.`;
-        delete fullTables.nssb;
-      } else {
-        const required: Values = years.map((_, i) => (nss[0].values[i] == null || nss[1].values[i] == null ? null
-          : nss[0].values[i]! + nss[1].values[i]!));
-        const bLines: Measure[] = [
-          { key: "budget", label: "Budgeted", what: "budget", color: BUDGET_COLOR, values: budget! },
-          { key: "actual", label: "Actual", what: "spending", color: ACTUAL_COLOR, values: nssTotal },
-          { key: "required", label: "Required by the state", what: "requirement", color: REQUIRED_COLOR, dash: "2 3", values: required },
-        ];
-        // Each line can be picked alone, with its trend; no comparison here for now (Tim, #207)
-        const bl = measureLines("nssb", bLines, null, { own: e.name, cmp: "", cmpLabel: () => "", cmpEntry: "" }, money);
-        const gap = e.nss_gap ?? nulls(years.length);
-        // "16.0% less", "2.5% more"
-        const moreLess = (v: number) => `${Math.abs(v).toFixed(1)}% ${v < 0 ? "less" : "more"}`;
-        const gAt = lastAt(gap);
-        const nx = e.nss_budget_next;
-        const district = e.kind === "district";
-        $("nssb-sub").replaceChildren(
-          `${dollarsNote}${whole ? "" : " per foundation pupil"}.${wholeNote}` +
-          (gAt >= 0 ? ` In FY${years[gAt]}, ${district ? e.name : "its districts"} spent ${moreLess(gap[gAt]!)} than ${district ? "it" : "they"} budgeted.` : "") +
-          (nx?.vs_actual != null ? ` FY${nx.fy}'s budget${district ? "" : "s"}${district && nx.budget != null ? `, ${amount(nx.budget)},` : ""} ` +
-            `${district ? "is" : "are"} ${moreLess(nx.vs_actual)} than FY${nx.fy - 1}'s spending` +
-            (nx.vs_budget != null ? ` and ${moreLess(nx.vs_budget)} than FY${nx.fy - 1}'s budget` : "") + "." : "") + " ",
-          helpTip("Net school spending is what the state counts toward a district's minimum: its own spending on its " +
-            "schools, with what its town spends for them, such as health insurance, and without transportation, " +
-            "capital, debt, and grants. Each year, on its End-of-Year Pupil and Financial Report, a district gives DESE " +
-            "what it spent the year that just ended and what it has budgeted for the year under way; DESE's " +
-            "compliance summaries list both, with what the state requires. The budget is the one the town meeting, " +
-            "city council, or member towns approved, not the school committee's first proposal or a level-services " +
-            "figure, which the state doesn't collect.\n\nThe columns under the chart compare each year's spending with " +
-            "that year's budget, in dollars of the day. DESE posts FY2021's summary on; the earlier ones are from " +
-            "the Internet Archive's copies of its site."));
-        if (bl.fitted) $("nssb-sub").append(" Scale fitted to the selection.");
-        p7 = lines($("svg-nssb") as unknown as SVGSVGElement, { ...frame(tall, `Net school spending${pp}`, `Spending${pp}`), trendsOnly: bl.only },
-          bl.lines, niceTicks(bl.max * 1.04), fmtUsd, usd, setHover, false, bl.trends);
-        legend($("legend-nssb"), bl.legend, "nssb");
-        const gapWords = (who: string, v: number | null | undefined, i: number) => (v == null ? `${who}: no FY${years[i]} budget and spending to compare`
-          : `${who}, FY${years[i]}: spent ${moreLess(v)} than budgeted`);
-        gapColumns($("svg-nssb-gap") as unknown as SVGSVGElement, { width, height: width < 520 ? 110 : 124, years }, gap, null,
-          ACTUAL_COLOR, COMPARE_COLOR, (i) => gapWords(e.name, gap[i], i));
-        $("svg-nssb-gap").setAttribute("aria-label", `Actual vs. budget, ${e.name}, by year: ` +
-          years.flatMap((y, i) => (gap[i] == null ? [] : [`FY${y} ${signedPct(gap[i]! / 100)}`])).join(", "));
-        // The strip's key: the district's columns and the comparison's dots
-        const key = (mark: string, color: string, words: string) => {
-          const li = document.createElement("li");
-          li.className = "legend-static";
-          const k = document.createElement("span");
-          k.className = `key ${mark}`;
-          k.style.setProperty("--c", color);
-          li.append(k, text("span", words));
-          return li;
-        };
-        $("nssb-gap-legend").replaceChildren(key("rect", ACTUAL_COLOR, e.name));
-        fullTables.nssb = { caption: `Budgeted and actual net school spending${whole ? "" : " per foundation pupil"}, ${e.name} (${dollarsNote.toLowerCase()})`, cols: [
-          ...bLines.map((x) => ({ label: x.label, values: x.values, fmt: usd })),
-          { label: "Actual vs. budget", values: gap, fmt: (v: number) => signedPct(v / 100) },
-        ] };
-        nssbTip = (i) => {
-          const b = budget![i], a = nssTotal[i], bPrev = budget![i - 1], aPrev = nssTotal[i - 1];
-          const rows: TipRow[] = [
-            ...bl.shown.filter((x) => x.values[i] != null).map((x) => ({ value: usd(x.values[i]!), label: x.label, color: x.color,
-              mark: x.dash ? "dash" as const : "line" as const })),
-            ...trendRow(bl.one ? bl.trend : null, i),
-            ...(gap[i] != null ? [{ value: signedPct(gap[i]! / 100), label: "Actual vs. budget", strong: true }] : []),
-            ...(b != null && aPrev != null ? [{ value: signedPct(b / aPrev - 1), label: `Budget${pp} against FY${years[i - 1]}'s spending` }] : []),
-            ...(b != null && bPrev != null ? [{ value: signedPct(b / bPrev - 1), label: `Budget${pp} against FY${years[i - 1]}'s budget` }] : []),
-          ];
-          return rows.length ? { title: `FY${years[i]}`, rows }
-            : { title: `FY${years[i]}`, rows: [{ value: "–", label: a == null ? "No budget or spending reported" : "No budget reported" }] };
-        };
-      }
+    const budget = e.nss_budget ? deflate(inDollars(e.nss_budget, e, "foundation")) : null;
+    const has = !!budget?.some((v) => v != null);
+    $("nssb-body").hidden = !has;
+    $("nssb-none").hidden = has;
+    if (!has) {
+      $("nssb-sub").textContent = "";
+      $("nssb-none").textContent = e.type === "charter"
+        ? "Charter schools have no net school spending requirement, so DESE's compliance reports don't include them."
+        : `DESE's compliance reports give no budgets for ${e.name}.`;
+      delete fullTables.nssb;
+      return null;
     }
+    const required: Values = years.map((_, i) => (nss[0].values[i] == null || nss[1].values[i] == null ? null
+      : nss[0].values[i]! + nss[1].values[i]!));
+    const bLines: Measure[] = [
+      { key: "budget", label: "Budgeted", what: "budget", color: BUDGET_COLOR, values: budget! },
+      { key: "actual", label: "Actual", what: "spending", color: ACTUAL_COLOR, values: nssTotal },
+      { key: "required", label: "Required by the state", what: "requirement", color: REQUIRED_COLOR, dash: "2 3", values: required },
+    ];
+    // Each line can be picked alone, with its trend; no comparison here for now (Tim, #207)
+    const bl = measureLines("nssb", bLines, null, { own: e.name, cmp: "", cmpLabel: () => "", cmpEntry: "" }, money);
+    const gap = e.nss_gap ?? nulls(years.length);
+    // "16.0% less", "2.5% more"
+    const moreLess = (v: number) => `${Math.abs(v).toFixed(1)}% ${v < 0 ? "less" : "more"}`;
+    const gAt = lastAt(gap);
+    const nx = e.nss_budget_next;
+    const district = e.kind === "district";
+    $("nssb-sub").replaceChildren(
+      `${dollarsNote}${whole ? "" : " per foundation pupil"}.${wholeNote}` +
+      (gAt >= 0 ? ` In FY${years[gAt]}, ${district ? e.name : "its districts"} spent ${moreLess(gap[gAt]!)} than ${district ? "it" : "they"} budgeted.` : "") +
+      (nx?.vs_actual != null ? ` FY${nx.fy}'s budget${district ? "" : "s"}${district && nx.budget != null ? `, ${amount(nx.budget)},` : ""} ` +
+        `${district ? "is" : "are"} ${moreLess(nx.vs_actual)} than FY${nx.fy - 1}'s spending` +
+        (nx.vs_budget != null ? ` and ${moreLess(nx.vs_budget)} than FY${nx.fy - 1}'s budget` : "") + "." : "") + " ",
+      helpTip("Net school spending is what the state counts toward a district's minimum: its own spending on its " +
+        "schools, with what its town spends for them, such as health insurance, and without transportation, " +
+        "capital, debt, and grants. Each year, on its End-of-Year Pupil and Financial Report, a district gives DESE " +
+        "what it spent the year that just ended and what it has budgeted for the year under way; DESE's " +
+        "compliance summaries list both, with what the state requires. The budget is the one the town meeting, " +
+        "city council, or member towns approved, not the school committee's first proposal or a level-services " +
+        "figure, which the state doesn't collect.\n\nThe columns under the chart compare each year's spending with " +
+        "that year's budget, in dollars of the day. DESE posts FY2021's summary on; the earlier ones are from " +
+        "the Internet Archive's copies of its site."));
+    if (bl.fitted) $("nssb-sub").append(" Scale fitted to the selection.");
+    const p7 = lines($("svg-nssb") as unknown as SVGSVGElement, { ...frame(tall, `Net school spending${pp}`, `Spending${pp}`), trendsOnly: bl.only },
+      bl.lines, niceTicks(bl.max * 1.04), fmtUsd, usd, setHover, false, bl.trends);
+    legend($("legend-nssb"), bl.legend, "nssb");
+    const gapWords = (who: string, v: number | null | undefined, i: number) => (v == null ? `${who}: no FY${years[i]} budget and spending to compare`
+      : `${who}, FY${years[i]}: spent ${moreLess(v)} than budgeted`);
+    gapColumns($("svg-nssb-gap") as unknown as SVGSVGElement, { width, height: width < 520 ? 110 : 124, years }, gap, null,
+      ACTUAL_COLOR, COMPARE_COLOR, (i) => gapWords(e.name, gap[i], i));
+    $("svg-nssb-gap").setAttribute("aria-label", `Actual vs. budget, ${e.name}, by year: ` +
+      years.flatMap((y, i) => (gap[i] == null ? [] : [`FY${y} ${signedPct(gap[i]! / 100)}`])).join(", "));
+    // The strip's key: the district's columns and the comparison's dots
+    const key = (mark: string, color: string, words: string) => {
+      const li = document.createElement("li");
+      li.className = "legend-static";
+      const k = document.createElement("span");
+      k.className = `key ${mark}`;
+      k.style.setProperty("--c", color);
+      li.append(k, text("span", words));
+      return li;
+    };
+    $("nssb-gap-legend").replaceChildren(key("rect", ACTUAL_COLOR, e.name));
+    fullTables.nssb = { caption: `Budgeted and actual net school spending${whole ? "" : " per foundation pupil"}, ${e.name} (${dollarsNote.toLowerCase()})`, cols: [
+      ...bLines.map((x) => ({ label: x.label, values: x.values, fmt: usd })),
+      { label: "Actual vs. budget", values: gap, fmt: (v: number) => signedPct(v / 100) },
+    ] };
+    const nssbTip = (i: number): TipContent => {
+      const b = budget![i], a = nssTotal[i], bPrev = budget![i - 1], aPrev = nssTotal[i - 1];
+      const rows: TipRow[] = [
+        ...bl.shown.filter((x) => x.values[i] != null).map((x) => ({ value: usd(x.values[i]!), label: x.label, color: x.color,
+          mark: x.dash ? "dash" as const : "line" as const })),
+        ...trendRow(bl.one ? bl.trend : null, i),
+        ...(gap[i] != null ? [{ value: signedPct(gap[i]! / 100), label: "Actual vs. budget", strong: true }] : []),
+        ...(b != null && aPrev != null ? [{ value: signedPct(b / aPrev - 1), label: `Budget${pp} against FY${years[i - 1]}'s spending` }] : []),
+        ...(b != null && bPrev != null ? [{ value: signedPct(b / bPrev - 1), label: `Budget${pp} against FY${years[i - 1]}'s budget` }] : []),
+      ];
+      return rows.length ? { title: `FY${years[i]}`, rows }
+        : { title: `FY${years[i]}`, rows: [{ value: "–", label: a == null ? "No budget or spending reported" : "No budget reported" }] };
+    };
+    return { panel: p7, figure: $("fig-nssb"), tip: nssbTip };
+  }
 
+  /** Revenue by source, or null where there are no revenue figures */
+  function revPanel(ctx: DistrictCtx): PanelEntry | null {
+    const { e, c, dollarsNote, whole, pp, tableOpts, width, tall } = ctx;
     // Panel 4: revenue by source, from Census figures that end a year or more
     // before DESE's, for regional districts and averages of enough of them.
     // Its own scale: revenue pays for more than the spending measure counts.
@@ -3026,36 +3129,37 @@ export async function startExplorer() {
     const revYears = meta.revenue;
     $("rev-body").hidden = !rev;
     $("rev-none").hidden = !!rev;
-    let p4: Panel | null = null;
-    let revTip: ((i: number) => TipContent) | null = null;
     if (!rev || !revYears) {
       $("rev-sub").textContent = "";
       $("rev-none").textContent = noRevenue(e);
       delete fullTables.rev;
-    } else {
-      // The latest revenue year, or the window's last year if that comes first
-      const at = years.indexOf(revYears.latest);
-      const end = at < 0 ? last : at;
-      const cRev = c ? revSeries(c) : null;
-      // An average's revenue covers only its regional districts, and its name says so
-      const p = stackPanel({
-        key: "rev", name: e.name, series: rev, cSeries: cRev, cmp: cRev ? { ...c!, name: revName(c!) } : null, noun: "sources",
-        width, height: tall, yTitle: `Revenue${pp}`, totalLabel: `Total revenue${pp}`, end, missing: "Not yet published by Census",
-        sub: (fitted) => [
-          (whole
-            ? `${dollarsNote}, in total${e.kind === "district" ? "" : `, for the average of its ${e.rev_members} regional districts`}: ` +
-              "each year's revenue per in-district FTE pupil times its pupils. "
-            : `${dollarsNote} per in-district FTE pupil${e.kind === "district" ? "" : `, pooled over its ${e.rev_members} regional districts`}. `) +
-          `Census figures through FY${revYears.latest}.` +
-          (c && !cRev ? ` ${capital(refName(c))} has no revenue chart to compare.` : "") + fitted],
-        table: { caption: `Revenue${whole ? "" : " per in-district FTE pupil"}`, rowLabel: "Source", units: ` (${dollarsNote.toLowerCase()})`,
-          per: tableOpts.per, noCmpNote: c ? `${capital(refName(c))} has no revenue figures to shade this table against.` : undefined },
-        full: { caption: `Revenue${whole ? "" : " per in-district FTE pupil"} by source, ${e.name} (${dollarsNote.toLowerCase()})` },
-      });
-      p4 = p.panel;
-      revTip = p.tip;
+      return null;
     }
+    // The latest revenue year, or the window's last year if that comes first
+    const at = years.indexOf(revYears.latest);
+    const end = at < 0 ? last : at;
+    const cRev = c ? revSeries(c) : null;
+    // An average's revenue covers only its regional districts, and its name says so
+    const p = stackPanel({
+      key: "rev", name: e.name, series: rev, cSeries: cRev, cmp: cRev ? { ...c!, name: revName(c!) } : null, noun: "sources",
+      width, height: tall, yTitle: `Revenue${pp}`, totalLabel: `Total revenue${pp}`, end, missing: "Not yet published by Census",
+      sub: (fitted) => [
+        (whole
+          ? `${dollarsNote}, in total${e.kind === "district" ? "" : `, for the average of its ${e.rev_members} regional districts`}: ` +
+            "each year's revenue per in-district FTE pupil times its pupils. "
+          : `${dollarsNote} per in-district FTE pupil${e.kind === "district" ? "" : `, pooled over its ${e.rev_members} regional districts`}. `) +
+        `Census figures through FY${revYears.latest}.` +
+        (c && !cRev ? ` ${capital(refName(c))} has no revenue chart to compare.` : "") + fitted],
+      table: { caption: `Revenue${whole ? "" : " per in-district FTE pupil"}`, rowLabel: "Source", units: ` (${dollarsNote.toLowerCase()})`,
+        per: tableOpts.per, noCmpNote: c ? `${capital(refName(c))} has no revenue figures to shade this table against.` : undefined },
+      full: { caption: `Revenue${whole ? "" : " per in-district FTE pupil"} by source, ${e.name} (${dollarsNote.toLowerCase()})` },
+    });
+    return { panel: p.panel, figure: $("fig-rev"), tip: p.tip };
+  }
 
+  /** Special education by category, with the Circuit Breaker's line, or null where DESE publishes none */
+  function spedPanel(ctx: DistrictCtx): PanelEntry | null {
+    const { e, c, dollarsNote, whole, pp, tableOpts, width, tall } = ctx;
     // Special education, from DESE's RADAR spreadsheet, per FTE pupil in district and out (the pupils DESE divides
     // all spending by, since its costs include out-of-district tuition), with a line for what the state paid back
     // through the Circuit Breaker for each year's costs. The export pools an average's districts (sped_fields).
@@ -3063,229 +3167,162 @@ export async function startExplorer() {
     const sped = spedSeries(e);
     $("sped-body").hidden = !sped;
     $("sped-none").hidden = !!sped;
-    let p6: Panel | null = null;
-    let spedTip: ((i: number) => TipContent) | null = null;
     if (!sped) {
       $("sped-sub").textContent = "";
       $("sped-none").textContent = e.type === "charter"
         ? "DESE's special education spending and Circuit Breaker figures don't include charter schools."
         : `DESE publishes no special education figures for ${e.name}.`;
       delete fullTables.sped;
-    } else {
-      const cSped = c ? spedSeries(c) : null;
-      const ecb = e.cb;
-      const cbAll: Series | null = ecb
-        ? { key: "cb", label: "Paid back by the state", color: CB_COLOR, values: deflate(inDollars(ecb.paid, e, "cb")) } : null;
-      const cbLine = drawn("sped", "cb", cbAll);
-      const claimed = ecb ? deflate(inDollars(ecb.claimed, e, "cb")) : null;
-      const above = ecb ? deflate(inDollars(ecb.above, e, "cb")) : null;
-      const studentsLabel = e.kind === "district" ? "Students claimed" : "Students claimed, per district";
-      const students = (v: number) => (e.kind === "district" ? Math.round(v).toLocaleString("en-US") : v.toFixed(1));
-      const share = e.sped_share!;
-      const shareAt = lastAt(share);
-      const p = stackPanel({
-        key: "sped", name: e.name, series: sped, cSeries: cSped, cmp: cSped ? c : null, noun: "categories", width, height: tall,
-        yTitle: `Special education${pp}`, yShort: "Per pupil", totalLabel: `Special education${pp}`, floor: true,
-        sub: (fitted) => [
-        (whole
-          ? `${dollarsNote}, in total: each year's figure per FTE pupil times its pupils, in the district's schools and out.`
-          : `${dollarsNote} per FTE pupil, in the district's schools and out.`) +
-        (shareAt >= 0 ? ` Special education was ${share[shareAt]!.toFixed(1)}% of ${e.kind === "district" ? `${e.name}'s spending` : "its districts' spending"} in FY${years[shareAt]}. ` : " "),
-        helpTip(
-          "DESE's direct special education spending: what each district reports spending on special education in its " +
-          "own schools (teaching, other instructional services, and transportation), on " +
-          "tuition at public schools and collaboratives elsewhere in Massachusetts and at private and out-of-state " +
-          "schools, on transportation to them, and on health services for pupils in private schools. The last category " +
-          "is what grants and revolving funds paid, such as federal special education grants.\n\nPer pupil divides " +
-          "by every FTE pupil the district is responsible " +
-          "for, in its own schools and out, as DESE does for total spending per pupil, so it is the cost of special " +
-          "education spread over all pupils, not the cost per student with a disability."),
-        ...(cbAll ? [" The green line is what the state paid back for each year's costs."] : []),
-        ...(fitted ? [fitted] : [])],
-        lines: cbLine ? [cbLine] : [],
-        legend: cbAll && hasLine(cbAll) ? [{ label: "Paid back by the state (Circuit Breaker)", color: CB_COLOR, mark: "line" as const, line: "cb" as const,
-          help: "The state's Circuit Breaker reimburses part of what a district spends on a student whose special " +
-            "education costs more than a threshold, four times the state's average foundation budget per pupil. The " +
-            "district claims a year's costs after the year ends, and the state repays a share of the costs above the " +
-            "threshold, 75% when the budget allows, in quarterly payments the next year. Transportation to " +
-            "out-of-district schools has counted since the FY2022 payments. Extraordinary relief pays in the same year " +
-            "when a district's instruction and tuition costs rise by more than a quarter over the year before.\n\nThe " +
-            "line puts each payment with the year of the costs it repays, so it lines up with the columns: FY2024's " +
-            "point is what the state paid in FY2025 for FY2024's claim, and any extraordinary relief paid in FY2024." }] : [],
-        table: { caption: `Special education spending${perAll}`, rowLabel: "Category", units: ` (${dollarsNote.toLowerCase()})`, per: tableOpts.per,
-          noCmpNote: c && !cSped ? `${capital(refName(c))} has no special education figures to shade this table against.` : undefined },
-        full: { caption: `Special education spending${perAll} by category, and the Circuit Breaker, ${e.name} (${dollarsNote.toLowerCase()})`,
-          mid: [{ label: "Share of all spending", values: share, fmt: (v: number) => `${v.toFixed(1)}%` }],
-          more: ecb && cbAll ? [
-            { label: "Paid back by the state, for the year's costs", values: cbAll.values, fmt: usd },
-            { label: "Costs claimed", values: claimed!, fmt: usd },
-            { label: "Costs above the threshold", values: above!, fmt: usd },
-            { label: studentsLabel, values: ecb.students, fmt: students },
-          ] : [] },
-        rows: (i) => [
-          ...(share[i] != null ? [{ value: `${share[i]!.toFixed(1)}%`, label: "Share of all spending" }] : []),
-          ...(cbLine && cbLine.values[i] != null ? [
-            { value: usd(cbLine.values[i]!), label: `Paid back by the state${pp}`, color: CB_COLOR, mark: "line" as const },
-            ...(ecb!.students[i] != null ? [{ value: students(ecb!.students[i]!), label: studentsLabel }] : []),
-            ...(claimed?.[i] != null ? [{ value: usd(claimed[i]!), label: `Costs claimed${pp}` }] : []),
-          ] : [])],
-      });
-      p6 = p.panel;
-      spedTip = p.tip;
+      return null;
     }
+    const cSped = c ? spedSeries(c) : null;
+    const ecb = e.cb;
+    const cbAll: Series | null = ecb
+      ? { key: "cb", label: "Paid back by the state", color: CB_COLOR, values: deflate(inDollars(ecb.paid, e, "cb")) } : null;
+    const cbLine = drawn("sped", "cb", cbAll);
+    const claimed = ecb ? deflate(inDollars(ecb.claimed, e, "cb")) : null;
+    const above = ecb ? deflate(inDollars(ecb.above, e, "cb")) : null;
+    const studentsLabel = e.kind === "district" ? "Students claimed" : "Students claimed, per district";
+    const students = (v: number) => (e.kind === "district" ? Math.round(v).toLocaleString("en-US") : v.toFixed(1));
+    const share = e.sped_share!;
+    const shareAt = lastAt(share);
+    const p = stackPanel({
+      key: "sped", name: e.name, series: sped, cSeries: cSped, cmp: cSped ? c : null, noun: "categories", width, height: tall,
+      yTitle: `Special education${pp}`, yShort: "Per pupil", totalLabel: `Special education${pp}`, floor: true,
+      sub: (fitted) => [
+      (whole
+        ? `${dollarsNote}, in total: each year's figure per FTE pupil times its pupils, in the district's schools and out.`
+        : `${dollarsNote} per FTE pupil, in the district's schools and out.`) +
+      (shareAt >= 0 ? ` Special education was ${share[shareAt]!.toFixed(1)}% of ${e.kind === "district" ? `${e.name}'s spending` : "its districts' spending"} in FY${years[shareAt]}. ` : " "),
+      helpTip(
+        "DESE's direct special education spending: what each district reports spending on special education in its " +
+        "own schools (teaching, other instructional services, and transportation), on " +
+        "tuition at public schools and collaboratives elsewhere in Massachusetts and at private and out-of-state " +
+        "schools, on transportation to them, and on health services for pupils in private schools. The last category " +
+        "is what grants and revolving funds paid, such as federal special education grants.\n\nPer pupil divides " +
+        "by every FTE pupil the district is responsible " +
+        "for, in its own schools and out, as DESE does for total spending per pupil, so it is the cost of special " +
+        "education spread over all pupils, not the cost per student with a disability."),
+      ...(cbAll ? [" The green line is what the state paid back for each year's costs."] : []),
+      ...(fitted ? [fitted] : [])],
+      lines: cbLine ? [cbLine] : [],
+      legend: cbAll && hasLine(cbAll) ? [{ label: "Paid back by the state (Circuit Breaker)", color: CB_COLOR, mark: "line" as const, line: "cb" as const,
+        help: "The state's Circuit Breaker reimburses part of what a district spends on a student whose special " +
+          "education costs more than a threshold, four times the state's average foundation budget per pupil. The " +
+          "district claims a year's costs after the year ends, and the state repays a share of the costs above the " +
+          "threshold, 75% when the budget allows, in quarterly payments the next year. Transportation to " +
+          "out-of-district schools has counted since the FY2022 payments. Extraordinary relief pays in the same year " +
+          "when a district's instruction and tuition costs rise by more than a quarter over the year before.\n\nThe " +
+          "line puts each payment with the year of the costs it repays, so it lines up with the columns: FY2024's " +
+          "point is what the state paid in FY2025 for FY2024's claim, and any extraordinary relief paid in FY2024." }] : [],
+      table: { caption: `Special education spending${perAll}`, rowLabel: "Category", units: ` (${dollarsNote.toLowerCase()})`, per: tableOpts.per,
+        noCmpNote: c && !cSped ? `${capital(refName(c))} has no special education figures to shade this table against.` : undefined },
+      full: { caption: `Special education spending${perAll} by category, and the Circuit Breaker, ${e.name} (${dollarsNote.toLowerCase()})`,
+        mid: [{ label: "Share of all spending", values: share, fmt: (v: number) => `${v.toFixed(1)}%` }],
+        more: ecb && cbAll ? [
+          { label: "Paid back by the state, for the year's costs", values: cbAll.values, fmt: usd },
+          { label: "Costs claimed", values: claimed!, fmt: usd },
+          { label: "Costs above the threshold", values: above!, fmt: usd },
+          { label: studentsLabel, values: ecb.students, fmt: students },
+        ] : [] },
+      rows: (i) => [
+        ...(share[i] != null ? [{ value: `${share[i]!.toFixed(1)}%`, label: "Share of all spending" }] : []),
+        ...(cbLine && cbLine.values[i] != null ? [
+          { value: usd(cbLine.values[i]!), label: `Paid back by the state${pp}`, color: CB_COLOR, mark: "line" as const },
+          ...(ecb!.students[i] != null ? [{ value: students(ecb!.students[i]!), label: studentsLabel }] : []),
+          ...(claimed?.[i] != null ? [{ value: usd(claimed[i]!), label: `Costs claimed${pp}` }] : []),
+        ] : [])],
+    });
+    return { panel: p.panel, figure: $("fig-sped"), tip: p.tip };
+  }
 
+  /** Students by race and ethnicity, and in selected groups: one source, two charts; nulls where DESE counts none */
+  function studentPanels(ctx: DistrictCtx): [PanelEntry | null, PanelEntry | null] {
+    const { e, c, cName, width, tall, frame } = ctx;
     // Students on October 1 of each school year, from DESE's enrollment: by race and ethnicity, each group's share
     // (a group chosen, its trend and the comparison's share); and the shares in selected groups, with the comparison's.
     // The export pools an average's districts (student_fields).
-    let p8: Panel | null = null;
-    let p9: Panel | null = null;
-    let sraceTip: ((i: number) => TipContent) | null = null;
-    let sgroupsTip: ((i: number) => TipContent) | null = null;
-    {
-      const st = e.students;
-      for (const id of ["fig-srace", "fig-sgroups"]) $(id).hidden = !st;
-      if (st) {
-        const cSt = c?.students ?? null;
-        const whose = e.kind === "district" ? `${e.name}'s` : "its districts'";
-        const studentsLabel = e.kind === "district" ? "Students" : "Students, average per district";
-        const yearsNote = `Each school year sits at its fiscal year: October 1, ${meta.latest - 1}, at FY${meta.latest}.`;
-        const sAt = lastAt(st.total);
-
-        // By race and ethnicity
-        const raceOf = (x: NonNullable<Entity["students"]>): Series[] =>
-          RACE_SERIES.map((q) => ({ key: q.key, label: q.label, color: q.color, values: x.race[q.key] }));
-        const sr = shareStack({
-          key: "srace", name: e.name, series: raceOf(st), cSeries: cSt ? raceOf(cSt) : null, cmp: c, width, height: tall,
-          yTitle: "Students by race and ethnicity", end: sAt, sub: `Shares of ${whose} students, from DESE.`,
-          help: "DESE counts each student once, by the race and ethnicity families report: Hispanic or Latino students " +
-            "of any race, and each race of the students who aren't Hispanic or Latino. Another race, or more than one, " +
-            "includes American Indian or Alaska Native, Native Hawaiian or Pacific Islander, and multiracial students, " +
-            `whom DESE has counted as their own group since FY2006. ${yearsNote}`,
-          full: `Students by race and ethnicity, ${e.name}, in percent of all students`,
-          base: { values: st.total, label: studentsLabel, fmt: fte },
-        });
-        p8 = sr.panel;
-        sraceTip = (i) => st.total[i] == null ? { title: `FY${years[i]}`, rows: [{ value: "–", label: "No enrollment reported" }] }
-          // With only the trends shown, the groups picked together, and the comparison's (#225)
-          : sr.only && sr.sel ? { title: `FY${years[i]}`, rows: [
-            { value: sr.shownTotal[i] == null ? "–" : pctFmt(sr.shownTotal[i]!), label: capital(sr.sel), strong: true },
-            ...trendRow(sr.trend, i, pctFmt, points),
-            ...(sr.overlay && sr.overlay.values[i] != null ? [{ value: pctFmt(sr.overlay.values[i]!), label: sr.overlay.label, color: COMPARE_COLOR, mark: "linedot" as const, role: "cmp" as const }] : []),
-          ], note: `October 1, ${years[i] - 1}` } : { title: `FY${years[i]}`, rows: sr.rows(i), note: `October 1, ${years[i] - 1}` };
-
-        // In selected groups: the district's lines in each group's color, the comparison's in its own. A group picked
-        // alone has its trend and the comparison's, as a single measure's chart does; the low income measures, which
-        // changed too often, have none, and high needs, which counts low income and shifts with it, none either
-        const groupsOf = (x: NonNullable<Entity["students"]>): Measure[] => STUDENT_GROUPS.map((q) => ({
-          key: q.key, label: q.label, what: q.what, color: q.color, values: x.groups[q.key] ?? nulls(years.length),
-          ...("dash" in q ? { dash: q.dash } : {}), ...(q.key === "swd" || q.key === "el" ? {} : { trend: false as const }) }));
-        const cGroups = cSt ? groupsOf(cSt) : null;
-        const sg = measureLines("sgroups", groupsOf(st), cGroups ? (x) => cGroups.find((y) => y.key === x.key)?.values : null,
-          { own: e.name, cmp: cName, cmpLabel: (x) => `${cName}, ${x.what}`, cmpEntry: cName }, points);
-        const nx = e.students_next;
-        const share = (v: number | undefined, words: string) => (v == null ? "" : `${v === 0 ? "none" : pctFmt(v)} ${words}`);
-        const latest = nx ? [share(nx.swd, "had disabilities"), share(nx.el, "were English learners"),
-          share(nx.low_income, "were low income"), share(nx.high_needs, "had high needs")].filter(Boolean) : [];
-        $("sgroups-sub").replaceChildren(`Shares of ${whose} students, from DESE.` +
-          (nx && latest.length ? ` On October 1, ${nx.fy - 1} (FY${nx.fy}), ${andList(latest)}.` : "") +
-          (sg.fitted ? " Scale fitted to the selection." : "") + " ",
-          helpTip("Students with disabilities have an Individualized Education Program. English learners are students " +
-            "whose first language isn't English and who can't yet do ordinary classroom work in English. High needs " +
-            "counts once each student who has a disability, is or was recently an English learner, or is low income, " +
-            "from FY2013.\n\nLow income has meant three things. Through FY2014 it was eligibility for free or " +
-            "reduced-price school meals. From FY2015 to FY2021 DESE counted students as economically disadvantaged " +
-            "instead, by their families' enrollment in state programs such as SNAP, which counted fewer students. From " +
-            "FY2022 it counts low income again, a broader measure that includes every student the one before did. " +
-            "The three don't compare, so each draws apart, and none has a trend line. High needs counts low income, so " +
-            "it shifts when low income's measure does, in FY2015 and FY2022, and has no trend line either.\n\n" + yearsNote));
-        p9 = lines($("svg-sgroups") as unknown as SVGSVGElement,
-          { ...frame(width < 520 ? 260 : 300, "Students", "Share"), trendsOnly: sg.only }, sg.lines,
-          niceTicks(Math.max(sg.one ? 1 : 10, sg.max * 1.06), 4), (v) => `${v}%`, pctFmt, setHover, false, sg.trends);
-        legend($("legend-sgroups"), sg.legend, "sgroups");
-        fullTables.sgroups = { caption: `Students in selected groups, ${e.name}, in percent of all students`, cols: [
-          ...sg.all.map((x) => ({ label: x.label, values: x.values, fmt: pctFmt })),
-          { label: studentsLabel, values: st.total, fmt: fte },
-          ...(cGroups ? cGroups.filter(hasLine).map((x) => ({ label: `${cName}, ${x.what}`, values: x.values, fmt: pctFmt })) : []),
-        ] };
-        sgroupsTip = (i) => {
-          const rows: TipRow[] = [
-            ...sg.shown.filter((x) => x.values[i] != null).map((x) => ({ value: pctFmt(x.values[i]!), color: x.color,
-              mark: x.dash ? "dash" as const : "line" as const,
-              label: e.kind === "district" && st.total[i] != null ? `${x.label}, ${count(Math.round(x.values[i]! * st.total[i]! / 100))} students` : x.label })),
-            ...trendRow(sg.one ? sg.trend : null, i, pctFmt),
-            ...(st.total[i] != null ? [{ value: fte(st.total[i]!), label: studentsLabel }] : []),
-            ...(hiddenLines.sgroups.has("cmp") ? [] : sg.cmpShown.filter((x) => x.values[i] != null)
-              .map((x) => ({ value: pctFmt(x.values[i]!), label: x.label, color: COMPARE_COLOR, mark: "linedot" as const }))),
-          ];
-          return { title: `FY${years[i]}`, rows: rows.length ? rows : [{ value: "–", label: "No enrollment reported" }], note: `October 1, ${years[i] - 1}` };
-        };
-      } else {
-        delete fullTables.srace;
-        delete fullTables.sgroups;
-      }
+    const st = e.students;
+    for (const id of ["fig-srace", "fig-sgroups"]) $(id).hidden = !st;
+    if (!st) {
+      delete fullTables.srace;
+      delete fullTables.sgroups;
+      return [null, null];
     }
+    const cSt = c?.students ?? null;
+    const whose = e.kind === "district" ? `${e.name}'s` : "its districts'";
+    const studentsLabel = e.kind === "district" ? "Students" : "Students, average per district";
+    const yearsNote = `Each school year sits at its fiscal year: October 1, ${meta.latest - 1}, at FY${meta.latest}.`;
+    const sAt = lastAt(st.total);
 
-    // Tooltips
-    panels = [
-      {
-        panel: p1.panel, figure: $("fig-ppe"),
-        tip: (i) => {
-          const t = p1.tip(i);
-          // The older measure's lines, under the columns' figures; alone, before FY2005
-          const at = (x: Series | null) => (x && x.values[i] != null ? x.values[i]! : null);
-          const rows: TipRow[] = [
-            ...(at(dayShown) != null ? [{ value: usd(at(dayShown)!), label: `${DAY_LABEL} (day program)`, color: DAY_COLOR, mark: "dash" as const,
-              strong: ppeTotal[i] == null }] : []),
-            ...programs.filter((p) => at(p) != null).map((p) => ({ value: usd(at(p)!), label: p.label, color: p.color, mark: "dash" as const })),
-            ...(at(cDayShown) != null ? [{ value: usd(at(cDayShown)!), label: cDayShown!.label, color: COMPARE_COLOR, mark: "dash" as const }] : []),
-          ];
-          if (!rows.length) return t;
-          if (ppeTotal[i] == null) return { title: t.title, rows, note: dayShown ? yoy(dayShown.values, i) : undefined };
-          return { ...t, rows: [...t.rows, ...rows] };
-        },
-      },
-      {
-        panel: p2, figure: $("fig-enroll"),
-        tip: (i) => ({
-          title: `FY${years[i]}`,
-          rows: [
-            ...en.shown.filter((s) => s.values[i] != null)
-              .map((s) => ({ value: fte(s.values[i]!), label: s.label, color: s.color, mark: s.dash ? "dash" as const : "line" as const })),
-            ...trendRow(en.one ? en.trend : null, i, fte),
-            ...(hiddenLines.enroll.has("cmp") ? [] : en.cmpShown.filter((s) => s.values[i] != null)
-              .map((s) => ({ value: fte(s.values[i]!), label: s.label, color: COMPARE_COLOR, mark: "linedot" as const }))),
-          ],
-          note: perDistrict ? "Average per district" : undefined,
-        }),
-      },
-      {
-        panel: p3, figure: $("fig-nss"),
-        tip: (i) => {
-          const required = (nss[0].values[i] ?? 0) + (nss[1].values[i] ?? 0);
-          const reported = nss[2].values[i] != null;
-          return {
-            title: `FY${years[i]}`,
-            rows: [
-              { value: reported ? usd(nssTotal[i]!) : "Not reported", label: "Actual net school spending", strong: true },
-              ...(reported ? [{ value: usd(nss[2].values[i]!), label: nss[2].values[i]! < 0 ? "Below required" : nss[2].label, color: nss[2].color, mark: "line" as const }] : []),
-              { value: usd(required), label: "Required net school spending" },
-              { value: nss[1].values[i] != null ? usd(nss[1].values[i]!) : "–", label: nss[1].label, color: nss[1].color, mark: "line" as const },
-              { value: nss[0].values[i] != null ? usd(nss[0].values[i]!) : "–", label: nss[0].label, color: nss[0].color, mark: "line" as const },
-              ...trendRow(nssTrend, i),
-              ...(nssOverlay && nssOverlay.values[i] != null ? [{ value: usd(nssOverlay.values[i]!), label: nssOverlay.label, color: COMPARE_COLOR, mark: "linedot" as const, role: "cmp" as const }] : []),
-            ],
-          };
-        },
-      },
-      ...(p4 && revTip ? [{ panel: p4, figure: $("fig-rev"), tip: revTip }] : []),
-      { panel: p5, figure: $("fig-ood"), tip: oodTip },
-      ...(p7 && nssbTip ? [{ panel: p7, figure: $("fig-nssb"), tip: nssbTip }] : []),
-      ...(p8 && sraceTip ? [{ panel: p8, figure: $("fig-srace"), tip: sraceTip }] : []),
-      ...(p9 && sgroupsTip ? [{ panel: p9, figure: $("fig-sgroups"), tip: sgroupsTip }] : []),
-      ...(p6 && spedTip ? [{ panel: p6, figure: $("fig-sped"), tip: spedTip }] : []),
-    ];
-    if (hovered != null) setHover(null, null);
+    // By race and ethnicity
+    const raceOf = (x: NonNullable<Entity["students"]>): Series[] =>
+      RACE_SERIES.map((q) => ({ key: q.key, label: q.label, color: q.color, values: x.race[q.key] }));
+    const sr = shareStack({
+      key: "srace", name: e.name, series: raceOf(st), cSeries: cSt ? raceOf(cSt) : null, cmp: c, width, height: tall,
+      yTitle: "Students by race and ethnicity", end: sAt, sub: `Shares of ${whose} students, from DESE.`,
+      help: "DESE counts each student once, by the race and ethnicity families report: Hispanic or Latino students " +
+        "of any race, and each race of the students who aren't Hispanic or Latino. Another race, or more than one, " +
+        "includes American Indian or Alaska Native, Native Hawaiian or Pacific Islander, and multiracial students, " +
+        `whom DESE has counted as their own group since FY2006. ${yearsNote}`,
+      full: `Students by race and ethnicity, ${e.name}, in percent of all students`,
+      base: { values: st.total, label: studentsLabel, fmt: fte },
+    });
+    const sraceTip = (i: number): TipContent => st.total[i] == null ? { title: `FY${years[i]}`, rows: [{ value: "–", label: "No enrollment reported" }] }
+      // With only the trends shown, the groups picked together, and the comparison's (#225)
+      : sr.only && sr.sel ? { title: `FY${years[i]}`, rows: [
+        { value: sr.shownTotal[i] == null ? "–" : pctFmt(sr.shownTotal[i]!), label: capital(sr.sel), strong: true },
+        ...trendRow(sr.trend, i, pctFmt, points),
+        ...(sr.overlay && sr.overlay.values[i] != null ? [{ value: pctFmt(sr.overlay.values[i]!), label: sr.overlay.label, color: COMPARE_COLOR, mark: "linedot" as const, role: "cmp" as const }] : []),
+      ], note: `October 1, ${years[i] - 1}` } : { title: `FY${years[i]}`, rows: sr.rows(i), note: `October 1, ${years[i] - 1}` };
 
+    // In selected groups: the district's lines in each group's color, the comparison's in its own. A group picked
+    // alone has its trend and the comparison's, as a single measure's chart does; the low income measures, which
+    // changed too often, have none, and high needs, which counts low income and shifts with it, none either
+    const groupsOf = (x: NonNullable<Entity["students"]>): Measure[] => STUDENT_GROUPS.map((q) => ({
+      key: q.key, label: q.label, what: q.what, color: q.color, values: x.groups[q.key] ?? nulls(years.length),
+      ...("dash" in q ? { dash: q.dash } : {}), ...(q.key === "swd" || q.key === "el" ? {} : { trend: false as const }) }));
+    const cGroups = cSt ? groupsOf(cSt) : null;
+    const sg = measureLines("sgroups", groupsOf(st), cGroups ? (x) => cGroups.find((y) => y.key === x.key)?.values : null,
+      { own: e.name, cmp: cName, cmpLabel: (x) => `${cName}, ${x.what}`, cmpEntry: cName }, points);
+    const nx = e.students_next;
+    const share = (v: number | undefined, words: string) => (v == null ? "" : `${v === 0 ? "none" : pctFmt(v)} ${words}`);
+    const latest = nx ? [share(nx.swd, "had disabilities"), share(nx.el, "were English learners"),
+      share(nx.low_income, "were low income"), share(nx.high_needs, "had high needs")].filter(Boolean) : [];
+    $("sgroups-sub").replaceChildren(`Shares of ${whose} students, from DESE.` +
+      (nx && latest.length ? ` On October 1, ${nx.fy - 1} (FY${nx.fy}), ${andList(latest)}.` : "") +
+      (sg.fitted ? " Scale fitted to the selection." : "") + " ",
+      helpTip("Students with disabilities have an Individualized Education Program. English learners are students " +
+        "whose first language isn't English and who can't yet do ordinary classroom work in English. High needs " +
+        "counts once each student who has a disability, is or was recently an English learner, or is low income, " +
+        "from FY2013.\n\nLow income has meant three things. Through FY2014 it was eligibility for free or " +
+        "reduced-price school meals. From FY2015 to FY2021 DESE counted students as economically disadvantaged " +
+        "instead, by their families' enrollment in state programs such as SNAP, which counted fewer students. From " +
+        "FY2022 it counts low income again, a broader measure that includes every student the one before did. " +
+        "The three don't compare, so each draws apart, and none has a trend line. High needs counts low income, so " +
+        "it shifts when low income's measure does, in FY2015 and FY2022, and has no trend line either.\n\n" + yearsNote));
+    const p9 = lines($("svg-sgroups") as unknown as SVGSVGElement,
+      { ...frame(width < 520 ? 260 : 300, "Students", "Share"), trendsOnly: sg.only }, sg.lines,
+      niceTicks(Math.max(sg.one ? 1 : 10, sg.max * 1.06), 4), (v) => `${v}%`, pctFmt, setHover, false, sg.trends);
+    legend($("legend-sgroups"), sg.legend, "sgroups");
+    fullTables.sgroups = { caption: `Students in selected groups, ${e.name}, in percent of all students`, cols: [
+      ...sg.all.map((x) => ({ label: x.label, values: x.values, fmt: pctFmt })),
+      { label: studentsLabel, values: st.total, fmt: fte },
+      ...(cGroups ? cGroups.filter(hasLine).map((x) => ({ label: `${cName}, ${x.what}`, values: x.values, fmt: pctFmt })) : []),
+    ] };
+    const sgroupsTip = (i: number): TipContent => {
+      const rows: TipRow[] = [
+        ...sg.shown.filter((x) => x.values[i] != null).map((x) => ({ value: pctFmt(x.values[i]!), color: x.color,
+          mark: x.dash ? "dash" as const : "line" as const,
+          label: e.kind === "district" && st.total[i] != null ? `${x.label}, ${count(Math.round(x.values[i]! * st.total[i]! / 100))} students` : x.label })),
+        ...trendRow(sg.one ? sg.trend : null, i, pctFmt),
+        ...(st.total[i] != null ? [{ value: fte(st.total[i]!), label: studentsLabel }] : []),
+        ...(hiddenLines.sgroups.has("cmp") ? [] : sg.cmpShown.filter((x) => x.values[i] != null)
+          .map((x) => ({ value: pctFmt(x.values[i]!), label: x.label, color: COMPARE_COLOR, mark: "linedot" as const }))),
+      ];
+      return { title: `FY${years[i]}`, rows: rows.length ? rows : [{ value: "–", label: "No enrollment reported" }], note: `October 1, ${years[i] - 1}` };
+    };
+    return [{ panel: sr.panel, figure: $("fig-srace"), tip: sraceTip }, { panel: p9, figure: $("fig-sgroups"), tip: sgroupsTip }];
   }
 
   /** Keep keyboard focus on the legend button that was just pressed. */
@@ -3627,18 +3664,14 @@ export async function startExplorer() {
     holder.replaceChildren(table);
   }
 
-  function renderTowns() {
+  /** What every town chart of one drawing shares (#237: renderTowns' 750 lines set these, and each chart's drawing and
+   * hover card, as locals): the town or average and its comparison, the Per choice and what it scales by, the series
+   * the tiles and charts both use, and which families of charts the town has figures for */
+  function townView() {
     const t = win(townById.get(state.t)!);
     const c = townComparison(t);
-    groupLink($<HTMLAnchorElement>("town-cmp-name"), c && RELATIVE_COMPARES.has(state.tcmp) ? c : null);
-    swapButton($<HTMLButtonElement>("swap-town"), t.name, c, !!c && townListed.has(c.id));
     const real = state.usd !== "nominal";
     const dollarsNote = real ? `FY${state.usd} dollars` : "Nominal dollars";
-    townSelect.value = t.id;
-    townCompareSelect.value = state.tcmp;
-    markSelf(townCompareSelect, t);
-    if (state.tvs) townVsSelect.value = state.tvs;
-    for (const o of townVsSelect.options) o.disabled = o.value === t.id;
 
     // The data are per resident. Per household or taxable property, each year's values scale by
     // residents over households or parcels, the town's (or an average's towns' combined) own. In
@@ -3648,10 +3681,6 @@ export async function startExplorer() {
     const inTotal = state.per === "total";
     const perP = inTotal ? "" : ` per ${perWord}`;
     const money = inTotal ? amount : usd;
-    // Titles and chart descriptions name the unit the Per choice picks
-    document.querySelectorAll("[data-per]").forEach((n) => (n.textContent = perP));
-    document.querySelectorAll("[data-aria-per]").forEach((n) =>
-      n.setAttribute("aria-label", n.getAttribute("data-aria-per")!.replace("{per}", perP)));
     const parcelCount = (x: Town): Values =>
       years.map((_, i) => (x.parcels ? sumAt(PARCEL_SERIES.map((q) => x.parcels![q.key]), i) : null));
     const perK = (x: Town): Values => {
@@ -3667,6 +3696,75 @@ export async function startExplorer() {
     const rev: Series[] = TOWN_REV_SERIES.map((s) => ({ ...s, values: deflate(per(t.rev[s.key], kT)) }));
     const cSpend: Series[] | null = c ? TOWN_SPEND_SERIES.map((s) => ({ ...s, values: deflate(per(c.spend[s.key], kC!)) })) : null;
     const cRev: Series[] | null = c ? TOWN_REV_SERIES.map((s) => ({ ...s, values: deflate(per(c.rev[s.key], kC!)) })) : null;
+    const spendTotal = totals(spend);
+    const end = lastWith(spendTotal);
+    const fy = years[end];
+    // Years the town filed no budget: none in its own figures, before any per-household or per-parcel
+    // scaling, which leaves a year empty where there's no count to divide by
+    const unfiled = years.filter((_, i) => sumAt(TOWN_SPEND_SERIES.map((s) => t.spend[s.key]), i) == null);
+
+    // Property (DLS): assessed value per resident and parcels by type, EQV, single-family tax bills.
+    // An average's parcels are its towns' combined, shown per town.
+    const hasProp = !!(towns!.meta.property && t.prop && t.parcels);
+    const propSeries = (x: Town): Series[] => {
+      const k = x === t ? kT : perK(x);
+      return PROPERTY_SERIES.map((q) => ({ ...q, values: deflate(per(x.prop![q.key], k)) }));
+    };
+    const parcelSeries = (x: Town): Series[] => {
+      const k = x.kind === "average" && x.members ? 1 / x.members : 1;
+      return PARCEL_SERIES.map((p) => ({ ...p, values: x.parcels![p.key].map((v) => (v == null ? null : v * k)) }));
+    };
+    const cHasProp = !!(c?.prop && c.parcels);
+    const val = hasProp ? propSeries(t) : [];
+    const cVal = hasProp && cHasProp ? propSeries(c!) : null;
+    const valTotal = totals(val);
+    const pEnd = hasProp ? lastWith(valTotal) : end;
+    const par = hasProp ? parcelSeries(t) : [];
+    const parTotal = totals(par);
+    const eIdx = hasProp ? lastWith(t.eqv!) : end;
+    const bIdx = hasProp ? lastWith(t.sf_bill!) : end;
+    const filed = unfiled.length ? ` Not filed for FY${unfiled.join(" or FY")}.` : "";
+
+    // Prop 2 1/2 votes that passed, by year, of the kinds that bear on a chart, with the year's amounts in the chart's
+    // units (an underride lowers the limit, so it adds no stem)
+    const votesFor = () => {
+      const vs = t.passed ?? [];
+      const byYear = years.map((y) => vs.filter((v) => v[0] === y));
+      if (!byYear.some((r) => r.length)) return undefined;
+      const amount = deflate(per(years.map((_, i) => {
+        const sum = byYear[i].reduce((a, v) => a + (v[1] !== "underride" && v[2] != null ? v[2] : 0), 0);
+        return sum > 0 && t.pop[i] ? sum / t.pop[i]! : null;
+      }), kT));
+      return { byYear, amount, label: `Amount of the votes${perP}` };
+    };
+
+    // The families of charts it has figures for: reserves, free cash, debt and capital projects (DLS), shown with its
+    // reserves; the property tax, the levy against its Prop 2 1/2 limit and the single-family bill, with its property
+    const hasFiscal = !!t.reserves;
+    const hasLevy = hasProp && !!t.levy;
+    const who = t.kind === "town" ? t.name : "these towns";
+    return { t, c, real, dollarsNote, perWord, inTotal, perP, money, parcelCount, perK, kT, kC, per, spend, rev, cSpend, cRev, spendTotal,
+      end, fy, unfiled, hasProp, propSeries, parcelSeries, cHasProp, val, cVal, valTotal, pEnd, par, parTotal, eIdx, bIdx, filed, votesFor,
+      hasFiscal, who, hasLevy };
+  }
+  /** ...and the charts' width, measured once the heading and tiles are in */
+  type TownCtx = ReturnType<typeof townView> & { width: number };
+
+  /** The menus, which follow the state, and the heading: the town's name, what it is, its school districts */
+  function townHeading(ctx: ReturnType<typeof townView>): void {
+    const { t, c, perP } = ctx;
+    groupLink($<HTMLAnchorElement>("town-cmp-name"), c && RELATIVE_COMPARES.has(state.tcmp) ? c : null);
+    swapButton($<HTMLButtonElement>("swap-town"), t.name, c, !!c && townListed.has(c.id));
+    townSelect.value = t.id;
+    townCompareSelect.value = state.tcmp;
+    markSelf(townCompareSelect, t);
+    if (state.tvs) townVsSelect.value = state.tvs;
+    for (const o of townVsSelect.options) o.disabled = o.value === t.id;
+
+    // Titles and chart descriptions name the unit the Per choice picks
+    document.querySelectorAll("[data-per]").forEach((n) => (n.textContent = perP));
+    document.querySelectorAll("[data-aria-per]").forEach((n) =>
+      n.setAttribute("aria-label", n.getAttribute("data-aria-per")!.replace("{per}", perP)));
     const perNote: Record<Per, string> = {
       resident: "",
       household: "Households are the Census Bureau's American Community Survey five-year estimates, the release ending " +
@@ -3679,17 +3777,9 @@ export async function startExplorer() {
         "group's figure per resident times its combined population over its towns.",
     };
     $("per-note").textContent = perNote[state.per];
-    const spendTotal = totals(spend);
-    const end = lastWith(spendTotal);
-    const fy = years[end];
-    // Years the town filed no budget: none in its own figures, before any per-household or per-parcel
-    // scaling, which leaves a year empty where there's no count to divide by
-    const unfiled = years.filter((_, i) => sumAt(TOWN_SPEND_SERIES.map((s) => t.spend[s.key]), i) == null);
 
     // Heading
     $("entity-name").textContent = t.name;
-    const popNow = t.pop[last];
-    const peerLabel = towns!.meta.peers.find((x) => x.id === t.peer)?.label;
     const place = t.region ? meta.regions[t.region] : "";
     const bits = t.kind === "town" ? [`${t.county} County`, place, t.gateway && t.community?.type !== "gateway" ? "Gateway City" : "",
       communityText(t.community, "residents"), incomeText(t.income, false)]
@@ -3715,7 +3805,13 @@ export async function startExplorer() {
           : null,
       })),
     } : null);
+  }
 
+  /** The tiles: always whole totals, whatever the legends isolate */
+  function townTiles(ctx: ReturnType<typeof townView>): void {
+    const { t, c, real, inTotal, perP, money, kT, kC, per, spend, rev, cSpend, cRev, spendTotal, end, fy, hasProp, parcelSeries, cHasProp, val, cVal, valTotal, pEnd, par, parTotal, eIdx, bIdx } = ctx;
+    const popNow = t.pop[last];
+    const peerLabel = towns!.meta.peers.find((x) => x.id === t.peer)?.label;
     // Tiles (always whole totals, whatever the legends isolate)
     const cSpendTotal = cSpend ? totals(cSpend) : null;
     const revTotal = totals(rev);
@@ -3730,29 +3826,9 @@ export async function startExplorer() {
     const popChange = t.pop[0] && popNow ? popNow / t.pop[0] - 1 : null;
     const allDollars = deflate(t.spend_total)[end];
 
-    // Property (DLS): assessed value per resident and parcels by type, EQV, single-family tax bills.
-    // An average's parcels are its towns' combined, shown per town.
-    const hasProp = !!(towns!.meta.property && t.prop && t.parcels);
-    const propSeries = (x: Town): Series[] => {
-      const k = x === t ? kT : perK(x);
-      return PROPERTY_SERIES.map((q) => ({ ...q, values: deflate(per(x.prop![q.key], k)) }));
-    };
-    const parcelSeries = (x: Town): Series[] => {
-      const k = x.kind === "average" && x.members ? 1 / x.members : 1;
-      return PARCEL_SERIES.map((p) => ({ ...p, values: x.parcels![p.key].map((v) => (v == null ? null : v * k)) }));
-    };
-    const cHasProp = !!(c?.prop && c.parcels);
-    const val = hasProp ? propSeries(t) : [];
-    const cVal = hasProp && cHasProp ? propSeries(c!) : null;
-    const valTotal = totals(val);
-    const pEnd = hasProp ? lastWith(valTotal) : end;
-    const par = hasProp ? parcelSeries(t) : [];
-    const parTotal = totals(par);
     const homes = (series: Series[], i: number) =>
       share(sumAt(series.filter((x) => RESIDENTIAL.has(x.key)).map((x) => x.values), i), sumAt(series.map((x) => x.values), i));
     const singles = (series: Series[], i: number) => share(series[0].values[i], sumAt(series.map((x) => x.values), i));
-    const eIdx = hasProp ? lastWith(t.eqv!) : end;
-    const bIdx = hasProp ? lastWith(t.sf_bill!) : end;
     // The two values side by side, each with the note on how they differ
     const valuesNote = "Assessed value is what the town's own assessors value its taxable property at, as of January 1 " +
       "before the fiscal year; the tax rate applies to it, so it sets tax bills. Equalized valuation (EQV) is the state's " +
@@ -3813,24 +3889,34 @@ export async function startExplorer() {
       ]),
       ...propTiles,
     );
+  }
 
+  function renderTowns() {
+    const view = townView();
+    townHeading(view);
+    townTiles(view);
     const width = panelBox().clientWidth;
     lastWidth = width;
-    const filed = unfiled.length ? ` Not filed for FY${unfiled.join(" or FY")}.` : "";
+    const ctx: TownCtx = { ...view, width };
+    const { t, hasFiscal, hasLevy, hasProp } = ctx;
+    // Drawn in the order they always were, each family's figures shown or hidden before its charts draw; listed for
+    // the hover as they always were
+    const tspend = tspendPanel(ctx), trev = trevPanel(ctx);
+    for (const id of ["fig-tres", "fig-tfc", "fig-tdebt", "fig-tcap"]) $(id).hidden = !hasFiscal;
+    const tres = tresPanel(ctx), tfc = tfcPanel(ctx), tdebt = tdebtPanel(ctx), tcap = tcapPanel(ctx);
+    if (hasFiscal) showRating(t, width);
+    for (const id of ["fig-tlevy", "fig-tbill"]) $(id).hidden = !hasLevy;
+    const tlevy = tlevyPanel(ctx), tbill = tbillPanel(ctx);
+    if (hasLevy) void showVotes(t);
+    for (const id of ["fig-tval", "fig-tpar", "fig-teqv"]) $(id).hidden = !hasProp;
+    const tval = tvalPanel(ctx), tpar = tparPanel(ctx), teqv = teqvPanel(ctx), tpop = tpopPanel(ctx);
+    panels = entries([tspend, trev, tres, tfc, tlevy, tbill, tdebt, tcap, tval, tpar, teqv, tpop, ...demoPanels(ctx)]);
+    if (hovered != null) setHover(null, null);
+  }
 
-    // Prop 2 1/2 votes that passed, by year, of the kinds that bear on a chart, with the year's amounts in the chart's
-    // units (an underride lowers the limit, so it adds no stem)
-    const votesFor = () => {
-      const vs = t.passed ?? [];
-      const byYear = years.map((y) => vs.filter((v) => v[0] === y));
-      if (!byYear.some((r) => r.length)) return undefined;
-      const amount = deflate(per(years.map((_, i) => {
-        const sum = byYear[i].reduce((a, v) => a + (v[1] !== "underride" && v[2] != null ? v[2] : 0), 0);
-        return sum > 0 && t.pop[i] ? sum / t.pop[i]! : null;
-      }), kT));
-      return { byYear, amount, label: `Amount of the votes${perP}` };
-    };
-
+  /** General fund spending by function */
+  function tspendPanel(ctx: TownCtx): PanelEntry {
+    const { t, c, dollarsNote, perP, spend, cSpend, end, filed, votesFor, width } = ctx;
     // Panel 1: spending by function
     const p1 = townStack({
       key: "tspend", name: t.name, series: spend, cSeries: cSpend, cmp: c, noun: "functions", rowLabel: "Function",
@@ -3838,320 +3924,354 @@ export async function startExplorer() {
       sub: `${dollarsNote}${perP}.${filed}`,
       votes: votesFor(),
     }, dollarsNote);
+    return { panel: p1.panel, figure: $("fig-tspend"), tip: p1.tip };
+  }
 
+  /** General fund revenue by source */
+  function trevPanel(ctx: TownCtx): PanelEntry {
+    const { t, c, dollarsNote, perP, rev, cRev, end, filed, width } = ctx;
     // Panel 2: revenue by source
     const p2 = townStack({
       key: "trev", name: t.name, series: rev, cSeries: cRev, cmp: c, noun: "sources", rowLabel: "Source",
       caption: `General fund revenue${perP}`, yShort: `Revenue${perP}`, totalLabel: `Total${perP}`, end, width,
       sub: `${dollarsNote}${perP}.${filed}`,
     }, dollarsNote);
+    return { panel: p2.panel, figure: $("fig-trev"), tip: p2.tip };
+  }
 
-    // Reserves at each year's end, debt, and capital projects (DLS)
-    const hasFiscal = !!t.reserves;
-    for (const id of ["fig-tres", "fig-tfc", "fig-tdebt", "fig-tcap"]) $(id).hidden = !hasFiscal;
-    const fiscalPanels: typeof panels = [];
-    const debtPanels: typeof panels = [];
-    const who = t.kind === "town" ? t.name : "these towns";
-    if (hasFiscal) {
-      const resOf = (x: Town, k: Values): Series[] => RESERVE_SERIES.map((q) => ({ ...q, values: deflate(per(x.reserves![q.key], k)) }));
-      const res = resOf(t, kT);
-      const cRes = c?.reserves ? resOf(c, kC!) : null;
-      const resShare = (x: Town, i: number) => share(sumAt(RESERVE_SERIES.map((q) => x.reserves![q.key]), i), x.budget?.[i] ?? null);
-      const r = t.reserves_latest;
-      const rp = reservePct(r);
-      const p9 = townStack({
-        key: "tres", name: t.name, series: res, cSeries: cRes, cmp: cRes ? c : null, noun: "reserves", rowLabel: "Reserve",
-        caption: `Reserves${perP}`, yShort: `Reserves${perP}`, totalLabel: `Total${perP}`, end: lastWith(totals(res)), width,
-        sub: `${dollarsNote}${perP}, at each fiscal year's end.` + (r && rp != null
-          ? ` At the end of FY${r.fy}, ${who} held ${amount(r.free_cash)} in free cash and ${amount(r.stab + r.sp_stab)} in ` +
-            `stabilization funds, ${pct(rp)} of ${t.kind === "town" ? "its" : "their"} operating budget${t.kind === "town" ? "" : "s"}.` : ""),
-        help: "Free cash is what a town's general fund had left at the end of a fiscal year, from revenue above its estimates " +
-          "and appropriations it didn't spend, less what it is still owed, such as unpaid property taxes. The state certifies it " +
-          "from the town's June 30 balance sheet, and town meeting or the council can then spend it.\n\nStabilization funds are " +
-          "savings: a majority vote adds to them and a two-thirds vote spends them. A special-purpose fund is saved for one " +
-          "specific use, such as capital projects or school costs.",
-        missing: "Not reported to the state",
-        tipRows: (i) => {
-          const s = resShare(t, i);
-          return s != null ? [{ value: pct(s), label: "Of the operating budget" }] : [];
-        },
-      }, dollarsNote);
-      fiscalPanels.push({ panel: p9.panel, figure: $("fig-tres"), tip: p9.tip });
+  /** Reserves at each year's end (DLS) */
+  function tresPanel(ctx: TownCtx): PanelEntry | null {
+    const { t, c, dollarsNote, perP, kT, kC, per, hasFiscal, who, width } = ctx;
+    if (!hasFiscal) return null;
+    const resOf = (x: Town, k: Values): Series[] => RESERVE_SERIES.map((q) => ({ ...q, values: deflate(per(x.reserves![q.key], k)) }));
+    const res = resOf(t, kT);
+    const cRes = c?.reserves ? resOf(c, kC!) : null;
+    const resShare = (x: Town, i: number) => share(sumAt(RESERVE_SERIES.map((q) => x.reserves![q.key]), i), x.budget?.[i] ?? null);
+    const r = t.reserves_latest;
+    const rp = reservePct(r);
+    const p9 = townStack({
+      key: "tres", name: t.name, series: res, cSeries: cRes, cmp: cRes ? c : null, noun: "reserves", rowLabel: "Reserve",
+      caption: `Reserves${perP}`, yShort: `Reserves${perP}`, totalLabel: `Total${perP}`, end: lastWith(totals(res)), width,
+      sub: `${dollarsNote}${perP}, at each fiscal year's end.` + (r && rp != null
+        ? ` At the end of FY${r.fy}, ${who} held ${amount(r.free_cash)} in free cash and ${amount(r.stab + r.sp_stab)} in ` +
+          `stabilization funds, ${pct(rp)} of ${t.kind === "town" ? "its" : "their"} operating budget${t.kind === "town" ? "" : "s"}.` : ""),
+      help: "Free cash is what a town's general fund had left at the end of a fiscal year, from revenue above its estimates " +
+        "and appropriations it didn't spend, less what it is still owed, such as unpaid property taxes. The state certifies it " +
+        "from the town's June 30 balance sheet, and town meeting or the council can then spend it.\n\nStabilization funds are " +
+        "savings: a majority vote adds to them and a two-thirds vote spends them. A special-purpose fund is saved for one " +
+        "specific use, such as capital projects or school costs.",
+      missing: "Not reported to the state",
+      tipRows: (i) => {
+        const s = resShare(t, i);
+        return s != null ? [{ value: pct(s), label: "Of the operating budget" }] : [];
+      },
+    }, dollarsNote);
+    return { panel: p9.panel, figure: $("fig-tres"), tip: p9.tip };
+  }
 
-      // Where free cash comes from: the state's proof of each year's free cash, over the years it covers. Shortfalls
-      // and adjustments below zero take some back, which the chart hatches off the top of the column.
-      const fcOf = (x: Town, k: Values): Series[] | null =>
-        x.fc_proof ? FC_SERIES.map((q) => ({ key: q.key, label: q.label, color: q.color, values: deflate(per(x.fc_proof![q.key], k)) })) : null;
-      const fcAll = fcOf(t, kT);
-      const has = fcAll ? years.map((_, i) => fcAll.some((s) => s.values[i] != null)) : [];
-      const a = has.indexOf(true);
-      const b = has.lastIndexOf(true);
-      $("fig-tfc").hidden = a < 0;
-      if (a >= 0 && fcAll) {
-        const fyears = years.slice(a, b + 1);
-        const cut = (v: Values) => v.slice(a, b + 1);
-        const fc = fcAll.map((s) => ({ ...s, values: cut(s.values) }));
-        // The legend picks the sources shown; their sum, its trend and the comparison's follow
-        const fcShown = visible(fc, "tfc");
-        const fcSel = selectionName(fcShown, fc, "sources");
-        const net = cut(deflate(per(t.fc_identified!, kT)));
-        const shownNet = fcSel ? totals(fcShown) : net;
-        const cFc = c?.fc_proof ? fcOf(c, kC!)!.map((s) => ({ ...s, values: cut(s.values) })) : null;
-        const cNet = fcSel ? (cFc ? totals(visible(cFc, "tfc")) : null) : c?.fc_identified ? cut(deflate(per(c.fc_identified, kC!))) : null;
-        const overlayAll = cNet && cNet.some((v) => v != null)
-          ? { key: "cmp", label: `${c!.name}, ${fcSel ?? "free cash"}`, color: COMPARE_COLOR, values: cNet } : null;
-        const overlay = drawn("tfc", "cmp", overlayAll);
-        let fMax = 0;
-        fyears.forEach((_, i) => (fMax = Math.max(fMax, stackTop(fc, i), overlayAll?.values[i] ?? 0)));
-        // The trend of the free cash identified, or of the sources picked, over the proof's years; the tooltip reads
-        // it in the page's years
-        const fcTrend = trendOf(t.name, fcSel, shownNet);
-        const fcTrendPage: Series = { ...fcTrend, values: years.map((_, i) => (i < a || i > b ? null : fcTrend.values[i - a])) };
-        const fcTv = trendView("tfc", drawn("tfc", "trend", fcTrend), overlayAll, c?.name ?? "");
-        // The comparison's trend too, for the hover card with only the trends shown
-        const fcCmp = cmpTrends.get("tfc");
-        if (fcCmp?.trend) cmpTrends.set("tfc", { ...fcCmp, trend: { ...fcCmp.trend,
-          values: years.map((_, i) => (i < a || i > b ? null : fcCmp.trend!.values[i - a])) } });
-        const inner = stackedColumns($("svg-tfc") as unknown as SVGSVGElement,
-          { width, height: width < 520 ? 260 : 300, years: fyears, yTitle: `Free cash${perP}`, yTitleShort: "Free cash", trendsOnly: fcTv.only },
-          fcShown, overlay,
-          fcSel ? fitTicks(fcShown, overlay?.values ?? null) : niceTicks(fMax * 1.04), fmtUsd, (i, src) => setHover(i == null ? null : i + a, src),
-          { value: shownNet[shownNet.length - 1], text: usd }, [], fcTv.trends);
-        const l = t.fc_proof_latest;
-        // The sources only: an adjustment can add a little, but it isn't where free cash comes from
-        const top3 = l ? FC_SERIES.filter((q) => q.key !== "adjust" && l[q.key] > 0).sort((x, y) => l[y.key] - l[x.key]).slice(0, 3) : [];
-        $("tfc-sub").replaceChildren(`${dollarsNote}${perP}, each year's free cash as the state calculates it from the town's ` +
-          "June 30 balance sheet; shortfalls and adjustments take some back (hatched)." + (fcSel ? " Scale fitted to the selection." : "") +
-          (l && top3.length ? ` For FY${l.fy}, ${t.kind === "town" ? `${t.name}'s` : "these towns'"} ${amount(l.identified)} came ` +
-            `mostly from ${andList(top3.map((q) => `${amount(l[q.key])} ${q.words}`))}.` : "") + " ",
-          helpTip("Local receipts are what a town collects besides the property tax and state aid: motor vehicle excise, " +
-            "fees, permits, interest, and the like. Budgets estimate them conservatively, as the state advises, so most towns " +
-            "collect more. State aid above the estimate is aid that came in above the state's own estimate for the year. " +
-            "Appropriations left unspent are amounts voted in the budget but neither spent nor committed by June 30. Free cash " +
-            "the town didn't spend the year before carries into this year's. The state then subtracts what the town is still " +
-            "owed, such as unpaid taxes, and makes other adjustments, which can also add a little back."));
-        legend($("legend-tfc"), [
-          ...fc.map((s) => ({ key: s.key, label: s.label, color: s.color, mark: "rect" as const })),
-          { label: "Taken back by shortfalls and adjustments", color: GRAY, mark: "hatch" as const, spot: "shortfall" },
-          // As on the other charts: the trend, then the comparison
-          ...lineLegend(fcTrend, overlayAll, usd),
-        ], "tfc");
-        fullTables.tfc = { caption: `Where free cash comes from${perP}, ${t.name} (${dollarsNote.toLowerCase()})`, cols: [
-          ...fcAll.map((s) => ({ label: s.label, values: s.values, fmt: usd })),
-          { label: "Free cash identified", values: deflate(per(t.fc_identified!, kT)), fmt: usd },
-          ...(c?.fc_identified ? [{ label: `${c.name}, free cash identified`, values: deflate(per(c.fc_identified, kC!)), fmt: usd }] : []),
+  /** Where free cash comes from, over the years the state's proofs cover */
+  function tfcPanel(ctx: TownCtx): PanelEntry | null {
+    const { t, c, dollarsNote, perP, kT, kC, per, hasFiscal, width } = ctx;
+    if (!hasFiscal) return null;
+    // Where free cash comes from: the state's proof of each year's free cash, over the years it covers. Shortfalls
+    // and adjustments below zero take some back, which the chart hatches off the top of the column.
+    const fcOf = (x: Town, k: Values): Series[] | null =>
+      x.fc_proof ? FC_SERIES.map((q) => ({ key: q.key, label: q.label, color: q.color, values: deflate(per(x.fc_proof![q.key], k)) })) : null;
+    const fcAll = fcOf(t, kT);
+    const has = fcAll ? years.map((_, i) => fcAll.some((s) => s.values[i] != null)) : [];
+    const a = has.indexOf(true);
+    const b = has.lastIndexOf(true);
+    $("fig-tfc").hidden = a < 0;
+    if (a < 0 || !fcAll) return null;
+    const fyears = years.slice(a, b + 1);
+    const cut = (v: Values) => v.slice(a, b + 1);
+    const fc = fcAll.map((s) => ({ ...s, values: cut(s.values) }));
+    // The legend picks the sources shown; their sum, its trend and the comparison's follow
+    const fcShown = visible(fc, "tfc");
+    const fcSel = selectionName(fcShown, fc, "sources");
+    const net = cut(deflate(per(t.fc_identified!, kT)));
+    const shownNet = fcSel ? totals(fcShown) : net;
+    const cFc = c?.fc_proof ? fcOf(c, kC!)!.map((s) => ({ ...s, values: cut(s.values) })) : null;
+    const cNet = fcSel ? (cFc ? totals(visible(cFc, "tfc")) : null) : c?.fc_identified ? cut(deflate(per(c.fc_identified, kC!))) : null;
+    const overlayAll = cNet && cNet.some((v) => v != null)
+      ? { key: "cmp", label: `${c!.name}, ${fcSel ?? "free cash"}`, color: COMPARE_COLOR, values: cNet } : null;
+    const overlay = drawn("tfc", "cmp", overlayAll);
+    let fMax = 0;
+    fyears.forEach((_, i) => (fMax = Math.max(fMax, stackTop(fc, i), overlayAll?.values[i] ?? 0)));
+    // The trend of the free cash identified, or of the sources picked, over the proof's years; the tooltip reads
+    // it in the page's years
+    const fcTrend = trendOf(t.name, fcSel, shownNet);
+    const fcTrendPage: Series = { ...fcTrend, values: years.map((_, i) => (i < a || i > b ? null : fcTrend.values[i - a])) };
+    const fcTv = trendView("tfc", drawn("tfc", "trend", fcTrend), overlayAll, c?.name ?? "");
+    // The comparison's trend too, for the hover card with only the trends shown
+    const fcCmp = cmpTrends.get("tfc");
+    if (fcCmp?.trend) cmpTrends.set("tfc", { ...fcCmp, trend: { ...fcCmp.trend,
+      values: years.map((_, i) => (i < a || i > b ? null : fcCmp.trend!.values[i - a])) } });
+    const inner = stackedColumns($("svg-tfc") as unknown as SVGSVGElement,
+      { width, height: width < 520 ? 260 : 300, years: fyears, yTitle: `Free cash${perP}`, yTitleShort: "Free cash", trendsOnly: fcTv.only },
+      fcShown, overlay,
+      fcSel ? fitTicks(fcShown, overlay?.values ?? null) : niceTicks(fMax * 1.04), fmtUsd, (i, src) => setHover(i == null ? null : i + a, src),
+      { value: shownNet[shownNet.length - 1], text: usd }, [], fcTv.trends);
+    const l = t.fc_proof_latest;
+    // The sources only: an adjustment can add a little, but it isn't where free cash comes from
+    const top3 = l ? FC_SERIES.filter((q) => q.key !== "adjust" && l[q.key] > 0).sort((x, y) => l[y.key] - l[x.key]).slice(0, 3) : [];
+    $("tfc-sub").replaceChildren(`${dollarsNote}${perP}, each year's free cash as the state calculates it from the town's ` +
+      "June 30 balance sheet; shortfalls and adjustments take some back (hatched)." + (fcSel ? " Scale fitted to the selection." : "") +
+      (l && top3.length ? ` For FY${l.fy}, ${t.kind === "town" ? `${t.name}'s` : "these towns'"} ${amount(l.identified)} came ` +
+        `mostly from ${andList(top3.map((q) => `${amount(l[q.key])} ${q.words}`))}.` : "") + " ",
+      helpTip("Local receipts are what a town collects besides the property tax and state aid: motor vehicle excise, " +
+        "fees, permits, interest, and the like. Budgets estimate them conservatively, as the state advises, so most towns " +
+        "collect more. State aid above the estimate is aid that came in above the state's own estimate for the year. " +
+        "Appropriations left unspent are amounts voted in the budget but neither spent nor committed by June 30. Free cash " +
+        "the town didn't spend the year before carries into this year's. The state then subtracts what the town is still " +
+        "owed, such as unpaid taxes, and makes other adjustments, which can also add a little back."));
+    legend($("legend-tfc"), [
+      ...fc.map((s) => ({ key: s.key, label: s.label, color: s.color, mark: "rect" as const })),
+      { label: "Taken back by shortfalls and adjustments", color: GRAY, mark: "hatch" as const, spot: "shortfall" },
+      // As on the other charts: the trend, then the comparison
+      ...lineLegend(fcTrend, overlayAll, usd),
+    ], "tfc");
+    fullTables.tfc = { caption: `Where free cash comes from${perP}, ${t.name} (${dollarsNote.toLowerCase()})`, cols: [
+      ...fcAll.map((s) => ({ label: s.label, values: s.values, fmt: usd })),
+      { label: "Free cash identified", values: deflate(per(t.fc_identified!, kT)), fmt: usd },
+      ...(c?.fc_identified ? [{ label: `${c.name}, free cash identified`, values: deflate(per(c.fc_identified, kC!)), fmt: usd }] : []),
+    ] };
+    return {
+      panel: offsetPanel(inner, a, fyears.length), figure: $("fig-tfc"),
+      tip: (i) => {
+        const k = i - a;
+        if (k < 0 || k >= fyears.length) return { title: `FY${years[i]}`, rows: [{ value: "–", label: `The state's proofs cover FY${fyears[0]} on` }] };
+        return { title: `FY${years[i]}`, rows: [
+          { value: shownNet[k] != null ? usd(shownNet[k]!) : "–", label: fcSel ? `${capital(fcSel)}${perP}` : `Free cash identified${perP}`, strong: true },
+          ...fcShown.filter((s) => s.values[k] != null && s.values[k] !== 0).reverse()
+            .map((s) => ({ value: usd(s.values[k]!), label: s.label, color: s.color, mark: "rect" as const })),
+          ...trendRow(fcTrendPage, i),
+          ...(overlay && overlay.values[k] != null ? [{ value: usd(overlay.values[k]!), label: overlay.label, color: COMPARE_COLOR, mark: "linedot" as const, role: "cmp" as const }] : []),
         ] };
-        fiscalPanels.push({
-          panel: offsetPanel(inner, a, fyears.length), figure: $("fig-tfc"),
-          tip: (i) => {
-            const k = i - a;
-            if (k < 0 || k >= fyears.length) return { title: `FY${years[i]}`, rows: [{ value: "–", label: `The state's proofs cover FY${fyears[0]} on` }] };
-            return { title: `FY${years[i]}`, rows: [
-              { value: shownNet[k] != null ? usd(shownNet[k]!) : "–", label: fcSel ? `${capital(fcSel)}${perP}` : `Free cash identified${perP}`, strong: true },
-              ...fcShown.filter((s) => s.values[k] != null && s.values[k] !== 0).reverse()
-                .map((s) => ({ value: usd(s.values[k]!), label: s.label, color: s.color, mark: "rect" as const })),
-              ...trendRow(fcTrendPage, i),
-              ...(overlay && overlay.values[k] != null ? [{ value: usd(overlay.values[k]!), label: overlay.label, color: COMPARE_COLOR, mark: "linedot" as const, role: "cmp" as const }] : []),
-            ] };
-          },
-        });
-      }
+      },
+    };
+  }
 
-      const debtOf = (x: Town, k: Values): Series[] => DEBT_SERIES.map((q) => ({ ...q, values: deflate(per(x.debt![q.key], k)) }));
-      const debt = debtOf(t, kT);
-      const cDebt = c?.debt ? debtOf(c, kC!) : null;
-      const dl = t.debt_latest;
-      const sp = newest(t.ratings?.sp, "sp");
-      const md = newest(t.ratings?.moodys, "moodys");
-      const p10 = townStack({
-        key: "tdebt", name: t.name, series: debt, cSeries: cDebt, cmp: cDebt ? c : null, noun: "parts", rowLabel: "Debt",
-        caption: `Long-term debt${perP}`, yShort: `Debt${perP}`, totalLabel: `Total${perP}`, end: lastWith(totals(debt)), width,
-        sub: `${dollarsNote}${perP}, at each fiscal year's end.` +
-          (dl && dl.budget ? ` In FY${dl.fy}, ${who} owed ${amount(dl.outstanding)}, and general fund debt service was ` +
-            `${(dl.service / dl.budget * 100).toFixed(1)}% of the operating budget.` : "") +
-          (sp || md ? ` ${t.name}'s bonds: ${[sp ? `S&P ${sp[1]} (${sp[0]})` : "", md ? `Moody's ${md[1]} (${md[0]})` : ""].filter(Boolean).join(", ")}.` : ""),
-        help: "Debt outstanding is what the town owes on its long-term bonds at the fiscal year's end, from Schedule A. " +
-          "Authorized, not yet borrowed, is debt that town meeting or the council has voted to borrow but the town " +
-          "hasn't yet issued.\n\nDebt service is what the general fund paid that year in principal and interest; DLS " +
-          "sets it against the operating budget. The tooltip also gives the debt as a share of the town's equalized " +
-          "valuation, the state's estimate of what all its taxable property is worth.",
-        missing: "Not reported to the state",
-        votes: votesFor(),
-        tipRows: (i) => [
-          ...(t.debt_service?.[i] != null ? [{ value: `${t.debt_service[i]!.toFixed(1)}%`, label: "Debt service, share of the budget" }] : []),
-          ...(t.debt_eqv?.[i] != null ? [{ value: `${t.debt_eqv[i]!.toFixed(2)}%`, label: "Debt, share of equalized value" }] : []),
-        ],
-      }, dollarsNote);
-      const capOf = (x: Town, k: Values): Series[] => CAPITAL_SERIES.map((q) => ({ ...q, values: deflate(per(x.capital![q.key], k)) }));
-      const cap = capOf(t, kT);
-      const cCap = c?.capital ? capOf(c, kC!) : null;
-      const p11 = townStack({
-        key: "tcap", name: t.name, series: cap, cSeries: cCap, cmp: cCap ? c : null, noun: "purposes", rowLabel: "Purpose",
-        caption: `Capital projects spending${perP}`, yShort: `Capital${perP}`, totalLabel: `Total${perP}`, end: lastWith(totals(cap)), width,
-        sub: `${dollarsNote}${perP}, from capital projects funds.`,
-        help: "Spending from a town's capital projects funds, by purpose, from Schedule A Part 4: the funds that hold borrowing, " +
-          "grants, and transfers for building, buying, and repairing, kept apart from the general fund. Chapter 90 is the " +
-          "state's aid for local roads. A large project shows in the years its bills are paid.",
-        missing: "Not reported to the state",
-        votes: votesFor(),
-      }, dollarsNote);
-      showRating(t, width);
-      debtPanels.push({ panel: p10.panel, figure: $("fig-tdebt"), tip: p10.tip }, { panel: p11.panel, figure: $("fig-tcap"), tip: p11.tip });
-    }
+  /** Long-term debt */
+  function tdebtPanel(ctx: TownCtx): PanelEntry | null {
+    const { t, c, dollarsNote, perP, kT, kC, per, votesFor, hasFiscal, who, width } = ctx;
+    if (!hasFiscal) return null;
+    const debtOf = (x: Town, k: Values): Series[] => DEBT_SERIES.map((q) => ({ ...q, values: deflate(per(x.debt![q.key], k)) }));
+    const debt = debtOf(t, kT);
+    const cDebt = c?.debt ? debtOf(c, kC!) : null;
+    const dl = t.debt_latest;
+    const sp = newest(t.ratings?.sp, "sp");
+    const md = newest(t.ratings?.moodys, "moodys");
+    const p10 = townStack({
+      key: "tdebt", name: t.name, series: debt, cSeries: cDebt, cmp: cDebt ? c : null, noun: "parts", rowLabel: "Debt",
+      caption: `Long-term debt${perP}`, yShort: `Debt${perP}`, totalLabel: `Total${perP}`, end: lastWith(totals(debt)), width,
+      sub: `${dollarsNote}${perP}, at each fiscal year's end.` +
+        (dl && dl.budget ? ` In FY${dl.fy}, ${who} owed ${amount(dl.outstanding)}, and general fund debt service was ` +
+          `${(dl.service / dl.budget * 100).toFixed(1)}% of the operating budget.` : "") +
+        (sp || md ? ` ${t.name}'s bonds: ${[sp ? `S&P ${sp[1]} (${sp[0]})` : "", md ? `Moody's ${md[1]} (${md[0]})` : ""].filter(Boolean).join(", ")}.` : ""),
+      help: "Debt outstanding is what the town owes on its long-term bonds at the fiscal year's end, from Schedule A. " +
+        "Authorized, not yet borrowed, is debt that town meeting or the council has voted to borrow but the town " +
+        "hasn't yet issued.\n\nDebt service is what the general fund paid that year in principal and interest; DLS " +
+        "sets it against the operating budget. The tooltip also gives the debt as a share of the town's equalized " +
+        "valuation, the state's estimate of what all its taxable property is worth.",
+      missing: "Not reported to the state",
+      votes: votesFor(),
+      tipRows: (i) => [
+        ...(t.debt_service?.[i] != null ? [{ value: `${t.debt_service[i]!.toFixed(1)}%`, label: "Debt service, share of the budget" }] : []),
+        ...(t.debt_eqv?.[i] != null ? [{ value: `${t.debt_eqv[i]!.toFixed(2)}%`, label: "Debt, share of equalized value" }] : []),
+      ],
+    }, dollarsNote);
+    return { panel: p10.panel, figure: $("fig-tdebt"), tip: p10.tip };
+  }
 
-    // The property tax: the levy against its Prop 2 1/2 limit, and the single-family bill
-    const hasLevy = hasProp && !!t.levy;
-    for (const id of ["fig-tlevy", "fig-tbill"]) $(id).hidden = !hasLevy;
-    const taxPanels: typeof panels = [];
-    if (hasLevy) {
-      const levy: Series[] = LEVY_SERIES.map((x) => ({ ...x, values: deflate(per(t.levy![x.key], kT)) }));
-      const cLevy: Series[] | null = c?.levy ? LEVY_SERIES.map((x) => ({ ...x, values: deflate(per(c.levy![x.key], kC!)) })) : null;
-      const lEnd = lastWith(totals(levy));
-      const raised = t.levy_total?.[lEnd];
-      const max = t.levy_max?.[lEnd];
-      const used = raised != null && max ? `In FY${years[lEnd]}, ${t.kind === "town" ? t.name : "these towns"} raised ` +
-        `${amount(raised)} of a ${amount(max)} limit, leaving ${max - raised >= 1e6 ? amount(max - raised) : usd(max - raised)} ` +
-        `(${pct((max - raised) / max)}) unused.` : "";
-      const o = t.override_latest;
-      const op = overridePct(o);
-      const v = t.votes;
-      const held = (k: "override" | "debt" | "capital" | "stabilization", one: string, many: string) =>
-        v && v[k][0] ? `${count(v[k][1])} of ${count(v[k][0])} ${v[k][0] === 1 ? one : many}` : "";
-      const voteBits = [held("override", "override or underride vote", "override and underride votes"),
-        held("debt", "debt exclusion", "debt exclusions"), held("capital", "capital exclusion", "capital exclusions")].filter(Boolean);
-      const p7 = townStack({
-        key: "tlevy", name: t.name, series: levy, cSeries: cLevy, cmp: cLevy ? c : null, noun: "parts", rowLabel: "Levy",
-        caption: `Property tax levy and its limit${perP}`, yShort: `Levy${perP}`, totalLabel: `Levy limit${perP}`, end: lEnd, width,
-        sub: `${dollarsNote}${perP}. Proposition 2½ limits each town's levy; the stack's full height is the limit, ` +
-          `with voter-approved debt exclusions. ${used}` +
-          (o && op != null ? ` Override capacity, the room between the limit and the ceiling, was ${pct(op)} of the ceiling in FY${o.fy}.` : "") +
-          (voteBits.length ? ` Since FY${years[0]}, ${t.kind === "town" ? `${t.name}'s voters` : "voters in these towns"} passed ${voteBits.join(", ")}.` : ""),
-        extra: t.levy_ceiling_pr ? {
-          series: { key: "ceiling", label: "Levy ceiling", color: CEILING_COLOR, dash: "2 4", values: deflate(per(t.levy_ceiling_pr, kT)) },
-          line: "ceiling", legend: "Levy ceiling, 2½% of value",
-          help: "The levy ceiling is 2½% of the town's total assessed value; no levy may exceed it, even with an override, " +
-            "though a debt exclusion can take the levy above it. The levy limit grows 2½% a year plus new growth, and an " +
-            "override raises it for good. Override capacity is the room between the limit, before debt exclusions, and " +
-            "the ceiling: how much more an override could raise, a measure of how much room a town has left.",
-        } : undefined,
-        tipRows: (i) => t.override_pct?.[i] != null ? [{ value: `${t.override_pct[i]!.toFixed(1)}%`, label: "Override capacity, share of the ceiling" }] : [],
-        votes: votesFor(),
-      }, dollarsNote);
-      // The single-family bill, with its rate and its share of income in the tooltip
-      const billCmp: Series | null = c?.sf_bill ? { key: "cmp", label: c.name, color: COMPARE_COLOR, values: deflate(c.sf_bill) } : null;
-      // The scale holds the comparison whether it shows or not
-      const bMax = Math.max(...[deflate(t.sf_bill!), billCmp?.values ?? []].flat().map((v) => v ?? 0));
-      const bills: Series[] = [
-        { key: "bill", label: t.name, color: POP_COLOR, values: deflate(t.sf_bill!) },
-        ...(drawn("tbill", "cmp", billCmp) ? [billCmp!] : []),
-      ];
-      const billTrend = trendOf(t.name, null, bills[0].values);
-      const billTv = trendView("tbill", drawn("tbill", "trend", billTrend), billCmp, c?.name ?? "");
-      const p8 = lines($("svg-tbill") as unknown as SVGSVGElement,
-        { width, height: width < 520 ? 220 : 260, years, yTitle: "Single-family tax bill", yTitleShort: "Tax bill", trendsOnly: billTv.only }, bills,
-        niceTicks(bMax * 1.04, 4), fmtUsd, usd, setHover, false, billTv.trends);
-      legend($("legend-tbill"), [
-        { label: t.name, color: POP_COLOR, mark: "line" as const, spot: "bill" },
-        ...lineLegend(billTrend, billCmp, usd),
-      ], "tbill");
-      const rate = t.sf_rate?.[bIdx];
-      $("tbill-sub").textContent = `${dollarsNote}. The state's average single-family tax bill: single-family assessed ` +
-        "value over single-family homes, times the tax rate." +
-        (rate != null && t.sf_bill?.[bIdx] != null ? ` In FY${years[bIdx]}, ${t.kind === "town" ? `${t.name}'s` : "the"} bill ` +
-          `was ${usd(t.sf_bill[bIdx]!)} at $${rate.toFixed(2)} per $1,000 of value` +
-          (t.sf_bill_income?.[bIdx] != null ? `, ${pct(t.sf_bill_income[bIdx]!)} of income per capita.` : ".") : "");
-      fullTables.tbill = { caption: `Average single-family tax bill, ${t.name} (${dollarsNote.toLowerCase()})`, cols: [
-        { label: "Bill", values: deflate(t.sf_bill!), fmt: usd },
-        { label: "Rate per $1,000", values: t.sf_rate ?? [], fmt: (v) => `$${v.toFixed(2)}` },
-        { label: "Share of income per capita", values: t.sf_bill_income ?? [], fmt: (v) => `${(v * 100).toFixed(1)}%` },
-        ...(c?.sf_bill ? [{ label: `${c.name}, bill`, values: deflate(c.sf_bill), fmt: usd }] : []),
-      ] };
-      void showVotes(t);
-      taxPanels.push(
-        { panel: p7.panel, figure: $("fig-tlevy"), tip: p7.tip },
-        {
-          panel: p8, figure: $("fig-tbill"),
-          tip: (i) => ({
-            title: `FY${years[i]}`,
-            rows: [...bills.filter((x) => x.values[i] != null)
-              .map((x) => ({ value: usd(x.values[i]!), label: x.label, color: x.color, mark: x.key === "cmp" ? "linedot" as const : "line" as const })),
-              ...(bills[0].values[i] != null ? trendRow(billTrend, i) : [])],
-            note: t.sf_rate?.[i] != null ? `${t.name}: $${t.sf_rate[i]!.toFixed(2)} per $1,000` +
-              (t.sf_bill_income?.[i] != null ? `, ${(t.sf_bill_income[i]! * 100).toFixed(1)}% of income per capita` : "") : undefined,
-          }),
-        },
-      );
-    }
+  /** Capital projects spending */
+  function tcapPanel(ctx: TownCtx): PanelEntry | null {
+    const { t, c, dollarsNote, perP, kT, kC, per, votesFor, hasFiscal, width } = ctx;
+    if (!hasFiscal) return null;
+    const capOf = (x: Town, k: Values): Series[] => CAPITAL_SERIES.map((q) => ({ ...q, values: deflate(per(x.capital![q.key], k)) }));
+    const cap = capOf(t, kT);
+    const cCap = c?.capital ? capOf(c, kC!) : null;
+    const p11 = townStack({
+      key: "tcap", name: t.name, series: cap, cSeries: cCap, cmp: cCap ? c : null, noun: "purposes", rowLabel: "Purpose",
+      caption: `Capital projects spending${perP}`, yShort: `Capital${perP}`, totalLabel: `Total${perP}`, end: lastWith(totals(cap)), width,
+      sub: `${dollarsNote}${perP}, from capital projects funds.`,
+      help: "Spending from a town's capital projects funds, by purpose, from Schedule A Part 4: the funds that hold borrowing, " +
+        "grants, and transfers for building, buying, and repairing, kept apart from the general fund. Chapter 90 is the " +
+        "state's aid for local roads. A large project shows in the years its bills are paid.",
+      missing: "Not reported to the state",
+      votes: votesFor(),
+    }, dollarsNote);
+    return { panel: p11.panel, figure: $("fig-tcap"), tip: p11.tip };
+  }
 
-    // Panels: property
-    for (const id of ["fig-tval", "fig-tpar", "fig-teqv"]) $(id).hidden = !hasProp;
-    const propPanels: typeof panels = [];
-    if (hasProp) {
-      const p4 = townStack({
-        key: "tval", name: t.name, series: val, cSeries: cVal, cmp: cVal ? c : null, noun: "property types",
-        rowLabel: "Property type", caption: `Assessed value${perP}`, yShort: `Value${perP}`, totalLabel: `Total${perP}`, end: pEnd, width,
-        sub: `${dollarsNote}${perP}: taxable property as assessed on January 1 before each fiscal year.`,
-        missing: "Not reported to the state",
-      }, dollarsNote);
-      const p5 = townStack({
-        key: "tpar", name: t.name, series: par, cSeries: cHasProp ? parcelSeries(c!) : null, cmp: cHasProp ? c : null, shares: true,
-        noun: "property types", rowLabel: "Property type",
-        caption: t.kind === "town" ? "Parcels" : "Parcels per town", yShort: "Parcels", totalLabel: t.kind === "town" ? "Total parcels" : "Parcels per town",
-        end: pEnd, width, fmt: count, axis: (v) => compact(v), kind: "count",
-        sub: (t.kind === "town" ? "Parcels of taxable real estate by use." : `Average per town, across its ${t.members} towns.`) +
-          " Personal property accounts and exempt parcels are not counted. The tooltip gives each use's share of all parcels" +
-          (c ? `; the comparison is ${c.kind === "town" ? c.name : "the average town of the comparison"}'s count.` : "."),
-        missing: "Not reported to the state",
-      }, dollarsNote);
-      // EQV every other year, joined across the years between
-      const eqvCmp: Series | null = c?.eqv ? { key: "cmp", label: c.name, color: COMPARE_COLOR, values: deflate(per(c.eqv, kC!)) } : null;
-      const eqvOwn = deflate(per(t.eqv!, kT));
-      const eMax = Math.max(...[eqvOwn, eqvCmp?.values ?? []].flat().map((v) => v ?? 0));
-      const eqvLines: Series[] = [
-        { key: "eqv", label: t.name, color: POP_COLOR, values: eqvOwn },
-        ...(drawn("teqv", "cmp", eqvCmp) ? [eqvCmp!] : []),
-      ];
-      const eqvTrend = trendOf(t.name, null, eqvLines[0].values);
-      const eqvTv = trendView("teqv", drawn("teqv", "trend", eqvTrend), eqvCmp, c?.name ?? "");
-      const p6 = lines($("svg-teqv") as unknown as SVGSVGElement,
-        { width, height: width < 520 ? 220 : 260, years, yTitle: `Equalized value${perP}`, yTitleShort: `EQV${perP}`, trendsOnly: eqvTv.only }, eqvLines,
-        niceTicks(eMax * 1.04, 4), fmtUsd, usd, setHover, true, eqvTv.trends);
-      legend($("legend-teqv"), [
-        { label: t.name, color: POP_COLOR, mark: "line" as const, spot: "eqv" },
-        ...lineLegend(eqvTrend, eqvCmp, usd),
-      ], "teqv");
-      const k = towns!.meta.c70_target;
-      const at = k ? years.indexOf(k.eqv_year + 1) : -1;
-      const base = k && t.kind === "town" && at >= 0 ? t.eqv_total?.[at] ?? null : null;
-      $("teqv-sub").textContent = `${dollarsNote}${perP}. Every two years the state sets each town's equalized ` +
-        "valuation, its estimate of what all the town's taxable property would sell for on January 1; each is shown at the " +
-        "fiscal year whose assessments share that date." +
-        (k && base != null ? ` For FY${k.fy}, Chapter 70 set ${t.name}'s target local contribution at ` +
-          `${usd(base * k.property_pct / 100)} from property, ${k.property_pct}% of its January ${k.eqv_year} equalized ` +
-          `valuation, plus ${k.income_pct}% of its residents' ` +
-          `${k.income_year} income, up to ${k.cap}% of its foundation budget.` : "");
-      fullTables.teqv = { caption: `Equalized valuation, ${t.name} (${dollarsNote.toLowerCase()})`, cols: [
-        { label: inTotal ? (t.kind === "town" ? "Total" : "Average town") : `Per ${perWord}`, values: deflate(per(t.eqv!, kT)), fmt: usd },
-        { label: t.kind === "town" ? "In all (nominal)" : "Towns combined (nominal)", values: t.eqv_total ?? [], fmt: (v) => amount(v) },
-        ...(c?.eqv ? [{ label: `${c.name}${inTotal ? ", total" : `, per ${perWord}`}`, values: deflate(per(c.eqv, kC!)), fmt: usd }] : []),
-      ] };
-      propPanels.push(
-        { panel: p4.panel, figure: $("fig-tval"), tip: p4.tip },
-        { panel: p5.panel, figure: $("fig-tpar"), tip: p5.tip },
-        {
-          panel: p6, figure: $("fig-teqv"),
-          tip: (i) => {
-            const rows: TipRow[] = [...eqvLines.filter((x) => x.values[i] != null)
-              .map((x) => ({ value: usd(x.values[i]!), label: x.label, color: x.color, mark: "line" as const })),
-              ...(eqvLines[0].values[i] != null ? trendRow(eqvTrend, i) : [])];
-            return rows.length
-              ? { title: `FY${years[i]}`, rows, note: `EQV as of January 1, ${years[i] - 1}` }
-              : { title: `FY${years[i]}`, rows: [{ value: "–", label: "No EQV for this January" }], note: "The state sets EQV every two years" };
-          },
-        },
-      );
-    }
+  /** The property tax levy against its Prop 2 1/2 limit */
+  function tlevyPanel(ctx: TownCtx): PanelEntry | null {
+    const { t, c, dollarsNote, perP, kT, kC, per, votesFor, hasLevy, width } = ctx;
+    if (!hasLevy) return null;
+    const levy: Series[] = LEVY_SERIES.map((x) => ({ ...x, values: deflate(per(t.levy![x.key], kT)) }));
+    const cLevy: Series[] | null = c?.levy ? LEVY_SERIES.map((x) => ({ ...x, values: deflate(per(c.levy![x.key], kC!)) })) : null;
+    const lEnd = lastWith(totals(levy));
+    const raised = t.levy_total?.[lEnd];
+    const max = t.levy_max?.[lEnd];
+    const used = raised != null && max ? `In FY${years[lEnd]}, ${t.kind === "town" ? t.name : "these towns"} raised ` +
+      `${amount(raised)} of a ${amount(max)} limit, leaving ${max - raised >= 1e6 ? amount(max - raised) : usd(max - raised)} ` +
+      `(${pct((max - raised) / max)}) unused.` : "";
+    const o = t.override_latest;
+    const op = overridePct(o);
+    const v = t.votes;
+    const held = (k: "override" | "debt" | "capital" | "stabilization", one: string, many: string) =>
+      v && v[k][0] ? `${count(v[k][1])} of ${count(v[k][0])} ${v[k][0] === 1 ? one : many}` : "";
+    const voteBits = [held("override", "override or underride vote", "override and underride votes"),
+      held("debt", "debt exclusion", "debt exclusions"), held("capital", "capital exclusion", "capital exclusions")].filter(Boolean);
+    const p7 = townStack({
+      key: "tlevy", name: t.name, series: levy, cSeries: cLevy, cmp: cLevy ? c : null, noun: "parts", rowLabel: "Levy",
+      caption: `Property tax levy and its limit${perP}`, yShort: `Levy${perP}`, totalLabel: `Levy limit${perP}`, end: lEnd, width,
+      sub: `${dollarsNote}${perP}. Proposition 2½ limits each town's levy; the stack's full height is the limit, ` +
+        `with voter-approved debt exclusions. ${used}` +
+        (o && op != null ? ` Override capacity, the room between the limit and the ceiling, was ${pct(op)} of the ceiling in FY${o.fy}.` : "") +
+        (voteBits.length ? ` Since FY${years[0]}, ${t.kind === "town" ? `${t.name}'s voters` : "voters in these towns"} passed ${voteBits.join(", ")}.` : ""),
+      extra: t.levy_ceiling_pr ? {
+        series: { key: "ceiling", label: "Levy ceiling", color: CEILING_COLOR, dash: "2 4", values: deflate(per(t.levy_ceiling_pr, kT)) },
+        line: "ceiling", legend: "Levy ceiling, 2½% of value",
+        help: "The levy ceiling is 2½% of the town's total assessed value; no levy may exceed it, even with an override, " +
+          "though a debt exclusion can take the levy above it. The levy limit grows 2½% a year plus new growth, and an " +
+          "override raises it for good. Override capacity is the room between the limit, before debt exclusions, and " +
+          "the ceiling: how much more an override could raise, a measure of how much room a town has left.",
+      } : undefined,
+      tipRows: (i) => t.override_pct?.[i] != null ? [{ value: `${t.override_pct[i]!.toFixed(1)}%`, label: "Override capacity, share of the ceiling" }] : [],
+      votes: votesFor(),
+    }, dollarsNote);
+    return { panel: p7.panel, figure: $("fig-tlevy"), tip: p7.tip };
+  }
 
+  /** The average single-family tax bill */
+  function tbillPanel(ctx: TownCtx): PanelEntry | null {
+    const { t, c, dollarsNote, bIdx, hasLevy, width } = ctx;
+    if (!hasLevy) return null;
+    // The single-family bill, with its rate and its share of income in the tooltip
+    const billCmp: Series | null = c?.sf_bill ? { key: "cmp", label: c.name, color: COMPARE_COLOR, values: deflate(c.sf_bill) } : null;
+    // The scale holds the comparison whether it shows or not
+    const bMax = Math.max(...[deflate(t.sf_bill!), billCmp?.values ?? []].flat().map((v) => v ?? 0));
+    const bills: Series[] = [
+      { key: "bill", label: t.name, color: POP_COLOR, values: deflate(t.sf_bill!) },
+      ...(drawn("tbill", "cmp", billCmp) ? [billCmp!] : []),
+    ];
+    const billTrend = trendOf(t.name, null, bills[0].values);
+    const billTv = trendView("tbill", drawn("tbill", "trend", billTrend), billCmp, c?.name ?? "");
+    const p8 = lines($("svg-tbill") as unknown as SVGSVGElement,
+      { width, height: width < 520 ? 220 : 260, years, yTitle: "Single-family tax bill", yTitleShort: "Tax bill", trendsOnly: billTv.only }, bills,
+      niceTicks(bMax * 1.04, 4), fmtUsd, usd, setHover, false, billTv.trends);
+    legend($("legend-tbill"), [
+      { label: t.name, color: POP_COLOR, mark: "line" as const, spot: "bill" },
+      ...lineLegend(billTrend, billCmp, usd),
+    ], "tbill");
+    const rate = t.sf_rate?.[bIdx];
+    $("tbill-sub").textContent = `${dollarsNote}. The state's average single-family tax bill: single-family assessed ` +
+      "value over single-family homes, times the tax rate." +
+      (rate != null && t.sf_bill?.[bIdx] != null ? ` In FY${years[bIdx]}, ${t.kind === "town" ? `${t.name}'s` : "the"} bill ` +
+        `was ${usd(t.sf_bill[bIdx]!)} at $${rate.toFixed(2)} per $1,000 of value` +
+        (t.sf_bill_income?.[bIdx] != null ? `, ${pct(t.sf_bill_income[bIdx]!)} of income per capita.` : ".") : "");
+    fullTables.tbill = { caption: `Average single-family tax bill, ${t.name} (${dollarsNote.toLowerCase()})`, cols: [
+      { label: "Bill", values: deflate(t.sf_bill!), fmt: usd },
+      { label: "Rate per $1,000", values: t.sf_rate ?? [], fmt: (v) => `$${v.toFixed(2)}` },
+      { label: "Share of income per capita", values: t.sf_bill_income ?? [], fmt: (v) => `${(v * 100).toFixed(1)}%` },
+      ...(c?.sf_bill ? [{ label: `${c.name}, bill`, values: deflate(c.sf_bill), fmt: usd }] : []),
+    ] };
+    return {
+      panel: p8, figure: $("fig-tbill"),
+      tip: (i) => ({
+        title: `FY${years[i]}`,
+        rows: [...bills.filter((x) => x.values[i] != null)
+          .map((x) => ({ value: usd(x.values[i]!), label: x.label, color: x.color, mark: x.key === "cmp" ? "linedot" as const : "line" as const })),
+          ...(bills[0].values[i] != null ? trendRow(billTrend, i) : [])],
+        note: t.sf_rate?.[i] != null ? `${t.name}: $${t.sf_rate[i]!.toFixed(2)} per $1,000` +
+          (t.sf_bill_income?.[i] != null ? `, ${(t.sf_bill_income[i]! * 100).toFixed(1)}% of income per capita` : "") : undefined,
+      }),
+    };
+  }
+
+  /** Assessed value by property type */
+  function tvalPanel(ctx: TownCtx): PanelEntry | null {
+    const { t, c, dollarsNote, perP, hasProp, val, cVal, pEnd, width } = ctx;
+    if (!hasProp) return null;
+    const p4 = townStack({
+      key: "tval", name: t.name, series: val, cSeries: cVal, cmp: cVal ? c : null, noun: "property types",
+      rowLabel: "Property type", caption: `Assessed value${perP}`, yShort: `Value${perP}`, totalLabel: `Total${perP}`, end: pEnd, width,
+      sub: `${dollarsNote}${perP}: taxable property as assessed on January 1 before each fiscal year.`,
+      missing: "Not reported to the state",
+    }, dollarsNote);
+    return { panel: p4.panel, figure: $("fig-tval"), tip: p4.tip };
+  }
+
+  /** Parcels by property type */
+  function tparPanel(ctx: TownCtx): PanelEntry | null {
+    const { t, c, dollarsNote, hasProp, parcelSeries, cHasProp, pEnd, par, width } = ctx;
+    if (!hasProp) return null;
+    const p5 = townStack({
+      key: "tpar", name: t.name, series: par, cSeries: cHasProp ? parcelSeries(c!) : null, cmp: cHasProp ? c : null, shares: true,
+      noun: "property types", rowLabel: "Property type",
+      caption: t.kind === "town" ? "Parcels" : "Parcels per town", yShort: "Parcels", totalLabel: t.kind === "town" ? "Total parcels" : "Parcels per town",
+      end: pEnd, width, fmt: count, axis: (v) => compact(v), kind: "count",
+      sub: (t.kind === "town" ? "Parcels of taxable real estate by use." : `Average per town, across its ${t.members} towns.`) +
+        " Personal property accounts and exempt parcels are not counted. The tooltip gives each use's share of all parcels" +
+        (c ? `; the comparison is ${c.kind === "town" ? c.name : "the average town of the comparison"}'s count.` : "."),
+      missing: "Not reported to the state",
+    }, dollarsNote);
+    return { panel: p5.panel, figure: $("fig-tpar"), tip: p5.tip };
+  }
+
+  /** Equalized valuation */
+  function teqvPanel(ctx: TownCtx): PanelEntry | null {
+    const { t, c, dollarsNote, perWord, inTotal, perP, kT, kC, per, hasProp, width } = ctx;
+    if (!hasProp) return null;
+    // EQV every other year, joined across the years between
+    const eqvCmp: Series | null = c?.eqv ? { key: "cmp", label: c.name, color: COMPARE_COLOR, values: deflate(per(c.eqv, kC!)) } : null;
+    const eqvOwn = deflate(per(t.eqv!, kT));
+    const eMax = Math.max(...[eqvOwn, eqvCmp?.values ?? []].flat().map((v) => v ?? 0));
+    const eqvLines: Series[] = [
+      { key: "eqv", label: t.name, color: POP_COLOR, values: eqvOwn },
+      ...(drawn("teqv", "cmp", eqvCmp) ? [eqvCmp!] : []),
+    ];
+    const eqvTrend = trendOf(t.name, null, eqvLines[0].values);
+    const eqvTv = trendView("teqv", drawn("teqv", "trend", eqvTrend), eqvCmp, c?.name ?? "");
+    const p6 = lines($("svg-teqv") as unknown as SVGSVGElement,
+      { width, height: width < 520 ? 220 : 260, years, yTitle: `Equalized value${perP}`, yTitleShort: `EQV${perP}`, trendsOnly: eqvTv.only }, eqvLines,
+      niceTicks(eMax * 1.04, 4), fmtUsd, usd, setHover, true, eqvTv.trends);
+    legend($("legend-teqv"), [
+      { label: t.name, color: POP_COLOR, mark: "line" as const, spot: "eqv" },
+      ...lineLegend(eqvTrend, eqvCmp, usd),
+    ], "teqv");
+    const k = towns!.meta.c70_target;
+    const at = k ? years.indexOf(k.eqv_year + 1) : -1;
+    const base = k && t.kind === "town" && at >= 0 ? t.eqv_total?.[at] ?? null : null;
+    $("teqv-sub").textContent = `${dollarsNote}${perP}. Every two years the state sets each town's equalized ` +
+      "valuation, its estimate of what all the town's taxable property would sell for on January 1; each is shown at the " +
+      "fiscal year whose assessments share that date." +
+      (k && base != null ? ` For FY${k.fy}, Chapter 70 set ${t.name}'s target local contribution at ` +
+        `${usd(base * k.property_pct / 100)} from property, ${k.property_pct}% of its January ${k.eqv_year} equalized ` +
+        `valuation, plus ${k.income_pct}% of its residents' ` +
+        `${k.income_year} income, up to ${k.cap}% of its foundation budget.` : "");
+    fullTables.teqv = { caption: `Equalized valuation, ${t.name} (${dollarsNote.toLowerCase()})`, cols: [
+      { label: inTotal ? (t.kind === "town" ? "Total" : "Average town") : `Per ${perWord}`, values: deflate(per(t.eqv!, kT)), fmt: usd },
+      { label: t.kind === "town" ? "In all (nominal)" : "Towns combined (nominal)", values: t.eqv_total ?? [], fmt: (v) => amount(v) },
+      ...(c?.eqv ? [{ label: `${c.name}${inTotal ? ", total" : `, per ${perWord}`}`, values: deflate(per(c.eqv, kC!)), fmt: usd }] : []),
+    ] };
+    return {
+      panel: p6, figure: $("fig-teqv"),
+      tip: (i) => {
+        const rows: TipRow[] = [...eqvLines.filter((x) => x.values[i] != null)
+          .map((x) => ({ value: usd(x.values[i]!), label: x.label, color: x.color, mark: "line" as const })),
+          ...(eqvLines[0].values[i] != null ? trendRow(eqvTrend, i) : [])];
+        return rows.length
+          ? { title: `FY${years[i]}`, rows, note: `EQV as of January 1, ${years[i] - 1}` }
+          : { title: `FY${years[i]}`, rows: [{ value: "–", label: "No EQV for this January" }], note: "The state sets EQV every two years" };
+      },
+    };
+  }
+
+  /** Population and the labor force */
+  function tpopPanel(ctx: TownCtx): PanelEntry {
+    const { t, c, width } = ctx;
     // Population, the denominator of the dollar panels, and the labor force: first the unemployment rate, and a
     // switch to the population, labor force and employed behind it. Their trends draw only with the dial, one for each
     // line, the town's and the comparison's.
@@ -4235,114 +4355,103 @@ export async function startExplorer() {
       // FY2021 uses the April 2020 estimates base (update_census_data.py)
       note: years[i] === 2021 ? "April 1, 2020 estimate" : `July 1, ${years[i] - 1} estimate`,
     };
+    return { panel: p3, figure: $("fig-tpop"), tip: popTip };
+  }
 
+  /** Who lives here, from the Census Bureau's releases: four charts of shares, by age, race and ethnicity, sex, and disability */
+  function demoPanels(ctx: TownCtx): (PanelEntry | null)[] {
+    const { t, c, width } = ctx;
     // Who lives here: the Census Bureau's five-year estimates that don't overlap, each group's share of residents
     // by age, race and ethnicity, sex, and disability. A share's trend and the comparison draw once a group is chosen.
-    const demoPanels: typeof panels = [];
     const dm = t.demo;
     for (const id of ["fig-tage", "fig-trace", "fig-tsex"]) $(id).hidden = !dm;
     $("fig-tdis").hidden = !dm?.disability.some((v) => v != null);
-    if (dm) {
-      type Demo = Record<DemoKey, Values>;
-      const releases = years.filter((_, i) => dm.population[i] != null);
-      const span = (i: number) => `${years[i] - 5}–${years[i] - 1}`;
-      const residents = t.kind === "town" ? "Population" : "Population, combined";
-      // A share's trend: its yearly change in points, and that as a percent of the share
-      /** One panel: each group's count over the residents it's a share of (base), or, missing, why a release has none */
-      const demoStack = (key: "tage" | "trace" | "tsex" | "tdis", defs: readonly { key: string; label: string; color: string; of: (d: Demo) => Values }[],
-        caption: string, sub: string, help: string, base: { of: (d: Demo) => Values; label: string } = { of: (d) => d.population, label: residents },
-        missing = "No estimate for this release") => {
-        const seriesOf = (x: Town): Series[] | null => x.demo ? defs.map((q) => {
-          const whole = base.of(x.demo!), part = q.of(x.demo!);
-          return { key: q.key, label: q.label, color: q.color, values: whole.map((n, i) => (n && part[i] != null ? part[i]! / n * 100 : null)) };
-        }) : null;
-        const series = seriesOf(t)!;
-        const p = shareStack({
-          key, name: t.name, series, cSeries: c ? seriesOf(c) : null, cmp: c, width, height: width < 520 ? 240 : 280, yTitle: caption,
-          sparse: true, keepEmpty: true, end: lastAt(series[0].values), sub, help,
-          full: `${caption}, ${t.name}: the Census Bureau's five-year estimates, at the fiscal year after each`,
-          base: { values: base.of(dm), label: base.label, fmt: count },
-        });
-        const none = { value: "–", label: missing };
-        // Between two releases, the band's change: each group's share at either end
-        const between = (i: number): TipContent => {
-          const before = [...releases].reverse().find((fy) => fy < years[i]);
-          const after = releases.find((fy) => fy > years[i]);
-          if (before == null || after == null) return { title: `FY${years[i]}`, rows: [{ value: "–", label: `The estimates sit at FY${releases.join(", FY")}` }] };
-          const [p0, p1] = [years.indexOf(before), years.indexOf(after)];
-          const rows = p.shown.filter((x) => x.values[p0] != null && x.values[p1] != null).reverse()
-            .map((x) => ({ value: `${pctFmt(x.values[p0]!)} → ${pctFmt(x.values[p1]!)}`, color: x.color, mark: "rect" as const,
-              label: `${x.label}, ${signed(x.values[p1]! - x.values[p0]!, points)}` }));
-          return { title: `${span(p0)} to ${span(p1)}`, rows: rows.length ? rows : [none] };
-        };
-        // With only the trends shown, the groups picked together, and the comparison's (#225); between two
-        // releases, each at either end
-        const together = (i: number): TipContent => {
-          const ends = dm.population[i] == null
-            ? ((before, after) => (before == null || after == null ? null : [years.indexOf(before), years.indexOf(after)]))(
-              [...releases].reverse().find((fy) => fy < years[i]), releases.find((fy) => fy > years[i]))
-            : [i, i];
-          if (!ends) return between(i);
-          const [p0, p1] = ends;
-          const row = (v: Values, label: string, extra: Partial<TipRow>): TipRow[] => (v[p0] == null || v[p1] == null ? [] : [{
-            value: p0 === p1 ? pctFmt(v[p0]!) : `${pctFmt(v[p0]!)} → ${pctFmt(v[p1]!)}`,
-            label: p0 === p1 ? label : `${label}, ${signed(v[p1]! - v[p0]!, points)}`, ...extra }]);
-          // The trends run through every year, so their figures are the hovered year's
-          const rows = [...row(p.shownTotal, capital(p.sel!), { strong: true }), ...trendRow(p.trend, i, pctFmt, points),
-            ...(p.overlay ? row(p.overlay.values, p.overlay.label, { color: COMPARE_COLOR, mark: "linedot", role: "cmp" }) : [])];
-          return { title: p0 === p1 ? `${span(p0)}, at FY${years[p0]}` : `${span(p0)} to ${span(p1)}`, rows: rows.length ? rows : [none] };
-        };
-        const tip = (i: number): TipContent => p.only && p.sel ? together(i) : dm.population[i] == null
-          ? between(i)
-          : base.of(dm)[i] == null ? { title: `${span(i)}, at FY${years[i]}`, rows: [none] }
-          : { title: `${span(i)}, at FY${years[i]}`, rows: p.rows(i) };
-        return { panel: p.panel, tip };
+    if (!dm) return [];
+    type Demo = Record<DemoKey, Values>;
+    const releases = years.filter((_, i) => dm.population[i] != null);
+    const span = (i: number) => `${years[i] - 5}–${years[i] - 1}`;
+    const residents = t.kind === "town" ? "Population" : "Population, combined";
+    // A share's trend: its yearly change in points, and that as a percent of the share
+    /** One panel: each group's count over the residents it's a share of (base), or, missing, why a release has none */
+    const demoStack = (key: "tage" | "trace" | "tsex" | "tdis", defs: readonly { key: string; label: string; color: string; of: (d: Demo) => Values }[],
+      caption: string, sub: string, help: string, base: { of: (d: Demo) => Values; label: string } = { of: (d) => d.population, label: residents },
+      missing = "No estimate for this release") => {
+      const seriesOf = (x: Town): Series[] | null => x.demo ? defs.map((q) => {
+        const whole = base.of(x.demo!), part = q.of(x.demo!);
+        return { key: q.key, label: q.label, color: q.color, values: whole.map((n, i) => (n && part[i] != null ? part[i]! / n * 100 : null)) };
+      }) : null;
+      const series = seriesOf(t)!;
+      const p = shareStack({
+        key, name: t.name, series, cSeries: c ? seriesOf(c) : null, cmp: c, width, height: width < 520 ? 240 : 280, yTitle: caption,
+        sparse: true, keepEmpty: true, end: lastAt(series[0].values), sub, help,
+        full: `${caption}, ${t.name}: the Census Bureau's five-year estimates, at the fiscal year after each`,
+        base: { values: base.of(dm), label: base.label, fmt: count },
+      });
+      const none = { value: "–", label: missing };
+      // Between two releases, the band's change: each group's share at either end
+      const between = (i: number): TipContent => {
+        const before = [...releases].reverse().find((fy) => fy < years[i]);
+        const after = releases.find((fy) => fy > years[i]);
+        if (before == null || after == null) return { title: `FY${years[i]}`, rows: [{ value: "–", label: `The estimates sit at FY${releases.join(", FY")}` }] };
+        const [p0, p1] = [years.indexOf(before), years.indexOf(after)];
+        const rows = p.shown.filter((x) => x.values[p0] != null && x.values[p1] != null).reverse()
+          .map((x) => ({ value: `${pctFmt(x.values[p0]!)} → ${pctFmt(x.values[p1]!)}`, color: x.color, mark: "rect" as const,
+            label: `${x.label}, ${signed(x.values[p1]! - x.values[p0]!, points)}` }));
+        return { title: `${span(p0)} to ${span(p1)}`, rows: rows.length ? rows : [none] };
       };
-      const counts = <T extends { key: DemoKey }>(defs: readonly T[]) => defs.map((q) => ({ ...q, of: (d: Demo) => d[q.key] }));
-      const acsHelp = "The Census Bureau's American Community Survey asks a sample of households each year; its five-year " +
-        "estimates pool five years of answers, which small towns need. Estimates whose years overlap shouldn't be compared, " +
-        "so these are the four that don't: 2005–2009, 2010–2014, 2015–2019, and 2020–2024, each at the fiscal year after it " +
-        "ends, as the household counts are. A small town's shares can carry margins of error of several points.";
-      const theirs = t.kind === "town" ? `${t.name}'s` : "these towns'";
-      const pAge = demoStack("tage", counts(AGE_SERIES), "Population by age",
-        `Shares of ${theirs} residents, from the Census Bureau's American Community Survey.`, acsHelp);
-      const pRace = demoStack("trace", counts(RACE_SERIES), "Population by race and ethnicity",
-        `Shares of ${theirs} residents, from the Census Bureau's American Community ` +
-          "Survey. Hispanic or Latino residents may be of any " +
-          "race; each race counts residents who aren't Hispanic or Latino.",
-        acsHelp + "\n\nRace and Hispanic or Latino origin are as residents report them. Another race, or more than one, " +
-          "includes American Indian and Alaska Native, Native Hawaiian and Pacific Islander, and residents who name some " +
-          "other race or two or more races.");
-      const pSex = demoStack("tsex", counts(SEX_SERIES), "Women in the population",
-        `The share of ${theirs} residents who are women, from the Census Bureau's American Community Survey.`,
-        acsHelp + "\n\nThe survey asks each resident's sex as female or male.");
-      const pDis = demoStack("tdis", [
-        { key: "disability", label: "With a disability", color: DISABILITY_COLOR, of: (d) => d.disability },
-      ], "Population with a disability",
-        `The share of ${theirs} residents with a disability, among those not living in institutions such as ` +
-          "nursing homes and prisons, from the Census Bureau's American Community Survey, which counts disability from " +
-          "2008–2012 on.",
-        acsHelp + "\n\nA disability here is serious difficulty with hearing, seeing, concentrating or remembering, walking or " +
-          "climbing stairs, dressing or bathing, or, for those 15 and older, doing errands alone. The survey counts it for " +
-          "civilians not living in institutions such as nursing homes and prisons, from 2008–2012 on, so 2005–2009 has none.",
-        { of: (d) => d.disability_universe, label: "Population not in institutions" }, "The survey counts disability from 2008–2012 on");
-      demoPanels.push({ panel: pAge.panel, figure: $("fig-tage"), tip: pAge.tip }, { panel: pRace.panel, figure: $("fig-trace"), tip: pRace.tip },
-        { panel: pSex.panel, figure: $("fig-tsex"), tip: pSex.tip }, { panel: pDis.panel, figure: $("fig-tdis"), tip: pDis.tip });
-    }
-
-    panels = [
-      { panel: p1.panel, figure: $("fig-tspend"), tip: p1.tip },
-      { panel: p2.panel, figure: $("fig-trev"), tip: p2.tip },
-      ...fiscalPanels,
-      ...taxPanels,
-      ...debtPanels,
-      ...propPanels,
-      {
-        panel: p3, figure: $("fig-tpop"), tip: popTip,
-      },
-      ...demoPanels,
-    ];
-    if (hovered != null) setHover(null, null);
+      // With only the trends shown, the groups picked together, and the comparison's (#225); between two
+      // releases, each at either end
+      const together = (i: number): TipContent => {
+        const ends = dm.population[i] == null
+          ? ((before, after) => (before == null || after == null ? null : [years.indexOf(before), years.indexOf(after)]))(
+            [...releases].reverse().find((fy) => fy < years[i]), releases.find((fy) => fy > years[i]))
+          : [i, i];
+        if (!ends) return between(i);
+        const [p0, p1] = ends;
+        const row = (v: Values, label: string, extra: Partial<TipRow>): TipRow[] => (v[p0] == null || v[p1] == null ? [] : [{
+          value: p0 === p1 ? pctFmt(v[p0]!) : `${pctFmt(v[p0]!)} → ${pctFmt(v[p1]!)}`,
+          label: p0 === p1 ? label : `${label}, ${signed(v[p1]! - v[p0]!, points)}`, ...extra }]);
+        // The trends run through every year, so their figures are the hovered year's
+        const rows = [...row(p.shownTotal, capital(p.sel!), { strong: true }), ...trendRow(p.trend, i, pctFmt, points),
+          ...(p.overlay ? row(p.overlay.values, p.overlay.label, { color: COMPARE_COLOR, mark: "linedot", role: "cmp" }) : [])];
+        return { title: p0 === p1 ? `${span(p0)}, at FY${years[p0]}` : `${span(p0)} to ${span(p1)}`, rows: rows.length ? rows : [none] };
+      };
+      const tip = (i: number): TipContent => p.only && p.sel ? together(i) : dm.population[i] == null
+        ? between(i)
+        : base.of(dm)[i] == null ? { title: `${span(i)}, at FY${years[i]}`, rows: [none] }
+        : { title: `${span(i)}, at FY${years[i]}`, rows: p.rows(i) };
+      return { panel: p.panel, tip };
+    };
+    const counts = <T extends { key: DemoKey }>(defs: readonly T[]) => defs.map((q) => ({ ...q, of: (d: Demo) => d[q.key] }));
+    const acsHelp = "The Census Bureau's American Community Survey asks a sample of households each year; its five-year " +
+      "estimates pool five years of answers, which small towns need. Estimates whose years overlap shouldn't be compared, " +
+      "so these are the four that don't: 2005–2009, 2010–2014, 2015–2019, and 2020–2024, each at the fiscal year after it " +
+      "ends, as the household counts are. A small town's shares can carry margins of error of several points.";
+    const theirs = t.kind === "town" ? `${t.name}'s` : "these towns'";
+    const pAge = demoStack("tage", counts(AGE_SERIES), "Population by age",
+      `Shares of ${theirs} residents, from the Census Bureau's American Community Survey.`, acsHelp);
+    const pRace = demoStack("trace", counts(RACE_SERIES), "Population by race and ethnicity",
+      `Shares of ${theirs} residents, from the Census Bureau's American Community ` +
+        "Survey. Hispanic or Latino residents may be of any " +
+        "race; each race counts residents who aren't Hispanic or Latino.",
+      acsHelp + "\n\nRace and Hispanic or Latino origin are as residents report them. Another race, or more than one, " +
+        "includes American Indian and Alaska Native, Native Hawaiian and Pacific Islander, and residents who name some " +
+        "other race or two or more races.");
+    const pSex = demoStack("tsex", counts(SEX_SERIES), "Women in the population",
+      `The share of ${theirs} residents who are women, from the Census Bureau's American Community Survey.`,
+      acsHelp + "\n\nThe survey asks each resident's sex as female or male.");
+    const pDis = demoStack("tdis", [
+      { key: "disability", label: "With a disability", color: DISABILITY_COLOR, of: (d) => d.disability },
+    ], "Population with a disability",
+      `The share of ${theirs} residents with a disability, among those not living in institutions such as ` +
+        "nursing homes and prisons, from the Census Bureau's American Community Survey, which counts disability from " +
+        "2008–2012 on.",
+      acsHelp + "\n\nA disability here is serious difficulty with hearing, seeing, concentrating or remembering, walking or " +
+        "climbing stairs, dressing or bathing, or, for those 15 and older, doing errands alone. The survey counts it for " +
+        "civilians not living in institutions such as nursing homes and prisons, from 2008–2012 on, so 2005–2009 has none.",
+      { of: (d) => d.disability_universe, label: "Population not in institutions" }, "The survey counts disability from 2008–2012 on");
+    return [{ panel: pAge.panel, figure: $("fig-tage"), tip: pAge.tip }, { panel: pRace.panel, figure: $("fig-trace"), tip: pRace.tip },
+      { panel: pSex.panel, figure: $("fig-tsex"), tip: pSex.tip }, { panel: pDis.panel, figure: $("fig-tdis"), tip: pDis.tip }];
   }
 
   // Plain-language note on the dollar modes, with a worked example from the index for the year chosen
