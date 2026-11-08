@@ -244,6 +244,19 @@ const TOWN_CHAIN = {
   "state-all": ["state_all"], gateway: ["gateway"],
   type: ["type"], fifth: ["fifth"],
 } as const;
+/** The id a "Compare with" choice points to for a district or town (#237: one for both views, which each had a copy):
+ * with "Another ...", the one picked, unless it's x itself; otherwise the first in the choice's chain that x has and
+ * isn't x */
+function comparisonOf(x: { id: string; cmp: Partial<Record<string, string | null>> } | undefined, choice: string, vs: string | null,
+  chain: Partial<Record<string, readonly string[]>>): string | null {
+  if (!x || choice === "none") return null;
+  if (choice === "other") return vs && vs !== x.id ? vs : null;
+  for (const k of chain[choice] ?? []) {
+    const id = x.cmp[k];
+    if (id && id !== x.id) return id;
+  }
+  return null;
+}
 /** The Compare with choices that stand for a group relative to the district or town, named under the menu */
 const RELATIVE_COMPARES = new Set<string>(["cohort", "cohort-state", "peer", "peer-state", "region", "type", "fifth"]);
 const COMPARES: Compare[] = ["none", "cohort", "cohort-state", "region", "state", "state-all", "gateway", "type", "fifth", "other"];
@@ -1099,12 +1112,6 @@ export async function startExplorer() {
     groupedPicker(vsSelect, "pick-vs-label", "districts and groups")];
   showDollars();
   select.addEventListener("change", () => update({ d: select.value, ...histFor(select.value) }));
-  compareSelect.addEventListener("change", () => {
-    const cmp = compareSelect.value as Compare;
-    // Start the second menu on whatever was being compared, so nothing jumps
-    const vs = cmp === "other" && !state.vs ? (comparisonId(entity(state.d)) ?? "statewide") : state.vs;
-    update({ cmp, vs });
-  });
   vsSelect.addEventListener("change", () => update({ vs: vsSelect.value, ...(earlyOnly(vsSelect.value) && state.hist !== "on" ? histPatch(true) : {}) }));
   dollarInputs.forEach((r) => r.addEventListener("change", () => r.checked && update({ usd: r.value === "real" ? String(meta.latest) : "nominal" })));
   const perInputs = document.querySelectorAll<HTMLInputElement>('input[name="per"]');
@@ -1140,21 +1147,26 @@ export async function startExplorer() {
     regions.forEach(([rk, rl]) => addGroup(sel, `${rl} groups`, towns!.averages.filter((a) => a.region === rk)));
   }
   townSelect.addEventListener("change", () => update({ t: townSelect.value }));
-  townCompareSelect.addEventListener("change", () => {
-    const tcmp = townCompareSelect.value as TownCompare;
-    const tvs = tcmp === "other" && !state.tvs ? (townComparisonId(townById.get(state.t)) ?? "towns-statewide") : state.tvs;
-    update({ tcmp, tvs });
-  });
   townVsSelect.addEventListener("change", () => update({ tvs: townVsSelect.value }));
-  // Swap: what was compared becomes the focus, and what was the focus its comparison, by name ("Another ...")
-  $("swap-district").addEventListener("click", () => {
-    const id = comparisonId(entity(state.d));
-    if (id) update({ d: id, cmp: "other", vs: state.d });
-  });
-  $("swap-town").addEventListener("click", () => {
-    const id = townComparisonId(townById.get(state.t));
-    if (id) update({ t: id, tcmp: "other", tvs: state.t });
-  });
+  // Each view's Compare with and Swap (#237: one handler each, for both views). Picking "Another ..." starts its second
+  // menu on whatever was being compared, so nothing jumps; Swap makes what was compared the focus, and what was the
+  // focus its comparison, by name ("Another ...")
+  for (const side of [
+    { menu: compareSelect, swap: "swap-district", focus: "d", choice: "cmp", vs: "vs", chain: CHAIN, fallback: "statewide",
+      get: () => entity(state.d) },
+    { menu: townCompareSelect, swap: "swap-town", focus: "t", choice: "tcmp", vs: "tvs", chain: TOWN_CHAIN, fallback: "towns-statewide",
+      get: () => townById.get(state.t) },
+  ] as const) {
+    const compared = () => comparisonOf(side.get(), state[side.choice], state[side.vs], side.chain);
+    side.menu.addEventListener("change", () => {
+      const choice = side.menu.value;
+      update({ [side.choice]: choice, [side.vs]: choice === "other" && !state[side.vs] ? (compared() ?? side.fallback) : state[side.vs] });
+    });
+    $(side.swap).addEventListener("click", () => {
+      const id = compared();
+      if (id) update({ [side.focus]: id, [side.choice]: "other", [side.vs]: state[side.focus] });
+    });
+  }
 
   // Tabs: arrow keys move between them, as for any tab list
   const tabs = [...document.querySelectorAll<HTMLButtonElement>('[role="tab"]')];
@@ -1354,16 +1366,10 @@ export async function startExplorer() {
       o.title = on ? "The group in focus" : "";
     }
   }
-  /** The id the "Compare with" choice points to for this entity, if any. */
-  function comparisonId(e: Entity | undefined): string | null {
-    if (!e || state.cmp === "none") return null;
-    if (state.cmp === "other") return state.vs && state.vs !== e.id ? state.vs : null;
-    for (const k of CHAIN[state.cmp]) {
-      const id = e.cmp[k];
-      if (id && id !== e.id) return id;
-    }
-    return null;
-  }
+  /** The id each view's "Compare with" choice points to for this district or town, if any (comparisonOf) */
+  const comparisonId = (e: Entity | undefined) => comparisonOf(e, state.cmp, state.vs, CHAIN);
+  const townComparisonId = (t: Town | undefined) => comparisonOf(t, state.tcmp, state.tvs, TOWN_CHAIN);
+  /** The comparison itself, cut to the window: once its data has loaded */
   const comparisonFor = (e: Entity) => {
     const id = comparisonId(e);
     const c = id ? entity(id) : null;
@@ -1373,15 +1379,6 @@ export async function startExplorer() {
   /** "Shutesbury" or "the Statewide Tiny enrollment group average", for use mid-sentence. */
   const refName = (c: Named) => c.ref ?? (c.kind === "district" || c.kind === "town" ? c.name : `the ${c.name}`);
 
-  function townComparisonId(t: Town | undefined): string | null {
-    if (!t || state.tcmp === "none") return null;
-    if (state.tcmp === "other") return state.tvs && state.tvs !== t.id ? state.tvs : null;
-    for (const k of TOWN_CHAIN[state.tcmp]) {
-      const id = t.cmp[k];
-      if (id && id !== t.id) return id;
-    }
-    return null;
-  }
   const townComparison = (t: Town) => {
     const id = townComparisonId(t);
     const c = id ? townById.get(id) : null;
