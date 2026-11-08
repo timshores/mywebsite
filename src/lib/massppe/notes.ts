@@ -9,7 +9,7 @@
 // under a part, "Shown in" and the charts, map measures and tabs that draw on it. A part is named by its id less
 // "about-" ("spending-per-pupil"), the bold words it begins with, made into an id.
 
-export interface NotesContents {
+interface NotesContents {
   /** On the Data tab, drawn: go to the part or group the address names, once for each address */
   show(): void;
   /** From another tab: name the part or group to go to once the Data tab is drawn */

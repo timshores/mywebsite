@@ -7,6 +7,7 @@
 // Once the measures' years arrive (map-years.json), a change can be measured between any two years,
 // and a level shown for any year, or played from the first year to the latest.
 
+import { el, svgEl } from "./dom";
 import { enlargeButton } from "./enlarge";
 import { asShown, change, count, measured, pct, usd, yearly } from "./format";
 import { median } from "./stats";
@@ -467,13 +468,6 @@ function endsOn(a: Arr | undefined, lo: number, hi: number): [number, number] | 
   return first >= 0 && last > first ? [first, last] : null;
 }
 
-function el<K extends keyof HTMLElementTagNameMap>(tag: K, cls?: string, text?: string): HTMLElementTagNameMap[K] {
-  const n = document.createElement(tag);
-  if (cls) n.className = cls;
-  if (text != null) n.textContent = text;
-  return n;
-}
-const SVG = "http://www.w3.org/2000/svg";
 
 /**
  * real and setReal: the explorer's Dollars choice, which the map shares; refresh() redraws it when
@@ -594,40 +588,40 @@ export function startMap(root: HTMLElement, data: MapData, opts: {
   fold.open = !closed;
   const figure = el("figure", "map-figure");
   const legend = el("ul", "map-legend");
-  const svg = document.createElementNS(SVG, "svg");
+  const svg = svgEl("svg");
   svg.setAttribute("class", "map-svg");
   svg.setAttribute("viewBox", `0 0 ${meta.width} ${meta.height}`);
   svg.setAttribute("role", "img");
-  const defs = document.createElementNS(SVG, "defs");
+  const defs = svgEl("defs");
   defs.innerHTML = ["map-nodata", "map-hatch"].map((id) => `<pattern id="${id}" width="8" height="8" patternUnits="userSpaceOnUse" ` +
     'patternTransform="rotate(45)"><rect width="8" height="8" fill="#f4f1e8"/><line x1="0" y1="0" x2="0" y2="8" stroke="#bdb7aa" ' +
     'stroke-width="3"/></pattern>').join("");
-  const shapes = document.createElementNS(SVG, "g");
+  const shapes = svgEl("g");
   shapes.setAttribute("class", "map-shapes");
   // The hovered group's region, within a grouping by region: a red line around its outside edge (each town's
   // outline, drawn wide, and masked off inside the region, leaves only the edge)
-  const ring = document.createElementNS(SVG, "g");
+  const ring = svgEl("g");
   ring.setAttribute("class", "map-ring");
   ring.setAttribute("mask", "url(#map-ring-mask)");
-  const ringMask = document.createElementNS(SVG, "mask");
+  const ringMask = svgEl("mask");
   ringMask.id = "map-ring-mask";
   ringMask.setAttribute("maskUnits", "userSpaceOnUse");
   defs.append(ringMask);
-  const lift = document.createElementNS(SVG, "g");  // the hovered town, or district, drawn on top
+  const lift = svgEl("g");  // the hovered town, or district, drawn on top
   svg.append(defs, shapes, ring, lift);
   function showRing(towns: MapTown[]) {
     ring.replaceChildren();
     ringMask.replaceChildren();
     if (!towns.length) return;
-    const all = document.createElementNS(SVG, "rect");
+    const all = svgEl("rect");
     for (const [k, v] of Object.entries({ x: -20, y: -20, width: meta.width + 40, height: meta.height + 40, fill: "#fff" })) all.setAttribute(k, String(v));
     ringMask.append(all);
     for (const t of towns) {
-      const inside = document.createElementNS(SVG, "path");
+      const inside = svgEl("path");
       inside.setAttribute("d", t.d);
       inside.setAttribute("fill", "#000");
       ringMask.append(inside);
-      const edge = document.createElementNS(SVG, "path");
+      const edge = svgEl("path");
       edge.setAttribute("d", t.d);
       edge.setAttribute("stroke", RING_COLOR);
       ring.append(edge);
@@ -660,7 +654,7 @@ export function startMap(root: HTMLElement, data: MapData, opts: {
   // One path per town, made once; each draw only recolors them
   const paths = new Map<string, SVGPathElement>();
   for (const t of data.towns) {
-    const p = document.createElementNS(SVG, "path");
+    const p = svgEl("path");
     p.setAttribute("d", t.d);
     p.setAttribute("class", "map-town");
     p.dataset.id = t.id;

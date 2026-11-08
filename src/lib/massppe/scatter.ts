@@ -2,7 +2,7 @@
 // smoothed curve (LOESS, as R's geom_smooth draws it), labels that dodge one another,
 // and the nearest point under the pointer. Plain SVG, like charts.ts.
 
-import { svgEl } from "./charts";
+import { svgEl } from "./dom";
 
 export interface Point {
   x: number;
@@ -21,7 +21,7 @@ export interface Group {
   z: number;
 }
 
-export interface ScatterOpts {
+interface ScatterOpts {
   width: number;
   height: number;
   logX?: boolean;
@@ -76,7 +76,8 @@ export function ticksFor(min: number, max: number, count = 5): number[] {
   const step = [1, 2, 2.5, 5, 10].map((f) => f * mag).find((s) => s >= raw) ?? raw;
   const out: number[] = [];
   for (let v = Math.floor(min / step) * step; v <= max + step * 1e-6; v += step) out.push(Math.round(v * 1e9) / 1e9);
-  if (out[out.length - 1] < max) out.push(out[out.length - 1] + step);
+  // Rounded as the rest are, so a last tick reads 0.6, not 0.6000000000000001
+  if (out[out.length - 1] < max) out.push(Math.round((out[out.length - 1] + step) * 1e9) / 1e9);
   return out;
 }
 

@@ -7,7 +7,8 @@
 // rather than fetched, the data ships as hashed JavaScript chunks, which the host
 // compresses (it sends .json uncompressed).
 
-import { gapColumns, lines, niceTicks, niceTicksRange, ratingSteps, stackedColumns, svgEl, type Marks, type Panel, type Series, type Val } from "./charts";
+import { gapColumns, lines, niceTicks, niceTicksRange, ratingSteps, stackedColumns, type Marks, type Panel, type Series, type Val } from "./charts";
+import { capital, svgEl, text } from "./dom";
 import { andList, change, compact, measured as fte, pct, points, signFor, total as amount, usd } from "./format";
 import { closeEnlarged, enlargeButton } from "./enlarge";
 import type { CapData } from "./cap";
@@ -553,16 +554,9 @@ function shade(delta: number | null, bins: number[]) {
 }
 
 const sentence = (s: string) => s.charAt(0) + s.slice(1).toLowerCase();
-const capital = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 
-function text(tag: string, content: string, cls?: string) {
-  const node = document.createElement(tag);
-  node.textContent = content;
-  if (cls) node.className = cls;
-  return node;
-}
 
 function sumAt(groups: Values[], i: number): number | null {
   const vals = groups.map((g) => g[i]);

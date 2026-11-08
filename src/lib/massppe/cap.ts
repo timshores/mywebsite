@@ -7,7 +7,7 @@
 // target min(yield x f, cap x foundation budget). f is 1 at 82.5%; at 100% and with no cap
 // this reproduces Michael Naughton and Tupper Brown's FY2026 targets to the dollar.
 
-import { svgEl } from "./charts";
+import { capital, el, svgEl, vn } from "./dom";
 import { change as changePct, compact, digits, pct, rho as rhoText, round, signFor, total, usd } from "./format";
 import { median } from "./stats";
 import { groupedPicker } from "./picker";
@@ -54,19 +54,12 @@ const rate = (v: number) => `${digits(v * 100, 3)}%`;
 const capPct = (c: number) => `${round(c * 100, 1)}%`;
 /** An axis tick in percent: a round number, with a decimal only where the tick needs one */
 const pctTick = (v: number) => `${round(v * 100, 1)}%`;
-function el<K extends keyof HTMLElementTagNameMap>(tag: K, cls?: string, text?: string): HTMLElementTagNameMap[K] {
-  const n = document.createElement(tag);
-  if (cls) n.className = cls;
-  if (text != null) n.textContent = text;
-  return n;
-}
 const link = (text: string, href: string) => Object.assign(el("a", undefined, text), { href });
 /** Further reading on Chapter 70, for the explanations that end with it */
 const seeAlso = (): (string | Node)[] => ["See also Kiera McLaughlin's ", link("“Chapter 70: Some of What You Need to " +
   "Know to Understand the School Budget Process”", "https://www.amherstindy.org/2026/02/05/chapter-70-some-of-what-you-need-to-know-to-understand-the-school-budget-process/"),
   " in the Amherst Indy, February 5, 2026."];
 /** A measure's name, bold wherever text describes it */
-const vn = (s: string) => el("strong", "cw-var", s);
 
 const GROUPS: Record<string, Group> = {
   capped: { label: "At today's cap", color: "#6250d6", shape: "square", z: 2 },
@@ -271,7 +264,7 @@ export function startCap(root: HTMLElement, data: CapData, opts: { town: string 
     histMemo = { key, f };
     return f;
   };
-  const yearsSvg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  const yearsSvg = svgEl("svg");
   yearsSvg.setAttribute("class", "cap-years-chart");
   yearsSvg.setAttribute("role", "img");
 
@@ -406,7 +399,7 @@ export function startCap(root: HTMLElement, data: CapData, opts: { town: string 
   chartContext.dataset.detail = "";
   const legend = el("ul", "cw-legend");
   const figure = el("figure", "cap-figure");
-  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  const svg = svgEl("svg");
   svg.setAttribute("class", "cap-chart");
   svg.setAttribute("role", "img");
   const tip = el("div", "cw-tip");
@@ -832,7 +825,7 @@ export function startCap(root: HTMLElement, data: CapData, opts: { town: string 
     const lead: Record<XKey, (string | Node)[]> = {
       cey_pct: [": each town's fair share by the formula set against what its schools need. This is the measure the " +
         `cap reads: every town right of the dashed line at ${pct(y.max_pct, 1)} is at today's cap.` + (cappedUp + cappedDown
-          ? ` ${capitalize(scenName)}, ${cappedUp} of those ${capped.length} towns would be asked for more and ` +
+          ? ` ${capital(scenName)}, ${cappedUp} of those ${capped.length} towns would be asked for more and ` +
             `${cappedDown} for less.`
           : "")],
       eqv_pc: [": the property half of the formula's measure of wealth.", ...where],
@@ -871,7 +864,7 @@ export function startCap(root: HTMLElement, data: CapData, opts: { town: string 
         const x = towns.find((q) => q.id === p.id)!;
         tip.replaceChildren(el("strong", undefined, x.name),
           el("div", undefined, `Target today: ${usd(x.target)}${x.capped ? " (at the cap)" : ""}`),
-          el("div", undefined, `${capitalize(scenName)}: ${usd(alt.get(x.id)!)} (${signed(change(x))})`),
+          el("div", undefined, `${capital(scenName)}: ${usd(alt.get(x.id)!)} (${signed(change(x))})`),
           el("div", undefined, `Per household: ${signed(p.y)}`),
           el("div", undefined, `${xo.title}: ${xo.fmt(p.x)}`),
           el("div", "cw-tip-hint", "Select to walk through it above"));
@@ -956,4 +949,3 @@ export function startCap(root: HTMLElement, data: CapData, opts: { town: string 
   return { render };
 }
 
-const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);

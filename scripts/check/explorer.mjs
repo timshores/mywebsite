@@ -32,7 +32,7 @@ const VIEWS = [
   "?d=leverett", "?d=leverett&cmp=region&hist=on", "?d=ashburnham-westminster&cmp=cohort", "?d=amherst-pelham&cmp=state&dper=total",
   "?d=region-western", "?d=statewide-all&hist=on", "?d=abby-kelley-foster-charter-public-district", "?d=acton&hist=on",
   "?view=towns&t=amherst&tcmp=peer", "?view=towns&t=leverett&per=parcel", "?view=towns&t=boston&tcmp=state",
-  "?view=commonwealth&y=soc&x=el&hl=region&focus=west",
+  "?view=commonwealth&y=soc&x=el&hl=region&focus=west", "?view=cap",
 ];
 const MAP_LAYERS = ["districts", "towns"];
 
@@ -62,7 +62,11 @@ async function readView(page) {
     const dialog = document.querySelector("dialog.cw-dialog[open]");
     if (dialog) out.plot = { title: t(dialog.querySelector(".cw-title")), legend: t(dialog.querySelector(".cw-legend")),
       finding: t(dialog.querySelector(".cw-finding")), cautions: t(dialog.querySelector(".cw-cautions")), caption: t(dialog.querySelector(".cw-caption")),
-      marks: dialog.querySelectorAll(".sc-pt").length + " points, " + dialog.querySelectorAll(".sc-pt.is-faded").length + " faded" };
+      marks: dialog.querySelectorAll(".sc-pt").length + " points, " + dialog.querySelectorAll(".sc-pt.is-faded").length + " faded",
+      axes: [...dialog.querySelectorAll("svg.cw-chart text")].map((x) => x.textContent).join(" | ") };
+    // The cap tab: its words and its charts' labels
+    const cap = document.getElementById("cap-view");
+    if (shown(cap)) out.cap = { text: t(cap), axes: [...cap.querySelectorAll("svg text")].map((x) => x.textContent).join(" | ") };
     return out;
   });
 }
@@ -118,7 +122,7 @@ async function snapshot(out) {
   for (const v of VIEWS) {
     await page.goto(base + v, { waitUntil: "networkidle" });
     await settle(page, 1200);
-    snap[v] = { ...(await readView(page)), ...(v.includes("view=commonwealth") ? {} : { tables: await fullTables(page) }) };
+    snap[v] = { ...(await readView(page)), ...(/view=(commonwealth|cap)/.test(v) ? {} : { tables: await fullTables(page) }) };
   }
   snap.map = await readMap(page);
   snap.errors = errors;

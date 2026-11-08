@@ -1,7 +1,7 @@
 // SVG charts for the explorer: stacked columns and lines on one shared year axis.
 // Every panel uses the same margins, so a year sits at the same x in each one.
 
-const SVG = "http://www.w3.org/2000/svg";
+import { svgEl } from "./dom";
 
 export type Val = number | null;
 
@@ -130,7 +130,7 @@ const lineKey = (key: string) => (key === "cmp" ? "line:cmp" : key.startsWith("c
  * the comparison's line doesn't ("cmptrend:swd", as its measure's too); or, for one of several, its series */
 const trendKey = (tr: Series) => (tr.key === "trend" ? "line:trend" : tr.key.startsWith("cmptrend") ? lineKey(`cmp${tr.key.slice(8)}`) : tr.key);
 
-export interface Frame {
+interface Frame {
   width: number;
   height: number;
   years: number[];
@@ -144,7 +144,7 @@ export interface Frame {
   trendsOnly?: boolean;
 }
 
-export const MARGIN = { top: 18, right: 64, bottom: 30, left: 80 };
+const MARGIN = { top: 18, right: 64, bottom: 30, left: 80 };
 /** Room under the year labels for the axis title, added to the frame's height */
 const X_TITLE_ROOM = 20;
 // Axis titles: big and bold like the scatterplots' (.sc-title)
@@ -153,16 +153,6 @@ const BAR_MAX = 24;
 const GAP = 2;
 const RADIUS = 4;
 
-export function svgEl<K extends keyof SVGElementTagNameMap>(
-  tag: K,
-  attrs: Record<string, string | number> = {},
-  parent?: Element,
-): SVGElementTagNameMap[K] {
-  const node = document.createElementNS(SVG, tag);
-  for (const [k, v] of Object.entries(attrs)) node.setAttribute(k, String(v));
-  if (parent) parent.appendChild(node);
-  return node;
-}
 
 /** Clean axis ticks covering min..max, always including 0. */
 export function niceTicksRange(min: number, max: number, count = 5): number[] {
@@ -184,7 +174,28 @@ export function niceTicks(max: number, count = 5): number[] {
   return niceTicksRange(0, max, count);
 }
 
-export class Axis {
+/** The year axis every chart on it shares: n years, each a step wide, a year's x at its step's middle (#237) */
+function yearAxis(frame: Frame) {
+  const n = frame.years.length;
+  const plotW = Math.max(10, frame.width - MARGIN.left - MARGIN.right);
+  const step = plotW / n;
+  return { n, plotW, step, x: (i: number) => MARGIN.left + step * (i + 0.5) };
+}
+
+/** Label every k-th year, counted back from the latest so it is always labeled */
+const yearEvery = (step: number, width: number) => [1, 2, 4, 5].find((k) => step * k >= (width < 520 ? 40 : 36)) ?? 8;
+
+/** The years along the bottom at height y, as '25 on a narrow chart */
+function drawYears(g: Element, frame: Frame, x: (i: number) => number, step: number, y: number) {
+  const every = yearEvery(step, frame.width);
+  frame.years.forEach((yr, i) => {
+    if ((frame.years.length - 1 - i) % every) return;
+    const label = svgEl("text", { x: x(i), y, "text-anchor": "middle", class: "tick" }, g);
+    label.textContent = frame.width < 520 ? `'${String(yr).slice(2)}` : String(yr);
+  });
+}
+
+class Axis {
   readonly n: number;
   readonly step: number;
   readonly plotW: number;
@@ -192,10 +203,8 @@ export class Axis {
   readonly yMax: number;
   readonly yMin: number;
   constructor(readonly frame: Frame, readonly ticks: number[]) {
-    this.n = frame.years.length;
-    this.plotW = Math.max(10, frame.width - MARGIN.left - MARGIN.right);
+    ({ n: this.n, plotW: this.plotW, step: this.step } = yearAxis(frame));
     this.plotH = frame.height - MARGIN.top - MARGIN.bottom;
-    this.step = this.plotW / this.n;
     this.yMax = ticks[ticks.length - 1];
     this.yMin = ticks[0];
   }
@@ -208,11 +217,6 @@ export class Axis {
   indexAt(px: number) {
     return Math.min(this.n - 1, Math.max(0, Math.floor((px - MARGIN.left) / this.step)));
   }
-  /** Label every k-th year, counted back from the latest so it is always labeled. */
-  labelEvery() {
-    const minGap = this.frame.width < 520 ? 40 : 36;
-    return [1, 2, 4, 5].find((k) => this.step * k >= minGap) ?? 8;
-  }
 }
 
 function drawGrid(svg: SVGSVGElement, ax: Axis, fmt: (v: number) => string) {
@@ -223,13 +227,7 @@ function drawGrid(svg: SVGSVGElement, ax: Axis, fmt: (v: number) => string) {
     const label = svgEl("text", { x: MARGIN.left - 8, y, dy: "0.32em", "text-anchor": "end", class: "tick" }, g);
     label.textContent = fmt(t);
   }
-  const k = ax.labelEvery();
-  const narrow = ax.frame.width < 520;
-  ax.frame.years.forEach((yr, i) => {
-    if ((ax.n - 1 - i) % k !== 0) return;
-    const label = svgEl("text", { x: ax.x(i), y: MARGIN.top + ax.plotH + 18, "text-anchor": "middle", class: "tick" }, g);
-    label.textContent = narrow ? `'${String(yr).slice(2)}` : String(yr);
-  });
+  drawYears(g, ax.frame, (i) => ax.x(i), ax.step, MARGIN.top + ax.plotH + 18);
 
   // Axis titles name what's plotted, the first place a reader looks
   const xTitle = svgEl("text", { x: MARGIN.left + ax.plotW / 2, y: ax.frame.height + 14, "text-anchor": "middle", class: "sc-title" }, g);
@@ -594,10 +592,7 @@ export function gapColumns(svg: SVGSVGElement, frame: Frame, own: Val[], cmp: Va
   label: (i: number, cmp: boolean) => string): void {
   svg.replaceChildren();
   svg.setAttribute("viewBox", `0 0 ${frame.width} ${frame.height}`);
-  const n = frame.years.length;
-  const plotW = Math.max(10, frame.width - MARGIN.left - MARGIN.right);
-  const step = plotW / n;
-  const x = (i: number) => MARGIN.left + step * (i + 0.5);
+  const { plotW, step, x } = yearAxis(frame);
   // A scale of whole steps that holds every value, and a step each way at least
   const vals = [...own, ...(cmp ?? [])].filter((v): v is number => v != null);
   const m = Math.max(1, ...vals.map(Math.abs));
@@ -612,12 +607,7 @@ export function gapColumns(svg: SVGSVGElement, frame: Frame, own: Val[], cmp: Va
     const tx = svgEl("text", { x: MARGIN.left - 8, y: y(v), dy: "0.32em", "text-anchor": "end", class: "tick" }, g);
     tx.textContent = `${v > 0 ? "+" : v < 0 ? "−" : ""}${Math.abs(v)}%`;
   }
-  const every = [1, 2, 4, 5].find((k) => step * k >= (frame.width < 520 ? 40 : 36)) ?? 8;
-  frame.years.forEach((yr, i) => {
-    if ((n - 1 - i) % every) return;
-    const tx = svgEl("text", { x: x(i), y: frame.height - 6, "text-anchor": "middle", class: "tick" }, g);
-    tx.textContent = frame.width < 520 ? `'${String(yr).slice(2)}` : String(yr);
-  });
+  drawYears(g, frame, x, step, frame.height - 6);
   const w = Math.min(BAR_MAX, step * 0.62);
   own.forEach((v, i) => {
     if (v == null) return;
@@ -639,12 +629,9 @@ export function ratingSteps(svg: SVGSVGElement, frame: Frame, levels: string[],
   series: { points: (number | null)[]; color: string; nudge: number; label: (i: number) => string }[]): void {
   svg.replaceChildren();
   svg.setAttribute("viewBox", `0 0 ${frame.width} ${frame.height}`);
-  const n = frame.years.length;
-  const plotW = Math.max(10, frame.width - MARGIN.left - MARGIN.right);
-  const step = plotW / n;
+  const { plotW, step, x } = yearAxis(frame);
   const top = 10;
   const rowH = (frame.height - top - 22) / Math.max(1, levels.length - 1);
-  const x = (i: number) => MARGIN.left + step * (i + 0.5);
   const y = (lvl: number) => top + rowH * lvl;
   const g = svgEl("g", { class: "grid", "aria-hidden": "true" }, svg);
   levels.forEach((name, k) => {
@@ -652,12 +639,7 @@ export function ratingSteps(svg: SVGSVGElement, frame: Frame, levels: string[],
     const tx = svgEl("text", { x: MARGIN.left - 8, y: y(k), dy: "0.32em", "text-anchor": "end", class: "tick" }, g);
     tx.textContent = name;
   });
-  const every = [1, 2, 4, 5].find((k) => step * k >= (frame.width < 520 ? 40 : 36)) ?? 8;
-  frame.years.forEach((yr, i) => {
-    if ((n - 1 - i) % every) return;
-    const tx = svgEl("text", { x: x(i), y: frame.height - 6, "text-anchor": "middle", class: "tick" }, g);
-    tx.textContent = frame.width < 520 ? `'${String(yr).slice(2)}` : String(yr);
-  });
+  drawYears(g, frame, x, step, frame.height - 6);
   for (const s of series) {
     const rated = s.points.map((p, i) => [p, i] as const).filter(([p]) => p != null) as [number, number][];
     if (rated.length > 1) {

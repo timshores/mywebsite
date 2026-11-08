@@ -6,6 +6,7 @@
 import { change, compact, count, pct, rho, round, signFor, usd } from "./format";
 import { median } from "./stats";
 import { loess, pearson, scatter, spearman, type Group, type Point } from "./scatter";
+import { capital, el, svgEl, vn } from "./dom";
 
 type Values = (number | null)[];
 
@@ -248,8 +249,6 @@ const PRESETS: Preset[] = [
   },
 ];
 
-/** A measure's name, bold wherever text describes it */
-const vn = (s: string) => el("strong", "cw-var", s);
 /** Text with its *starred* measure names in bold */
 const starred = (s: string) => s.split("*").map((part, i) => (i % 2 ? vn(part) : part));
 type Rich = (string | Node)[];
@@ -274,13 +273,6 @@ const axisFmt = (u: Unit) => (v: number) => {
   const s = String(Math.abs(round(v * 100, 1)));
   return `${signFor(v, s, u === "chg")}${s}%`;
 };
-const capital = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
-function el<K extends keyof HTMLElementTagNameMap>(tag: K, cls?: string, text?: string): HTMLElementTagNameMap[K] {
-  const n = document.createElement(tag);
-  if (cls) n.className = cls;
-  if (text != null) n.textContent = text;
-  return n;
-}
 /** The element, holding text and the nodes among it */
 function withParts<T extends HTMLElement>(node: T, parts: Rich): T {
   node.append(...parts);
@@ -493,7 +485,7 @@ export function startCommonwealth(root: HTMLElement, data: CwData, opts: {
     const card = el("button", "cw-card");
     card.type = "button";
     card.setAttribute("aria-haspopup", "dialog");
-    const thumb = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    const thumb = svgEl("svg");
     thumb.setAttribute("class", "cw-thumb");
     thumb.setAttribute("aria-hidden", "true");
     const { pts, hl } = pointsFor({ x: p.x, y: p.y, fy: latest, log: p.log, all: false, hl: DEFAULT_HL, find: null });
@@ -586,7 +578,7 @@ export function startCommonwealth(root: HTMLElement, data: CwData, opts: {
 
   const body = el("div", "cw-body");
   const figure = el("figure", "cw-figure");
-  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  const svg = svgEl("svg");
   svg.setAttribute("class", "cw-chart");
   svg.setAttribute("role", "img");
   const tip = el("div", "cw-tip");
