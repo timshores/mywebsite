@@ -10,17 +10,18 @@
 import { addStyles, el, svgEl } from "./dom";
 import { enlargeButton } from "./enlarge";
 import { asShown, change, count, measured, pct, usd, yearly } from "./format";
-import { cagr, linearFit, median, quantile } from "./stats";
+import { median, quantile } from "./stats";
 import { GROUP_HUES } from "./palette";
 import type { CommunityType } from "./data";
+import { combinedRow, fromRow, minSpan, yearsIn, type Arr, type MapSeries, type Val, type Yrs } from "./series";
 import css from "./map.css?inline"; // the styles for what this module builds (#237), added as it loads (#238)
 
 addStyles(css);
 
-/** [value, year] for a level; [value, first year, last year] for a change */
-type Val = number[];
-/** A measure year by year, along MapSeries.years */
-type Arr = (number | null)[];
+// The measures year by year (map-years.json) and their figures over the years chosen live in series.ts (#238); the
+// series type stays importable from here, where explorer.ts takes it
+export type { MapSeries } from "./series";
+
 /** elem and high: the districts serving its elementary and its secondary grades; all: the two combined,
  * each weighted by the town's own pupils, where they differ */
 interface MapTown {
@@ -50,22 +51,8 @@ export interface MapData {
   towns: MapTown[];
   districts: Record<string, { name: string; ct?: Kind | null; v: Record<string, Val> }>;
 }
-/** The measures year by year (map-years.json): every array runs along years, trailing years without a value
- * left off. cpi: the Northeast index each year, for growth after inflation. A split town's w: its pupils in
- * its elementary district and in its secondary one. */
-export interface MapSeries {
-  years: number[];
-  cpi: (number | null)[];
-  towns: Record<string, Record<string, Arr>>;
-  districts: Record<string, Record<string, Arr>>;
-  /** The group averages' */
-  groups?: Record<string, Record<string, Arr>>;
-}
-
 type Layer = "towns" | "districts";
 type Grades = "elem" | "high" | "all";
-/** The years a value covers: one year has from equal to to */
-interface Yrs { from: number; to: number }
 interface Measure {
   key: string;
   label: string;
@@ -452,22 +439,6 @@ function growthCuts(values: number[]): number[] {
   return out;
 }
 
-const round = (v: number, d: number) => Math.round(v * 10 ** d) / 10 ** d;
-const get = (a: Arr | undefined, i: number) => (a && i >= 0 && i < a.length ? a[i] : null);
-/** The first and last years with a positive value, between lo and hi */
-function endsOn(a: Arr | undefined, lo: number, hi: number): [number, number] | null {
-  let first = -1;
-  let last = -1;
-  for (let i = lo; i <= hi; i++) {
-    const v = get(a, i);
-    if (v != null && v > 0) {
-      if (first < 0) first = i;
-      last = i;
-    }
-  }
-  return first >= 0 && last > first ? [first, last] : null;
-}
-
 
 /**
  * real and setReal: the explorer's Dollars choice, which the map shares; refresh() redraws it when
@@ -666,106 +637,7 @@ export function startMap(root: HTMLElement, data: MapData, opts: {
   const schoolsOf = (t: MapTown) => [...new Set([t.elem, t.high].filter((d): d is string => !!d))]
     .map((d) => data.districts[d]?.name ?? d).join(" and ") || "no district of its own";
 
-  // ---- The measures year by year, by the rules the pipeline uses for the figures in map.json ----
-  const yi = (y: number) => S!.years.indexOf(y);
-  /** The least-squares line's yearly growth from its first year to its last, between lo and hi; none where the line
-   * starts or ends at or below zero, as the pipeline rules for the figures in map.json */
-  function trendOn(a: Arr, lo: number, hi: number): Val | null {
-    const fit = linearFit(S!.years.map((_, i) => (i < lo || i > hi ? null : get(a, i))));
-    const at = fit.flatMap((v, i) => (v == null ? [] : [i]));
-    if (!at.length) return null;
-    const [a0, b0] = [at[0], at[at.length - 1]];
-    const g = cagr(fit[a0], fit[b0], b0 - a0);
-    return g == null ? null : [round(g, 5), S!.years[a0], S!.years[b0]];
-  }
-  /** Trend growth after inflation (in the latest year's dollars) or before; the pipeline fits each on its own */
-  function growthOn(a: Arr, lo: number, hi: number, after: boolean): Val | null {
-    const cpi = S!.cpi;
-    const base = cpi[yi(meta.latest)]!;
-    const real = S!.years.map((_, i) => {
-      const v = get(a, i);
-      return v == null || cpi[i] == null ? null : (v * base) / cpi[i]!;
-    });
-    const r = trendOn(real, lo, hi);
-    const nom = trendOn(a, lo, hi);
-    if (!r || !nom) return null;
-    return after ? r : nom;
-  }
-  function changeOn(a: Arr, lo: number, hi: number): Val | null {
-    const e = endsOn(a, lo, hi);
-    return e ? [round(get(a, e[1])! / get(a, e[0])! - 1, 4), S!.years[e[0]], S!.years[e[1]]] : null;
-  }
-  /** A measure's value from one town's or district's row, over the years chosen */
-  function fromRow(m: Measure, row: Record<string, Arr> | undefined, y: Yrs, after: boolean): Val | null {
-    if (!row) return null;
-    if (m.years === "range") {
-      const a = row[m.key];
-      if (!a) return null;
-      return m.dollars ? growthOn(a, yi(y.from), yi(y.to), after) : changeOn(a, yi(y.from), yi(y.to));
-    }
-    const i = yi(y.to);
-    if (m.key === "above" || m.key === "aid") {
-      const v = get(row[m.key], i);
-      const req = get(row.req, i);
-      return v == null || !req ? null : [round(v / req, 4), y.to];
-    }
-    const v = get(row[m.key], i);
-    if (v != null) return [v, y.to];
-    // A census figure holds until the next release: the latest at or before the year, with its own year
-    if (m.hold) for (let k = i - 1; k >= 0; k--) {
-      const x = get(row[m.key], k);
-      if (x != null) return [x, S!.years[k]];
-    }
-    return null;
-  }
-  /** A split town's two districts as one, each weighted by the town's pupils in it */
-  function combinedRow(m: Measure, t: MapTown, y: Yrs, after: boolean): Val | null {
-    const w = S!.towns[t.id]?.w;
-    const r1 = S!.districts[t.elem!];
-    const r2 = S!.districts[t.high!];
-    if (!w || !r1 || !r2) return null;
-    const [w1, w2] = w as number[];
-    const lo = yi(y.from);
-    const hi = yi(y.to);
-    if (m.key === "ppe") {
-      const mix = S!.years.map((_, k) => {
-        const a = get(r1.ppe, k);
-        const b = get(r2.ppe, k);
-        return a == null || b == null ? null : (w1 * a + w2 * b) / (w1 + w2);
-      });
-      return growthOn(mix, lo, hi, after);
-    }
-    if (m.key === "enroll") {
-      // Each district's change over the years both have, so the figure covers the years it's labeled with
-      const e1 = endsOn(r1.enroll, lo, hi);
-      const e2 = endsOn(r2.enroll, lo, hi);
-      if (!e1 || !e2) return null;
-      const a = Math.max(e1[0], e2[0]);
-      const b = Math.min(e1[1], e2[1]);
-      const ends = [get(r1.enroll, a), get(r2.enroll, a), get(r1.enroll, b), get(r2.enroll, b)];
-      if (a >= b || ends.some((v) => !(v != null && v > 0))) return null;
-      const c1 = ends[2]! / ends[0]! - 1;
-      const c2 = ends[3]! / ends[1]! - 1;
-      return [round((w1 * c1 + w2 * c2) / (w1 + w2), 4), S!.years[a], S!.years[b]];
-    }
-    if (m.key === "above" || m.key === "aid") {
-      // Each needs only its own figure and the requirement: aid can be had in a year above-required wasn't reported
-      const i = yi(y.to);
-      const [v1, q1, v2, q2] = [r1, r2].flatMap((r) => [get(r[m.key], i), get(r.req, i)]);
-      if ([v1, q1, v2, q2].some((v) => v == null)) return null;
-      const req = w1 * q1! + w2 * q2!;
-      if (!req) return null;
-      return [round((w1 * v1! + w2 * v2!) / req, 4), y.to];
-    }
-    if (m.years === "year") {
-      // A share of the students or of spending, each district's weighted by the town's pupils in it
-      const i = yi(y.to);
-      const a = get(r1[m.key], i);
-      const b = get(r2[m.key], i);
-      return a == null || b == null ? null : [round((w1 * a + w2 * b) / (w1 + w2), 4), y.to];
-    }
-    return null;
-  }
+  // ---- The measures year by year: series.ts figures them, from the series and the latest year (#238) ----
   /** The grouping shown on this layer, if any */
   const groupingNow = () => (data.groupings?.[layer] ?? []).find((g) => g.key === groupBy[layer]) ?? null;
   /** The rows a layer's colors come from: its towns' or districts', or its groups' */
@@ -774,25 +646,8 @@ export function startMap(root: HTMLElement, data: MapData, opts: {
     if (g) return g.groups.map((id) => ({ [id]: S?.groups?.[id] ?? {} }));
     return [onTowns ? S!.towns : S!.districts];
   };
-  /** The years a measure has on this layer, first to last */
-  function yearsOf(m: Measure, onTowns: boolean): number[] {
-    if (!S || !m.years) return [];
-    let lo = Infinity;
-    let hi = -1;
-    for (const row of rowsOf(onTowns).flatMap((r) => Object.values(r))) {
-      const a = row[m.key];
-      if (!a) continue;
-      for (let i = 0; i < a.length; i++) {
-        if (a[i] == null) continue;
-        lo = Math.min(lo, i);
-        hi = Math.max(hi, i);
-      }
-    }
-    return hi >= lo ? S.years.slice(lo, hi + 1) : [];
-  }
-  /** Fewest years between a change's two ends: a trend needs three values, which property value, set every
-   * other year, has only across four */
-  const minSpan = (m: Measure) => (m.key === "eqv" ? 4 : m.dollars ? 2 : 1);
+  /** The years a measure has on this layer, first to last; none for a measure of one year, or before the series */
+  const yearsOf = (m: Measure, onTowns: boolean): number[] => (S && m.years ? yearsIn(S, m.key, rowsOf(onTowns)) : []);
   const selKey = (m: Measure) => `${layer}:${m.key}`;
   function sel(m: Measure, ys: number[]): Yrs {
     const c = chosen.get(selKey(m));
@@ -991,13 +846,13 @@ export function startMap(root: HTMLElement, data: MapData, opts: {
     };
     /** A district's own value: over the years chosen, once they're here, or as map.json has it */
     const districtVal = (d: string, after: boolean, yy: Yrs | null): Val | null =>
-      (bySeries ? fromRow(measure, S!.districts[d], yy!, after) : inMode(data.districts[d]?.v[measure.key], after));
+      (bySeries ? fromRow(S!, meta.latest, measure, S!.districts[d], yy!, after) : inMode(data.districts[d]?.v[measure.key], after));
     const valueIn = (t: MapTown, after: boolean, yy: Yrs | null): Val | null => {
       if (bySeries) {
-        if (onTowns) return fromRow(measure, S!.towns[t.id], yy!, after);
+        if (onTowns) return fromRow(S!, meta.latest, measure, S!.towns[t.id], yy!, after);
         if (combinedAt(t)) {
           // Density isn't combined, and a town without the two weights takes its own district's
-          return measure.key === "density" || !S!.towns[t.id]?.w ? districtVal(t.elem!, after, yy) : combinedRow(measure, t, yy!, after);
+          return measure.key === "density" || !S!.towns[t.id]?.w ? districtVal(t.elem!, after, yy) : combinedRow(S!, meta.latest, measure, t, yy!, after);
         }
         const d = districtOf(t);
         return d ? districtVal(d, after, yy) : null;
@@ -1010,7 +865,7 @@ export function startMap(root: HTMLElement, data: MapData, opts: {
     };
     /** A group's value: its average's, over the years chosen, or as map.json has it */
     const groupVal = (g: string, after: boolean, yy: Yrs | null): Val | null =>
-      (bySeries ? fromRow(measure, S!.groups?.[g], yy!, after) : inMode(data.groups?.[g]?.v[measure.key], after));
+      (bySeries ? fromRow(S!, meta.latest, measure, S!.groups?.[g], yy!, after) : inMode(data.groups?.[g]?.v[measure.key], after));
     const valueAt = (t: MapTown, after: boolean, yy: Yrs | null): Val | null => {
       if (!grouping) return valueIn(t, after, yy);
       const g = groupOf(t);
