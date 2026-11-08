@@ -534,6 +534,8 @@ function trendRate(trend: Values) {
 /** A change, signed, in the panel's own format: +$521, −12 */
 const signed = (v: number, fmt: (v: number) => string) => `${signFor(v, fmt(Math.abs(v)), true)}${fmt(Math.abs(v))}`;
 const signedPct = (v: number) => change(v);
+/** A share already in percent, as the students' and residents' shares come: "43.2%" */
+const pctFmt = (v: number) => pct(v / 100);
 
 export async function startExplorer() {
   const root = $("explorer");
@@ -727,11 +729,18 @@ export async function startExplorer() {
   const hasComps = new Map<StackPanel, boolean>();
   // The labor force chart: the unemployment rate, or the residents, labor force and employed behind it
   let popView: "rate" | "people" = "rate";
+  // What was last written, so a redraw that changes nothing writes nothing (#237: every render wrote)
+  let written = "";
   function remember() {
     if (consent !== "yes") return;
     const sets = (r: Record<string, Set<string>>) => Object.fromEntries(Object.entries(r).map(([k, s]) => [k, [...s]]));
-    storage.set(STORE, JSON.stringify({ state, isolated: sets(isolated), hidden: sets(hiddenLines) }));
-    folds().forEach((d) => storage.set(foldKey(d), d.open ? "open" : "closed"));
+    const choices = JSON.stringify({ state, isolated: sets(isolated), hidden: sets(hiddenLines) });
+    const open = folds().map((d) => [foldKey(d), d.open ? "open" : "closed"] as const);
+    const now = choices + JSON.stringify(open);
+    if (now === written) return;
+    written = now;
+    storage.set(STORE, choices);
+    open.forEach(([k, v]) => storage.set(k, v));
   }
   // Folding sections (the introductions, the cap tab's explanation) stay folded or open as they
   // were left, with the other remembered choices. The page's inline scripts, or the code that
@@ -759,6 +768,7 @@ export async function startExplorer() {
     else {
       storage.drop(STORE);
       folds().forEach((d) => storage.drop(foldKey(d)));
+      written = "";
     }
     $("remember-prompt").hidden = true;
     rememberNote();
@@ -939,11 +949,16 @@ export async function startExplorer() {
   const histFor = (id: string): Partial<typeof state> =>
     earlyOnly(id) ? (state.to >= meta.start ? { ...histPatch(true), from: fullYears[0], to: meta.start - 1 } : {})
       : state.to < meta.start ? { to: meta.latest } : {};
+  /** A dial's state: checked or not, its On or Off, its title, and whether it can be used (#237: one place for the six) */
+  function setDial(dial: HTMLElement, on: boolean, title: string, disabled?: boolean) {
+    dial.setAttribute("aria-checked", String(on));
+    if (disabled !== undefined) dial.setAttribute("aria-disabled", String(disabled));
+    dial.querySelector(".dial-state")!.textContent = on ? "On" : "Off";
+    dial.title = title;
+  }
   const showHist = () => {
     const on = state.hist === "on";
-    histSwitch.setAttribute("aria-checked", String(on));
-    histSwitch.querySelector(".dial-state")!.textContent = on ? "On" : "Off";
-    histSwitch.title = on ? `Show FY${meta.start} on only` : `Add the years FY${fullYears[0]} to FY${meta.start - 1}`;
+    setDial(histSwitch, on, on ? `Show FY${meta.start} on only` : `Add the years FY${fullYears[0]} to FY${meta.start - 1}`);
   };
   histSwitch.closest<HTMLElement>(".control")!.hidden = !H;
   $("hist-label").after(helpTip(SWITCH_NOTE));
@@ -1007,31 +1022,20 @@ export async function startExplorer() {
     for (const [p, b] of trendDials) {
       const can = !!hasTrends.get(p);
       const on = can && trendsAlone.has(p);
-      b.setAttribute("aria-checked", String(on));
-      b.setAttribute("aria-disabled", String(!can));
-      b.querySelector(".dial-state")!.textContent = on ? "On" : "Off";
-      b.title = !can ? (["tage", "trace", "tsex", "tdis", "srace"].includes(p) ? "Pick a group in the legend to see its trend" : "This chart has no trend line to show")
-        : on ? "Show the whole chart" : "Show only the trend lines";
+      setDial(b, on, !can ? (["tage", "trace", "tsex", "tdis", "srace"].includes(p) ? "Pick a group in the legend to see its trend" : "This chart has no trend line to show")
+        : on ? "Show the whole chart" : "Show only the trend lines", !can);
     }
     const all = allTrends();
-    trendsSwitch.setAttribute("aria-checked", String(all));
-    trendsSwitch.querySelector(".dial-state")!.textContent = all ? "On" : "Off";
-    trendsSwitch.title = all ? "Show the whole charts" : "Show only the trend lines, on every chart";
+    setDial(trendsSwitch, all, all ? "Show the whole charts" : "Show only the trend lines, on every chart");
     for (const [p, b] of compDials) {
       const can = !!hasComps.get(p);
       const on = can && !hiddenLines[p].has("cmp");
-      b.setAttribute("aria-checked", String(on));
-      b.setAttribute("aria-disabled", String(!can));
-      b.querySelector(".dial-state")!.textContent = on ? "On" : "Off";
-      b.title = !can ? (["tage", "trace", "srace"].includes(p) ? "Pick a group in the legend to compare it"
-        : "Nothing to compare with on this chart: pick a comparison in the controls") : on ? "Hide the comparison" : "Show the comparison";
+      setDial(b, on, !can ? (["tage", "trace", "srace"].includes(p) ? "Pick a group in the legend to compare it"
+        : "Nothing to compare with on this chart: pick a comparison in the controls") : on ? "Hide the comparison" : "Show the comparison", !can);
     }
     const comps = allComps();
     const any = compsInView().length > 0;
-    compsSwitch.setAttribute("aria-checked", String(comps));
-    compsSwitch.setAttribute("aria-disabled", String(!any));
-    compsSwitch.querySelector(".dial-state")!.textContent = comps ? "On" : "Off";
-    compsSwitch.title = !any ? "Pick a comparison to compare with" : comps ? "Hide the comparison on every chart" : "Show the comparison on every chart";
+    setDial(compsSwitch, comps, !any ? "Pick a comparison to compare with" : comps ? "Hide the comparison on every chart" : "Show the comparison on every chart", !any);
   }
 
   select.value = state.d;
@@ -1062,9 +1066,7 @@ export async function startExplorer() {
   const showDetail = () => {
     const on = state.detail === "on";
     root.classList.toggle("detail-off", !on);
-    dial.setAttribute("aria-checked", String(on));
-    dial.querySelector(".dial-state")!.textContent = on ? "On" : "Off";
-    dial.title = on ? "Turn the explanations around the charts off" : "Turn the explanations around the charts back on";
+    setDial(dial, on, on ? "Turn the explanations around the charts off" : "Turn the explanations around the charts back on");
   };
   showDetail();
   dial.addEventListener("click", () => {
@@ -3032,7 +3034,6 @@ export async function startExplorer() {
       for (const id of ["fig-srace", "fig-sgroups"]) $(id).hidden = !st;
       if (st) {
         const cSt = c?.students ?? null;
-        const pctFmt = (v: number) => pct(v / 100);
         const whose = e.kind === "district" ? `${e.name}'s` : "its districts'";
         const studentsLabel = e.kind === "district" ? "Students" : "Students, average per district";
         const yearsNote = `Each school year sits at its fiscal year: October 1, ${meta.latest - 1}, at FY${meta.latest}.`;
@@ -3390,8 +3391,8 @@ export async function startExplorer() {
   const share = (part: Val, whole: Val) => (part != null && whole ? part / whole : null);
   /** Index of the latest year with a value, for towns that have not filed recently. */
   const lastWith = (vals: Values) => {
-    for (let i = vals.length - 1; i >= 0; i--) if (vals[i] != null) return i;
-    return last;
+    const i = lastAt(vals);
+    return i < 0 ? last : i;
   };
 
   interface TownStack {
@@ -4214,13 +4215,10 @@ export async function startExplorer() {
     $("fig-tdis").hidden = !dm?.disability.some((v) => v != null);
     if (dm) {
       type Demo = Record<DemoKey, Values>;
-      const pctFmt = (v: number) => pct(v / 100);
       const releases = years.filter((_, i) => dm.population[i] != null);
       const span = (i: number) => `${years[i] - 5}–${years[i] - 1}`;
       const residents = t.kind === "town" ? "Population" : "Population, combined";
       // A share's trend: its yearly change in points, and that as a percent of the share
-      const pointsDetail = (values: Values) => ((r) => (r ? `${signed(r.perYear, points)}` +
-        `${r.rate != null ? ` (${signedPct(r.rate)})` : ""} a year` : undefined))(trendRate(values));
       /** One panel: each group's count over the residents it's a share of (base), or, missing, why a release has none */
       const demoStack = (key: "tage" | "trace" | "tsex" | "tdis", defs: readonly { key: string; label: string; color: string; of: (d: Demo) => Values }[],
         caption: string, sub: string, help: string, base: { of: (d: Demo) => Values; label: string } = { of: (d) => d.population, label: residents },
@@ -4253,9 +4251,9 @@ export async function startExplorer() {
         legend($(`legend-${key}`), [
           ...series.map((x) => ({ ...(single ? { spot: x.key } : { key: x.key }), label: x.label, color: x.color, mark: "rect" as const })),
           ...(trendAll && hasLine(trendAll) ? [{ label: trendAll.label, color: TREND_COLOR, mark: "dash" as const, line: "trend" as const,
-            detail: pointsDetail(trendAll.values) }] : []),
+            detail: trendDetail(trendAll.values, points) }] : []),
           ...(overlayAll ? [{ label: overlayAll.label, color: COMPARE_COLOR, mark: "linedot" as const, line: "cmp" as const,
-            detail: hasLine(cmpTrendOf(overlayAll)) ? pointsDetail(cmpTrendOf(overlayAll).values) : undefined }] : []),
+            detail: hasLine(cmpTrendOf(overlayAll)) ? trendDetail(cmpTrendOf(overlayAll).values, points) : undefined }] : []),
         ], key);
         fullTables[key] = { caption: `${caption}, ${t.name}: the Census Bureau's five-year estimates, at the fiscal year after each`, cols: [
           ...series.map((x) => ({ label: x.label, values: x.values, fmt: pctFmt })),
