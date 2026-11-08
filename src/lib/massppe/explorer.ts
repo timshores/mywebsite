@@ -3463,7 +3463,10 @@ export async function startExplorer() {
     if (!refocus) return;
     const { panel, key } = refocus;
     refocus = null;
-    document.querySelector<HTMLButtonElement>(`#legend-${panel} [data-key="${CSS.escape(key)}"]`)?.focus();
+    // The chart's legend, or the one under it for its lines, which a wide chart splits off (#238: only the first was
+    // searched, so a line button below lost the focus a click had given it)
+    const at = `[data-key="${CSS.escape(key)}"]`;
+    document.querySelector<HTMLButtonElement>(`#legend-${panel} ${at}, #legend-${panel}-below ${at}`)?.focus();
   }
 
   // ---- Relations: the selected district's towns or the selected town's districts, as an
