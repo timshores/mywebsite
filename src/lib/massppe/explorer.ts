@@ -1672,12 +1672,13 @@ export async function startExplorer() {
       lines: [...shown, ...(hiddenLines[panel].has("cmp") ? [] : cmpShown)],
       max: Math.max(0, ...[...shown, ...cmpShown].flatMap((x) => x.values.map((v) => v ?? 0))) };
   }
-  /** The lines' legend entries: the trend, and the comparison with its trend's yearly figure */
-  const lineLegend = (trend: Series | null, overlay: Series | null, fmt: (v: number) => string = usd): LegendItem[] => [
+  /** The lines' legend entries: the trend, and the comparison with its trend's yearly figure. With Since 1990 on, a
+   * comparison with no figure in the window has no entry, unless keepEmpty (the town view's shares never had that rule) */
+  const lineLegend = (trend: Series | null, overlay: Series | null, fmt: (v: number) => string = usd, keepEmpty = false): LegendItem[] => [
     ...(hasLine(trend) ? [{ label: trend.label, color: TREND_COLOR, mark: "dash" as const, line: "trend" as const,
       detail: trendDetail(trend.values, fmt) }] : []),
     // The comparison, with its own trend's yearly figure (its trend line draws with only the trends shown)
-    ...(overlay && (state.hist !== "on" || hasLine(overlay)) ? [{ label: overlay.label, color: COMPARE_COLOR, mark: "linedot" as const, line: "cmp" as const,
+    ...(overlay && (keepEmpty || state.hist !== "on" || hasLine(overlay)) ? [{ label: overlay.label, color: COMPARE_COLOR, mark: "linedot" as const, line: "cmp" as const,
       detail: cmpDetail(overlay, fmt) }] : []),
   ];
   // The trend's value, and its step from the year before: the same in dollars each year, a shrinking share as it grows
@@ -2323,6 +2324,182 @@ export async function startExplorer() {
     return { title: `FY${years[i]}`, rows, note: yoy(sel ? shownTotal : total, i) };
   };
 
+  /** A chart of stacked columns, on either view. The copies had drifted in their words, and a few in what they did;
+   * each chart keeps its own, as a field here (#237) */
+  interface StackSpec {
+    key: StackPanel;
+    /** Whose chart it is, for its trend and its tables */
+    name: string;
+    series: Series[];
+    /** The comparison's series, and the comparison by name: null where it has nothing to compare */
+    cSeries: Series[] | null;
+    cmp: Named | null;
+    /** What the legend picks, plural: "categories", "sources" */
+    noun: string;
+    width: number;
+    height: number;
+    /** The vertical axis's name, and a shorter one for when it won't fit */
+    yTitle: string;
+    yShort?: string;
+    /** The subtitle, given the words a selection adds there ("" or " Scale fitted to the selection."), placed where
+     * each chart places them */
+    sub: (fitted: string) => (string | Node)[];
+    /** The hover card's total */
+    totalLabel: string;
+    /** The year whose total labels the columns, the last with figures; the window's last unless given */
+    end?: number;
+    /** Values, dollars unless given; the axis's labels */
+    fmt?: (v: number) => string;
+    axis?: (v: number) => string;
+    /** Ticks shared with another chart, while nothing is picked */
+    ticks?: number[];
+    /** Lines over the columns as the chart draws them (the caller hides them), which the scale holds; they leave
+     * while the votes show alone. Their legend entries, after the trend's and the comparison's. */
+    lines?: Series[];
+    legend?: LegendItem[];
+    /** A selection's scale holds the lines' tops, never below zero (the town charts and special education), else
+     * the comparison's line as drawn (spending, revenue, the shares): the copies differed, and each keeps its own */
+    floor?: boolean;
+    /** Shares that fill the whole (shareStack): a selection keeps its groups' capitals ("Hispanic or Latino"), a
+     * chart of one group is that group picked, and the trend and the comparison draw only for a selection */
+    share?: boolean;
+    /** Years far apart (the Census releases): faint bands between the columns */
+    sparse?: boolean;
+    /** The comparison's legend entry even where its line has no figure in the window (the town view's shares);
+     * lineLegend leaves it off with Since 1990 on */
+    keepEmpty?: boolean;
+    /** The comparison table: its name before the selection's ("Spending per in-district FTE pupil"), its units after
+     * the name (" (nominal dollars)"), and the unit its column heads give per */
+    table?: { caption: string; rowLabel: string; units: string; per: string; kind?: "usd" | "count"; noCmpNote?: string };
+    /** The full data table: each series, the total, mid, the comparison's total, more; or cols in place of them all */
+    full: { caption: string; cols?: TableCol[]; mid?: TableCol[]; more?: TableCol[] };
+    /** The hover card for a year with no total: why */
+    missing?: string;
+    /** Rows the hover card adds under the stack's for a year, given the lines drawn */
+    rows?: (i: number, lines: Series[]) => TipRow[];
+    /** The hover card gives each part's share of the total beside its figure (parcels) */
+    partShares?: boolean;
+    /** Prop 2 1/2 votes that passed, by year, with their amounts in the chart's units */
+    votes?: { byYear: NonNullable<Town["passed"]>[]; amount: Values; label: string };
+  }
+
+  /** A stacked chart, either view's (#237: the district view's spending, revenue, special education and students by
+   * race each repeated the town charts' dozen steps): what the legend picks and its totals, the comparison's line and
+   * the trend, the chart, its legend, the comparison and full data tables, and its hover card. Returns the chart and
+   * the hover card, with what a chart's own card needs. */
+  function stackPanel(s: StackSpec) {
+    const fmt = s.fmt ?? usd;
+    // A share's trend rises in points, its values are percents
+    const stepFmt = s.share ? points : fmt;
+    const total = totals(s.series);
+    const cTotal = s.cSeries ? totals(s.cSeries) : null;
+    // A share chart of one group (women, with a disability) shows it as one picked would
+    const single = !!s.share && s.series.length === 1;
+    const shown = single ? s.series : visible(s.series, s.key);
+    const sel = !s.share ? selectionName(shown, s.series, s.noun)
+      : single ? s.series[0].label : shown.length === s.series.length ? null : shown.length === 1 ? shown[0].label : `${shown.length} selected groups`;
+    const shownTotal = totals(shown);
+    const cShownTotal = s.cSeries ? totals(single ? s.cSeries : visible(s.cSeries, s.key)) : null;
+    const overlayAll = s.cmp && cShownTotal && (sel || !s.share)
+      ? { key: "cmp", label: `${s.cmp.name}, ${sel ?? "total"}`, color: COMPARE_COLOR, values: cShownTotal } : null;
+    const trendAll = s.share && !sel ? null : trendOf(s.name, sel, shownTotal, stepFmt);
+    const overlay = drawn(s.key, "cmp", overlayAll);
+    const trend = trendAll && drawn(s.key, "trend", trendAll);
+    const sub = $(`${s.key}-sub`);
+    sub.replaceChildren(...s.sub(sel && !single ? " Scale fitted to the selection." : ""));
+    const vm = s.votes;
+    const marks: Marks | null = vm && !hiddenLines[s.key].has("votes")
+      ? { key: "votes", color: VOTE_COLOR, at: vm.byYear.map((r) => r.length > 0), amount: vm.amount } : null;
+    const tv = trendView(s.key, trend, overlayAll, s.cmp?.name ?? "", stepFmt, fmt);
+    // The votes alone: no columns or lines, the scale fitted to their amounts. Only the trends comes first.
+    const alone = !!marks && votesAlone.has(s.key) && !tv.only;
+    const extras = alone ? [] : s.lines ?? [];
+    const amountMax = Math.max(0, ...(marks?.amount ?? []).map((v) => v ?? 0));
+    let max = 0;
+    years.forEach((_, i) => (max = Math.max(max, stackTop(s.series, i), cTotal?.[i] ?? 0, ...extras.map((x) => x.values[i] ?? 0),
+      marks?.amount[i] ?? 0)));
+    const lineTops = s.floor
+      ? years.map((_, i) => Math.max(overlay?.values[i] ?? 0, ...extras.map((x) => x.values[i] ?? 0), marks?.amount[i] ?? 0))
+      : overlay?.values ?? null;
+    if (alone) sub.append(" Showing the votes alone, on a scale fitted to their amounts.");
+    const end = s.end ?? last;
+    const panel = stackedColumns($(`svg-${s.key}`) as unknown as SVGSVGElement,
+      { width: s.width, height: s.height, years, yTitle: s.yTitle, yTitleShort: s.yShort, ...(s.sparse ? { sparse: true } : {}),
+        trendsOnly: tv.only },
+      alone ? [] : shown, alone ? null : overlay,
+      alone ? niceTicks((amountMax || max) * 1.04) : sel ? fitTicks(shown, lineTops) : s.ticks ?? niceTicks(max * 1.04),
+      s.axis ?? fmtUsd, setHover, alone ? undefined : { value: end >= 0 ? shownTotal[end] : null, text: fmt, index: end }, [],
+      alone ? [] : tv.trends, extras, marks);
+    legend($(`legend-${s.key}`), [
+      ...s.series.map((x) => ({ ...(single ? { spot: x.key } : { key: x.key }), label: x.label, color: x.color, mark: "rect" as const })),
+      ...lineLegend(trendAll, overlayAll, stepFmt, s.keepEmpty),
+      ...(s.legend ?? []),
+      ...(vm ? [{ label: "Prop 2½ votes passed", color: VOTE_COLOR, mark: "diamond" as const, line: "votes" as const,
+        help: "Each vote that passed, at the fiscal year it takes effect; a stem rises to its amount where the state " +
+          "records one. Click to see the votes alone, and again to see them over the chart." }] : []),
+    ], s.key);
+    const tb = s.table;
+    if (tb) compareTable($(`cmp-${s.key}`), `${tb.caption}${sel ? `, ${sel}` : ""}, ${s.name}${tb.units}`, tb.rowLabel,
+      cmpRows(shown, s.cSeries, sel, total, cTotal, shownTotal, cShownTotal, "Total"), tb.kind ?? "usd", s.cmp,
+      { end, per: tb.per, noCmpNote: tb.noCmpNote });
+    fullTables[s.key] = { caption: s.full.caption, cols: s.full.cols ?? [
+      ...s.series.map((x) => ({ label: x.label, values: x.values, fmt })),
+      { label: "Total", values: total, fmt },
+      ...(s.full.mid ?? []),
+      ...(s.cmp && cTotal ? [{ label: `${s.cmp.name}, total`, values: cTotal, fmt }] : []),
+      ...(s.full.more ?? []),
+    ] };
+    const tip = (i: number): TipContent => {
+      const passed = marks ? vm!.byYear[i] : [];
+      if (alone && !passed.length) return { title: `FY${years[i]}`, rows: [{ value: "–", label: "No Prop 2½ vote passed for this year" }] };
+      if (s.missing && total[i] == null && !alone) return { title: `FY${years[i]}`, rows: [{ value: "–", label: s.missing }] };
+      const t0 = alone ? { title: `FY${years[i]}`, rows: [] as TipRow[] }
+        : stackTip(i, shown, sel, shownTotal, total, overlay, trend, s.totalLabel, s.noun, fmt);
+      // Parcels: each type's share of all of them beside its count
+      const t = s.partShares && total[i] ? { ...t0, rows: t0.rows.map((r) => {
+        const part = shown.find((x) => x.label === r.label);
+        return part && part.values[i] != null ? { ...r, value: `${r.value} (${pct(part.values[i]! / total[i]!)})` } : r;
+      }) } : t0;
+      const more = [
+        ...(s.rows?.(i, extras) ?? []),
+        ...(passed.length ? [
+          ...(vm!.amount[i] != null ? [{ value: fmt(vm!.amount[i]!), label: vm!.label, color: VOTE_COLOR, mark: "diamond" as const }] : []),
+          ...passed.slice(0, 5).map(([, kind, amt, what], k) => ({ value: amt != null ? amount(amt) : "–",
+            label: `${VOTE_WORDS[kind] ?? kind} passed${what ? `: ${what}` : ""}`,
+            ...(k === 0 && vm!.amount[i] == null ? { color: VOTE_COLOR, mark: "diamond" as const } : {}) })),
+          ...(passed.length > 5 ? [{ value: "", label: `and ${passed.length - 5} more, listed under the levy chart` }] : []),
+        ] : []),
+      ];
+      return more.length ? { ...t, rows: [...t.rows, ...more] } : t;
+    };
+    return { panel, tip, total, cTotal, shown, sel, shownTotal, overlay, trend, only: tv.only };
+  }
+
+  /** A chart of shares that fill the whole, each group's part of the students or residents, on stackPanel (#237: the
+   * district view's students by race copied the town view's): its subtitle with a note behind a "?", the full data
+   * table's shares, their base and the comparison's shares, and a year's rows for the hover card. Each chart makes its
+   * own card around them: the Census releases sit years apart, the school years don't. */
+  function shareStack(s: Pick<StackSpec, "key" | "name" | "series" | "cSeries" | "cmp" | "width" | "height" | "yTitle" | "sparse" |
+    "keepEmpty" | "end"> & { sub: string; help: string; full: string; base: { values: Values; label: string; fmt: (v: number) => string } }) {
+    const p = stackPanel({ ...s, share: true, noun: "groups", yShort: "Share", totalLabel: "", fmt: pctFmt, axis: (v) => `${v}%`,
+      ticks: [0, 25, 50, 75, 100], sub: (fitted) => [s.sub + fitted + " ", helpTip(s.help)],
+      full: { caption: s.full, cols: [
+        ...s.series.map((x) => ({ label: x.label, values: x.values, fmt: pctFmt })),
+        { label: s.base.label, values: s.base.values, fmt: s.base.fmt },
+        ...(s.cmp && s.cSeries ? s.cSeries.map((x) => ({ label: `${s.cmp!.name}, ${x.label}`, values: x.values, fmt: pctFmt })) : []),
+      ] } });
+    /** A year's rows: each group shown, the base, the trend and the comparison */
+    const rows = (i: number): TipRow[] => [
+      ...p.shown.filter((x) => x.values[i] != null).reverse()
+        .map((x) => ({ value: pctFmt(x.values[i]!), label: x.label, color: x.color, mark: "rect" as const })),
+      { value: s.base.fmt(s.base.values[i]!), label: s.base.label },
+      ...trendRow(p.trend, i, pctFmt),
+      ...(p.overlay && p.overlay.values[i] != null ? [{ value: pctFmt(p.overlay.values[i]!), label: p.overlay.label, color: COMPARE_COLOR,
+        mark: "linedot" as const, role: "cmp" as const }] : []),
+    ];
+    return { ...p, rows };
+  }
+
   // ---- Render ----
   let lastWidth = 0;
   /** The panel column of the view on screen; every chart is drawn to its width. */
@@ -2592,47 +2769,40 @@ export async function startExplorer() {
     const tall = width < 520 ? 260 : 320;
     const frame = (height: number, yTitle: string, yTitleShort?: string) => ({ width, height, years, yTitle, yTitleShort });
 
-    // Panel 1: spending by category
-    const ppeShown = visible(ppe, "ppe");
-    const ppeSel = selectionName(ppeShown, ppe, "categories");
-    const ppeShownTotal = totals(ppeShown);
-    const cPpeShownTotal = cPpe ? totals(visible(cPpe, "ppe")) : null;
-    const ppeOverlayAll = c ? { key: "cmp", label: `${cName}, ${ppeSel ?? "total"}`, color: COMPARE_COLOR, values: cPpeShownTotal! } : null;
-    const ppeTrendAll = trendOf(e.name, ppeSel, ppeShownTotal);
-    const ppeOverlay = drawn("ppe", "cmp", ppeOverlayAll);
-    const ppeTrend = drawn("ppe", "trend", ppeTrendAll);
-    // The older measure's lines are totals, so they leave the chart while categories are isolated
+    // Panel 1: spending by category. The older measure's lines are totals, so they leave the chart while categories
+    // are picked: what the legend picks, ahead of the chart
+    const ppeSel = selectionName(visible(ppe, "ppe"), ppe, "categories");
     const dayShown = ppeSel ? null : drawn("ppe", "day", dayAll);
     const cDayShown = ppeSel ? null : drawn("ppe", "cday", cDayAll);
-    const extras = [cDayShown, dayShown, ...(ppeSel ? [] : programs)].filter(hasLine);
     const earlyWindow = dayAll != null && hasLine(dayAll) && dayEnds[0] >= 0 && years[dayEnds[0]] < H!.functional_from;
-    $("ppe-sub").textContent =
-      `${dollarsNote}${whole ? "" : " per in-district FTE pupil"}.${wholeNote}` +
-      (whole ? " Pupils are in-district FTE." : "") +
-      (ppeSel ? " Scale fitted to the selection." : "") +
-      (earlyWindow ? ` ${years[last] >= H!.functional_from ? HIST_NOTE : HIST_NOTE.replace(/ In FY2005 and FY2006.*$/, "")}` : "") +
-      (earlyWindow && whole ? " With Totals on, the dashed line is the day-program figure times DESE's average membership, FY1997 to FY2006." : "") +
-      (histOn && ppeSel && dayAll && hasLine(dayAll) ? " The older measure's line is a total, so it shows when every category does." : "");
-    const ppeTv = trendView("ppe", ppeTrend, ppeOverlayAll, cName);
-    const p1 = stackedColumns($("svg-ppe") as unknown as SVGSVGElement, { ...frame(tall, `Spending${pp}`), trendsOnly: ppeTv.only }, ppeShown, ppeOverlay,
-      ppeSel ? fitTicks(ppeShown, ppeOverlay?.values ?? null) : dollarTicks, fmtUsd, setHover,
-      { value: ppeShownTotal[last], text: usd }, [], ppeTv.trends, extras);
-    legend($("legend-ppe"), [
-      ...ppe.map((s) => ({ key: s.key, label: s.label, color: s.color, mark: "rect" as const })),
-      ...lineLegend(ppeTrendAll, ppeOverlayAll),
-      ...(dayAll && hasLine(dayAll) && !ppeSel ? [{ label: DAY_LABEL, color: DAY_COLOR, mark: "dash" as const, line: "day" as const,
-        detail: dayGrowth || undefined, help: e.kind === "average" ? `${DAY_NOTE}\n\n${WEIGHT_NOTE}` : DAY_NOTE }] : []),
-      ...(cDayAll && hasLine(cDayAll) && !ppeSel ? [{ label: cDayAll.label, color: COMPARE_COLOR, mark: "dash" as const, line: "cday" as const,
-        help: c!.kind === "average" ? WEIGHT_NOTE : undefined }] : []),
-      ...(hasPrograms && !whole && !ppeSel ? [{ label: showPrograms ? "Hide the programs" : "Show the programs, older measure", color: DAY_COLOR, mark: "dash" as const, on: showPrograms,
-        toggle: () => (showPrograms = !showPrograms),
-        help: "DESE's day-program figure for each program the district ran: regular classes (regular day), special " +
-          "education (special needs), bilingual programs (to FY2003, when DESE folded them into regular education) and " +
-          "vocational programs (occupational day). Each is per pupil in that program, so they don't add up to the total." },
-        ...programs.map((p) => ({ label: p.label, color: p.color, mark: "dash" as const, spot: `line:${p.key}` }))] : []),
-    ], "ppe");
-    compareTable($("cmp-ppe"), `Spending${whole ? "" : " per in-district FTE pupil"}${ppeSel ? `, ${ppeSel}` : ""}, ${e.name} (${dollarsNote.toLowerCase()})`, "Category",
-      cmpRows(ppeShown, cPpe, ppeSel, ppeTotal, cPpeTotal, ppeShownTotal, cPpeShownTotal, "Total"), "usd", c, tableOpts);
+    const p1 = stackPanel({
+      key: "ppe", name: e.name, series: ppe, cSeries: cPpe, cmp: c, noun: "categories", width, height: tall,
+      yTitle: `Spending${pp}`, totalLabel: `Total${pp}`, ticks: dollarTicks,
+      sub: (fitted) => [
+        `${dollarsNote}${whole ? "" : " per in-district FTE pupil"}.${wholeNote}` +
+        (whole ? " Pupils are in-district FTE." : "") + fitted +
+        (earlyWindow ? ` ${years[last] >= H!.functional_from ? HIST_NOTE : HIST_NOTE.replace(/ In FY2005 and FY2006.*$/, "")}` : "") +
+        (earlyWindow && whole ? " With Totals on, the dashed line is the day-program figure times DESE's average membership, FY1997 to FY2006." : "") +
+        (histOn && ppeSel && dayAll && hasLine(dayAll) ? " The older measure's line is a total, so it shows when every category does." : "")],
+      lines: [cDayShown, dayShown, ...(ppeSel ? [] : programs)].filter(hasLine),
+      legend: [
+        ...(dayAll && hasLine(dayAll) && !ppeSel ? [{ label: DAY_LABEL, color: DAY_COLOR, mark: "dash" as const, line: "day" as const,
+          detail: dayGrowth || undefined, help: e.kind === "average" ? `${DAY_NOTE}\n\n${WEIGHT_NOTE}` : DAY_NOTE }] : []),
+        ...(cDayAll && hasLine(cDayAll) && !ppeSel ? [{ label: cDayAll.label, color: COMPARE_COLOR, mark: "dash" as const, line: "cday" as const,
+          help: c!.kind === "average" ? WEIGHT_NOTE : undefined }] : []),
+        ...(hasPrograms && !whole && !ppeSel ? [{ label: showPrograms ? "Hide the programs" : "Show the programs, older measure", color: DAY_COLOR, mark: "dash" as const, on: showPrograms,
+          toggle: () => (showPrograms = !showPrograms),
+          help: "DESE's day-program figure for each program the district ran: regular classes (regular day), special " +
+            "education (special needs), bilingual programs (to FY2003, when DESE folded them into regular education) and " +
+            "vocational programs (occupational day). Each is per pupil in that program, so they don't add up to the total." },
+          ...programs.map((p) => ({ label: p.label, color: p.color, mark: "dash" as const, spot: `line:${p.key}` }))] : []),
+      ],
+      table: { caption: `Spending${whole ? "" : " per in-district FTE pupil"}`, rowLabel: "Category", units: ` (${dollarsNote.toLowerCase()})`, per: tableOpts.per },
+      full: { caption: `Spending${whole ? "" : " per in-district FTE pupil"} by category, ${e.name} (${dollarsNote.toLowerCase()})`, more: [
+        ...(dayAll && hasLine(dayAll) ? [{ label: `${DAY_LABEL} (day program)`, values: dayAll.values, fmt: usd }] : []),
+        ...(cDayAll && hasLine(cDayAll) ? [{ label: cDayAll.label, values: cDayAll.values, fmt: usd }] : []),
+      ] },
+    });
     // The older measure's own table, over its own years
     const dayHolder = $("cmp-day");
     if (dayAll && dayEnds[1] - dayEnds[0] >= 1) {
@@ -2643,13 +2813,6 @@ export async function startExplorer() {
         [...progRows, { label: "Total, all day programs", color: "", mark: "dash" as const, values: dayAll.values, base: cDayAll?.values ?? null, total: true }],
         "usd", c, { ...tableOpts, start: dayEnds[0], end: dayEnds[1] });
     } else dayHolder.replaceChildren();
-    fullTables.ppe = { caption: `Spending${whole ? "" : " per in-district FTE pupil"} by category, ${e.name} (${dollarsNote.toLowerCase()})`, cols: [
-      ...ppe.map((s) => ({ label: s.label, values: s.values, fmt: usd })),
-      { label: "Total", values: ppeTotal, fmt: usd },
-      ...(c ? [{ label: `${cName}, total`, values: cPpeTotal!, fmt: usd }] : []),
-      ...(dayAll && hasLine(dayAll) ? [{ label: `${DAY_LABEL} (day program)`, values: dayAll.values, fmt: usd }] : []),
-      ...(cDayAll && hasLine(cDayAll) ? [{ label: cDayAll.label, values: cDayAll.values, fmt: usd }] : []),
-    ] };
 
     // Spending on out-of-district FTE: what the district pays to educate its own pupils in other schools, per
     // out-of-district FTE pupil, or with Totals on, in dollars. DESE's totals give it (export: ood_series).
@@ -2874,48 +3037,23 @@ export async function startExplorer() {
       const at = years.indexOf(revYears.latest);
       const end = at < 0 ? last : at;
       const cRev = c ? revSeries(c) : null;
-      const cRevName = c && cRev ? revName(c) : "";
-      const revTotal = totals(rev);
-      const cRevTotal = cRev ? totals(cRev) : null;
-      const revShown = visible(rev, "rev");
-      const revSel = selectionName(revShown, rev, "sources");
-      const revShownTotal = totals(revShown);
-      const cRevShownTotal = cRev ? totals(visible(cRev, "rev")) : null;
-      const revOverlayAll = cRev ? { key: "cmp", label: `${cRevName}, ${revSel ?? "total"}`, color: COMPARE_COLOR, values: cRevShownTotal! } : null;
-      const revTrendAll = trendOf(e.name, revSel, revShownTotal);
-      const revOverlay = drawn("rev", "cmp", revOverlayAll);
-      const revTrend = drawn("rev", "trend", revTrendAll);
-      $("rev-sub").textContent =
-        (whole
-          ? `${dollarsNote}, in total${e.kind === "district" ? "" : `, for the average of its ${e.rev_members} regional districts`}: ` +
-            "each year's revenue per in-district FTE pupil times its pupils. "
-          : `${dollarsNote} per in-district FTE pupil${e.kind === "district" ? "" : `, pooled over its ${e.rev_members} regional districts`}. `) +
-        `Census figures through FY${revYears.latest}.` +
-        (c && !cRev ? ` ${capital(refName(c))} has no revenue chart to compare.` : "") +
-        (revSel ? " Scale fitted to the selection." : "");
-      let revMax = 0;
-      years.forEach((_, i) => (revMax = Math.max(revMax, stackTop(rev, i), cRevTotal?.[i] ?? 0)));
-      const revTv = trendView("rev", revTrend, revOverlayAll, cRevName);
-      p4 = stackedColumns($("svg-rev") as unknown as SVGSVGElement, { ...frame(tall, `Revenue${pp}`), trendsOnly: revTv.only }, revShown, revOverlay,
-        revSel ? fitTicks(revShown, revOverlay?.values ?? null) : niceTicks(revMax * 1.04), fmtUsd, setHover,
-        { value: revShownTotal[end], text: usd, index: end }, [], revTv.trends);
-      legend($("legend-rev"), [
-        ...rev.map((s) => ({ key: s.key, label: s.label, color: s.color, mark: "rect" as const })),
-        ...lineLegend(revTrendAll, revOverlayAll),
-      ], "rev");
-      compareTable($("cmp-rev"), `Revenue${whole ? "" : " per in-district FTE pupil"}${revSel ? `, ${revSel}` : ""}, ${e.name} (${dollarsNote.toLowerCase()})`, "Source",
-        cmpRows(revShown, cRev, revSel, revTotal, cRevTotal, revShownTotal, cRevShownTotal, "Total"),
-        "usd", cRev ? { ...c!, name: cRevName } : null, {
-        end, ...tableOpts, noCmpNote: c ? `${capital(refName(c))} has no revenue figures to shade this table against.` : undefined,
+      // An average's revenue covers only its regional districts, and its name says so
+      const p = stackPanel({
+        key: "rev", name: e.name, series: rev, cSeries: cRev, cmp: cRev ? { ...c!, name: revName(c!) } : null, noun: "sources",
+        width, height: tall, yTitle: `Revenue${pp}`, totalLabel: `Total revenue${pp}`, end, missing: "Not yet published by Census",
+        sub: (fitted) => [
+          (whole
+            ? `${dollarsNote}, in total${e.kind === "district" ? "" : `, for the average of its ${e.rev_members} regional districts`}: ` +
+              "each year's revenue per in-district FTE pupil times its pupils. "
+            : `${dollarsNote} per in-district FTE pupil${e.kind === "district" ? "" : `, pooled over its ${e.rev_members} regional districts`}. `) +
+          `Census figures through FY${revYears.latest}.` +
+          (c && !cRev ? ` ${capital(refName(c))} has no revenue chart to compare.` : "") + fitted],
+        table: { caption: `Revenue${whole ? "" : " per in-district FTE pupil"}`, rowLabel: "Source", units: ` (${dollarsNote.toLowerCase()})`,
+          per: tableOpts.per, noCmpNote: c ? `${capital(refName(c))} has no revenue figures to shade this table against.` : undefined },
+        full: { caption: `Revenue${whole ? "" : " per in-district FTE pupil"} by source, ${e.name} (${dollarsNote.toLowerCase()})` },
       });
-      fullTables.rev = { caption: `Revenue${whole ? "" : " per in-district FTE pupil"} by source, ${e.name} (${dollarsNote.toLowerCase()})`, cols: [
-        ...rev.map((s) => ({ label: s.label, values: s.values, fmt: usd })),
-        { label: "Total", values: revTotal, fmt: usd },
-        ...(cRev ? [{ label: `${cRevName}, total`, values: cRevTotal!, fmt: usd }] : []),
-      ] };
-      revTip = (i) => revTotal[i] == null
-        ? { title: `FY${years[i]}`, rows: [{ value: "–", label: "Not yet published by Census" }] }
-        : stackTip(i, revShown, revSel, revShownTotal, revTotal, revOverlay, revTrend, `Total revenue${pp}`, "sources");
+      p4 = p.panel;
+      revTip = p.tip;
     }
 
     // Special education, from DESE's RADAR spreadsheet, per FTE pupil in district and out (the pupils DESE divides
@@ -2935,16 +3073,6 @@ export async function startExplorer() {
       delete fullTables.sped;
     } else {
       const cSped = c ? spedSeries(c) : null;
-      const spedTotal = totals(sped);
-      const cSpedTotal = cSped ? totals(cSped) : null;
-      const spedShown = visible(sped, "sped");
-      const spedSel = selectionName(spedShown, sped, "categories");
-      const spedShownTotal = totals(spedShown);
-      const cSpedShownTotal = cSped ? totals(visible(cSped, "sped")) : null;
-      const spedOverlayAll = cSped ? { key: "cmp", label: `${cName}, ${spedSel ?? "total"}`, color: COMPARE_COLOR, values: cSpedShownTotal! } : null;
-      const spedTrendAll = trendOf(e.name, spedSel, spedShownTotal);
-      const spedOverlay = drawn("sped", "cmp", spedOverlayAll);
-      const spedTrend = drawn("sped", "trend", spedTrendAll);
       const ecb = e.cb;
       const cbAll: Series | null = ecb
         ? { key: "cb", label: "Paid back by the state", color: CB_COLOR, values: deflate(inDollars(ecb.paid, e, "cb")) } : null;
@@ -2955,7 +3083,10 @@ export async function startExplorer() {
       const students = (v: number) => (e.kind === "district" ? Math.round(v).toLocaleString("en-US") : v.toFixed(1));
       const share = e.sped_share!;
       const shareAt = lastAt(share);
-      $("sped-sub").replaceChildren(
+      const p = stackPanel({
+        key: "sped", name: e.name, series: sped, cSeries: cSped, cmp: cSped ? c : null, noun: "categories", width, height: tall,
+        yTitle: `Special education${pp}`, yShort: "Per pupil", totalLabel: `Special education${pp}`, floor: true,
+        sub: (fitted) => [
         (whole
           ? `${dollarsNote}, in total: each year's figure per FTE pupil times its pupils, in the district's schools and out.`
           : `${dollarsNote} per FTE pupil, in the district's schools and out.`) +
@@ -2970,20 +3101,9 @@ export async function startExplorer() {
           "for, in its own schools and out, as DESE does for total spending per pupil, so it is the cost of special " +
           "education spread over all pupils, not the cost per student with a disability."),
         ...(cbAll ? [" The green line is what the state paid back for each year's costs."] : []),
-        ...(spedSel ? [" Scale fitted to the selection."] : []));
-      let spedMax = 0;
-      years.forEach((_, i) => (spedMax = Math.max(spedMax, stackTop(sped, i), cSpedTotal?.[i] ?? 0, cbLine?.values[i] ?? 0)));
-      // A selection's scale holds the lines drawn over it, the payback's too
-      const lineTops = years.map((_, i) => Math.max(spedOverlay?.values[i] ?? 0, cbLine?.values[i] ?? 0));
-      const spedTv = trendView("sped", spedTrend, spedOverlayAll, cName);
-      p6 = stackedColumns($("svg-sped") as unknown as SVGSVGElement,
-        { ...frame(tall, `Special education${pp}`, `Per pupil`), trendsOnly: spedTv.only }, spedShown, spedOverlay,
-        spedSel ? fitTicks(spedShown, lineTops) : niceTicks(spedMax * 1.04), fmtUsd, setHover,
-        { value: spedShownTotal[last], text: usd }, [], spedTv.trends, cbLine ? [cbLine] : []);
-      legend($("legend-sped"), [
-        ...sped.map((s) => ({ key: s.key, label: s.label, color: s.color, mark: "rect" as const })),
-        ...lineLegend(spedTrendAll, spedOverlayAll),
-        ...(cbAll && hasLine(cbAll) ? [{ label: "Paid back by the state (Circuit Breaker)", color: CB_COLOR, mark: "line" as const, line: "cb" as const,
+        ...(fitted ? [fitted] : [])],
+        lines: cbLine ? [cbLine] : [],
+        legend: cbAll && hasLine(cbAll) ? [{ label: "Paid back by the state (Circuit Breaker)", color: CB_COLOR, mark: "line" as const, line: "cb" as const,
           help: "The state's Circuit Breaker reimburses part of what a district spends on a student whose special " +
             "education costs more than a threshold, four times the state's average foundation budget per pupil. The " +
             "district claims a year's costs after the year ends, and the state repays a share of the costs above the " +
@@ -2991,35 +3111,27 @@ export async function startExplorer() {
             "out-of-district schools has counted since the FY2022 payments. Extraordinary relief pays in the same year " +
             "when a district's instruction and tuition costs rise by more than a quarter over the year before.\n\nThe " +
             "line puts each payment with the year of the costs it repays, so it lines up with the columns: FY2024's " +
-            "point is what the state paid in FY2025 for FY2024's claim, and any extraordinary relief paid in FY2024." }] : []),
-      ], "sped");
-      const spedCaption = `Special education spending${perAll}${spedSel ? `, ${spedSel}` : ""}, ${e.name} (${dollarsNote.toLowerCase()})`;
-      compareTable($("cmp-sped"), spedCaption, "Category",
-        cmpRows(spedShown, cSped, spedSel, spedTotal, cSpedTotal, spedShownTotal, cSpedShownTotal, "Total"),
-        "usd", cSped ? c : null, { ...tableOpts, noCmpNote: c && !cSped ? `${capital(refName(c))} has no special education figures to shade this table against.` : undefined });
-      fullTables.sped = { caption: `Special education spending${perAll} by category, and the Circuit Breaker, ${e.name} (${dollarsNote.toLowerCase()})`, cols: [
-        ...sped.map((s) => ({ label: s.label, values: s.values, fmt: usd })),
-        { label: "Total", values: spedTotal, fmt: usd },
-        { label: "Share of all spending", values: share, fmt: (v: number) => `${v.toFixed(1)}%` },
-        ...(cSped ? [{ label: `${cName}, total`, values: cSpedTotal!, fmt: usd }] : []),
-        ...(ecb && cbAll ? [
-          { label: "Paid back by the state, for the year's costs", values: cbAll.values, fmt: usd },
-          { label: "Costs claimed", values: claimed!, fmt: usd },
-          { label: "Costs above the threshold", values: above!, fmt: usd },
-          { label: studentsLabel, values: ecb.students, fmt: students },
-        ] : []),
-      ] };
-      spedTip = (i) => {
-        const t = stackTip(i, spedShown, spedSel, spedShownTotal, spedTotal, spedOverlay, spedTrend, `Special education${pp}`, "categories");
-        const rows = [...t.rows,
+            "point is what the state paid in FY2025 for FY2024's claim, and any extraordinary relief paid in FY2024." }] : [],
+        table: { caption: `Special education spending${perAll}`, rowLabel: "Category", units: ` (${dollarsNote.toLowerCase()})`, per: tableOpts.per,
+          noCmpNote: c && !cSped ? `${capital(refName(c))} has no special education figures to shade this table against.` : undefined },
+        full: { caption: `Special education spending${perAll} by category, and the Circuit Breaker, ${e.name} (${dollarsNote.toLowerCase()})`,
+          mid: [{ label: "Share of all spending", values: share, fmt: (v: number) => `${v.toFixed(1)}%` }],
+          more: ecb && cbAll ? [
+            { label: "Paid back by the state, for the year's costs", values: cbAll.values, fmt: usd },
+            { label: "Costs claimed", values: claimed!, fmt: usd },
+            { label: "Costs above the threshold", values: above!, fmt: usd },
+            { label: studentsLabel, values: ecb.students, fmt: students },
+          ] : [] },
+        rows: (i) => [
           ...(share[i] != null ? [{ value: `${share[i]!.toFixed(1)}%`, label: "Share of all spending" }] : []),
           ...(cbLine && cbLine.values[i] != null ? [
             { value: usd(cbLine.values[i]!), label: `Paid back by the state${pp}`, color: CB_COLOR, mark: "line" as const },
             ...(ecb!.students[i] != null ? [{ value: students(ecb!.students[i]!), label: studentsLabel }] : []),
             ...(claimed?.[i] != null ? [{ value: usd(claimed[i]!), label: `Costs claimed${pp}` }] : []),
-          ] : [])];
-        return { ...t, rows };
-      };
+          ] : [])],
+      });
+      p6 = p.panel;
+      spedTip = p.tip;
     }
 
     // Students on October 1 of each school year, from DESE's enrollment: by race and ethnicity, each group's share
@@ -3042,52 +3154,24 @@ export async function startExplorer() {
         // By race and ethnicity
         const raceOf = (x: NonNullable<Entity["students"]>): Series[] =>
           RACE_SERIES.map((q) => ({ key: q.key, label: q.label, color: q.color, values: x.race[q.key] }));
-        const race = raceOf(st);
-        const cRace = cSt ? raceOf(cSt) : null;
-        const shown = visible(race, "srace");
-        // The groups' names keep their capitals mid-sentence ("Hispanic or Latino")
-        const sel = shown.length === race.length ? null : shown.length === 1 ? shown[0].label : `${shown.length} selected groups`;
-        const shownTotal = totals(shown);
-        const overlayAll = cRace && sel ? { key: "cmp", label: `${cName}, ${sel}`, color: COMPARE_COLOR, values: totals(visible(cRace, "srace")) } : null;
-        const overlay = drawn("srace", "cmp", overlayAll);
-        const trendAll = sel ? trendOf(e.name, sel, shownTotal, points) : null;
-        const trend = trendAll ? drawn("srace", "trend", trendAll) : null;
-        const tv = trendView("srace", trend, overlayAll, cName, points, pctFmt);
-        $("srace-sub").replaceChildren(`Shares of ${whose} students, from DESE.` + (sel ? " Scale fitted to the selection." : "") + " ",
-          helpTip("DESE counts each student once, by the race and ethnicity families report: Hispanic or Latino students " +
+        const sr = shareStack({
+          key: "srace", name: e.name, series: raceOf(st), cSeries: cSt ? raceOf(cSt) : null, cmp: c, width, height: tall,
+          yTitle: "Students by race and ethnicity", end: sAt, sub: `Shares of ${whose} students, from DESE.`,
+          help: "DESE counts each student once, by the race and ethnicity families report: Hispanic or Latino students " +
             "of any race, and each race of the students who aren't Hispanic or Latino. Another race, or more than one, " +
             "includes American Indian or Alaska Native, Native Hawaiian or Pacific Islander, and multiracial students, " +
-            `whom DESE has counted as their own group since FY2006. ${yearsNote}`));
-        p8 = stackedColumns($("svg-srace") as unknown as SVGSVGElement,
-          { ...frame(tall, "Students by race and ethnicity", "Share"), trendsOnly: tv.only }, shown, overlay,
-          sel ? fitTicks(shown, overlay?.values ?? null) : [0, 25, 50, 75, 100], (v) => `${v}%`, setHover,
-          { value: sAt >= 0 ? shownTotal[sAt] : null, text: pctFmt, index: sAt }, [], tv.trends);
-        legend($("legend-srace"), [
-          ...race.map((x) => ({ key: x.key, label: x.label, color: x.color, mark: "rect" as const })),
-          ...lineLegend(trendAll, overlayAll, points),
-        ], "srace");
-        fullTables.srace = { caption: `Students by race and ethnicity, ${e.name}, in percent of all students`, cols: [
-          ...race.map((x) => ({ label: x.label, values: x.values, fmt: pctFmt })),
-          { label: studentsLabel, values: st.total, fmt: fte },
-          ...(cRace ? cRace.map((x) => ({ label: `${cName}, ${x.label}`, values: x.values, fmt: pctFmt })) : []),
-        ] };
+            `whom DESE has counted as their own group since FY2006. ${yearsNote}`,
+          full: `Students by race and ethnicity, ${e.name}, in percent of all students`,
+          base: { values: st.total, label: studentsLabel, fmt: fte },
+        });
+        p8 = sr.panel;
         sraceTip = (i) => st.total[i] == null ? { title: `FY${years[i]}`, rows: [{ value: "–", label: "No enrollment reported" }] }
           // With only the trends shown, the groups picked together, and the comparison's (#225)
-          : tv.only && sel ? { title: `FY${years[i]}`, rows: [
-            { value: shownTotal[i] == null ? "–" : pctFmt(shownTotal[i]!), label: capital(sel), strong: true },
-            ...trendRow(trend, i, pctFmt, points),
-            ...(overlay && overlay.values[i] != null ? [{ value: pctFmt(overlay.values[i]!), label: overlay.label, color: COMPARE_COLOR, mark: "linedot" as const, role: "cmp" as const }] : []),
-          ], note: `October 1, ${years[i] - 1}` } : {
-          title: `FY${years[i]}`,
-          rows: [
-            ...shown.filter((x) => x.values[i] != null).reverse()
-              .map((x) => ({ value: pctFmt(x.values[i]!), label: x.label, color: x.color, mark: "rect" as const })),
-            { value: fte(st.total[i]!), label: studentsLabel },
-            ...trendRow(trend, i, pctFmt),
-            ...(overlay && overlay.values[i] != null ? [{ value: pctFmt(overlay.values[i]!), label: overlay.label, color: COMPARE_COLOR, mark: "linedot" as const, role: "cmp" as const }] : []),
-          ],
-          note: `October 1, ${years[i] - 1}`,
-        };
+          : sr.only && sr.sel ? { title: `FY${years[i]}`, rows: [
+            { value: sr.shownTotal[i] == null ? "–" : pctFmt(sr.shownTotal[i]!), label: capital(sr.sel), strong: true },
+            ...trendRow(sr.trend, i, pctFmt, points),
+            ...(sr.overlay && sr.overlay.values[i] != null ? [{ value: pctFmt(sr.overlay.values[i]!), label: sr.overlay.label, color: COMPARE_COLOR, mark: "linedot" as const, role: "cmp" as const }] : []),
+          ], note: `October 1, ${years[i] - 1}` } : { title: `FY${years[i]}`, rows: sr.rows(i), note: `October 1, ${years[i] - 1}` };
 
         // In selected groups: the district's lines in each group's color, the comparison's in its own. A group picked
         // alone has its trend and the comparison's, as a single measure's chart does; the low income measures, which
@@ -3144,9 +3228,9 @@ export async function startExplorer() {
     // Tooltips
     panels = [
       {
-        panel: p1, figure: $("fig-ppe"),
+        panel: p1.panel, figure: $("fig-ppe"),
         tip: (i) => {
-          const t = stackTip(i, ppeShown, ppeSel, ppeShownTotal, ppeTotal, ppeOverlay, ppeTrend, `Total${pp}`, "categories");
+          const t = p1.tip(i);
           // The older measure's lines, under the columns' figures; alone, before FY2005
           const at = (x: Series | null) => (x && x.values[i] != null ? x.values[i]! : null);
           const rows: TipRow[] = [
@@ -3429,87 +3513,32 @@ export async function startExplorer() {
     votes?: { byYear: NonNullable<Town["passed"]>[]; amount: Values; label: string };
   }
 
-  /** A stacked town panel (spending, revenue, property): chart, legend, tables; returns it with its tooltip. */
+  /** A stacked town chart, as stackPanel draws it: the town view's height, units, Per choice and help (#237) */
   function townStack(s: TownStack, dollarsNote: string) {
-    const total = totals(s.series);
-    const cTotal = s.cSeries ? totals(s.cSeries) : null;
-    const shown = visible(s.series, s.key);
-    const sel = selectionName(shown, s.series, s.noun);
-    const shownTotal = totals(shown);
-    const cShownTotal = s.cSeries ? totals(visible(s.cSeries, s.key)) : null;
-    const overlayAll = s.cmp && cShownTotal
-      ? { key: "cmp", label: `${s.cmp.name}, ${sel ?? "total"}`, color: COMPARE_COLOR, values: cShownTotal }
-      : null;
-    const trendAll = trendOf(s.name, sel, shownTotal, s.fmt ?? usd);
-    const overlay = drawn(s.key, "cmp", overlayAll);
-    const trend = drawn(s.key, "trend", trendAll);
-    $(`${s.key}-sub`).replaceChildren(s.sub + (sel ? " Scale fitted to the selection." : "") + (s.help ? " " : ""),
-      ...(s.help ? [helpTip(s.help)] : []));
-    const vm = s.votes;
-    const marks: Marks | null = vm && !hiddenLines[s.key].has("votes")
-      ? { key: "votes", color: VOTE_COLOR, at: vm.byYear.map((r) => r.length > 0), amount: vm.amount } : null;
-    const tv = trendView(s.key, trend, overlayAll, s.cmp?.name ?? "", s.fmt ?? usd);
-    // The votes alone: no columns or lines, the scale fitted to their amounts. Only the trends comes first.
-    const alone = !!marks && votesAlone.has(s.key) && !tv.only;
-    const extra = s.extra && !alone ? drawn(s.key, s.extra.line, s.extra.series) : null;
-    const amountMax = Math.max(0, ...(marks?.amount ?? []).map((v) => v ?? 0));
-    let max = 0;
-    years.forEach((_, i) => (max = Math.max(max, stackTop(s.series, i), cTotal?.[i] ?? 0, extra?.values[i] ?? 0,
-      marks?.amount[i] ?? 0)));
     const fmt = s.fmt ?? usd;
-    const lineTops = years.map((_, i) => Math.max(overlay?.values[i] ?? 0, extra?.values[i] ?? 0, marks?.amount[i] ?? 0));
-    if (alone) $(`${s.key}-sub`).append(" Showing the votes alone, on a scale fitted to their amounts.");
-    const panel = stackedColumns($(`svg-${s.key}`) as unknown as SVGSVGElement,
-      { width: s.width, height: s.width < 520 ? 260 : 320, years, yTitle: s.caption, yTitleShort: s.yShort, trendsOnly: tv.only },
-      alone ? [] : shown, alone ? null : overlay,
-      alone ? niceTicks((amountMax || max) * 1.04) : sel ? fitTicks(shown, lineTops) : niceTicks(max * 1.04), s.axis ?? fmtUsd, setHover,
-      alone ? undefined : { value: shownTotal[s.end], text: fmt, index: s.end }, [], alone ? [] : tv.trends, extra ? [extra] : [], marks);
-    legend($(`legend-${s.key}`), [
-      ...s.series.map((x) => ({ key: x.key, label: x.label, color: x.color, mark: "rect" as const })),
-      ...lineLegend(trendAll, overlayAll, fmt),
-      ...(s.extra && hasLine(s.extra.series)
-        ? [{ label: s.extra.legend, color: s.extra.series.color, mark: s.extra.series.dash ? "dash" as const : "line" as const, line: s.extra.line,
-          help: s.extra.help }] : []),
-      ...(vm ? [{ label: "Prop 2½ votes passed", color: VOTE_COLOR, mark: "diamond" as const, line: "votes" as const,
-        help: "Each vote that passed, at the fiscal year it takes effect; a stem rises to its amount where the state " +
-          "records one. Click to see the votes alone, and again to see them over the chart." }] : []),
-    ], s.key);
     const units = s.kind === "count" ? "" : ` (${dollarsNote.toLowerCase()})`;
-    compareTable($(`cmp-${s.key}`), `${s.caption}${sel ? `, ${sel}` : ""}, ${s.name}${units}`, s.rowLabel,
-      cmpRows(shown, s.cSeries, sel, total, cTotal, shownTotal, cShownTotal, "Total"), s.kind ?? "usd", s.cmp,
-      { end: s.end, per: state.per === "total" ? "" : PER_WORD[state.per], noCmpNote: s.noCmpNote });
-    fullTables[s.key] = { caption: `${s.caption} by year, ${s.name}${units}`, cols: [
-      ...s.series.map((x) => ({ label: x.label, values: x.values, fmt })),
-      { label: "Total", values: total, fmt },
-      ...(s.cmp && cTotal ? [{ label: `${s.cmp.name}, total`, values: cTotal, fmt }] : []),
-      ...(vm ? [{ label: "Prop 2½ votes passed", values: vm.byYear.map((r) => r.length || null), fmt: count },
-        { label: vm.label, values: vm.amount, fmt }] : []),
-    ] };
-    const tip = (i: number): TipContent => {
-      const passed = marks ? vm!.byYear[i] : [];
-      if (alone && !passed.length) return { title: `FY${years[i]}`, rows: [{ value: "–", label: "No Prop 2½ vote passed for this year" }] };
-      if (total[i] == null && !alone) return { title: `FY${years[i]}`, rows: [{ value: "–", label: s.missing ?? "Not filed with the state" }] };
-      const t0 = alone ? { title: `FY${years[i]}`, rows: [] as TipRow[] }
-        : stackTip(i, shown, sel, shownTotal, total, overlay, trend, s.totalLabel, s.noun, fmt);
-      // Parcels: each type's share of all of them beside its count
-      const t = s.shares && total[i] ? { ...t0, rows: t0.rows.map((r) => {
-        const part = shown.find((x) => x.label === r.label);
-        return part && part.values[i] != null ? { ...r, value: `${r.value} (${pct(part.values[i]! / total[i]!)})` } : r;
-      }) } : t0;
-      const more = [
-        ...(extra && extra.values[i] != null ? [{ value: fmt(extra.values[i]!), label: extra.label, color: extra.color, mark: "line" as const }] : []),
+    const vm = s.votes;
+    const extra = s.extra ? drawn(s.key, s.extra.line, s.extra.series) : null;
+    return stackPanel({
+      key: s.key, name: s.name, series: s.series, cSeries: s.cSeries, cmp: s.cmp, noun: s.noun, width: s.width,
+      height: s.width < 520 ? 260 : 320, yTitle: s.caption, yShort: s.yShort, totalLabel: s.totalLabel, end: s.end, fmt, axis: s.axis,
+      floor: true, partShares: s.shares, votes: vm, missing: s.missing ?? "Not filed with the state",
+      sub: (fitted) => [s.sub + fitted + (s.help ? " " : ""), ...(s.help ? [helpTip(s.help)] : [])],
+      lines: extra ? [extra] : [],
+      legend: s.extra && hasLine(s.extra.series)
+        ? [{ label: s.extra.legend, color: s.extra.series.color, mark: s.extra.series.dash ? "dash" as const : "line" as const, line: s.extra.line,
+          help: s.extra.help }] : [],
+      table: { caption: s.caption, rowLabel: s.rowLabel, units, per: state.per === "total" ? "" : PER_WORD[state.per], kind: s.kind,
+        noCmpNote: s.noCmpNote },
+      full: { caption: `${s.caption} by year, ${s.name}${units}`, more: vm ? [
+        { label: "Prop 2½ votes passed", values: vm.byYear.map((r) => r.length || null), fmt: count },
+        { label: vm.label, values: vm.amount, fmt }] : [] },
+      // The line over the columns, its figure, then the chart's own rows
+      rows: (i, ls) => [
+        ...ls.filter((x) => x.values[i] != null).map((x) => ({ value: fmt(x.values[i]!), label: x.label, color: x.color, mark: "line" as const })),
         ...(s.tipRows?.(i) ?? []),
-        ...(passed.length ? [
-          ...(vm!.amount[i] != null ? [{ value: fmt(vm!.amount[i]!), label: vm!.label, color: VOTE_COLOR, mark: "diamond" as const }] : []),
-          ...passed.slice(0, 5).map(([, kind, amt, what], k) => ({ value: amt != null ? amount(amt) : "–",
-            label: `${VOTE_WORDS[kind] ?? kind} passed${what ? `: ${what}` : ""}`,
-            ...(k === 0 && vm!.amount[i] == null ? { color: VOTE_COLOR, mark: "diamond" as const } : {}) })),
-          ...(passed.length > 5 ? [{ value: "", label: `and ${passed.length - 5} more, listed under the levy chart` }] : []),
-        ] : []),
-      ];
-      return more.length ? { ...t, rows: [...t.rows, ...more] } : t;
-    };
-    return { panel, tip, total, cTotal };
+      ],
+    });
   }
 
   /** Reserves against the budget and override capacity against the ceiling, each its newest year, which DLS publishes
@@ -4228,38 +4257,12 @@ export async function startExplorer() {
           return { key: q.key, label: q.label, color: q.color, values: whole.map((n, i) => (n && part[i] != null ? part[i]! / n * 100 : null)) };
         }) : null;
         const series = seriesOf(t)!;
-        const cSeries = c ? seriesOf(c) : null;
-        // A chart of one group (women, with a disability) shows it as one picked would: its trend and the comparison's
-        const single = series.length === 1;
-        const shown = single ? series : visible(series, key);
-        const dAt = lastAt(series[0].values);
-        // The groups' names keep their capitals mid-sentence ("Hispanic or Latino")
-        const sel = single ? series[0].label : shown.length === series.length ? null : shown.length === 1 ? shown[0].label : `${shown.length} selected groups`;
-        const shownTotal = totals(shown);
-        const overlayAll = c && cSeries && sel ? { key: "cmp", label: `${c.name}, ${sel}`, color: COMPARE_COLOR,
-          values: totals(single ? cSeries : visible(cSeries, key)) } : null;
-        const overlay = drawn(key, "cmp", overlayAll);
-        // Its trend once a group is chosen: a share's line across the releases
-        const trendAll = sel ? trendOf(t.name, sel, shownTotal, points) : null;
-        const trend = trendAll ? drawn(key, "trend", trendAll) : null;
-        $(`${key}-sub`).replaceChildren(sub + (sel && !single ? " Scale fitted to the selection." : "") + " ", helpTip(help));
-        const tv = trendView(key, trend, overlayAll, c?.name ?? "", points, pctFmt);
-        const panel = stackedColumns($(`svg-${key}`) as unknown as SVGSVGElement,
-          { width, height: width < 520 ? 240 : 280, years, yTitle: caption, yTitleShort: "Share", sparse: true, trendsOnly: tv.only }, shown, overlay,
-          sel ? fitTicks(shown, overlay?.values ?? null) : [0, 25, 50, 75, 100], (v) => `${v}%`, setHover,
-          { value: dAt >= 0 ? shownTotal[dAt] : null, text: pctFmt, index: dAt }, [], tv.trends);
-        legend($(`legend-${key}`), [
-          ...series.map((x) => ({ ...(single ? { spot: x.key } : { key: x.key }), label: x.label, color: x.color, mark: "rect" as const })),
-          ...(trendAll && hasLine(trendAll) ? [{ label: trendAll.label, color: TREND_COLOR, mark: "dash" as const, line: "trend" as const,
-            detail: trendDetail(trendAll.values, points) }] : []),
-          ...(overlayAll ? [{ label: overlayAll.label, color: COMPARE_COLOR, mark: "linedot" as const, line: "cmp" as const,
-            detail: hasLine(cmpTrendOf(overlayAll)) ? trendDetail(cmpTrendOf(overlayAll).values, points) : undefined }] : []),
-        ], key);
-        fullTables[key] = { caption: `${caption}, ${t.name}: the Census Bureau's five-year estimates, at the fiscal year after each`, cols: [
-          ...series.map((x) => ({ label: x.label, values: x.values, fmt: pctFmt })),
-          { label: base.label, values: base.of(dm), fmt: count },
-          ...(c && cSeries ? cSeries.map((x) => ({ label: `${c.name}, ${x.label}`, values: x.values, fmt: pctFmt })) : []),
-        ] };
+        const p = shareStack({
+          key, name: t.name, series, cSeries: c ? seriesOf(c) : null, cmp: c, width, height: width < 520 ? 240 : 280, yTitle: caption,
+          sparse: true, keepEmpty: true, end: lastAt(series[0].values), sub, help,
+          full: `${caption}, ${t.name}: the Census Bureau's five-year estimates, at the fiscal year after each`,
+          base: { values: base.of(dm), label: base.label, fmt: count },
+        });
         const none = { value: "–", label: missing };
         // Between two releases, the band's change: each group's share at either end
         const between = (i: number): TipContent => {
@@ -4267,7 +4270,7 @@ export async function startExplorer() {
           const after = releases.find((fy) => fy > years[i]);
           if (before == null || after == null) return { title: `FY${years[i]}`, rows: [{ value: "–", label: `The estimates sit at FY${releases.join(", FY")}` }] };
           const [p0, p1] = [years.indexOf(before), years.indexOf(after)];
-          const rows = shown.filter((x) => x.values[p0] != null && x.values[p1] != null).reverse()
+          const rows = p.shown.filter((x) => x.values[p0] != null && x.values[p1] != null).reverse()
             .map((x) => ({ value: `${pctFmt(x.values[p0]!)} → ${pctFmt(x.values[p1]!)}`, color: x.color, mark: "rect" as const,
               label: `${x.label}, ${signed(x.values[p1]! - x.values[p0]!, points)}` }));
           return { title: `${span(p0)} to ${span(p1)}`, rows: rows.length ? rows : [none] };
@@ -4285,21 +4288,15 @@ export async function startExplorer() {
             value: p0 === p1 ? pctFmt(v[p0]!) : `${pctFmt(v[p0]!)} → ${pctFmt(v[p1]!)}`,
             label: p0 === p1 ? label : `${label}, ${signed(v[p1]! - v[p0]!, points)}`, ...extra }]);
           // The trends run through every year, so their figures are the hovered year's
-          const rows = [...row(shownTotal, capital(sel!), { strong: true }), ...trendRow(trend, i, pctFmt, points),
-            ...(overlay ? row(overlay.values, overlay.label, { color: COMPARE_COLOR, mark: "linedot", role: "cmp" }) : [])];
+          const rows = [...row(p.shownTotal, capital(p.sel!), { strong: true }), ...trendRow(p.trend, i, pctFmt, points),
+            ...(p.overlay ? row(p.overlay.values, p.overlay.label, { color: COMPARE_COLOR, mark: "linedot", role: "cmp" }) : [])];
           return { title: p0 === p1 ? `${span(p0)}, at FY${years[p0]}` : `${span(p0)} to ${span(p1)}`, rows: rows.length ? rows : [none] };
         };
-        const tip = (i: number): TipContent => tv.only && sel ? together(i) : dm.population[i] == null
+        const tip = (i: number): TipContent => p.only && p.sel ? together(i) : dm.population[i] == null
           ? between(i)
           : base.of(dm)[i] == null ? { title: `${span(i)}, at FY${years[i]}`, rows: [none] }
-          : { title: `${span(i)}, at FY${years[i]}`, rows: [
-            ...shown.filter((x) => x.values[i] != null).reverse()
-              .map((x) => ({ value: pctFmt(x.values[i]!), label: x.label, color: x.color, mark: "rect" as const })),
-            { value: count(base.of(dm)[i]!), label: base.label },
-            ...trendRow(trend, i, pctFmt),
-            ...(overlay && overlay.values[i] != null ? [{ value: pctFmt(overlay.values[i]!), label: overlay.label, color: COMPARE_COLOR, mark: "linedot" as const, role: "cmp" as const }] : []),
-          ] };
-        return { panel, tip };
+          : { title: `${span(i)}, at FY${years[i]}`, rows: p.rows(i) };
+        return { panel: p.panel, tip };
       };
       const counts = <T extends { key: DemoKey }>(defs: readonly T[]) => defs.map((q) => ({ ...q, of: (d: Demo) => d[q.key] }));
       const acsHelp = "The Census Bureau's American Community Survey asks a sample of households each year; its five-year " +
