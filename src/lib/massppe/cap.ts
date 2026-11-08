@@ -14,6 +14,7 @@ import { groupedPicker } from "./picker";
 import { chartRoom, enlargeButton, isEnlarged } from "./enlarge";
 import { scatter, ticksFor, type Group, type Point, type ScatterView } from "./scatter";
 import { BLUE, FIFTH_RAMP, ORANGE, VIOLET } from "./palette";
+import "./cap.css"; // the styles for what this module builds (#237)
 
 interface CapTown {
   lea: number; name: string; id: string; county: string | null; region: string | null;

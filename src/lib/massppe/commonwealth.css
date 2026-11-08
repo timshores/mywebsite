@@ -1,0 +1,579 @@
+/* The Commonwealth tab's plots: the styles for what commonwealth.ts builds, the gallery, a plot's window and its
+   settings, cautions, legend and Horizontal list. commonwealth.ts imports this sheet, which comes after
+   explorer.css (see there), which holds what they share with the cap tab: scatter.ts's marks, the legend's keys, the tips,
+   the windows dom.ts builds (#237) */
+
+/* The gallery: a card for each plot, which opens it full screen */
+.explorer .cw-gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 210px), 1fr));
+  gap: 1rem;
+}
+
+.explorer .cw-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 0.8rem;
+  cursor: pointer;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+.explorer .cw-card:hover,
+.explorer .cw-card:focus-visible {
+  border-color: var(--accent);
+  box-shadow: 0 6px 18px var(--shadow);
+  transform: translateY(-1px);
+}
+
+.explorer .cw-thumb {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 320 / 190;
+  background: #fbf8f1;
+  border-radius: 8px;
+}
+
+.explorer .cw-card-title {
+  font-weight: 700;
+  font-size: 1.02rem;
+}
+
+.explorer .cw-card-blurb {
+  font-size: 0.86rem;
+  color: var(--ink-soft);
+  line-height: 1.4;
+}
+
+.explorer .cw-card-axes {
+  font-size: 0.75rem;
+  color: var(--muted);
+  margin-top: auto;
+  padding-top: 0.2rem;
+}
+
+.explorer .cw-dialog {
+  width: 90vw;
+  max-width: none;
+  height: 94vh;
+  max-height: none;
+  margin: auto;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--paper);
+  color: var(--ink);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
+}
+
+.explorer .cw-dialog[open] {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.explorer .cw-dialog::backdrop {
+  background: rgba(var(--ink-rgb), 0.45);
+}
+
+.explorer .cw-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem 1rem;
+  align-items: end;
+  padding: 0 1.2rem 0.8rem;
+}
+
+.explorer .cw-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.explorer .cw-field select,
+.explorer .cw-field input {
+  font: inherit;
+  font-size: 0.88rem;
+  color: var(--ink);
+  padding: 0.35rem 0.5rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--white);
+  max-width: min(30rem, 100%);
+}
+
+.explorer .cw-check {
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+  font-size: 0.84rem;
+  color: var(--ink-soft);
+  padding-bottom: 0.4rem;
+}
+
+.explorer .cw-body {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  padding: 0.6rem 1.2rem 0.8rem;
+  overflow: hidden;
+}
+
+.explorer .cw-figure {
+  position: relative;
+  margin: 0;
+  min-width: 0;
+}
+
+.explorer .cw-head-tools {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.explorer .cw-drawer-toggle {
+  font-size: 0.85rem;
+  color: var(--ink);
+  padding: 0.3rem 0.8rem;
+  white-space: nowrap;
+}
+
+.explorer .cw-drawer-toggle[aria-expanded="true"] {
+  border-color: var(--accent);
+  background: #fbf1ec;
+}
+
+.explorer .cw-settings {
+  border-bottom: 1px solid var(--line);
+}
+
+/* A fold (the folds' rules are in explorer.css), as the introductions are */
+.explorer .cw-settings > summary {
+  gap: 0.45rem;
+  padding: 0 1.2rem 0.5rem;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.explorer .cw-finding-row {
+  display: flex;
+  align-items: baseline;
+  gap: 0.8rem;
+  margin-top: 0.3rem;
+}
+
+.explorer .cw-finding {
+  flex: 1;
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+/* The horizontal picker beside the chart, while the settings are open */
+/* The chart, the picker's edge (a handle to drag), and the picker at its chosen width */
+.explorer .cw-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 14px var(--picker-w, 330px);
+  column-gap: 0.6rem;
+}
+
+.explorer .cw-body.picker-closed {
+  grid-template-columns: minmax(0, 1fr) 14px 0;
+}
+
+.explorer .cw-picker-handle {
+  position: relative;
+  align-self: stretch;
+  width: 14px;
+  padding: 0;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  cursor: col-resize;
+  touch-action: none;
+}
+
+/* A grip: two short bars, and a chevron when the list is shut */
+.explorer .cw-picker-handle::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 4px;
+  height: 36px;
+  transform: translate(-50%, -50%);
+  border-left: 1.5px solid var(--axis);
+  border-right: 1.5px solid var(--axis);
+}
+
+.explorer .cw-body.picker-closed .cw-picker-handle {
+  cursor: pointer;
+  background: #f3eee3;
+}
+
+.explorer .cw-body.picker-closed .cw-picker-handle::before {
+  width: 7px;
+  height: 7px;
+  border: solid var(--ink-soft);
+  border-width: 0 0 1.5px 1.5px;
+  transform: translate(-30%, -50%) rotate(45deg);
+}
+
+.explorer .cw-picker-handle:hover,
+.explorer .cw-picker-handle:focus-visible {
+  background: #efe7d8;
+}
+
+.explorer .cw-picker {
+  min-height: 0;
+  min-width: 0;
+  overflow-y: auto;
+  border-left: 1px solid var(--line);
+  padding-left: 1rem;
+}
+
+.explorer .cw-picker h3 {
+  font-size: 1rem;
+  margin: 0 0 0.2rem;
+}
+
+.explorer .cw-picker-sub {
+  font-size: 0.74rem;
+  line-height: 1.4;
+  color: var(--muted);
+  margin: 0 0 0.5rem;
+}
+
+/* The Vertical label reads as a heading, like the Horizontal list's */
+.explorer .cw-field-axis > span {
+  font-family: "Besley", serif;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+/* Cautions: the pitfalls a pair falls into, under the finding */
+.explorer .cw-cautions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.45rem;
+  margin-top: 0.35rem;
+  font-size: 0.8rem;
+}
+
+.explorer .cw-cautions-lead {
+  color: var(--ink-soft);
+}
+
+.explorer .cw-caution {
+  font: inherit;
+  font-size: 0.78rem;
+  color: #8a3f22;
+  background: #fbf1ec;
+  border: 1px solid #ecc8b8;
+  border-radius: 999px;
+  padding: 0.12rem 0.6rem;
+  cursor: pointer;
+}
+
+.explorer .cw-caution::before {
+  content: "⚠ ";
+}
+
+.explorer .cw-caution.quiet {
+  color: var(--ink-soft);
+  background: var(--white);
+  border-color: var(--line);
+}
+
+.explorer .cw-caution.quiet::before {
+  content: "";
+}
+
+/* A pair that counts the same thing: marked and set back in the Horizontal list */
+.explorer .cw-bar.is-built {
+  color: var(--muted);
+}
+
+.explorer .cw-built {
+  color: #8a3f22;
+}
+
+.explorer .cw-bar:disabled {
+  cursor: default;
+  color: var(--muted);
+}
+
+.explorer .cw-sub-note {
+  font-size: 0.85rem;
+  color: var(--muted);
+  margin: 0 0 0.6rem;
+}
+
+.explorer .cw-bars-key {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 0.5rem;
+  display: grid;
+  gap: 0.15rem;
+  font-size: 0.72rem;
+  line-height: 1.3;
+  color: var(--ink-soft);
+}
+
+.explorer .cw-bars-key li {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.explorer .cw-bars-swatch {
+  flex: none;
+  width: 12px;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--blue);
+}
+
+.explorer .cw-bars-swatch.neg {
+  background: var(--orange);
+}
+
+.explorer .cw-chart {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* A highlight's groups, each a toggle that picks it out (#233) */
+.explorer .cw-key-btn {
+  font: inherit;
+  color: inherit;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.1rem 0.5rem;
+  margin: 0 -0.5rem;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.explorer .cw-key-btn:hover:not(:disabled) {
+  border-color: var(--line);
+  background: var(--white);
+}
+
+.explorer .cw-key-btn.is-on {
+  color: var(--ink);
+  border-color: var(--line);
+  background: var(--white);
+  margin: 0;
+}
+
+.explorer .cw-key-btn:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
+.explorer .cw-key-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.explorer .cw-legend.has-focus .cw-key-btn:not(.is-on) {
+  opacity: 0.6;
+}
+
+.explorer .cw-key-rho {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.explorer .cw-legend-note {
+  color: var(--muted);
+  font-style: italic;
+}
+
+.explorer .cw-legend-clear {
+  font: inherit;
+  color: var(--accent);
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.explorer .cw-caption {
+  font-size: 0.8rem;
+  color: var(--muted);
+  margin-top: 0.4rem;
+  line-height: 1.45;
+}
+
+.explorer .cw-table {
+  font-size: 0.84rem;
+}
+
+.explorer .cw-table table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+.explorer .cw-table th,
+.explorer .cw-table td {
+  text-align: left;
+  padding: 0.2rem 0.5rem;
+  border-bottom: 1px solid var(--grid);
+}
+
+.explorer .cw-table td {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.explorer .cw-bars {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 0.05rem;
+}
+
+.explorer .cw-bar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 64px 2.6rem;
+  align-items: center;
+  gap: 0.45rem;
+  width: 100%;
+  font: inherit;
+  font-size: 0.76rem;
+  line-height: 1.25;
+  text-align: left;
+  color: var(--ink);
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  padding: 0.14rem 0.3rem;
+  cursor: pointer;
+}
+
+.explorer .cw-bar-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.explorer .cw-bar:hover {
+  background: #f3eee3;
+}
+
+.explorer .cw-bar.is-current {
+  border-color: var(--accent);
+  background: #fbf1ec;
+}
+
+.explorer .cw-bar-track {
+  position: relative;
+  height: 6px;
+  background: #efe9dd;
+  border-radius: 4px;
+}
+
+.explorer .cw-bar-track::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: -2px;
+  bottom: -2px;
+  width: 1px;
+  background: var(--axis);
+}
+
+.explorer .cw-bar-fill {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  background: var(--blue);
+  border-radius: 0 4px 4px 0;
+}
+
+.explorer .cw-bar-fill.neg {
+  left: auto;
+  right: 50%;
+  background: var(--orange);
+  border-radius: 4px 0 0 4px;
+}
+
+.explorer .cw-bar-value {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 900px) {
+  .explorer .cw-body {
+    padding: 0.5rem 0.8rem 0.6rem;
+  }
+
+  .explorer .cw-finding-row {
+    flex-wrap: wrap;
+    gap: 0.3rem;
+  }
+
+  .explorer .cw-body,
+  .explorer .cw-body.picker-closed {
+    grid-template-columns: minmax(0, 1fr);
+    overflow-y: auto;
+  }
+
+  .explorer .cw-picker-handle {
+    display: none;
+  }
+
+  .explorer .cw-picker {
+    overflow: visible;
+    border-left: 0;
+    border-top: 1px solid var(--line);
+    padding: 0.8rem 0 0;
+  }
+
+  .explorer .cw-controls {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    padding: 0.3rem 1rem 0.7rem;
+  }
+
+  .explorer .cw-controls > :nth-child(-n + 2),
+  .explorer .cw-controls .cw-check,
+  .explorer .cw-controls .cw-find {
+    grid-column: 1 / -1;
+  }
+
+  .explorer .cw-field select,
+  .explorer .cw-field input {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .explorer .cw-check {
+    padding-bottom: 0;
+  }
+
+  .explorer .cw-dialog {
+    width: 100vw;
+    height: 100dvh;
+    border-radius: 0;
+  }
+}

@@ -9,6 +9,7 @@ import { scatter, type Group, type Point } from "./scatter";
 import { capital, el, modal, placeTip, svgEl, vn } from "./dom";
 import { AMBER, BLUE, FIFTH_RAMP, GREEN, RED, REGION_HUES, VIOLET } from "./palette";
 import type { CommunityType } from "./data";
+import "./commonwealth.css"; // the styles for what this module builds (#237)
 
 type Values = (number | null)[];
 

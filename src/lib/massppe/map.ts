@@ -13,6 +13,7 @@ import { asShown, change, count, measured, pct, usd, yearly } from "./format";
 import { cagr, linearFit, median, quantile } from "./stats";
 import { GROUP_HUES } from "./palette";
 import type { CommunityType } from "./data";
+import "./map.css"; // the styles for what this module builds (#237)
 
 /** [value, year] for a level; [value, first year, last year] for a change */
 type Val = number[];
