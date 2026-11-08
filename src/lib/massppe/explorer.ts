@@ -215,6 +215,11 @@ const MIN_SPAN = 2;
 const PER_WORD: Record<Per, string> = { resident: "resident", household: "household", parcel: "taxable property", total: "town" };
 type View = "districts" | "towns" | "commonwealth" | "cap" | "data";
 const VIEWS: View[] = ["districts", "towns", "commonwealth", "cap", "data"];
+/** The explorer's state: what the controls pick, which its address and the saved choices hold (PARAMS) */
+interface State { view: View; d: string; cmp: Compare; vs: string | null; dper: DPer; hist: "on" | "off"; t: string; tcmp: TownCompare;
+  tvs: string | null; per: Per; usd: Dollars; detail: "on" | "off"; from: number; to: number }
+/** The district, and the town, a plain first visit opens on */
+const HOME = "leverett";
 /** Every chart, by its key: its figure is #fig-<key>, its drawing #svg-<key> (#237: the one list of them) */
 const PANELS = ["ppe", "sped", "enroll", "ood", "nss", "rev", "tspend", "trev", "tres", "tfc", "tlevy", "tbill", "tdebt", "tcap",
   "tval", "tpar", "teqv", "tpop", "tage", "trace", "tsex", "tdis", "nssb", "srace", "sgroups"] as const;
@@ -665,49 +670,102 @@ export async function startExplorer() {
     try { saved = JSON.parse(storage.get(STORE) ?? "null"); } catch { saved = null; }
   }
 
+  // Town data, imported the first time the Towns tab opens, then a region at a time
+  let towns: TownData | null = null;
+  let townListed = new Map<string, ListedTown>();
+  const townById = new Map<string, Town>();
+  const townFiles = import.meta.glob<{ default: { towns: Town[] } }>("../../data/massppe/towns/*.json");
+  const townLoaded = new Set<string>();
+  let townsFailed = false;
+  let townPickers: Picker[] = [];
+
   // ---- State: the link's, else the saved choices, else the defaults ----
-  const params = new URLSearchParams(location.search);
-  const src: Record<string, string | null | undefined> = location.search ? Object.fromEntries(params) : saved?.state ?? {};
-  const pickId = (v: string | null | undefined) => (v ? ALIASES[v] ?? v : null);
-  const oneOf = <T extends string>(v: string | null | undefined, allowed: T[], fallback: T): T => {
+  // A link's (or a saved choice's) values, by parameter
+  type Src = Record<string, string | number | null | undefined>;
+  const pickId = (v: Src[string]) => (v ? ALIASES[v] ?? String(v) : null);
+  const oneOf = <T extends string>(v: Src[string], allowed: T[], fallback: T): T => {
     const c = v ? CHOICE_ALIASES[v] ?? v : null;
     return allowed.includes(c as T) ? (c as T) : fallback;
   };
   // Since 1990: on with a link's hist=on, a first or last year before FY{start}, or a former district
   // whose figures all come before it
-  const histYear = (v: string | null | undefined) => !!H && H.years.includes(Number(v));
-  const histOn = !!H && (src.hist === "on" || histYear(src.from) || histYear(src.to) || earlyOnly(pickId(src.d)));
-  const state = {
-    d: listed.has(pickId(src.d) ?? "") ? pickId(src.d)! : "leverett",
-    cmp: oneOf(src.cmp, COMPARES, "none"),
+  const histYear = (v: Src[string]) => !!H && H.years.includes(Number(v));
+  const histAsked = (src: Src) => !!H && (src.hist === "on" || histYear(src.from) || histYear(src.to) || earlyOnly(pickId(src.d)));
+  /** The first year of the slider's scale, where a window starts by default */
+  const firstYear = (s: { hist: string } = state) => (s.hist === "on" ? fullYears[0] : meta.start);
+  /** Each address parameter, in the order the address writes them: how a link's or a saved choice's is read, with
+   * the default; what's written for it, null for nothing; and the views whose address carries it, all unless given
+   * (#237: the parsing, update's address, loadTowns' checks and the links built by hand each stated these apart).
+   * Old links read as they always have: western-ma, western-towns, cmp=western, usd=real. */
+  const PARAMS: { [K in keyof State]: { read: (src: Src) => State[K]; write: (s: State) => string | null; on?: View[] } } = {
+    view: { read: (src) => (VIEWS.includes(src.view as View) ? src.view as View : "districts"),
+      write: (s) => (s.view === "districts" ? null : s.view) },
+    d: { on: ["districts"], read: (src) => ((id) => (id && listed.has(id) ? id : HOME))(pickId(src.d)), write: (s) => s.d },
+    cmp: { on: ["districts"], read: (src) => oneOf(src.cmp, COMPARES, "none"), write: (s) => (s.cmp === "none" ? null : s.cmp) },
     // The entity picked in the second menu when comparing with another district or group
-    vs: listed.has(pickId(src.vs) ?? "") && !isFormer(pickId(src.vs)) ? pickId(src.vs) : null as string | null,
-    // Any year in the series; "real", from older links, is the latest year
-    // Nominal, or the latest year's dollars; links that name another year, or "real", get the latest
-    usd: (src.usd === "real" || meta.years.includes(Number(src.usd)) ? String(meta.latest) : "nominal") as Dollars,
-    per: oneOf(src.per, PERS, "resident"),
-    dper: oneOf(src.dper, DPERS, "pupil"),
-    // Extra detail: the explanations around the charts, on unless turned off
-    detail: (src.detail === "off" ? "off" : "on") as "on" | "off",
-    view: (VIEWS.includes(src.view as View) ? src.view : "districts") as View,
-    // Town view: checked against the town list once towns.json loads
-    t: pickId(src.t) ?? "leverett",
-    tcmp: oneOf(src.tcmp, TOWN_COMPARES, "none"),
-    tvs: pickId(src.tvs),
+    vs: { on: ["districts"], read: (src) => ((id) => (id && listed.has(id) && !isFormer(id) ? id : null))(pickId(src.vs)),
+      write: (s) => (s.cmp === "other" ? s.vs : null) },
+    dper: { on: ["districts"], read: (src) => oneOf(src.dper, DPERS, "pupil"), write: (s) => (s.dper === "pupil" ? null : s.dper) },
     // The earlier years on the district view, FY1990 to FY2004
-    hist: (histOn ? "on" : "off") as "on" | "off",
-    // The first and last years shown, at least MIN_SPAN apart; a former district whose figures all come
+    hist: { on: ["districts"], read: (src) => (histAsked(src) ? "on" : "off"), write: (s) => (s.hist === "on" ? "on" : null) },
+    // Town view: checked against the town list once towns.json loads (normalize)
+    t: { on: ["towns"], read: (src) => pickId(src.t) ?? HOME, write: (s) => s.t },
+    tcmp: { on: ["towns"], read: (src) => oneOf(src.tcmp, TOWN_COMPARES, "none"), write: (s) => (s.tcmp === "none" ? null : s.tcmp) },
+    tvs: { on: ["towns"], read: (src) => pickId(src.tvs), write: (s) => (s.tcmp === "other" ? s.tvs : null) },
+    per: { on: ["towns"], read: (src) => oneOf(src.per, PERS, "resident"), write: (s) => (s.per === "resident" ? null : s.per) },
+    // Nominal, or the latest year's dollars; links that name another year, or "real", get the latest
+    usd: { read: (src) => (src.usd === "real" || meta.years.includes(Number(src.usd)) ? String(meta.latest) : "nominal"),
+      write: (s) => (s.usd === "nominal" ? null : s.usd) },
+    // Extra detail: the explanations around the charts, on unless turned off
+    detail: { read: (src) => (src.detail === "off" ? "off" : "on"), write: (s) => (s.detail === "off" ? "off" : null) },
+    // The first and last years shown, at least MIN_SPAN apart (normalize); a former district whose figures all come
     // before FY{start} opens on the earlier years
-    from: fullYears.includes(Number(src.from)) ? Number(src.from) : histOn ? fullYears[0] : meta.start,
-    to: fullYears.includes(Number(src.to)) ? Number(src.to) : earlyOnly(pickId(src.d)) ? meta.start - 1 : meta.latest,
+    from: { on: ["districts", "towns"], read: (src) => (fullYears.includes(Number(src.from)) ? Number(src.from) : histAsked(src) ? fullYears[0] : meta.start),
+      write: (s) => (s.from === firstYear(s) ? null : String(s.from)) },
+    to: { on: ["districts", "towns"],
+      read: (src) => (fullYears.includes(Number(src.to)) ? Number(src.to) : earlyOnly(pickId(src.d)) ? meta.start - 1 : meta.latest),
+      write: (s) => (s.to === meta.latest ? null : String(s.to)) },
   };
-  if (state.cmp === "other" && !state.vs) state.cmp = "none";
+  const KEYS = Object.keys(PARAMS) as (keyof State)[];
+  const parseState = (src: Src) => Object.fromEntries(KEYS.map((k) => [k, PARAMS[k].read(src)])) as unknown as State;
+  /** The parameters' address for a state, those named (all unless given) that its view carries */
+  const toQuery = (s: State, keys = KEYS) => {
+    const q = new URLSearchParams();
+    for (const k of keys) {
+      const v = PARAMS[k].on?.includes(s.view) === false ? null : PARAMS[k].write(s);
+      if (v != null) q.set(k, v);
+    }
+    return q;
+  };
+  /** The rules every state keeps, whatever set it: a link, the saved choices, a control, a link in the page (#237: they
+   * were kept at startup, in loadTowns and in the handlers, but not in update). Each handler that moves the window or
+   * turns Since 1990 on or off still does it its own way; these hold whatever comes. */
+  function normalize(s: State) {
+    // "Another district or group" needs one picked, and so does "Another town or group"; the town and its comparison
+    // are in the town list, once it has loaded
+    if (s.cmp === "other" && !s.vs) s.cmp = "none";
+    if (townListed.size) {
+      if (!townListed.has(s.t)) s.t = HOME;
+      if (s.tvs && !townListed.has(s.tvs)) s.tvs = null;
+    }
+    if (s.tcmp === "other" && !s.tvs) s.tcmp = "none";
+    // With Since 1990 off, the window starts no earlier than FY{start}; it keeps at least MIN_SPAN years in view
+    if (s.hist !== "on" && s.from < meta.start) s.from = meta.start;
+    if (s.to - s.from < MIN_SPAN) [s.from, s.to] = [firstYear(s), meta.latest];
+  }
+  const state = parseState(location.search ? Object.fromEntries(new URLSearchParams(location.search)) : saved?.state ?? {});
+  normalize(state);
+  /** The state with nothing chosen, as a plain first visit opens */
+  const DEFAULTS = parseState({});
+  /** A link that opens a view: the defaults with patch, naming only what patch sets, so, as the links built by hand
+   * always did, it carries none of the reader's other choices (dollars, detail, the years); hash, a place on the page */
+  const hrefFor = (patch: Partial<State>, hash = "") => {
+    const q = toQuery({ ...DEFAULTS, ...patch }, KEYS.filter((k) => k in patch)).toString();
+    return `/muni-spending/${q ? `?${q}` : ""}${hash ? `#${hash}` : ""}`;
+  };
   // About the data's contents, and the part or group a link goes to there
   const notes = notesContents(() => state.view === "data", () => update({ view: "data" }));
   const aboutLine = (parts: string[]) => notes.links(parts, "span");
-  /** The first year of the slider's scale, where a window starts by default */
-  const firstYear = () => (state.hist === "on" ? fullYears[0] : meta.start);
-  if (state.to - state.from < MIN_SPAN) [state.from, state.to] = [firstYear(), meta.latest];
   // Legend selections; empty means every segment shows. Kept across districts so
   // one category can be followed from district to district.
   const isolated = Object.fromEntries(PANELS.map((k) =>
@@ -785,14 +843,6 @@ export async function startExplorer() {
   $("remember-no").addEventListener("click", () => setConsent("no"));
   rememberNote();
 
-  // Town data, imported the first time the Towns tab opens, then a region at a time
-  let towns: TownData | null = null;
-  let townListed = new Map<string, ListedTown>();
-  const townById = new Map<string, Town>();
-  const townFiles = import.meta.glob<{ default: { towns: Town[] } }>("../../data/massppe/towns/*.json");
-  const townLoaded = new Set<string>();
-  let townsFailed = false;
-  let townPickers: Picker[] = [];
   async function loadTowns() {
     if (towns || townsFailed) return;
     try {
@@ -802,9 +852,8 @@ export async function startExplorer() {
       return;
     }
     townListed = new Map([...towns.towns, ...towns.averages].map((x) => [x.id, x]));
-    if (!townListed.has(state.t)) state.t = "leverett";
-    if (state.tvs && !townListed.has(state.tvs)) state.tvs = null;
-    if (state.tcmp === "other" && !state.tvs) state.tcmp = "none";
+    // The town and its comparison, checked against the list
+    normalize(state);
     for (const sel of [townSelect, townVsSelect]) fillTowns(sel);
     townSelect.value = state.t;
     townCompareSelect.value = state.tcmp;
@@ -859,7 +908,7 @@ export async function startExplorer() {
   (menuMode === "former" ? fillFormer : fillEntities)(select);
   fillEntities(vsSelect);
   // The last of each kind looked at, to come back to when the menu switches
-  let lastCurrent = isFormer(state.d) ? "leverett" : state.d;
+  let lastCurrent = isFormer(state.d) ? HOME : state.d;
   let lastFormer = isFormer(state.d) ? state.d : (data.former ?? []).find((x) => x.former!.group === "early")?.id ?? null;
   /** Former districts, from the quiet link at the foot of the district menu: its other list, opening on
    * the last of that kind looked at */
@@ -938,7 +987,7 @@ export async function startExplorer() {
   // Since 1990: on, the slider's first handle moves to FY1990 if it was at the start; off, any handle
   // before FY{start} comes back to it
   const histSwitch = $<HTMLButtonElement>("hist-switch");
-  function histPatch(on: boolean): Partial<typeof state> {
+  function histPatch(on: boolean): Partial<State> {
     if (on) return { hist: "on", from: state.from === meta.start ? fullYears[0] : state.from };
     const from = Math.max(state.from, meta.start);
     return { hist: "off", from, to: state.to - from < MIN_SPAN ? meta.latest : state.to };
@@ -946,7 +995,7 @@ export async function startExplorer() {
   /** Choosing a former district whose figures all come before FY{start} turns Since 1990 on and shows the
    * earlier years; choosing any other while the window ends before FY{start} runs it to FY{latest} again,
    * or the district would show none of its own years */
-  const histFor = (id: string): Partial<typeof state> =>
+  const histFor = (id: string): Partial<State> =>
     earlyOnly(id) ? (state.to >= meta.start ? { ...histPatch(true), from: fullYears[0], to: meta.start - 1 } : {})
       : state.to < meta.start ? { to: meta.latest } : {};
   /** A dial's state: checked or not, its On or Off, its title, and whether it can be used (#237: one place for the six) */
@@ -1137,35 +1186,19 @@ export async function startExplorer() {
   /** The tabs opened so far, the first one included */
   const opened = new Set<View>([state.view]);
 
-  function update(patch: Partial<typeof state>) {
+  /** The plot's own parameters, which commonwealth.ts writes into the live address while a plot is open (setParams):
+   * carried while that tab shows, so the address keeps the plot */
+  const PLOT_KEYS = new Set(["plot", "x", "y", "fy", "log", "all", "hl", "focus", "find"]);
+  function update(patch: Partial<State>) {
     const switching = patch.view != null && patch.view !== state.view;
     // Picking a comparison turns Comps on, on every chart
     const picks = (k: "cmp" | "tcmp" | "vs" | "tvs") => patch[k] != null && patch[k] !== "none" && patch[k] !== state[k];
     if (picks("cmp") || picks("tcmp") || picks("vs") || picks("tvs")) compsAll(true);
     if (switching) closeEnlarged();
     Object.assign(state, patch);
-    const q = new URLSearchParams();
-    if (state.view === "towns") {
-      q.set("view", "towns");
-      q.set("t", state.t);
-      if (state.tcmp !== "none") q.set("tcmp", state.tcmp);
-      if (state.tcmp === "other" && state.tvs) q.set("tvs", state.tvs);
-      if (state.per !== "resident") q.set("per", state.per);
-    } else if (state.view !== "districts") {
-      q.set("view", state.view);
-    } else {
-      q.set("d", state.d);
-      if (state.cmp !== "none") q.set("cmp", state.cmp);
-      if (state.cmp === "other" && state.vs) q.set("vs", state.vs);
-      if (state.dper !== "pupil") q.set("dper", state.dper);
-      if (state.hist === "on") q.set("hist", "on");
-    }
-    if (state.usd !== "nominal") q.set("usd", state.usd);
-    if (state.detail === "off") q.set("detail", "off");
-    if (state.view === "districts" || state.view === "towns") {
-      if (state.from !== firstYear()) q.set("from", String(state.from));
-      if (state.to !== meta.latest) q.set("to", String(state.to));
-    }
+    normalize(state);
+    const q = toQuery(state);
+    if (state.view === "commonwealth") new URLSearchParams(location.search).forEach((v, k) => PLOT_KEYS.has(k) && q.append(k, v));
     // On the Data tab, the part or group the address goes to stays in it
     history.replaceState(null, "", `${location.pathname}?${q}${state.view === "data" ? location.hash : ""}`);
     askToRemember();
@@ -1287,11 +1320,11 @@ export async function startExplorer() {
     cap.render();
   }
 
-  /** A link that opens a district or town in the explorer, in place or in a new tab. */
-  function viewLink(label: string, patch: Partial<typeof state>) {
-    const q = patch.view === "towns" ? `?view=towns&t=${patch.t}` : `?d=${patch.d}`;
+  /** A link that opens a district or town in the explorer: in place, keeping the reader's choices; in a new tab, at
+   * hrefFor's address, which names only the district or town */
+  function viewLink(label: string, patch: Partial<State>) {
     const a = text("a", label) as HTMLAnchorElement;
-    a.href = q;
+    a.href = hrefFor(patch);
     a.addEventListener("click", (ev) => {
       if (!plainClick(ev)) return;
       ev.preventDefault();
@@ -3369,7 +3402,7 @@ export async function startExplorer() {
   function groupLink(a: HTMLAnchorElement, group: Named & { id: string } | null) {
     a.textContent = group ? group.name : "All groups";
     a.title = group ? `${group.name}: its members` : "Every group and its members";
-    a.href = `/muni-spending/?view=data#${group ? `group-${group.id}` : "groups"}`;
+    a.href = hrefFor({ view: "data" }, group ? `group-${group.id}` : "groups");
     a.classList.toggle("is-group", !!group);
   }
   // Followed here, it opens the Data tab at the group, as the tabs do; a new tab or window loads the address
@@ -3444,7 +3477,7 @@ export async function startExplorer() {
       const list: NoteUse[] = figures.map((f) => {
         const view = f.closest("[data-view-only]")!.getAttribute("data-view-only") as "districts" | "towns";
         return { parts: partsOf(f), where: VIEW_NAMES[view], name: f.querySelector("h3")!.textContent!.trim(),
-          href: `/muni-spending/${view === "towns" ? "?view=towns" : ""}#${f.id}`, open: () => goTo(view, f.id) };
+          href: hrefFor({ view }, f.id), open: () => goTo(view, f.id) };
       });
       try {
         const [m, c] = await Promise.all([import("./map"), import("./commonwealth")]);
@@ -3453,14 +3486,14 @@ export async function startExplorer() {
             if (!x.notes) continue;
             const id = `map-${layer}-${x.key}`;
             list.push({ parts: x.notes, where: LAYER_NAMES[layer], name: x.label,
-              href: `/muni-spending/?view=commonwealth#${id}`, open: () => goTo("commonwealth", id) });
+              href: hrefFor({ view: "commonwealth" }, id), open: () => goTo("commonwealth", id) });
           }
         }
         list.push({ parts: [...new Set(Object.values(c.SOURCES).map((x) => x.note)), "correlations"], where: "Commonwealth",
-          name: "Districts side by side", href: "/muni-spending/?view=commonwealth#cw-plots", open: () => goTo("commonwealth", "cw-plots") });
+          name: "Districts side by side", href: hrefFor({ view: "commonwealth" }, "cw-plots"), open: () => goTo("commonwealth", "cw-plots") });
       } catch { /* the charts' lines still show */ }
       list.push({ parts: ["equalized-valuation-eqv", "income-fifths"], where: "The 82.5% cap", name: "The 82.5% cap",
-        href: "/muni-spending/?view=cap", open: () => update({ view: "cap" }) });
+        href: hrefFor({ view: "cap" }), open: () => update({ view: "cap" }) });
       notes.shownIn(list);
     })();
     return uses;
