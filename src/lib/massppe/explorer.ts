@@ -59,8 +59,6 @@ interface Entity {
   /** In-district FTE of the regional districts the revenue pools, per district: what turns revenue per
    * pupil back into dollars (a district's own FTE, or an average's average district's) */
   rev_fte?: Values;
-  /** Town-run districts only: Census's latest totals, in dollars */
-  rev_check?: { fy: number; revenue: number; expenditure: number };
   /** Districts only: the town itself, or a regional district's member towns, each with what it must
    * contribute to this district and the other districts it belongs to */
   towns?: { id: string; name: string; contribution: number | null; also: TownDistrict[] }[];
@@ -71,7 +69,6 @@ interface Entity {
   day?: Partial<Record<DayKey, Values>> & { total: Values };
   day_memb?: Values;
   nces?: Values;
-  day_n?: Values;
   /** A district that no longer exists: the years it has figures for, and what became of it */
   former?: { first: number; last: number };
   note?: { text: string; source: string | null };
@@ -103,7 +100,9 @@ interface Entity {
 type DayKey = "total" | "regular" | "special" | "bilingual" | "occupational";
 /** A district's or average's earlier years, FY1990 to FY2004 (the older measure to FY2006), from its region's
  * districts-history file. A former district's record is its whole entity, with its FY2005-on series in main. */
-type HistRec = Pick<Entity, "id" | "ppe" | "enroll" | "nss" | "ood" | "day" | "day_memb" | "nces" | "day_n"> & Partial<Entity> &
+// A current district's or an average's record leaves out the series with no figure before FY2005 (explorer_history.py
+// drop_empty); a former district's has them all
+type HistRec = Pick<Entity, "id"> & Partial<Entity> &
   { main?: Pick<Entity, "ppe" | "enroll" | "nss" | "ood"> };
 
 /** What the menus need to know of a district or average before its file loads */
@@ -151,7 +150,6 @@ interface Town {
   rev: Record<string, Values>;
   /** Dollars, all towns combined for an average */
   spend_total: Values;
-  rev_total: Values;
   /** Its school districts, each with the town's required contribution and the district's other member towns */
   districts?: (TownDistrict & { contribution: number | null; with: { name: string; id: string | null }[] })[];
   /** Property (DLS): assessed value per resident and parcels by type (an average's are its towns'
@@ -191,7 +189,6 @@ interface Town {
   /** The labor force and the employed (an average's towns' combined), and the unemployment rate in percent,
    * each calendar year's at the next fiscal year, as the population is */
   labor?: { force: Values; employed: Values; rate: Values };
-  labor_latest?: number | null;
   /** Prop 2 1/2 votes since the explorer's first year, [held, won], by kind */
   votes?: Record<"override" | "debt" | "capital" | "stabilization", [number, number]>;
   /** What each year's free cash was made of, per resident, from the state's proof (FY2021 on); the free cash it
@@ -677,7 +674,7 @@ export async function startExplorer() {
   const early = (v: Values | undefined) => (v ? [...v, ...nulls(nH + nM - v.length)] : undefined);
   const dayJoin = (h: HistRec): Partial<Entity> => ({
     day: h.day ? join(h.day, undefined) as Entity["day"] : undefined,
-    day_memb: early(h.day_memb), nces: early(h.nces), day_n: early(h.day_n),
+    day_memb: early(h.day_memb), nces: early(h.nces),
   });
   const made = new Map<string, Entity>();
   /** A district or average as the district view draws it: with Since 1990 on, its earlier years in
@@ -699,7 +696,7 @@ export async function startExplorer() {
         ? { ...rec, ppe: join(h.ppe, h.main.ppe), enroll: join(h.enroll, h.main.enroll), nss: join(h.nss, h.main.nss),
           ood: [...(h.ood ?? nulls(nH)), ...(h.main.ood ?? nulls(nM))], ...dayJoin(h) }
         : { ...rec, ppe: h.main.ppe, enroll: h.main.enroll, nss: h.main.nss, ood: h.main.ood, day: undefined, day_memb: undefined,
-          nces: undefined, day_n: undefined };
+          nces: undefined };
     } else {
       const base = byId.get(id);
       if (!base || !h) return undefined;
