@@ -2497,6 +2497,11 @@ export async function startExplorer() {
     showYears();
     showHist();
     explainDollars();
+    // Each chart drawn says what its dials can do; a chart with no data this time says nothing, so none of the last
+    // district's or town's lingers on its hidden dials (#237)
+    hasTrends.clear();
+    hasComps.clear();
+    cmpTrends.clear();
     // A redraw can come before a district's or town's data does (a resize as a tab opens);
     // refresh() draws once it arrives
     if (state.view === "districts") {
