@@ -9,7 +9,7 @@ import { scatter, type Group, type Point } from "./scatter";
 import { addStyles, capital, el, modal, placeTip, svgEl, vn } from "./dom";
 import { AMBER, BLUE, FIFTH_RAMP, GREEN, RED, REGION_HUES, VIOLET } from "./palette";
 import type { CommunityType } from "./data";
-import { checkPair, sharedParts, type Words } from "./cautions";
+import { checkPair, sharedParts, type Caution, type Words } from "./cautions";
 import css from "./commonwealth.css?inline"; // the styles for what this module builds (#237), added as it loads (#238)
 
 addStyles(css);
@@ -240,6 +240,57 @@ interface View { preset: string | null; y: string; x: string; fy: number; log: b
   /** The highlight's groups picked out from its legend, each with its own trend */
   focus?: string[] }
 
+// ---- What a plot shows, from the data alone: the two below read nothing of the page, so they sit out here, taking
+// the data, rather than in startCommonwealth's closure (#238) ----
+
+/** The districts with both measures in a year, less the omitted ones unless all are asked for, and less those a
+ * log scale can't place (offScale: how many, and whether any are below zero). */
+function pointsFor(data: CwData, v: Pick<View, "x" | "y" | "fy" | "log" | "all" | "hl" | "find">) {
+  const i = data.meta.years.indexOf(v.fy);
+  const hl = HIGHLIGHTS[v.hl] ?? HIGHLIGHTS[DEFAULT_HL];
+  const pts: Point[] = [];
+  const rows: Row[] = [];
+  const offScale = { n: 0, below: false };
+  for (const d of data.districts) {
+    const x = d.v[v.x]?.[i];
+    const y = d.v[v.y]?.[i];
+    if (x == null || y == null) continue;
+    if (!v.all && (OMIT_NAMES.has(d.name) || (d.v.fe[i] ?? 0) < MIN_FE)) continue;
+    if (v.log && x <= 0) {
+      offScale.n++;
+      offScale.below ||= x < 0;
+      continue;
+    }
+    pts.push({ x, y, id: d.id ?? d.org, name: d.name, group: hl.of(d),
+      label: (d.id != null && hl.labels.has(d.id)) || d.org === v.find });
+    rows.push(d);
+  }
+  return { pts, rows, hl, offScale };
+}
+
+/** Spearman's rho between the vertical measure and every other measure, closest first;
+ * measures without data for the year come last. Each is taken on the districts its plot would show: the one across
+ * now on the scale it has, the others on the scale they open with, so a log scale leaves out its zeros here too. */
+function ranking(data: CwData, v: View) {
+  const i = data.meta.years.indexOf(v.fy);
+  const others = VARS.filter((o) => o.key !== v.y);
+  return others.map((o) => {
+    const log = o.key === v.x ? v.log : !!o.log;
+    const xs: number[] = [];
+    const ys: number[] = [];
+    for (const d of data.districts) {
+      const x = d.v[o.key]?.[i];
+      const y = d.v[v.y]?.[i];
+      if (x == null || y == null || (log && x <= 0)) continue;
+      if (!v.all && (OMIT_NAMES.has(d.name) || (d.v.fe[i] ?? 0) < MIN_FE)) continue;
+      xs.push(x);
+      ys.push(y);
+    }
+    return { v: o, r: spearman(xs, ys), n: xs.length };
+  }).sort((a, b) => (b.r == null ? -1 : Math.abs(b.r)) - (a.r == null ? -1 : Math.abs(a.r)));
+}
+type Ranked = ReturnType<typeof ranking>;
+
 export function startCommonwealth(root: HTMLElement, data: CwData, opts: {
   openDistrict: (id: string) => void;
   /** "About the data:" and the parts named, linked */
@@ -247,54 +298,6 @@ export function startCommonwealth(root: HTMLElement, data: CwData, opts: {
 }) {
   const years = data.meta.years;
   const latest = data.meta.latest;
-  const at = (fy: number) => years.indexOf(fy);
-
-  /** The districts with both measures in a year, less the omitted ones unless all are asked for, and less those a
-   * log scale can't place (offScale: how many, and whether any are below zero). */
-  function pointsFor(v: Pick<View, "x" | "y" | "fy" | "log" | "all" | "hl" | "find">) {
-    const i = at(v.fy);
-    const hl = HIGHLIGHTS[v.hl] ?? HIGHLIGHTS[DEFAULT_HL];
-    const pts: Point[] = [];
-    const rows: Row[] = [];
-    const offScale = { n: 0, below: false };
-    for (const d of data.districts) {
-      const x = d.v[v.x]?.[i];
-      const y = d.v[v.y]?.[i];
-      if (x == null || y == null) continue;
-      if (!v.all && (OMIT_NAMES.has(d.name) || (d.v.fe[i] ?? 0) < MIN_FE)) continue;
-      if (v.log && x <= 0) {
-        offScale.n++;
-        offScale.below ||= x < 0;
-        continue;
-      }
-      pts.push({ x, y, id: d.id ?? d.org, name: d.name, group: hl.of(d),
-        label: (d.id != null && hl.labels.has(d.id)) || d.org === v.find });
-      rows.push(d);
-    }
-    return { pts, rows, hl, offScale };
-  }
-
-  /** Spearman's rho between the vertical measure and every other measure, closest first;
-   * measures without data for the year come last. Each is taken on the districts its plot would show: the one across
-   * now on the scale it has, the others on the scale they open with, so a log scale leaves out its zeros here too. */
-  function ranking(v: View) {
-    const i = at(v.fy);
-    const others = VARS.filter((o) => o.key !== v.y);
-    return others.map((o) => {
-      const log = o.key === v.x ? v.log : !!o.log;
-      const xs: number[] = [];
-      const ys: number[] = [];
-      for (const d of data.districts) {
-        const x = d.v[o.key]?.[i];
-        const y = d.v[v.y]?.[i];
-        if (x == null || y == null || (log && x <= 0)) continue;
-        if (!v.all && (OMIT_NAMES.has(d.name) || (d.v.fe[i] ?? 0) < MIN_FE)) continue;
-        xs.push(x);
-        ys.push(y);
-      }
-      return { v: o, r: spearman(xs, ys), n: xs.length };
-    }).sort((a, b) => (b.r == null ? -1 : Math.abs(b.r)) - (a.r == null ? -1 : Math.abs(a.r)));
-  }
 
   // ---- Gallery ----
   const gallery = el("div", "cw-gallery");
@@ -305,7 +308,7 @@ export function startCommonwealth(root: HTMLElement, data: CwData, opts: {
     const thumb = svgEl("svg");
     thumb.setAttribute("class", "cw-thumb");
     thumb.setAttribute("aria-hidden", "true");
-    const { pts, hl } = pointsFor({ x: p.x, y: p.y, fy: latest, log: p.log, all: false, hl: DEFAULT_HL, find: null });
+    const { pts, hl } = pointsFor(data, { x: p.x, y: p.y, fy: latest, log: p.log, all: false, hl: DEFAULT_HL, find: null });
     scatter(thumb, pts, { width: 320, height: 190, logX: p.log, xFmt: String, yFmt: String, groups: hl.groups, smooth: true, mini: true });
     card.append(thumb, el("span", "cw-card-title", p.title), withParts(el("span", "cw-card-blurb"), starred(p.blurb)),
       el("span", "cw-card-axes", `${capital(VAR.get(p.y)!.short)} · ${VAR.get(p.x)!.short} · FY${latest}`));
@@ -585,9 +588,9 @@ export function startCommonwealth(root: HTMLElement, data: CwData, opts: {
     allBox.checked = v.all;
     find.value = data.districts.find((d) => d.org === v.find)?.name ?? "";
 
-    const { pts, rows, hl, offScale } = pointsFor(v);
+    const { pts, rows, hl, offScale } = pointsFor(data, v);
     const focus = (v.focus ?? []).filter((g) => hl.groups[g]);
-    describe(v, pts, hl, offScale, focus);
+    describe(v, pts, rows, hl, offScale, focus);
     // The chart takes the room the legend, finding and caption leave, so the view never scrolls
     const width = Math.max(300, figure.clientWidth || 800);
     const pad = parseFloat(getComputedStyle(body).paddingTop) + parseFloat(getComputedStyle(body).paddingBottom);
@@ -628,13 +631,24 @@ export function startCommonwealth(root: HTMLElement, data: CwData, opts: {
     setParams();
   }
 
-  /** The legend, finding, caption, ranking and table: everything but the chart. */
-  function describe(v: View, pts: Point[], hl: (typeof HIGHLIGHTS)[string], offScale: { n: number; below: boolean },
+  /** The legend, finding, caption, ranking and table: everything but the chart, each part drawn on its own (#238).
+   * rows: the districts behind the points, which the cautions read. */
+  function describe(v: View, pts: Point[], rows: Row[], hl: (typeof HIGHLIGHTS)[string], offScale: { n: number; below: boolean },
     focus: string[]) {
+    drawCautions(v, pts.length, checkPair(v, VAR.get(v.y)!, VAR.get(v.x)!, pts, rows));
+    drawLegend(pts, hl, focus);
+    drawCaption(v, pts.length, offScale);
+    drawTable(v, pts);
+    const rank = ranking(data, v);
+    drawPicker(v, rank);
+    drawFinding(v, rank);
+  }
+
+  /** The pitfalls this pair falls into, as buttons under the finding, each opening their window; or a word that
+   * there are none, with a button to how pairs are checked */
+  function drawCautions(v: View, n: number, found: Caution[]) {
     const yv = VAR.get(v.y)!;
     const xv = VAR.get(v.x)!;
-    const n = pts.length;
-    const found = checkPair(v, yv, xv, pts, pointsFor(v).rows);
     cautionRow.replaceChildren();
     if (found.length) {
       cautionRow.append(el("span", "cw-cautions-lead", "Cautions for this pair:"));
@@ -660,8 +674,11 @@ export function startCommonwealth(root: HTMLElement, data: CwData, opts: {
     ", Perspectives in Clinical Research, 2016. And whatever ρ shows, ", Object.assign(el("a", undefined,
       "correlation doesn't imply causation"), { href: CAUSATION }), ".");
     cautionList.replaceChildren(intro, ...found.flatMap((c) => [el("h4", undefined, c.label), withParts(el("p"), rich(c.text))]), src);
-    // With groups to pick from, each entry is a toggle: picked, a group keeps its color, the rest fade, and it gets
-    // its own smoothed trend and ρ, to find a pattern within a group that the statewide one hides (#233)
+  }
+
+  /** The legend. With groups to pick from, each entry is a toggle: picked, a group keeps its color, the rest fade,
+   * and it gets its own smoothed trend and ρ, to find a pattern within a group that the statewide one hides (#233) */
+  function drawLegend(pts: Point[], hl: (typeof HIGHLIGHTS)[string], focus: string[]) {
     const groups = Object.entries(hl.groups).sort((a, b) => b[1].z - a[1].z);
     const picking = groups.length > 1;
     legend.classList.toggle("is-picking", picking);
@@ -707,7 +724,12 @@ export function startCommonwealth(root: HTMLElement, data: CwData, opts: {
       } else li.textContent = "Select a group to pick it out, with its own trend and ρ.";
       return li;
     })()]));
+  }
 
+  /** The caption: the year, how many districts, which are left out, the sources and the parts of About the data */
+  function drawCaption(v: View, n: number, offScale: { n: number; below: boolean }) {
+    const yv = VAR.get(v.y)!;
+    const xv = VAR.get(v.x)!;
     // Left out: the districts too large or small to compare, unless all are asked for, and those a log scale can't place
     const out = v.all ? [] : ["Boston", "Provincetown", `districts with fewer than ${MIN_FE} foundation pupils`];
     if (offScale.n) {
@@ -726,8 +748,12 @@ export function startCommonwealth(root: HTMLElement, data: CwData, opts: {
     caption.append(". Towns' figures pool each district's member towns.");
     const about = opts.about([...new Set(srcs.map((s) => s.note)), "correlations"]);
     if (about) caption.append(" ", about);
+  }
 
-    // The table: every district drawn, highest first
+  /** The table: every district drawn, highest first */
+  function drawTable(v: View, pts: Point[]) {
+    const yv = VAR.get(v.y)!;
+    const xv = VAR.get(v.x)!;
     const t = el("table");
     const hr = t.createTHead().insertRow();
     hr.append(el("th", undefined, "District"), el("th", undefined, capital(yv.short)), el("th", undefined, capital(xv.short)));
@@ -739,10 +765,12 @@ export function startCommonwealth(root: HTMLElement, data: CwData, opts: {
       r.append(th, el("td", undefined, fmt(yv.unit, p.y)), el("td", undefined, fmt(xv.unit, p.x)));
     }
     tableHolder.replaceChildren(t);
-    tableTitle.replaceChildren(vn(capital(yv.label)), " and ", vn(xv.label.toLowerCase()), `, FY${v.fy}: ${n} districts, highest first.`);
+    tableTitle.replaceChildren(vn(capital(yv.label)), " and ", vn(xv.label.toLowerCase()), `, FY${v.fy}: ${pts.length} districts, highest first.`);
+  }
 
-    // The picker: every other measure, closest first
-    const rank = ranking(v);
+  /** The picker: every other measure, closest first */
+  function drawPicker(v: View, rank: Ranked) {
+    const yv = VAR.get(v.y)!;
     sideHead.textContent = "Horizontal";
     sideSub.replaceChildren("Every other measure, ranked by how closely it lines up with ", vn(yv.short), ` in FY${v.fy}. ` +
       "Select one to put it across the bottom.");
@@ -775,7 +803,12 @@ export function startCommonwealth(root: HTMLElement, data: CwData, opts: {
       li.append(b);
       return li;
     }));
-    // The finding sets school measures against size and wealth, not against one another
+  }
+
+  /** The finding sets school measures against size and wealth, not against one another */
+  function drawFinding(v: View, rank: Ranked) {
+    const yv = VAR.get(v.y)!;
+    const xv = VAR.get(v.x)!;
     const kind = rank.filter((o) => o.r != null && o.v.role !== yv.role && !sharedParts(o.v.key, v.y).length);
     const top = kind[0];
     const here = rank.find((o) => o.v.key === v.x && o.r != null);
@@ -803,7 +836,7 @@ export function startCommonwealth(root: HTMLElement, data: CwData, opts: {
     if (!view) return;
     let x = view.x;
     if (x === ySel.value) {
-      const best = ranking({ ...view, y: ySel.value }).find((o) => o.r != null && o.v.role !== VAR.get(ySel.value)!.role);
+      const best = ranking(data, { ...view, y: ySel.value }).find((o) => o.r != null && o.v.role !== VAR.get(ySel.value)!.role);
       x = best?.v.key ?? x;
     }
     change({ y: ySel.value, x, log: x === view.x ? view.log : !!VAR.get(x)?.log });
