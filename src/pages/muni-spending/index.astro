@@ -1448,10 +1448,6 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
     min-width: 0;
   }
 
-  .control[hidden] {
-    display: none;
-  }
-
   /* Beside Compare with: the group "Its region" and the like stand for, by name, or all the groups, linking
      to the groups page; under the menu where it takes the width */
   .cmp-row {
@@ -1568,10 +1564,6 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
     box-shadow: 0 16px 40px rgba(31, 31, 28, 0.2);
   }
 
-  .explorer :global(.control .picker-panel[hidden]) {
-    display: none;
-  }
-
   .explorer :global(.control .picker-search) {
     margin: 0.6rem 0.6rem 0.4rem;
     padding: 0.45rem 0.6rem;
@@ -1587,10 +1579,6 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
   .explorer :global(.control .picker-groups) {
     overflow-y: auto;
     padding: 0 0.4rem 0.5rem;
-  }
-
-  .explorer :global(.control .picker-group[hidden]) {
-    display: none;
   }
 
   .explorer :global(.control .picker-section) {
@@ -1658,11 +1646,6 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
     list-style: none;
     margin: 0 0 0.2rem;
     padding: 0 0 0 1.25rem;
-  }
-
-  .explorer :global(.control .picker-options[hidden]),
-  .explorer :global(.control .picker-options li[hidden]) {
-    display: none;
   }
 
   .explorer :global(.control .picker-option) {
@@ -2008,10 +1991,6 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
     margin: 0.55rem 0 0.35rem;
   }
 
-  .panel-views[hidden] {
-    display: none;
-  }
-
   .panel-views span {
     padding: 0.3rem 0.75rem;
     font-size: 0.85rem;
@@ -2250,10 +2229,6 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
     }
   }
 
-  .panels[hidden] {
-    display: none;
-  }
-
   .entity h2 {
     margin: 0 0 0.25rem;
   }
@@ -2266,10 +2241,6 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
     border-top: 1px solid var(--line);
     font-size: 0.88rem;
     color: var(--ink-soft);
-  }
-
-  .relations[hidden] {
-    display: none;
   }
 
   .relations :global(.rel-head) {
@@ -2514,11 +2485,6 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
     border: 1px dashed var(--line);
     border-radius: 12px;
     color: var(--ink-soft);
-  }
-
-  #rev-body[hidden],
-  .panel-none[hidden] {
-    display: none;
   }
 
   /* The trend's yearly rise, beside its legend entry */
@@ -2816,6 +2782,7 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
   .panel :global(.hit) {
     fill: transparent;
     cursor: crosshair;
+    pointer-events: all;
   }
 
   .panel :global(.col) {
@@ -2932,15 +2899,10 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
     stroke-width: 1;
   }
 
-  .panel :global(.hit),
   .panel :global(.overlay),
   .panel :global(.trend),
   .panel :global(.lines) {
     pointer-events: none;
-  }
-
-  .panel :global(.hit) {
-    pointer-events: all;
   }
 
   /* Tooltip: value first, label after, line keys */
@@ -2963,6 +2925,7 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
     font-weight: 700;
     color: var(--ink);
     margin-bottom: 0.3rem;
+    overflow-wrap: anywhere;
   }
 
   .tooltip :global(.tip-row) {
@@ -2981,15 +2944,9 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
     min-width: 4.6rem;
   }
 
-  .tooltip :global(.tip-label),
-  .tooltip :global(.tip-title),
-  .tooltip :global(.tip-note) {
+  .tooltip :global(.tip-label) {
     color: var(--ink-soft);
     overflow-wrap: anywhere;
-  }
-
-  .tooltip :global(.tip-title) {
-    color: var(--ink);
   }
 
   /* Keys sit beside the first line of a wrapped label */
@@ -3007,6 +2964,7 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
   .tooltip :global(.tip-note) {
     margin-top: 0.3rem;
     color: var(--muted);
+    overflow-wrap: anywhere;
   }
 
   /* Table view */
@@ -3364,10 +3322,6 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
     border: 1px solid var(--line);
     border-radius: 14px;
     box-shadow: 0 16px 40px rgba(31, 31, 28, 0.22);
-  }
-
-  .remember-prompt[hidden] {
-    display: none;
   }
 
   .remember-prompt p {
@@ -4542,8 +4496,7 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
     gap: 0.4rem;
   }
 
-  .explorer :global(.cw-drawer-toggle),
-  .explorer :global(.cw-more) {
+  .explorer :global(.cw-drawer-toggle) {
     font: inherit;
     font-size: 0.85rem;
     color: var(--ink);
@@ -5525,8 +5478,9 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 0.5rem 1rem;
-    padding: 0.7rem 0.9rem;
+    gap: 0.4rem 0.7rem;
+    padding: 0.4rem 0.75rem;
+    font-size: 0.82rem;
     border: 1px solid var(--line);
     border-radius: 12px;
     background: #fff;
@@ -5573,12 +5527,6 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
   }
 
   /* The floating bar: the year, set off at the left, then the cap, all on one line in small type */
-  .explorer :global(.cap-scen-row) {
-    gap: 0.4rem 0.7rem;
-    padding: 0.4rem 0.75rem;
-    font-size: 0.82rem;
-  }
-
   .explorer :global(.cap-scen-row .cap-year) {
     gap: 0.3rem;
     margin: 0;
@@ -5809,10 +5757,6 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
   .explorer :global(.cap-steps-table tr.minimum th),
   .explorer :global(.cap-steps-table tr.minimum td) {
     background: #fbf6ea;
-  }
-
-  .explorer :global(.cap-pays) {
-    margin-top: 0.7rem;
   }
 
   .explorer :global(.cap-level) {
