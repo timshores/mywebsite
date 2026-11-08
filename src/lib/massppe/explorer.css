@@ -79,23 +79,24 @@ html.modal-open {
   font-size: 1.05rem;
 }
 
-/* The introduction folds away; it starts open */
-.explorer .intro summary {
+/* The folds: the introductions, the map's measure, a plot's settings, the cap tab's explanation. Each summary is a
+   line with a chevron before it, a corner pointing right that turns down when open, as a picker's groups have too.
+   One rule each for what they share (#237); :where() weighs nothing, so each fold's own rule sets its size, color
+   and spacing over it, wherever it comes */
+.explorer :where(.intro summary, .map-about-fold > summary, .cw-settings > summary, .cap-fold > summary) {
   display: inline-flex;
   align-items: center;
-  gap: 0.45rem;
-  font-size: 0.85rem;
-  color: var(--muted);
   cursor: pointer;
   list-style: none;
-  margin-bottom: 0.5rem;
 }
 
-.explorer .intro summary::-webkit-details-marker {
+.explorer :where(.intro summary, .map-about-fold > summary, .cw-settings > summary,
+  .cap-fold > summary)::-webkit-details-marker {
   display: none;
 }
 
-.explorer .intro summary::before {
+.explorer :where(.intro summary, .map-about-fold > summary, .cw-settings > summary, .cap-fold > summary,
+  .control .picker-group-head)::before {
   content: "";
   width: 6px;
   height: 6px;
@@ -105,8 +106,17 @@ html.modal-open {
   transition: transform 0.12s ease;
 }
 
-.explorer .intro[open] summary::before {
+.explorer :where(.intro[open] summary, .map-about-fold[open] > summary, .cw-settings[open] > summary,
+  .cap-fold[open] > summary, .control .picker-group-head[aria-expanded="true"])::before {
   transform: rotate(45deg);
+}
+
+/* The introduction folds away; it starts open */
+.explorer .intro summary {
+  gap: 0.45rem;
+  font-size: 0.85rem;
+  color: var(--muted);
+  margin-bottom: 0.5rem;
 }
 
 .explorer .intro summary:hover {
@@ -179,17 +189,24 @@ html.modal-open {
   color: var(--ink);
 }
 
-.explorer .controls-dock-toggle {
-  flex: none;
-  padding: 0.2rem 0.75rem;
+/* The pill buttons: Swap, Show controls, Collapse and Enlarge, the map's switches and Play, a plot's Settings, the cap
+   tab's years and zoom. One rule for what they share (#237); :where() weighs nothing, so each button's own rule
+   sets its size, color and padding over it */
+.explorer :where(.swap-btn, .controls-dock-toggle, .enlarge-open, .collapse-toggle, .map-seg-btn, .map-play,
+  .cw-drawer-toggle, .cap-year-btn, .cap-zoom-btn) {
   font: inherit;
-  font-size: 0.82rem;
-  font-weight: 600;
-  color: var(--accent);
   background: var(--white);
   border: 1px solid var(--line);
   border-radius: 999px;
   cursor: pointer;
+}
+
+.explorer .controls-dock-toggle {
+  flex: none;
+  padding: 0.2rem 0.75rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--accent);
 }
 
 .explorer .controls-dock-toggle:hover,
@@ -458,20 +475,10 @@ html.modal-open {
   cursor: pointer;
 }
 
-/* A chevron that turns down when the group opens */
+/* The folds' chevron (their rules, before .intro summary), turning down when the group opens */
 .explorer .control .picker-group-head::before {
-  content: "";
   flex: none;
-  width: 6px;
-  height: 6px;
-  border: solid var(--ink-soft);
-  border-width: 0 1.5px 1.5px 0;
-  transform: rotate(-45deg);
-  transition: transform 0.12s ease;
-}
-
-.explorer .control .picker-group-head[aria-expanded="true"]::before {
-  transform: rotate(45deg);
+  border-color: var(--ink-soft);
 }
 
 .explorer .control .picker-group-label {
@@ -660,12 +667,14 @@ html.modal-open {
   outline: none;
 }
 
-.explorer .years-track input[type="range"]:focus-visible::-webkit-slider-thumb {
+/* The same ring on the Years sliders' handles, the explorer's and the map's: a rule for each engine, since a browser
+   drops a whole rule that names another engine's pseudo-element */
+.explorer :is(.years-track, .map-years-track) input[type="range"]:focus-visible::-webkit-slider-thumb {
   outline: 2px dashed var(--accent);
   outline-offset: 2px;
 }
 
-.explorer .years-track input[type="range"]:focus-visible::-moz-range-thumb {
+.explorer :is(.years-track, .map-years-track) input[type="range"]:focus-visible::-moz-range-thumb {
   outline: 2px dashed var(--accent);
   outline-offset: 2px;
 }
@@ -712,14 +721,9 @@ html.modal-open {
    words that change with the tab */
 .explorer .swap-btn {
   padding: 0.05rem 0.55rem;
-  font: inherit;
   font-size: 0.72rem;
   font-weight: 600;
   color: var(--ink-soft);
-  background: var(--white);
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  cursor: pointer;
 }
 
 .explorer .swap-btn:hover:not(:disabled) {
@@ -727,7 +731,9 @@ html.modal-open {
   border-color: var(--ink-soft);
 }
 
-.explorer .swap-btn:focus-visible {
+/* The focus ring of the explorer's own buttons, a dashed accent outline just outside (#237) */
+.explorer :is(.swap-btn, .relations .rel-more, .legend .legend-btn, .legend .legend-reset, .dialog-close,
+  .remember-actions button, .remember-note .link-button):focus-visible {
   outline: 2px dashed var(--accent);
   outline-offset: 2px;
 }
@@ -1186,11 +1192,6 @@ html.modal-open {
   text-underline-offset: 2px;
 }
 
-.explorer .relations .rel-more:focus-visible {
-  outline: 2px dashed var(--accent);
-  outline-offset: 2px;
-}
-
 .explorer .entity p {
   margin-bottom: 1rem;
 }
@@ -1440,12 +1441,6 @@ html.modal-open {
 
 .explorer .legend .legend-btn.is-off {
   opacity: 0.5;
-}
-
-.explorer .legend .legend-btn:focus-visible,
-.explorer .legend .legend-reset:focus-visible {
-  outline: 2px dashed var(--accent);
-  outline-offset: 2px;
 }
 
 /* Line entries are on until clicked off; off, they fade and strike through */
@@ -1983,11 +1978,6 @@ html.modal-open {
   color: var(--ink);
 }
 
-.explorer .dialog-close:focus-visible {
-  outline: 2px dashed var(--accent);
-  outline-offset: 2px;
-}
-
 .explorer .dialog-body.table-scroll {
   margin: 0;
   padding: 0 1.25rem 1rem;
@@ -2206,12 +2196,6 @@ html.modal-open {
   color: var(--paper);
   background: var(--ink);
   border-color: var(--ink);
-}
-
-.explorer .remember-actions button:focus-visible,
-.explorer .remember-note .link-button:focus-visible {
-  outline: 2px dashed var(--accent);
-  outline-offset: 2px;
 }
 
 .explorer .remember-note .link-button {
@@ -2595,14 +2579,9 @@ html.modal-open {
 }
 
 .explorer .map-seg-btn {
-  font: inherit;
   font-size: 0.82rem;
   color: var(--ink);
-  background: var(--white);
-  border: 1px solid var(--line);
-  border-radius: 999px;
   padding: 0.2rem 0.7rem;
-  cursor: pointer;
 }
 
 .explorer .map-seg-btn[aria-pressed="true"] {
@@ -2737,16 +2716,6 @@ html.modal-open {
   outline: none;
 }
 
-.explorer .map-years-track input[type="range"]:focus-visible::-webkit-slider-thumb {
-  outline: 2px dashed var(--accent);
-  outline-offset: 2px;
-}
-
-.explorer .map-years-track input[type="range"]:focus-visible::-moz-range-thumb {
-  outline: 2px dashed var(--accent);
-  outline-offset: 2px;
-}
-
 /* The years at the track's ends: a span's first and last; for one year, the scale's first, muted, and the year */
 .explorer .map-years-out,
 .explorer .map-years-from {
@@ -2761,14 +2730,9 @@ html.modal-open {
 }
 
 .explorer .map-play {
-  font: inherit;
   font-size: 0.82rem;
   color: var(--ink);
-  background: var(--white);
-  border: 1px solid var(--line);
-  border-radius: 999px;
   padding: 0.2rem 0.75rem;
-  cursor: pointer;
 }
 
 .explorer .map-play[aria-pressed="true"] {
@@ -2795,30 +2759,15 @@ html.modal-open {
   position: relative;
 }
 
+/* A fold (the folds' rules, before .intro summary), with a larger chevron */
 .explorer .map-about-fold > summary {
-  display: inline-flex;
-  align-items: center;
   gap: 0.5rem;
-  cursor: pointer;
-  list-style: none;
-}
-
-.explorer .map-about-fold > summary::-webkit-details-marker {
-  display: none;
 }
 
 .explorer .map-about-fold > summary::before {
-  content: "";
   width: 7px;
   height: 7px;
-  border: solid var(--ink-soft);
-  border-width: 0 1.5px 1.5px 0;
-  transform: rotate(-45deg);
-  transition: transform 0.12s ease;
-}
-
-.explorer .map-about-fold[open] > summary::before {
-  transform: rotate(45deg);
+  border-color: var(--ink-soft);
 }
 
 .explorer .map-measure-title {
@@ -3358,14 +3307,9 @@ html.modal-open {
 }
 
 .explorer .cw-drawer-toggle {
-  font: inherit;
   font-size: 0.85rem;
   color: var(--ink);
-  background: var(--white);
-  border: 1px solid var(--line);
-  border-radius: 999px;
   padding: 0.3rem 0.8rem;
-  cursor: pointer;
   white-space: nowrap;
 }
 
@@ -3378,33 +3322,12 @@ html.modal-open {
   border-bottom: 1px solid var(--line);
 }
 
+/* A fold (the folds' rules, before .intro summary), as the introductions are */
 .explorer .cw-settings > summary {
-  display: inline-flex;
-  align-items: center;
   gap: 0.45rem;
   padding: 0 1.2rem 0.5rem;
   font-size: 0.85rem;
   color: var(--muted);
-  cursor: pointer;
-  list-style: none;
-}
-
-.explorer .cw-settings > summary::-webkit-details-marker {
-  display: none;
-}
-
-.explorer .cw-settings > summary::before {
-  content: "";
-  width: 6px;
-  height: 6px;
-  border: solid currentColor;
-  border-width: 0 1.5px 1.5px 0;
-  transform: rotate(-45deg);
-  transition: transform 0.12s ease;
-}
-
-.explorer .cw-settings[open] > summary::before {
-  transform: rotate(45deg);
 }
 
 .explorer .cw-finding-row {
@@ -3751,14 +3674,9 @@ html.modal-open {
   align-items: center;
   gap: 0.35rem;
   padding: 0.2rem 0.6rem;
-  font: inherit;
   font-size: 0.8rem;
   font-weight: 500;
   color: var(--ink-soft);
-  background: var(--white);
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  cursor: pointer;
 }
 
 /* Comps and Trends only, chart by chart, together first in the row, the same place on every chart */
@@ -4278,14 +4196,9 @@ html.modal-open {
 }
 
 .explorer .cap-year-btn {
-  font: inherit;
   font-size: 0.85rem;
   color: var(--ink);
-  background: var(--white);
-  border: 1px solid var(--line);
-  border-radius: 999px;
   padding: 0.25rem 0.75rem;
-  cursor: pointer;
 }
 
 .explorer .cap-year-btn.is-on {
@@ -4459,13 +4372,8 @@ html.modal-open {
 .explorer .cap-zoom-btn {
   min-width: 1.9rem;
   padding: 0.15rem 0.5rem;
-  font: inherit;
   font-size: 0.82rem;
   color: var(--ink);
-  background: var(--white);
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  cursor: pointer;
 }
 
 .explorer .cap-zoom-btn:hover,
@@ -4565,35 +4473,20 @@ html.modal-open {
   margin-bottom: 0.6rem;
 }
 
-/* The cap tab's explanation folds like the introductions, with the summary as its heading */
+/* The cap tab's explanation folds like the introductions (the folds' rules, before .intro summary), its summary a
+   heading, with a larger chevron */
 .explorer .cap-fold > summary {
-  display: inline-flex;
-  align-items: center;
   gap: 0.5rem;
   font-size: 1.15rem;
   font-weight: 700;
   color: var(--ink);
   margin-bottom: 0.6rem;
-  cursor: pointer;
-  list-style: none;
-}
-
-.explorer .cap-fold > summary::-webkit-details-marker {
-  display: none;
 }
 
 .explorer .cap-fold > summary::before {
-  content: "";
   width: 7px;
   height: 7px;
-  border: solid var(--ink-soft);
-  border-width: 0 1.5px 1.5px 0;
-  transform: rotate(-45deg);
-  transition: transform 0.12s ease;
-}
-
-.explorer .cap-fold[open] > summary::before {
-  transform: rotate(45deg);
+  border-color: var(--ink-soft);
 }
 
 .explorer .cap-years-chart {
