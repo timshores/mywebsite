@@ -458,9 +458,10 @@ export function startCommonwealth(root: HTMLElement, data: CwData, opts: {
   const why = el("div", "cw-why");
   why.innerHTML =
     "<h4>Why the strongest correlation matters</h4>" +
-    "<p>Whether a district spends a lot depends on what you compare it with. The factor that lines up most closely " +
-    "with spending is the one that most needs holding steady: two districts alike in that factor make a fairer " +
-    "comparison than two that are alike only in a weaker one.</p>" +
+    "<p>Whether a district spends a lot depends on what you compare it with. A factor that lines up closely with " +
+    "spending is worth holding steady when you compare: two districts alike in it make a fairer comparison than two " +
+    "that differ in it. A factor built from the spending measure itself lines up closely for that reason alone, so " +
+    "the ranking marks it.</p>" +
     "<h4>Reading ρ</h4>" +
     "<p>Spearman's ρ runs from −1 to 1. It is positive when districts higher on one measure tend to be higher on the " +
     "other, negative when they tend to be lower, and near 0 when there is no consistent order. It compares ranks, so " +

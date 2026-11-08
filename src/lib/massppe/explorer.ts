@@ -3370,11 +3370,15 @@ export async function startExplorer() {
         "education spread over all pupils, not the cost per student with a disability.")],
       lines: cbLine ? [cbLine] : [],
       legend: cbAll && hasLine(cbAll) ? [{ label: "Paid back by the state (Circuit Breaker)", color: CB_COLOR, mark: "line" as const, line: "cb" as const,
-        help: "The state's Circuit Breaker reimburses part of what a district spends on a student whose special " +
-          "education costs more than a threshold, four times the state's average foundation budget per pupil. The " +
-          "district claims a year's costs after the year ends, and the state repays a share of the costs above the " +
-          "threshold, 75% when the budget allows, in quarterly payments the next year. Transportation to " +
-          "out-of-district schools has counted since the FY2022 payments. Extraordinary relief pays in the same year " +
+        // DESE, Circuit Breaker Threshold and Reimbursement Rates (July 20, 2026), and M.G.L. c. 71B, s. 5A (#242: the
+        // threshold had been described by its rule before FY2021)
+        help: "The state's Circuit Breaker (M.G.L. c. 71B, s. 5A) reimburses part of what a district spends on a " +
+          "student whose special education costs more than a threshold: $54,906 for FY2027 costs. Through FY2020 the " +
+          "threshold was four times the state's average foundation budget per pupil; since then it has risen each year " +
+          "with the foundation budget's inflation index. The district claims a year's costs after the year ends, and " +
+          "the state repays 75% of the costs above the threshold when the appropriation covers it, in quarterly " +
+          "payments the next year. Transportation to out-of-district schools has counted since the FY2022 payments, " +
+          "phased in over three years, and is paid after instruction when money runs short. Extraordinary relief pays in the same year " +
           "when a district's instruction and tuition costs rise by more than a quarter over the year before.\n\nThe " +
           "line puts each payment with the year of the costs it repays, so it lines up with the columns: FY2024's " +
           "point is what the state paid in FY2025 for FY2024's claim, and any extraordinary relief paid in FY2024." }] : [],
@@ -4130,8 +4134,10 @@ export async function startExplorer() {
       (l && top3.length ? ` For FY${l.fy}, ${t.kind === "town" ? `${t.name}'s` : "these towns'"} ${amount(l.identified)} came ` +
         `mostly from ${andList(top3.map((q) => `${amount(l[q.key])} ${q.words}`))}.` : "") + " ",
       helpTip("Local receipts are what a town collects besides the property tax and state aid: motor vehicle excise, " +
-        "fees, permits, interest, and the like. Budgets estimate them conservatively, as the state advises, so most towns " +
-        "collect more. State aid above the estimate is aid that came in above the state's own estimate for the year. " +
+        "fees, permits, interest, and the like. Budgets estimate them conservatively: state law holds each estimate to " +
+        "the year before's collections unless the state approves more (M.G.L. c. 59, s. 23), and the state has urged " +
+        "towns to estimate low. So nearly every town collects more: from FY2021 to FY2025, 95% to 99% of towns did " +
+        "each year, by the state's free cash records. State aid above the estimate is aid that came in above the state's own estimate for the year. " +
         "Appropriations left unspent are amounts voted in the budget but neither spent nor committed by June 30. Free cash " +
         "the town didn't spend the year before carries into this year's. The state then subtracts what the town is still " +
         "owed, such as unpaid taxes, and makes other adjustments, which can also add a little back."));

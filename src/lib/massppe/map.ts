@@ -196,8 +196,10 @@ const TOWN_MEASURES: Measure[] = [
     key: "bill_income", label: "Single-family tax bill as a share of income", kind: "level", fmt: share, short: share, years: "year",
     notes: ["property"],
     tail: 0.95,
+    // The Census Bureau's residence rule is documented; that students add little income is an inference (#242)
     about: (m, real, y) => `The average single-family tax bill in FY${y.to}, as a share of income per capita. College towns run ` +
-      "high because their students count as residents but report little income.",
+      "high, likely because the Census Bureau counts students as residents of the town where they live at school, " +
+      "while the income is what residents report on Massachusetts tax returns, to which most students add little.",
   },
   {
     key: "older", hold: true, label: "Population 65 and older", kind: "level", fmt: share, short: share, years: "year",
