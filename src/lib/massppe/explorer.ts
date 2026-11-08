@@ -12,7 +12,7 @@ import { closeEnlarged, enlargeButton } from "./enlarge";
 import type { CapData } from "./cap";
 import type { CwData } from "./commonwealth";
 import type { MapData, MapSeries } from "./map";
-import { notesContents, type NoteUse } from "./notes";
+import { notesContents, plainClick, type NoteUse } from "./notes";
 import { groupedPicker, type Picker } from "./picker";
 
 type Values = Val[];
@@ -542,6 +542,11 @@ const ABOVE_SHADES = ["#FFF4E6", "#FFE8CC", "#FFD9A8", "#FFC97A", "#FFB84D"];
 const BELOW_SHADES = ["#E0F7FA", "#B2EBF2", "#80DEEA", "#4DD0E1", "#26C6DA"];
 const SHADE_BINS_REL = [0.05, 0.1, 0.15, 0.2];
 const SHADE_BINS_PP = [0.005, 0.01, 0.015, 0.02];
+
+/** A gap as its words give it, in percent to the digits given, back as a share: the shade is the class of that
+ * figure, as the map's colors are (#231), so a gap shown as 5% is shaded as 5% */
+const gapText = (v: number, digits: number) => Math.abs(v * 100).toFixed(digits);
+const gapShown = (v: number, digits: number) => Math.sign(v) * Number(gapText(v, digits)) / 100;
 
 function shade(delta: number | null, bins: number[]) {
   if (delta == null || !Number.isFinite(delta) || Math.abs(delta) < bins[0]) return null;
@@ -1394,7 +1399,7 @@ export async function startExplorer() {
     const a = text("a", label) as HTMLAnchorElement;
     a.href = q;
     a.addEventListener("click", (ev) => {
-      if (ev.metaKey || ev.ctrlKey || ev.shiftKey || ev.button !== 0) return;
+      if (!plainClick(ev)) return;
       ev.preventDefault();
       update(patch);
       $("entity-name").scrollIntoView({ block: "nearest" });
@@ -2273,8 +2278,8 @@ export async function startExplorer() {
       const b = r.base?.[i];
       if (v != null && b != null && b > 0 && cName) {
         const rel = (v - b) / b;
-        const bg = shade(rel, SHADE_BINS_REL);
-        td.title = `${cName}: ${fmt(b)} (${signFor(rel, Math.abs(rel * 100).toFixed(0), true)}${Math.abs(rel * 100).toFixed(0)}%)`;
+        const bg = shade(gapShown(rel, 0), SHADE_BINS_REL);
+        td.title = `${cName}: ${fmt(b)} (${signFor(rel, gapText(rel, 0), true)}${gapText(rel, 0)}%)`;
         if (bg) {
           td.style.background = bg;
           td.append(sr(rel > 0));
@@ -2288,8 +2293,8 @@ export async function startExplorer() {
       const gb = r.base ? cagr(r.base[end - n], r.base[end], n) : null;
       if (g != null && gb != null && cName) {
         const delta = g - gb;
-        const bg = shade(delta, SHADE_BINS_PP);
-        td.title = `${cName}: ${pct(gb)} (${signFor(delta, Math.abs(delta * 100).toFixed(1), true)}${Math.abs(delta * 100).toFixed(1)} pp)`;
+        const bg = shade(gapShown(delta, 1), SHADE_BINS_PP);
+        td.title = `${cName}: ${pct(gb)} (${signFor(delta, gapText(delta, 1), true)}${gapText(delta, 1)} pp)`;
         if (bg) {
           td.style.background = bg;
           td.append(sr(delta > 0));
@@ -3350,7 +3355,7 @@ export async function startExplorer() {
   for (const id of ["cmp-name", "town-cmp-name"]) {
     const a = $<HTMLAnchorElement>(id);
     a.addEventListener("click", (ev) => {
-      if (ev.button !== 0 || ev.metaKey || ev.ctrlKey || ev.shiftKey || ev.altKey) return;
+      if (!plainClick(ev)) return;
       ev.preventDefault();
       notes.go(new URL(a.href).hash.slice(1));
       update({ view: "data" });
