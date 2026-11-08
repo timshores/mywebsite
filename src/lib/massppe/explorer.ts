@@ -4352,10 +4352,11 @@ export async function startExplorer() {
     $("teqv-sub").textContent = `${dollarsNote}${perP}. Every two years the state sets each town's equalized ` +
       "valuation, its estimate of what all the town's taxable property would sell for on January 1; each is shown at the " +
       "fiscal year whose assessments share that date." +
-      (k && base != null ? ` For FY${k.fy}, Chapter 70 set ${t.name}'s target local contribution at ` +
-        `${usd(base * k.property_pct / 100)} from property, ${k.property_pct}% of its January ${k.eqv_year} equalized ` +
-        `valuation, plus ${k.income_pct}% of its residents' ` +
-        `${k.income_year} income, up to ${k.cap}% of its foundation budget.` : "");
+      // The yield's property half, not the target's: a capped town's target is less than its yield (#242)
+      (k && base != null ? ` For FY${k.fy}, Chapter 70 counted ${usd(base * k.property_pct / 100)} of ${t.name}'s ` +
+        `combined effort yield from property, ${k.property_pct}% of its January ${k.eqv_year} equalized valuation, and ` +
+        `added ${k.income_pct}% of its residents' ${k.income_year} income. Its target local contribution is that yield or ` +
+        `${k.cap}% of its foundation budget, whichever is less.` : "");
     fullTables.teqv = { caption: `Equalized valuation, ${t.name} (${lower(dollarsNote)})`, cols: [
       { label: inTotal ? (t.kind === "town" ? "Total" : "Average town") : `Per ${perWord}`, values: deflate(per(t.eqv!, kT)), fmt: usd },
       { label: t.kind === "town" ? "In all (nominal)" : "Towns combined (nominal)", values: t.eqv_total ?? [], fmt: (v) => amount(v) },

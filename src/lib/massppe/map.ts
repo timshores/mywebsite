@@ -230,12 +230,14 @@ const TOWN_MEASURES: Measure[] = [
       `Services records them; debt and capital exclusions aren't counted.`,
   },
   {
-    key: "cap_hh", label: "The 82.5% cap: change per household with no cap", kind: "change", fmt: money, short: money, years: "year",
+    key: "cap_hh", label: "The 82.5% cap: change in target per household with no cap", kind: "change", fmt: money, short: money, years: "year",
     notes: ["equalized-valuation-eqv"],
-    about: (m, real, y) => `How much more or less each town would be asked to pay toward its schools in FY${y.to} with no cap, ` +
-      "per household, keeping that year's statewide total. The cap saves the blue towns money and costs the orange towns money.",
-    split: (up, down, n) => `With no cap, ${up} of ${n} towns would be asked for more and ${down} would be asked for less.` +
-      (n - up - down ? ` The other ${n - up - down} would be asked for the same.` : ""),
+    // DESE's terms (#242): a target is the formula's goal for a town's share, not a payment
+    about: (m, real, y) => `How much higher or lower each town's Chapter 70 target local contribution would be in FY${y.to} ` +
+      "with no cap, per household, keeping that year's statewide total. The cap lowers the blue towns' targets and raises " +
+      "the orange towns'.",
+    split: (up, down, n) => `With no cap, ${up} of ${n} towns would have higher targets and ${down} lower ones.` +
+      (n - up - down ? ` The other ${n - up - down} would have the same target.` : ""),
   },
 ];
 
