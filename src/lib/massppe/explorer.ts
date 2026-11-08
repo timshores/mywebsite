@@ -1459,7 +1459,7 @@ export async function startExplorer() {
   /** Why an entity has no revenue chart, in the chart's place. */
   function noRevenue(e: Entity): string {
     // The source and why it falls short for these are in the Data tab, not here
-    if (e.type === "charter") return "Detailed revenue figures aren't available for charter schools.";
+    if (e.type === "charter" || e.cohort === "CHARTER") return "Detailed revenue figures aren't available for charter schools.";
     if (e.kind === "district") return "Detailed revenue figures aren't available for town-run districts.";
     const n = e.rev_members ?? 0;
     return n === 0 ? `The ${e.name} includes no regional districts, so it has no revenue average.`
