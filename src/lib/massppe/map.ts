@@ -161,7 +161,7 @@ const TOWN_MEASURES: Measure[] = [
       `FY${y.from} to FY${y.to}, ${inDollars(m, real)}. The state sets equalized values every other year.`,
   },
   {
-    key: "income", label: "Income per resident", kind: "level", fmt: dollars, short: dollars, fifths: "towns",
+    key: "income", label: "Income per capita", kind: "level", fmt: dollars, short: dollars, fifths: "towns",
     notes: ["income-fifths"],
     about: (m) => `Each town's residents' income for the Chapter 70 formula, from ${m.fifths.year} state tax returns, ` +
       `divided by its population in July ${m.fifths.year}. The five colors are the income fifths, 70 or 71 towns each.`,
@@ -275,7 +275,7 @@ const DISTRICT_MEASURES: Measure[] = [
     about: (m, real, y) => `How much each district's in-district enrollment changed from FY${y.from} to FY${y.to}.`,
   },
   {
-    key: "income", label: "Income per resident of its towns", kind: "level", fmt: dollars, short: dollars, fifths: "districts",
+    key: "income", label: "Income per capita of its towns", kind: "level", fmt: dollars, short: dollars, fifths: "districts",
     notes: ["income-fifths"],
     about: (m) => `The combined income of each district's towns for the Chapter 70 formula, from ${m.fifths.year} state ` +
       `tax returns, divided by their combined population. The five colors are the districts' income fifths.`,

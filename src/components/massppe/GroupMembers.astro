@@ -113,7 +113,7 @@ const KINDS: Record<"districts" | "towns", [string, string, string][]> = {
       `Streetcar Suburbs in its ${MAPC}. Gateway Cities outside the Inner Core: the other 22. Suburban and other: the ` +
       `rest, which the state doesn't name. Land areas come from the Census Bureau's ${LAND}.`],
     ["fifth", "Income fifths", `The ${dFifth.total} traditional districts ranked by their towns' combined income per ` +
-      `resident, ${dFifth.per} to a fifth: ${fifthText(fifths.districts)}. Income per resident is the residents' ` +
+      `resident, ${dFifth.per} to a fifth: ${fifthText(fifths.districts)}. Income per capita is the residents' ` +
       `income the ${FORMULA} uses, from ${fifths.year} state tax returns, divided by the Census Bureau's ` +
       `${POP.replace("estimates", "estimate")} for July ${fifths.year}.`],
   ],
@@ -143,8 +143,8 @@ const KINDS: Record<"districts" | "towns", [string, string, string][]> = {
     ["type", "Community types", `Rural: under 500 residents per square mile, the line in the ${RURAL_PLAN} for the ` +
       "Commonwealth's Rural Policy Advisory Commission. Inner Core, Gateway Cities outside the Inner Core, and Suburban " +
       `and other are defined as they are for districts, above. Land areas come from the Census Bureau's ${LAND}.`],
-    ["fifth", "Income fifths", `All ${tFifth.total} cities and towns ranked by income per resident, ${tFifth.per} to a ` +
-      `fifth: ${fifthText(fifths.towns)}. Income per resident is figured as it is for districts, above.`],
+    ["fifth", "Income fifths", `All ${tFifth.total} cities and towns ranked by income per capita, ${tFifth.per} to a ` +
+      `fifth: ${fifthText(fifths.towns)}. Income per capita is figured as it is for districts, above.`],
     ["schools", "School districts", "Cities and towns by the districts that teach their pupils, vocational schools aside: " +
       "none of their own (they send their pupils to other towns' schools and pay tuition), regional districts only, their " +
       `own district and a regional one, or their own district for every grade, from DESE's ${C70}.`],

@@ -1,10 +1,10 @@
 ---
 import Layout from "../../layouts/Layout.astro";
 import { digits, pct, usd } from "../../lib/massppe/format";
-// What "the same effort" means, worked through for two towns with one house each and a school they share. It was a
-// window on the cap tab, whose "?" beside "the same effort" links here (cap.ts, helpLink). DESE's word is effort, as in
-// combined effort yield; it doesn't say "fiscal effort" (#242). Fixed numbers, so the page is built whole; Tim will
-// revise it.
+// What "the same fiscal effort" means, worked through for two towns with one house each and a school they share. It
+// was a window on the cap tab, whose "?" beside "fiscal effort" links here (cap.ts, helpLink). "Effort" and "fiscal
+// effort" mean the same here, as in education finance research (Tim, #243); DESE's own word is effort, as in combined
+// effort yield. Fixed numbers, so the page is built whole; Tim will revise it.
 const house = 400_000;
 const incomes = [100_000, 1_000_000];
 const school = 10_000;
@@ -27,10 +27,10 @@ const rows: { label: string; cells: string[]; total?: boolean }[] = [
 ];
 ---
 
-<Layout title="Same effort, two towns - Tim Shores"
-  description="What the same effort means in Chapter 70's combined effort yield, worked through for two towns">
+<Layout title="Same fiscal effort, two towns - Tim Shores"
+  description="What the same fiscal effort means in Chapter 70, worked through for two towns">
   <p class="back"><a href="/muni-spending/?view=cap">The 82.5% cap</a></p>
-  <h1>Same effort, two towns</h1>
+  <h1>Same fiscal effort, two towns</h1>
 
   <p>
     Picture two towns, each with one house assessed at {usd(house)}. In Town A, the family earns {usd(incomes[0])} a
@@ -41,7 +41,7 @@ const rows: { label: string; cells: string[]; total?: boolean }[] = [
     Chapter 70 sets its two percentages so that property and income each yield half the total. Here that's
     {usd(school / 2)} from {usd(2 * house)} of property, or {rate(pEx)}, and {usd(school / 2)} from
     {usd(incomes[0] + incomes[1])} of income, or {rate(iEx)}. Both towns pay those same two percentages: the same
-    effort. Each town's sum is its combined effort yield. In the real formula, the yield sets the town's target local
+    fiscal effort. Each town's sum is its combined effort yield. In the real formula, the yield sets the town's target local
     contribution, a goal for its share; what the town must appropriate, its required local contribution, moves toward
     the target over several years.
   </p>
@@ -61,7 +61,7 @@ const rows: { label: string; cells: string[]; total?: boolean }[] = [
   </table>
 
   <p>
-    Town B pays more because its family earns ten times as much. But the same effort isn't the same share of
+    Town B pays more because its family earns ten times as much. But the same fiscal effort isn't the same share of
     each family's income. The property half falls on both houses equally, so Town A's family pays
     {pct(cey[0] / incomes[0], 1)} of its income and Town B's pays {pct(cey[1] / incomes[1], 1)}.
   </p>

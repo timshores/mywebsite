@@ -5,9 +5,9 @@
 // Any cap keeps the formula's rule that targets add up to 59% of all foundation budgets, so
 // both statewide percentages scale by one factor f, found here by bisection, with each town's
 // target min(yield x f, cap x foundation budget). f is 1 at 82.5%. A town with no foundation budget (Gosnold, with no
-// pupils of its own) has no target under any cap and takes no share of the total (#242). Against Michael Naughton and
-// Tupper Brown's FY2026 workbook, last compared 2026-11-08: at 100%, every town within $1; with no cap, every town
-// within 0.01%.
+// pupils of its own) takes no part in f; with no cap its target is its yield times f, as Michael Naughton and Tupper
+// Brown's FY2026 workbook gives it (#243). Against that workbook (schools ppe_report/evidence/cap_fy2026.py): every
+// town within $1, at 100% and with no cap. The model itself is capModel.ts.
 
 import { addStyles, capital, el, lower, modal, placeTip, pointsAt, svgEl, vn } from "./dom";
 import { change as changePct, compact, digits, pct, rho as rhoText, round, signFor, total, usd } from "./format";
@@ -95,10 +95,10 @@ const X_OPTIONS: Record<XKey, { label: string; title: string; short: string; fmt
     fmt: (v) => pct(v), axis: pctTick },
   eqv_pc: { label: "Property value per resident", title: "Equalized property value per resident", short: "Property value per resident",
     fmt: usd, axis: (v) => compact(v, "$") },
-  income_pc: { label: "Income per resident", title: "Income per resident", short: "Income per resident",
+  income_pc: { label: "Income per capita", title: "Income per capita", short: "Income per capita",
     fmt: usd, axis: (v) => compact(v, "$") },
   // Wealth as the formula measures it, Naughton and Brown's horizontal axis
-  cey_pc: { label: "Property and income per resident", title: "Combined effort yield per resident", short: "Yield per resident",
+  cey_pc: { label: "Property and income per capita", title: "Combined effort yield per resident", short: "Yield per resident",
     fmt: usd, axis: (v) => compact(v, "$") },
 };
 const xOf = (x: CapTown, k: XKey): number | null => {
@@ -168,8 +168,8 @@ function howParts({ y }: Ctx) {
     "Each year, a complicated formula tells us what's fair for each town. The formula starts out with two percentages " +
     `set for the year for every town in the Commonwealth: in FY${y.fy}, ` +
     `${rate(y.property_pct)} of its property value and ${rate(y.income_pct)} of its residents' income. The sum is the ` +
-    "town's combined effort yield. It's what the town's target would be if it made the same effort",
-    helpLink("What is the combined effort yield? An example with two towns", "/muni-spending/fiscal-effort/"),
+    "town's combined effort yield. It's what the town's target would be if it made the same fiscal effort",
+    helpLink("What is fiscal effort? An example with two towns", "/muni-spending/fiscal-effort/"),
     " as every other town to educate its schoolchildren: the same share of its property value and its residents' income.");
   const pCap = el("p");
   pCap.append(`Meanwhile … no town's target is more than ${pct(y.max_pct, 1)} of its foundation budget, the state's ` +
@@ -211,7 +211,7 @@ function scenarioText({ y, f, scenario, atScenarioCap, down, downSum, up, upSum,
   return `${means} statewide percentages of ${rate(y.property_pct * f)} of property value and ` +
     `${rate(y.income_pct * f)} of income` + (scenario == null ? ". " : `, with ${atScenarioCap} towns at the new cap. `) +
     `${down.length} towns' targets would be ${big(-downSum)} lower in FY${y.fy}, and ${up.length} towns' targets would ` +
-    `be ${big(upSum)} higher` + (up.length ? `, ${upTop} of them in the fifth with the highest income per resident.` : ".") +
+    `be ${big(upSum)} higher` + (up.length ? `, ${upTop} of them in the fifth with the highest income per capita.` : ".") +
     " The town table, the year-by-year chart, the scatterplot, and the income table all follow this choice.";
 }
 
@@ -271,7 +271,7 @@ function helpParts({ y, t }: Ctx, sp: Spending | undefined) {
 function fifthsParts({ y, withIncome, fifthOf, change, scenName, n }: Ctx) {
   const tbl = el("table", "cap-fifths-table");
   const hr = tbl.createTHead().insertRow();
-  for (const h of ["Towns by income per resident", "Towns", "At today's cap", "Median income per resident",
+  for (const h of ["Towns by income per capita", "Towns", "At today's cap", "Median income per capita",
     `Change in targets, ${scenName}`, "Median change per resident", "Median change as a share of income"]) hr.append(el("th", undefined, h));
   const tb = tbl.createTBody();
   const names = ["Lowest fifth", "Second fifth", "Middle fifth", "Fourth fifth", "Highest fifth"];
@@ -294,7 +294,7 @@ function fifthsParts({ y, withIncome, fifthOf, change, scenName, n }: Ctx) {
   const scroll = Object.assign(el("div", "table-scroll"), { tabIndex: 0 });
   scroll.append(tbl);
   return [el("h3", undefined, "By income"),
-    el("p", "cap-note", `All ${n} towns, in five groups by income per resident (${y.income_year} ` +
+    el("p", "cap-note", `All ${n} towns, in five groups by income per capita (${y.income_year} ` +
       `income over the July ${y.income_year} population estimate). A negative change means the group's targets are ` +
       `higher with today's cap than they would be ${scenName}: the cap raises them.`),
     scroll];
@@ -443,7 +443,7 @@ export function startCap(root: HTMLElement, data: CapData, opts: { town: string 
   const steps = el("div", "cap-steps");
   lookup.append(pickWrap, steps);
 
-  // Explanations: targets and required contributions in a window of its own; the combined effort yield on a page of its
+  // Explanations: targets and required contributions in a window of its own; fiscal effort on a page of its
   // own, /muni-spending/fiscal-effort/
   const { dialog: help, body: helpBody } = modal("cap-help-title", "How Chapter 70 sets the minimum", root.closest(".explorer") ?? document.body);
   const helpButton = (label: string, dialog = help) => {

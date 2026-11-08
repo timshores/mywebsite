@@ -497,13 +497,13 @@ const asFirst = (c: Chart) => (c.svg + KEYS)
         <a href="https://www.doe.mass.edu/finance/chapter70/fy2027/chapter-2027-whitepaper.docx">FY2027</a>. For
         another cap, or none, I keep the formula's rule that targets add up to 59% of all foundation budgets and scale
         both percentages by the one factor that makes them add up; each town's target is then the smaller of its scaled
-        yield and the new cap. A town with no foundation budget, Gosnold, has no target under any cap. For FY2026 this
-        matches every one of Naughton's targets to within $1, with a 100% cap and with no cap, except Gosnold's: he
-        gives it a no-cap target of $563,230. The model's
+        yield and the new cap. For FY2026 this matches every one of Naughton's targets to within $1, with a 100% cap
+        and with no cap. Gosnold, which has no foundation budget, is treated as he treats it; About the data explains.
+        The model's
         <a href="https://github.com/timshores/schools/blob/main/ppe_report/evidence/cap_fy2026.md">evidence record</a>
         traces its figures from DESE's spreadsheet to this page and reruns that comparison each time it's checked.
         Per-resident figures use the Census Bureau's July 2024 population
-        estimates; income per resident divides the formula's income by the estimate for July of that year.
+        estimates; income per capita divides the formula's income by the estimate for July of that year.
       </p>
     </section>
 
@@ -722,9 +722,9 @@ const asFirst = (c: Chart) => (c.svg + KEYS)
         for the rest, called suburban and other here.
       </p>
       <p>
-        <strong>Income fifths</strong> rank the 351 towns by income per resident: the residents' income the Chapter 70
+        <strong>Income fifths</strong> rank the 351 towns by income per capita: the residents' income the Chapter 70
         formula uses for FY2027, from 2023 state tax returns, divided by the Census Bureau's population estimate for July
-        2023. Each fifth holds 70 or 71 towns. A district's fifth ranks the combined income per resident of its towns
+        2023. Each fifth holds 70 or 71 towns. A district's fifth ranks the combined income per capita of its towns
         among the 286 traditional districts, 57 or 58 to a fifth. Each fifth has an average of its own, for "Its income
         fifth" under Compare with. The cap tab ranks the towns the same way, for whichever year it shows. Land areas are the Census Bureau's
         (<a href="https://www2.census.gov/geo/tiger/GENZ2023/shp/cb_2023_25_cousub_500k.zip">2023 cartographic
@@ -912,6 +912,10 @@ const asFirst = (c: Chart) => (c.svg + KEYS)
         of a total equal to 59% of all foundation budgets. No town's target could exceed 82.5% of its foundation
         budget, and {cappedFy2025} towns were at that cap. Each year a town's required contribution moves from the year before
         toward its target, and Chapter 70 aid pays at least the rest of the foundation budget.
+        Gosnold, whose pupils all go to school elsewhere, has a foundation budget of $0, so under the cap its target
+        is $0. With no cap, the cap tab follows Michael Naughton's FY2026 workbook: Gosnold takes no part in setting the
+        new percentages, but its target is its combined effort yield at them, $563,230 in FY2026. So with no cap, the
+        towns' targets come to that much more than DESE's statewide total.
       </p>
       <p>
         <strong>Town and school budgets overlap without lining up.</strong> Education includes the town's own school

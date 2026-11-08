@@ -33,8 +33,10 @@ export function requiredFor(t: ModelTown, target: number, yieldPct: number): num
  * the pipeline's at_cap (#242). DESE's target is the lesser of the two, so a capped town's target is below its yield. */
 export const atCap = (target: number, cey: number, foundation: number | null) => !!foundation && target < cey - 1;
 
-/** A town's target under a cap, or none, at factor f: none for a town with no foundation budget */
-export const targetAt = (cey: number, fb: number, f: number, cap: number | null) => (!fb ? 0 : cap == null ? cey * f : Math.min(cey * f, cap * fb));
+/** A town's target under a cap, or none, at factor f. A town with no foundation budget (Gosnold) takes no part in
+ * setting f; with no cap its target is still its yield times f, as Michael Naughton's FY2026 workbook gives it (Tim,
+ * #243), and under any cap a share of a $0 budget is $0 */
+export const targetAt = (cey: number, fb: number, f: number, cap: number | null) => (cap == null ? cey * f : !fb ? 0 : Math.min(cey * f, cap * fb));
 
 /** The same for arrays: one year's yields and foundation budgets, held to that year's total. */
 export function solveArrays(ceys: number[], fbs: number[], total: number, cap: number | null): number {
@@ -43,7 +45,7 @@ export function solveArrays(ceys: number[], fbs: number[], total: number, cap: n
   for (let k = 0; k < 80; k++) {
     const f = (lo + hi) / 2;
     let sum = 0;
-    for (let i = 0; i < ceys.length; i++) sum += targetAt(ceys[i], fbs[i], f, cap);
+    for (let i = 0; i < ceys.length; i++) if (fbs[i]) sum += targetAt(ceys[i], fbs[i], f, cap);
     if (sum < total) lo = f;
     else hi = f;
   }
@@ -57,7 +59,7 @@ export function solve(towns: ModelTown[], total: number, cap: number | null): nu
   for (let k = 0; k < 80; k++) {
     const f = (lo + hi) / 2;
     let sum = 0;
-    for (const t of towns) sum += targetAt(t.cey, t.foundation, f, cap);
+    for (const t of towns) if (t.foundation) sum += targetAt(t.cey, t.foundation, f, cap);
     if (sum < total) lo = f;
     else hi = f;
   }

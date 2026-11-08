@@ -5,7 +5,7 @@
 /** Community types, from least dense to most */
 export type CommunityType = "rural" | "suburban" | "gateway" | "core";
 
-/** Which fifth of the state a town, or a district's towns together, falls in by income per resident (1 lowest) */
+/** Which fifth of the state a town, or a district's towns together, falls in by income per capita (1 lowest) */
 export interface IncomeFifth { fifth: number; income_pc: number; year: number }
 /** The Inner Core (Boston and its densest neighbors), the other Gateway Cities, rural, or suburban and
  * other, with students (districts) or residents (towns) per square mile; rural districts carry DESE's

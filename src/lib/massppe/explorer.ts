@@ -262,10 +262,10 @@ const RELATIVE_COMPARES = new Set<string>(["cohort", "cohort-state", "peer", "pe
 const COMPARES: Compare[] = ["none", "cohort", "cohort-state", "region", "state", "state-all", "gateway", "type", "fifth", "other"];
 const TOWN_COMPARES: TownCompare[] = ["none", "peer", "peer-state", "region", "state", "state-all", "gateway", "type", "fifth", "other"];
 const FIFTH_NAMES = ["", "Lowest", "Second", "Middle", "Fourth", "Highest"];
-/** "Middle income fifth: $47,294 per resident, 2023", for a district's or town's heading */
+/** "Middle income fifth: $47,294 income per capita, 2023", for a district's or town's heading (Tim, #243: per capita) */
 function incomeText(i: IncomeFifth | undefined, district: boolean) {
   if (!i) return "";
-  return `${FIFTH_NAMES[i.fifth]} income fifth: ${usd(i.income_pc)} per resident${district ? " of its towns" : ""}, ${i.year}`;
+  return `${FIFTH_NAMES[i.fifth]} income fifth: ${usd(i.income_pc)} income per capita${district ? " of its towns" : ""}, ${i.year}`;
 }
 /** "Rural, 4.2 students per square mile": the community type, for a district's or town's heading */
 function communityText(c: Community | undefined, per: "students" | "residents") {
