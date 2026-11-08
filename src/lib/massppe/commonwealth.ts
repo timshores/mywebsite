@@ -8,6 +8,7 @@ import { loess, median, pearson, spearman } from "./stats";
 import { scatter, type Group, type Point } from "./scatter";
 import { capital, el, modal, placeTip, svgEl, vn } from "./dom";
 import { AMBER, BLUE, FIFTH_RAMP, GREEN, RED, REGION_HUES, VIOLET } from "./palette";
+import type { CommunityType } from "./data";
 
 type Values = (number | null)[];
 
@@ -20,7 +21,7 @@ interface Row {
   towns: string[];
   valley: boolean;
   /** Community type: the Inner Core, the other Gateway Cities, rural, or suburban and other */
-  ct?: "core" | "gateway" | "rural" | "suburban" | null;
+  ct?: CommunityType | null;
   /** Income fifth of the district's towns together, 1 lowest to 5 highest */
   fifth?: number | null;
   v: Record<string, Values>;

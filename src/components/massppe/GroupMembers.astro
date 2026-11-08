@@ -11,6 +11,8 @@ import explorer from "../../data/massppe/explorer.json";
 import towns from "../../data/massppe/towns.json";
 import mapData from "../../data/massppe/map.json";
 import { andList, pct } from "../../lib/massppe/format";
+import type { Data, TownData } from "../../lib/massppe/data";
+import type { MapData } from "../../lib/massppe/map";
 
 type Group = { id: string; name: string; scope: string; members: { id: string; name: string }[] };
 const all = groups as Record<"districts" | "towns", Group[]>;
@@ -30,41 +32,42 @@ const FORMULA = a("https://www.doe.mass.edu/finance/chapter70/fy2027/chapter-202
 const POP = a("https://www.census.gov/programs-surveys/popest.html", "population estimates");
 const DLS = a("https://dls-gw.dor.state.ma.us/reports/rdPage.aspx?rdReport=ScheduleA.GenFund_MAIN", "Schedule A");
 
-// The numbers in the notes, from the data
-const meta = explorer.meta;
+// The numbers in the notes, from the data, read as data.ts and map.ts describe it (#237)
+const ex = explorer as unknown as Data;
+const townList = towns as unknown as TownData;
+const meta = ex.meta;
 const latest = meta.latest;
 const num = (n: number) => n.toLocaleString("en-US");
 const usd = (n: number) => `$${num(n)}`;
 const SIZES = ["TINY", "SMALL", "MEDIUM", "LARGE", "XLARGE"] as const;
 const sizes = SIZES.map((k) => {
-  const c = (meta.cohorts as Record<string, { label: string; range: (number | null)[] | null }>)[k];
+  const c = meta.cohorts[k];
   const [lo, hi] = c.range!;
   const name = c.label.split(" (")[0];
   return `${name} ${lo === 0 ? `up to ${num(hi!)}` : hi == null ? `over ${num(lo! - 1)}` : `${num(lo!)}–${num(hi)}`}`;
 }).join(", ");
 // The very large districts, largest first, and their share of the pupils in traditional districts
-type ListedDistrict = { id: string; name: string; type: string; cohort: string | null; region: string | null; fte: number };
-const traditional = (explorer.districts as ListedDistrict[]).filter((d) => d.type === "traditional");
+const traditional = ex.districts.filter((d) => d.type === "traditional").map((d) => ({ ...d, fte: d.fte ?? 0 }));
 const big = traditional.filter((d) => d.cohort === "XLARGE").sort((x, y) => y.fte - x.fte);
 const pupils = traditional.reduce((n, d) => n + d.fte, 0);
 const bigShare = pct(big.reduce((n, d) => n + d.fte, 0) / pupils);
 const largestShare = pct(big[0].fte / pupils);
 const pooledN = traditional.length - big.length;
-const regionNames = meta.regions as Record<string, string>;
+const regionNames = meta.regions;
 // Which of them each region leaves out, in the explorer's order of regions
 const byRegion = Object.entries(regionNames).map(([rk, rl]) => [rl, big.filter((d) => d.region === rk).map((d) => d.name)] as const)
   .filter(([, names]) => names.length).map(([rl, names]) => `${andList(names)} in ${rl === "Boston area" ? "the Boston area" : rl}`).join("; ");
 // The cities set apart on the Towns tab, and their share of the state's residents
-const apart = towns.meta.apart as string[];
+const apart = townList.meta.apart;
 const townFiles = import.meta.glob<{ default: { towns: { kind: string; name: string; pop: (number | null)[] }[] } }>(
   "../../data/massppe/towns/*.json", { eager: true });
 const latestPop = Object.values(townFiles).flatMap((f) => f.default.towns).filter((t) => t.kind === "town")
   .map((t) => ({ name: t.name, pop: t.pop[t.pop.length - 1] ?? 0 }));
 const residents = latestPop.reduce((n, t) => n + t.pop, 0);
 const apartShare = pct(latestPop.filter((t) => apart.includes(t.name)).reduce((n, t) => n + t.pop, 0) / residents);
-const peers = (towns.meta.peers as { label: string }[]).map((p) => p.label.replace(/ residents$/, "")).join("; ");
-const fifths = mapData.meta.fifths as { towns: number[]; districts: number[]; year: number };
-const fifthText = (c: number[]) => `lowest, under ${usd(c[0])}; second, ${usd(c[0])}–${usd(c[1] - 1)}; middle, ` +
+const peers = townList.meta.peers.map((p) => p.label.replace(/ residents$/, "")).join("; ");
+const fifths = (mapData as unknown as MapData).meta.fifths;
+const fifthText = (c: number[] | null) => !c ? "not available" : `lowest, under ${usd(c[0])}; second, ${usd(c[0])}–${usd(c[1] - 1)}; middle, ` +
   `${usd(c[1])}–${usd(c[2] - 1)}; fourth, ${usd(c[2])}–${usd(c[3] - 1)}; highest, ${usd(c[3])} and up`;
 const spread = (view: "districts" | "towns", scope: string) => {
   const ns = all[view].filter((g) => g.scope === scope).map((g) => g.members.length);
@@ -125,7 +128,7 @@ const KINDS: Record<"districts" | "towns", [string, string, string][]> = {
       "without one, its county's. Each region's average leaves out its cities whose school districts have more than " +
       `10,000 pupils: ${byRegion}.`],
     ["peer", "Population groups", `Towns by the Census Bureau's estimate of their population on July 1, ` +
-      `${towns.meta.peer_year}: ${peers}. The ${apart.length} cities whose school districts have more than 10,000 ` +
+      `${townList.meta.peer_year}: ${peers}. The ${apart.length} cities whose school districts have more than 10,000 ` +
       "pupils are in theirs, though they stand apart from the statewide and regional averages."],
     ["region-peer", "Population groups by region", "Each population group within each region, where at least three " +
       "towns share both. Where they don't, “Its population group in its region” compares with the group statewide."],

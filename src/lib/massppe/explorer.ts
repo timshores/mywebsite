@@ -18,18 +18,13 @@ import type { MapData, MapSeries } from "./map";
 import { notesContents, plainClick, type NoteUse } from "./notes";
 import { groupedPicker, type Picker } from "./picker";
 import { AMBER, BLUE, DEEP_GREEN, GRAY, GREEN, ORANGE, PINK, RED, VIOLET } from "./palette";
+import type { Community, Data, IncomeFifth, Listed, ListedTown, Meta, TownData } from "./data";
 
 type Values = Val[];
 
 /** Ids to compare with, one per "Compare with" choice; null where there is none */
 type CmpIds = Partial<Record<"cohort" | "cohort_state" | "region" | "state" | "state_all" | "gateway" | "type" | "fifth", string | null>>;
 type TownCmpIds = Partial<Record<"peer" | "peer_state" | "region" | "state" | "state_all" | "gateway" | "type" | "fifth", string | null>>;
-/** Which fifth of the state a town, or a district's towns together, falls in by income per resident (1 lowest) */
-interface IncomeFifth { fifth: number; income_pc: number; year: number }
-/** The Inner Core (Boston and its densest neighbors), the other Gateway Cities, rural, or suburban and
- * other, with students (districts) or residents (towns) per square mile; rural districts carry DESE's
- * rural aid tier */
-interface Community { type: "core" | "gateway" | "rural" | "suburban"; density: number; tier?: number | null; fy: number }
 
 /** A district or a district average, from its region's file */
 interface Entity {
@@ -108,21 +103,6 @@ type DayKey = "total" | "regular" | "special" | "bilingual" | "occupational";
 type HistRec = Pick<Entity, "id"> & Partial<Entity> &
   { main?: Pick<Entity, "ppe" | "enroll" | "nss" | "ood"> };
 
-/** What the menus need to know of a district or average before its file loads */
-interface Listed {
-  id: string;
-  name: string;
-  chunk: string;
-  cohort: string | null;
-  region: string | null;
-  type?: "traditional" | "vocational" | "charter";
-  scope?: string;
-  regional?: boolean;
-  fte?: number;
-  gateway?: boolean;
-  /** Former districts: their years, and which list they go in: ended before FY{start}, after, or charter */
-  former?: { first: number; last: number; group?: "early" | "later" | "charter" };
-}
 
 /** A town or a town average, from its region's file */
 interface Town {
@@ -211,53 +191,14 @@ interface Town {
 type DemoKey = "population" | "male" | "female" | "age_under_18" | "age_18_24" | "age_25_44" | "age_45_64" | "age_65_up" |
   "white" | "black" | "asian" | "other_race" | "hispanic" | "disability_universe" | "disability";
 
-interface ListedTown {
-  id: string; name: string; chunk: string; region: string | null; county?: string | null; peer?: string | null;
-  scope?: string; gateway?: boolean;
-}
 
 /** A school district a town belongs to; id is null for districts outside the explorer */
 interface TownDistrict { name: string; id: string | null; kind: "town" | "regional" | "vocational" }
 
-interface TownData {
-  meta: {
-    years: number[]; latest: number; members_fy: number; regions: Record<string, string>;
-    apart: string[]; peer_year: number; peers: { id: string; label: string }[];
-    property?: boolean;
-    /** FY2025 Chapter 70 target local contribution: percentages of EQV and income, the cap */
-    c70_target?: { fy: number; eqv_year: number; income_year: number; property_pct: number; income_pct: number;
-      target_share: number; cap: number; capped_towns: number };
-  };
-  averages: ListedTown[];
-  towns: ListedTown[];
-}
 
 /** What a comparison needs: a name, whether it reads with "the", or its own mid-sentence name */
 interface Named { name: string; kind: string; ref?: string }
 
-interface Meta {
-  years: number[];
-  latest: number;
-  start: number;
-  categories: string[];
-  cohorts: Record<string, { label: string; short: string; range: [number, number | null] | null }>;
-  regions: Record<string, string>;
-  cpi: Record<string, number>;
-  /** Census revenue years, which trail the DESE years */
-  revenue: { first: number; latest: number; min_members: number } | null;
-  /** The earlier years, for Since 1990: their years, the year the explorer's own measure begins, the
-   * day program's years, and the years DESE's membership and NCES enrollment weight its averages */
-  history?: { years: number[]; functional_from: number; day: [number, number]; membership_from: number;
-    chapter70_from: number; nces: [number, number] };
-}
-
-interface Data {
-  meta: Meta;
-  averages: Listed[];
-  districts: Listed[];
-  /** Districts the older files or the Hub have and the explorer's own years don't */
-  former?: Listed[];
-}
 
 type Compare = "none" | "cohort" | "cohort-state" | "region" | "state" | "state-all" | "gateway" | "type" | "fifth" | "other";
 type TownCompare = "none" | "peer" | "peer-state" | "region" | "state" | "state-all" | "gateway" | "type" | "fifth" | "other";
@@ -594,7 +535,7 @@ export async function startExplorer() {
   const root = $("explorer");
   let data: Data;
   try {
-    data = (await import("../../data/massppe/explorer.json")).default as unknown as Data;
+    data = (await import("../../data/massppe/explorer.json")).default as Data;
   } catch {
     root.replaceChildren(text("p", "The explorer data didn't load. Reload the page to try again.", "load-error"));
     return;
@@ -856,7 +797,7 @@ export async function startExplorer() {
   async function loadTowns() {
     if (towns || townsFailed) return;
     try {
-      towns = (await import("../../data/massppe/towns.json")).default as unknown as TownData;
+      towns = (await import("../../data/massppe/towns.json")).default as TownData;
     } catch {
       townsFailed = true;
       return;
@@ -1305,7 +1246,7 @@ export async function startExplorer() {
     if (cw) return;
     const [mod, json, mapMod, mapJson] = await Promise.all([import("./commonwealth"), import("../../data/massppe/commonwealth.json"),
       import("./map"), import("../../data/massppe/map.json")]);
-    map = mapMod.startMap($("cw-map"), mapJson.default as unknown as MapData, {
+    map = mapMod.startMap($("cw-map"), mapJson.default as MapData, {
       openTown: (id) => update({ view: "towns", t: id }),
       openDistrict: (id) => update({ view: "districts", d: id }),
       // The map shares the explorer's Dollars choice
@@ -1315,8 +1256,8 @@ export async function startExplorer() {
     });
     // The measures year by year come after: the map draws without them, and its year controls appear when they arrive
     const m = map;
-    import("../../data/massppe/map-years.json").then((y) => m.setSeries(y.default as unknown as MapSeries)).catch(() => {});
-    cw = mod.startCommonwealth($("cw-root"), json.default as unknown as CwData, {
+    import("../../data/massppe/map-years.json").then((y) => m.setSeries(y.default as MapSeries)).catch(() => {});
+    cw = mod.startCommonwealth($("cw-root"), json.default as CwData, {
       openDistrict: (id) => update({ view: "districts", d: id }),
       about: aboutLine,
     });
@@ -1351,7 +1292,7 @@ export async function startExplorer() {
   async function loadCap() {
     if (cap) return;
     const [mod, json] = await Promise.all([import("./cap"), import("../../data/massppe/cap.json")]);
-    cap = mod.startCap($("cap-root"), json.default as unknown as CapData, { town: state.t });
+    cap = mod.startCap($("cap-root"), json.default as CapData, { town: state.t });
     cap.render();
   }
 
@@ -3639,6 +3580,7 @@ export async function startExplorer() {
       box.ontoggle = () => box.open && showVotes(t);
       return;
     }
+    // Each vote is a nine-field row (VoteRow), which JSON can only type as an array, so this cast can't be checked
     votesData ??= (await import("../../data/massppe/votes.json")).default as unknown as Record<string, VoteRow[]>;
     if (state.t !== t.id) return;
     const rows = votesData[t.id] ?? [];
