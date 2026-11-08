@@ -2173,13 +2173,14 @@ export async function startExplorer() {
       lines: [...shown, ...(hiddenLines[panel].has("cmp") ? [] : cmpShown)],
       max: Math.max(0, ...[...shown, ...cmpShown].flatMap((x) => x.values.map((v) => v ?? 0))) };
   }
-  /** The lines' legend entries: the trend, and the comparison with its trend's yearly figure. With Since 1990 on, a
-   * comparison with no figure in the window has no entry, unless keepEmpty (the town view's shares never had that rule) */
-  const lineLegend = (trend: Series | null, overlay: Series | null, fmt: (v: number) => string = usd, keepEmpty = false): LegendItem[] => [
+  /** The lines' legend entries: the trend, and the comparison with its trend's yearly figure; a comparison with no
+   * figure in the window has no entry, on every chart (#238) */
+  const lineLegend = (trend: Series | null, overlay: Series | null, fmt: (v: number) => string = usd): LegendItem[] => [
     ...(hasLine(trend) ? [{ label: trend.label, color: TREND_COLOR, mark: "dash" as const, line: "trend" as const,
       detail: trendDetail(trend.values, fmt) }] : []),
     // The comparison, with its own trend's yearly figure (its trend line draws with only the trends shown)
-    ...(overlay && (keepEmpty || state.hist !== "on" || hasLine(overlay)) ? [{ label: overlay.label, color: COMPARE_COLOR, mark: "linedot" as const, line: "cmp" as const,
+    // The comparison, wherever its line has a figure to draw: every chart, Since 1990 on or off (#238)
+    ...(hasLine(overlay) ? [{ label: overlay.label, color: COMPARE_COLOR, mark: "linedot" as const, line: "cmp" as const,
       detail: cmpDetail(overlay, fmt) }] : []),
   ];
   // The trend's value, and its step from the year before: the same in dollars each year, a shrinking share as it grows
@@ -2496,17 +2497,11 @@ export async function startExplorer() {
      * while the votes show alone. Their legend entries, after the trend's and the comparison's. */
     lines?: Series[];
     legend?: LegendItem[];
-    /** A selection's scale holds the lines' tops, never below zero (the town charts and special education), else
-     * the comparison's line as drawn (spending, revenue, the shares): the copies differed, and each keeps its own */
-    floor?: boolean;
     /** Shares that fill the whole (shareStack): a selection keeps its groups' capitals ("Hispanic or Latino"), a
      * chart of one group is that group picked, and the trend and the comparison draw only for a selection */
     share?: boolean;
     /** Years far apart (the Census releases): faint bands between the columns */
     sparse?: boolean;
-    /** The comparison's legend entry even where its line has no figure in the window (the town view's shares);
-     * lineLegend leaves it off with Since 1990 on */
-    keepEmpty?: boolean;
     /** The comparison table: its name before the selection's ("Spending per in-district FTE pupil"), its units after
      * the name (" (nominal dollars)"), and the unit its column heads give per */
     table?: { caption: string; rowLabel: string; units: string; per: string; kind?: "usd" | "count"; noCmpNote?: string };
@@ -2557,9 +2552,14 @@ export async function startExplorer() {
     let max = 0;
     years.forEach((_, i) => (max = Math.max(max, stackTop(s.series, i), cTotal?.[i] ?? 0, ...extras.map((x) => x.values[i] ?? 0),
       marks?.amount[i] ?? 0)));
-    const lineTops = s.floor
-      ? years.map((_, i) => Math.max(overlay?.values[i] ?? 0, ...extras.map((x) => x.values[i] ?? 0), marks?.amount[i] ?? 0))
-      : overlay?.values ?? null;
+    // A selection's scale holds every line drawn over its columns, as drawn: each year, the highest of the comparison's,
+    // the chart's other lines and the votes' amounts (#238: the copies held either the comparison alone or the rest,
+    // never below zero)
+    const drawnLines = [overlay?.values, ...extras.map((x) => x.values), marks?.amount].filter((v): v is Values => !!v);
+    const lineTops = drawnLines.length ? years.map((_, i) => {
+      const vs = drawnLines.map((v) => v[i]).filter((x): x is number => x != null);
+      return vs.length ? Math.max(...vs) : null;
+    }) : null;
     if (alone) sub.append(" Showing the votes alone, on a scale fitted to their amounts.");
     const end = s.end ?? last;
     const panel = stackedColumns($(`svg-${s.key}`) as unknown as SVGSVGElement,
@@ -2571,7 +2571,7 @@ export async function startExplorer() {
       alone ? [] : tv.trends, extras, marks);
     legend($(`legend-${s.key}`), [
       ...s.series.map((x) => ({ ...(single ? { spot: x.key } : { key: x.key }), label: x.label, color: x.color, mark: "rect" as const })),
-      ...lineLegend(trendAll, overlayAll, stepFmt, s.keepEmpty),
+      ...lineLegend(trendAll, overlayAll, stepFmt),
       ...(s.legend ?? []),
       ...(vm ? [{ label: "Prop 2½ votes passed", color: VOTE_COLOR, mark: "diamond" as const, line: "votes" as const,
         help: "Each vote that passed, at the fiscal year it takes effect; a stem rises to its amount where the state " +
@@ -2591,7 +2591,10 @@ export async function startExplorer() {
     const tip = (i: number): TipContent => {
       const passed = marks ? vm!.byYear[i] : [];
       if (alone && !passed.length) return { title: `FY${years[i]}`, rows: [{ value: "–", label: "No Prop 2½ vote passed for this year" }] };
-      if (s.missing && total[i] == null && !alone) return { title: `FY${years[i]}`, rows: [{ value: "–", label: s.missing }] };
+      // A year with no total says why, and still gives the comparison's figure where it has one (#238)
+      if (s.missing && total[i] == null && !alone) return { title: `FY${years[i]}`, rows: [{ value: "–", label: s.missing },
+        ...(overlay && overlay.values[i] != null
+          ? [{ value: fmt(overlay.values[i]!), label: overlay.label, color: COMPARE_COLOR, mark: "linedot" as const, role: "cmp" as const }] : [])] };
       const t0 = alone ? { title: `FY${years[i]}`, rows: [] as TipRow[] }
         : stackTip(i, shown, sel, shownTotal, total, overlay, trend, s.totalLabel, s.noun, fmt);
       // Parcels: each type's share of all of them beside its count
@@ -2619,7 +2622,7 @@ export async function startExplorer() {
    * table's shares, their base and the comparison's shares, and a year's rows for the hover card. Each chart makes its
    * own card around them: the Census releases sit years apart, the school years don't. */
   function shareStack(s: Pick<StackSpec, "key" | "name" | "series" | "cSeries" | "cmp" | "width" | "height" | "yTitle" | "sparse" |
-    "keepEmpty" | "end"> & { sub: string; help: string; full: string; base: { values: Values; label: string; fmt: (v: number) => string } }) {
+    "end"> & { sub: string; help: string; full: string; base: { values: Values; label: string; fmt: (v: number) => string } }) {
     const p = stackPanel({ ...s, share: true, noun: "groups", yShort: "Share", totalLabel: "", fmt: pctFmt, axis: (v) => `${v}%`,
       ticks: [0, 25, 50, 75, 100], sub: (fitted) => [s.sub + fitted + " ", helpTip(s.help)],
       full: { caption: s.full, cols: [
@@ -2945,13 +2948,13 @@ export async function startExplorer() {
     const earlyWindow = dayAll != null && hasLine(dayAll) && dayEnds[0] >= 0 && years[dayEnds[0]] < H!.functional_from;
     const p1 = stackPanel({
       key: "ppe", name: e.name, series: ppe, cSeries: cPpe, cmp: c, noun: "categories", width, height: tall,
-      yTitle: `Spending${pp}`, totalLabel: `Total${pp}`, ticks: dollarTicks,
+      yTitle: `Spending${pp}`, totalLabel: `Total${pp}`, ticks: dollarTicks, missing: "No figures from DESE",
       sub: (fitted) => [
         `${dollarsNote}${whole ? "" : " per in-district FTE pupil"}.${wholeNote}` +
-        (whole ? " Pupils are in-district FTE." : "") + fitted +
+        (whole ? " Pupils are in-district FTE." : "") +
         (earlyWindow ? ` ${years[last] >= H!.functional_from ? HIST_NOTE : HIST_NOTE.replace(/ In FY2005 and FY2006.*$/, "")}` : "") +
         (earlyWindow && whole ? " With Totals on, the dashed line is the day-program figure times DESE's average membership, FY1997 to FY2006." : "") +
-        (histOn && ppeSel && dayAll && hasLine(dayAll) ? " The older measure's line is a total, so it shows when every category does." : "")],
+        (histOn && ppeSel && dayAll && hasLine(dayAll) ? " The older measure's line is a total, so it shows when every category does." : "") + fitted],
       lines: [cDayShown, dayShown, ...(ppeSel ? [] : programs)].filter(hasLine),
       legend: [
         ...(dayAll && hasLine(dayAll) && !ppeSel ? [{ label: DAY_LABEL, color: DAY_COLOR, mark: "dash" as const, line: "day" as const,
@@ -2966,7 +2969,7 @@ export async function startExplorer() {
           ...programs.map((p) => ({ label: p.label, color: p.color, mark: "dash" as const, spot: `line:${p.key}` }))] : []),
       ],
       table: { caption: `Spending${whole ? "" : " per in-district FTE pupil"}`, rowLabel: "Category", units: ` (${dollarsNote.toLowerCase()})`, per: tableOpts.per },
-      full: { caption: `Spending${whole ? "" : " per in-district FTE pupil"} by category, ${e.name} (${dollarsNote.toLowerCase()})`, more: [
+      full: { caption: `Spending${whole ? "" : " per in-district FTE pupil"} by year, ${e.name} (${dollarsNote.toLowerCase()})`, more: [
         ...(dayAll && hasLine(dayAll) ? [{ label: `${DAY_LABEL} (day program)`, values: dayAll.values, fmt: usd }] : []),
         ...(cDayAll && hasLine(cDayAll) ? [{ label: cDayAll.label, values: cDayAll.values, fmt: usd }] : []),
       ] },
@@ -3275,7 +3278,7 @@ export async function startExplorer() {
     // An average's revenue covers only its regional districts, and its name says so
     const p = stackPanel({
       key: "rev", name: e.name, series: rev, cSeries: cRev, cmp: cRev ? { ...c!, name: revName(c!) } : null, noun: "sources",
-      width, height: tall, yTitle: `Revenue${pp}`, totalLabel: `Total revenue${pp}`, end, missing: "Not yet published by Census",
+      width, height: tall, yTitle: `Revenue${pp}`, totalLabel: `Total${pp}`, end, missing: "Not yet published by Census",
       sub: (fitted) => [
         (whole
           ? `${dollarsNote}, in total${e.kind === "district" ? "" : `, for the average of its ${e.rev_members} regional districts`}: ` +
@@ -3285,7 +3288,7 @@ export async function startExplorer() {
         (c && !cRev ? ` ${capital(refName(c))} has no revenue chart to compare.` : "") + fitted],
       table: { caption: `Revenue${whole ? "" : " per in-district FTE pupil"}`, rowLabel: "Source", units: ` (${dollarsNote.toLowerCase()})`,
         per: tableOpts.per, noCmpNote: c ? `${capital(refName(c))} has no revenue figures to shade this table against.` : undefined },
-      full: { caption: `Revenue${whole ? "" : " per in-district FTE pupil"} by source, ${e.name} (${dollarsNote.toLowerCase()})` },
+      full: { caption: `Revenue${whole ? "" : " per in-district FTE pupil"} by year, ${e.name} (${dollarsNote.toLowerCase()})` },
     });
     return { panel: p.panel, figure: $("fig-rev"), tip: p.tip };
   }
@@ -3321,12 +3324,13 @@ export async function startExplorer() {
     const shareAt = lastAt(share);
     const p = stackPanel({
       key: "sped", name: e.name, series: sped, cSeries: cSped, cmp: cSped ? c : null, noun: "categories", width, height: tall,
-      yTitle: `Special education${pp}`, yShort: "Per pupil", totalLabel: `Special education${pp}`, floor: true,
+      yTitle: `Special education${pp}`, yShort: "Per pupil", totalLabel: `Total${pp}`, missing: "No figures from DESE",
       sub: (fitted) => [
       (whole
         ? `${dollarsNote}, in total: each year's figure per FTE pupil times its pupils, in the district's schools and out.`
         : `${dollarsNote} per FTE pupil, in the district's schools and out.`) +
-      (shareAt >= 0 ? ` Special education was ${share[shareAt]!.toFixed(1)}% of ${e.kind === "district" ? `${e.name}'s spending` : "its districts' spending"} in FY${years[shareAt]}. ` : " "),
+      (shareAt >= 0 ? ` Special education was ${share[shareAt]!.toFixed(1)}% of ${e.kind === "district" ? `${e.name}'s spending` : "its districts' spending"} in FY${years[shareAt]}.` : "") +
+      (cbAll ? " The green line is what the state paid back for each year's costs." : "") + fitted + " ",
       helpTip(
         "DESE's direct special education spending: what each district reports spending on special education in its " +
         "own schools (teaching, other instructional services, and transportation), on " +
@@ -3335,9 +3339,7 @@ export async function startExplorer() {
         "is what grants and revolving funds paid, such as federal special education grants.\n\nPer pupil divides " +
         "by every FTE pupil the district is responsible " +
         "for, in its own schools and out, as DESE does for total spending per pupil, so it is the cost of special " +
-        "education spread over all pupils, not the cost per student with a disability."),
-      ...(cbAll ? [" The green line is what the state paid back for each year's costs."] : []),
-      ...(fitted ? [fitted] : [])],
+        "education spread over all pupils, not the cost per student with a disability.")],
       lines: cbLine ? [cbLine] : [],
       legend: cbAll && hasLine(cbAll) ? [{ label: "Paid back by the state (Circuit Breaker)", color: CB_COLOR, mark: "line" as const, line: "cb" as const,
         help: "The state's Circuit Breaker reimburses part of what a district spends on a student whose special " +
@@ -3350,7 +3352,7 @@ export async function startExplorer() {
           "point is what the state paid in FY2025 for FY2024's claim, and any extraordinary relief paid in FY2024." }] : [],
       table: { caption: `Special education spending${perAll}`, rowLabel: "Category", units: ` (${dollarsNote.toLowerCase()})`, per: tableOpts.per,
         noCmpNote: c && !cSped ? `${capital(refName(c))} has no special education figures to shade this table against.` : undefined },
-      full: { caption: `Special education spending${perAll} by category, and the Circuit Breaker, ${e.name} (${dollarsNote.toLowerCase()})`,
+      full: { caption: `Special education spending${perAll} by year, with the Circuit Breaker, ${e.name} (${dollarsNote.toLowerCase()})`,
         mid: [{ label: "Share of all spending", values: share, fmt: (v: number) => `${v.toFixed(1)}%` }],
         more: ecb && cbAll ? [
           { label: "Paid back by the state, for the year's costs", values: cbAll.values, fmt: usd },
@@ -3404,7 +3406,7 @@ export async function startExplorer() {
     const sraceTip = (i: number): TipContent => st.total[i] == null ? { title: `FY${years[i]}`, rows: [{ value: "–", label: "No enrollment reported" }] }
       // With only the trends shown, the groups picked together, and the comparison's (#225)
       : sr.only && sr.sel ? { title: `FY${years[i]}`, rows: [
-        { value: sr.shownTotal[i] == null ? "–" : pctFmt(sr.shownTotal[i]!), label: capital(sr.sel), strong: true },
+        ...(sr.shownTotal[i] == null ? [] : [{ value: pctFmt(sr.shownTotal[i]!), label: capital(sr.sel), strong: true }]),
         ...trendRow(sr.trend, i, pctFmt, points),
         ...(sr.overlay && sr.overlay.values[i] != null ? [{ value: pctFmt(sr.overlay.values[i]!), label: sr.overlay.label, color: COMPARE_COLOR, mark: "linedot" as const, role: "cmp" as const }] : []),
       ], note: `October 1, ${years[i] - 1}` } : { title: `FY${years[i]}`, rows: sr.rows(i), note: `October 1, ${years[i] - 1}` };
@@ -3639,7 +3641,7 @@ export async function startExplorer() {
     return stackPanel({
       key: s.key, name: s.name, series: s.series, cSeries: s.cSeries, cmp: s.cmp, noun: s.noun, width: s.width,
       height: s.width < 520 ? 260 : 320, yTitle: s.caption, yShort: s.yShort, totalLabel: s.totalLabel, end: s.end, fmt, axis: s.axis,
-      floor: true, partShares: s.shares, votes: vm, missing: s.missing ?? "Not filed with the state",
+      partShares: s.shares, votes: vm, missing: s.missing ?? "Not filed with the state",
       sub: (fitted) => [s.sub + fitted + (s.help ? " " : ""), ...(s.help ? [helpTip(s.help)] : [])],
       lines: extra ? [extra] : [],
       legend: s.extra && hasLine(s.extra.series)
@@ -4463,7 +4465,7 @@ export async function startExplorer() {
       const series = seriesOf(t)!;
       const p = shareStack({
         key, name: t.name, series, cSeries: c ? seriesOf(c) : null, cmp: c, width, height: width < 520 ? 240 : 280, yTitle: caption,
-        sparse: true, keepEmpty: true, end: lastAt(series[0].values), sub, help,
+        sparse: true, end: lastAt(series[0].values), sub, help,
         full: `${caption}, ${t.name}: the Census Bureau's five-year estimates, at the fiscal year after each`,
         base: { values: base.of(dm), label: base.label, fmt: count },
       });
