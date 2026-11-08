@@ -274,16 +274,22 @@ html.modal-open {
   display: none;
 }
 
-/* A control in the controls row. The cap tab's town menu is a .control too (cap.ts), so that the picker's rules below
-   reach it, but the page's scoped rules never did: :where(.controls) keeps it out here, at .control's own weight */
-.explorer :where(.controls) .control {
-  position: relative;
+/* A control: its label over its menu, switch or slider. The cap tab's town menu is one too (cap.ts, .cap-pick), which
+   repeated these while the page's scoped rules couldn't reach it (#237) */
+.explorer .control {
   display: flex;
   flex-direction: column;
   gap: 0.3rem;
   font-size: 0.82rem;
   font-weight: 500;
   color: var(--ink-soft);
+}
+
+/* In the controls row only: Go back hangs under its menu, and a fieldset drops its frame and shrinks with the row.
+   :where(.controls) leaves the cap tab's menu as it was, and keeps .control's weight, so .years-control's min-width,
+   later, still wins */
+.explorer :where(.controls) .control {
+  position: relative;
   border: 0;
   min-width: 0;
 }
@@ -4612,15 +4618,10 @@ html.modal-open {
   min-width: 3.5rem;
 }
 
+/* The town menu, a .control (its look is there): narrower than the tab, set off from the steps under it */
 .explorer .cap-pick {
-  display: flex;
-  flex-direction: column;
-  gap: 0.3rem;
   max-width: 24rem;
   margin-bottom: 0.8rem;
-  font-size: 0.82rem;
-  font-weight: 500;
-  color: var(--ink-soft);
 }
 
 .explorer .cap-steps-table {
