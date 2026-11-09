@@ -14,6 +14,8 @@ export interface WorkStep { value: string; label: string; detail?: string; kind:
 export interface Work {
   steps: WorkStep[];
   assumptions?: string[];
+  /** The heading over the assumptions: what a model assumes, or what a measure counts */
+  notesHead?: string;
   /** How far it's been checked, in a sentence, and the record that says so */
   status: string;
   record?: string;
@@ -45,7 +47,7 @@ export function showWork(work: Work, summary = "Show the work"): HTMLDetailsElem
   scroll.append(table);
   box.append(scroll);
   if (work.assumptions?.length) {
-    box.append(el("p", "show-work-head", "What the model assumes"));
+    box.append(el("p", "show-work-head", work.notesHead ?? "What the model assumes"));
     const ul = el("ul");
     for (const a of work.assumptions) ul.append(el("li", undefined, a));
     box.append(ul);

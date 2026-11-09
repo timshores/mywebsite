@@ -312,8 +312,8 @@ let workOpen = false;
 const onDate = (iso: string) => new Date(`${iso}T12:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 
 /** The evidence record's last result for a year (schools ppe_report/evidence/cap.py), if it has one */
-const evidenceFor = (fy: number) => (evidence.cap.years as Record<string, { links: number; passed: number; outside: boolean;
-  outside_required: boolean; fifths: boolean; reviewed: string | null }>)[String(fy)];
+const evidenceFor = (fy: number) => ((evidence as { cap?: { years: Record<string, { links: number; passed: number; outside: boolean;
+  outside_required: boolean; fifths: boolean; reviewed: string | null }> } }).cap?.years ?? {})[String(fy)];
 const reviewedText = (ev: { reviewed: string | null }) =>
   `An AI wrote the checks; ${ev.reviewed ? `${ev.reviewed} reviewed them` : "no person has reviewed them yet"}.`;
 /** Whether a reader has the income table's work open, kept across redraws */
@@ -344,7 +344,7 @@ function fifthsWork({ y, t, change, scenName, fifthOf }: Ctx): Work {
     : `Checked ${onDate(evidence.cap.checked)}: ` + (ev.fifths ? "the record reproduces every town's population from the " +
       "Census Bureau's file and puts every town in the same fifth as this table" : "the record's check of the fifths fails") +
       `; each town's change comes from the same model as the result above. ${reviewedText(ev)}`;
-  return { steps, status, record: evidence.cap.record,
+  return { steps, status, record: ev ? evidence.cap.record : undefined,
     sources: [{ text: `DESE's FY${y.fy} formula spreadsheet`, href: y.source },
       { text: "the Census Bureau's population estimates", href: "https://www.census.gov/programs-surveys/popest.html" }] };
 }
@@ -381,7 +381,7 @@ function capWork({ y, t, f, alt, scenario, scenName }: Ctx, reqAlt: number | nul
       "The cap changes this year only; every other rule stays as DESE applied it, including the one that a required " +
         "contribution can't exceed 90% of the foundation budget. Michael Naughton's workbook leaves that rule out, so " +
         "its required contributions for the wealthiest towns run higher."],
-    status, record: evidence.cap.record,
+    status, record: ev ? evidence.cap.record : undefined,
     sources: [{ text: `DESE's FY${y.fy} formula spreadsheet`, href: y.source }],
   };
 }

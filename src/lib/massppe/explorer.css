@@ -3096,6 +3096,11 @@ html.modal-open {
   border-collapse: collapse;
 }
 
+/* Its words wrap, where a chart panel's data tables don't (:where(.panel ...) .table-scroll table) */
+.explorer .show-work .show-work-steps {
+  white-space: normal;
+}
+
 .explorer .show-work-steps th,
 .explorer .show-work-steps td {
   padding: 0.35rem 0.6rem;

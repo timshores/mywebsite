@@ -12,6 +12,8 @@ import { capital, lower, svgEl, text } from "./dom";
 import { cagr, linearFit } from "./stats";
 import { andList, change, compact, measured as fte, pct, points, signFor, total as amount, usd } from "./format";
 import { closeEnlarged, enlargeButton } from "./enlarge";
+import { showWork } from "./showWork";
+import evidence from "../../data/massppe/evidence.json";
 import type { CapData } from "./cap";
 import type { CwData } from "./commonwealth";
 import type { MapData, MapSeries } from "./map";
@@ -145,6 +147,8 @@ interface Town {
   eqv_total?: Values;
   sf_bill?: Values;
   sf_bill_income?: Values;
+  /** DLS's income per capita, the tax bill share's denominator (#246) */
+  income_pc?: Values;
   /** The tax rate on single-family homes, per $1,000 of value */
   sf_rate?: Values;
   /** Prop 2 1/2: the levy raised and the capacity left under the limit, per resident; and in all */
@@ -752,6 +756,8 @@ const legends = new Set<HTMLElement>();
 /** Refit every legend drawn: when the web fonts arrive, and when Detail changes what an entry needs */
 const refitLegends = () => legends.forEach(fitLegend);
 // Made with the first legend, so the module loads where there's no ResizeObserver (Node)
+/** Whether a reader has the tax bill chart's work open, kept across redraws (#246) */
+let billWorkOpen = false;
 let legendFit: ResizeObserver | null = null;
 const refitResized = (entries: ResizeObserverEntry[]) => {
   for (const e of entries) {
@@ -4288,6 +4294,39 @@ export async function startExplorer() {
       (rate != null && t.sf_bill?.[bIdx] != null ? ` In FY${years[bIdx]}, ${t.kind === "town" ? `${t.name}'s` : "the"} bill ` +
         `was ${usd(t.sf_bill[bIdx]!)} at $${rate.toFixed(2)} per $1,000 of value` +
         (t.sf_bill_income?.[bIdx] != null ? `, ${pct(t.sf_bill_income[bIdx]!)} of income per capita.` : ".") : "");
+    // The share's work, for a town (#246): DLS's bill and income per capita, and the share DLS publishes too
+    const share = t.kind === "town" ? t.sf_bill_income?.[bIdx] : null;
+    // The record's summary, if it has one: a missing entry says "not checked", never breaks the page
+    const ev = (evidence as { bill_income?: { checked: string; record: string; links: number; passed: number;
+      town_years: number; reviewed: string | null } }).bill_income;
+    $("tbill-work").replaceChildren(...(share != null && rate != null && t.sf_bill?.[bIdx] != null && t.income_pc?.[bIdx] != null ? [(() => {
+      const work = showWork({
+        steps: [
+          { value: `$${rate.toFixed(2)}`, label: "Residential tax rate", detail: `Per $1,000 of assessed value, FY${years[bIdx]}`,
+            kind: "reported", source: "DLS" },
+          { value: usd(t.sf_bill[bIdx]!), label: "Average single-family tax bill",
+            detail: "The town's single-family assessed value over its single-family homes, times that rate", kind: "reported", source: "DLS" },
+          { value: usd(t.income_pc[bIdx]!), label: "Income per capita",
+            detail: "Residents' income on state tax returns over the Census Bureau's population, students included", kind: "reported", source: "DLS" },
+          { value: pct(share), label: "The bill as a share of income per capita",
+            detail: "The bill over income per capita. DLS publishes the same percentage in its report", kind: "computed" },
+        ],
+        notesHead: "What it measures",
+        assumptions: ["One home's bill set against one resident's share of the town's income. A town with large " +
+          "households, or with many residents who report little income, runs high on it."],
+        status: !ev ? "Not checked yet."
+          : `Checked ${new Date(`${ev.checked}T12:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}: ` +
+            `${ev.passed} of ${ev.links} links from DLS's report to this chart pass. DLS's own percentage matches its bill ` +
+            `over its income per capita in all ${ev.town_years.toLocaleString("en-US")} town-years. An AI wrote the checks; ` +
+            (ev.reviewed ? `${ev.reviewed} reviewed them.` : "no person has reviewed them yet."),
+        record: ev?.record,
+        sources: [{ text: "DLS's average single-family tax bill report",
+          href: "https://dls-gw.dor.state.ma.us/reports/rdPage.aspx?rdReport=AverageSingleTaxBill.SingleFamTaxBill_wRange" }],
+      });
+      work.open = billWorkOpen;
+      work.addEventListener("toggle", () => (billWorkOpen = work.open));
+      return work;
+    })()] : []));
     fullTables.tbill = { caption: `Average single-family tax bill, ${t.name} (${lower(dollarsNote)})`, cols: [
       { label: "Bill", values: deflate(t.sf_bill!), fmt: usd },
       { label: "Rate per $1,000", values: t.sf_rate ?? [], fmt: (v) => `$${v.toFixed(2)}` },
