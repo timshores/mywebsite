@@ -265,6 +265,14 @@ const asFirst = (c: Chart) => (c.svg + KEYS)
       })();
     </script>
 
+    <!-- Extra detail on or off: off leaves the controls, tiles, charts and legends. Above the tabs, which need the
+         bar's full width (#250) -->
+    <button type="button" class="detail-dial" id="detail-dial" role="switch" aria-checked="true">
+      <span class="dial-label">Detail</span>
+      <span class="dial-face" aria-hidden="true"><span class="dial-pointer"></span></span>
+      <span class="dial-state" aria-hidden="true">On</span>
+    </button>
+
     <div class="view-tabs">
       <div class="view-tablist" role="tablist" aria-label="Explorer view">
       <button type="button" role="tab" id="tab-districts" data-view="districts" aria-controls="view-panel" aria-selected="true">School districts</button>
@@ -274,12 +282,6 @@ const asFirst = (c: Chart) => (c.svg + KEYS)
       <button type="button" role="tab" id="tab-housing" data-view="housing" aria-controls="view-panel" aria-selected="false" tabindex="-1">Housing and enroll&shy;ment</button>
       <button type="button" role="tab" id="tab-data" data-view="data" aria-controls="view-panel" aria-selected="false" tabindex="-1">Data</button>
       </div>
-      <!-- Extra detail on or off: off leaves the controls, tiles, charts and legends -->
-      <button type="button" class="detail-dial" id="detail-dial" role="switch" aria-checked="true">
-        <span class="dial-label">Detail</span>
-        <span class="dial-face" aria-hidden="true"><span class="dial-pointer"></span></span>
-        <span class="dial-state" aria-hidden="true">On</span>
-      </button>
     </div>
 
     <div id="view-panel" role="tabpanel" aria-labelledby="tab-districts">
@@ -534,23 +536,17 @@ const asFirst = (c: Chart) => (c.svg + KEYS)
       <summary>About this tab</summary>
       <p class="hs-lede">
         When a town weighs new housing, someone usually cites cost of community services studies: homes cost a town
-        more in services than they pay in taxes, so new homes are a loss. I heard it during Leverett's comprehensive
-        planning, from 2021 to 2024, and I'm hearing it again as Amherst considers
-        <a href="https://www.amherstindy.org/2026/11/05/one-year-moratorium-proposed-for-rezoning-hampshire-college/">a moratorium on rezoning the Hampshire College campus</a>.
-      </p>
-      <p class="hs-lede">
-        Much of that argument rests on the idea that new homes bring new students. The Metropolitan Area Planning
-        Council tested it across the state.
+        more in services than they pay in taxes, so new homes are a loss. Much of that argument rests on the idea that
+        new homes bring new students. The Metropolitan Area Planning Council tested it across the state.
         <a href="https://www.mapc.org/learn/research-analysis/enrollment-2017/">Its 2017 brief</a> compared the homes
         towns permitted from 2010 to 2016 with their districts' enrollment, and
         <a href="https://www.mapc.org/learn/research-analysis/enrollment/">its 2024 update</a> compared the 2010 and
         2020 censuses' housing counts with enrollment over the same decade. Neither found a meaningful link.
       </p>
       <p class="hs-lede">
-        I like this work, and I'm curious about it. Rebuilt from the Census Bureau's and DESE's own counts, MAPC's 2024
-        comparison comes out as MAPC reported it. This tab shows that rebuild, the towns' new growth beside it, MAPC's
-        2017 data with single-family and multifamily permits apart, and the cost of community services studies
-        themselves.
+        Rebuilt from the Census Bureau's and DESE's own counts, MAPC's 2024 comparison comes out as MAPC reported it.
+        This tab shows that rebuild, the towns' new growth beside it, MAPC's 2017 data with single-family and
+        multifamily permits apart, and the cost of community services studies themselves.
       </p>
       </details>
       <script is:inline>
@@ -637,6 +633,12 @@ const asFirst = (c: Chart) => (c.svg + KEYS)
 
     <section class="notes" data-view-only="data" hidden>
       <h2>About the data</h2>
+      <!-- Who built it, and where the rest is: above the notes, not buried at their foot (#250) -->
+      <p class="notes-credit">
+        Built by Tim Shores with Claude Code. All the data, and the code that prepares it, are at
+        <a href="https://github.com/timshores/schools">github.com/timshores/schools</a>; the code that presents it is
+        at <a href="https://github.com/timshores/mywebsite">github.com/timshores/mywebsite</a>.
+      </p>
       <!-- Its contents, held beside the notes as the page scrolls, or in a bar under the tabs on a narrow
            screen; notes.ts lists the notes' bold leads and headings in it -->
       <div class="notes-layout">
@@ -1065,8 +1067,7 @@ const asFirst = (c: Chart) => (c.svg + KEYS)
       <p>
         The CSV links in the paragraphs above are this explorer's own files: the data for these districts and towns
         as each agency published it, except that the revenue file adds Census items up into the chart's sources, and
-        every row links to its source. Built by Tim Shores with Claude Code. The code that prepares the data is at
-        <a href="https://github.com/timshores/schools">github.com/timshores/schools</a>.
+        every row links to its source.
       </p>
       </div>
       </div>

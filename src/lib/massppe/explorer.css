@@ -884,13 +884,13 @@ html.modal-open {
   z-index: 30;
   display: flex;
   gap: 0.25rem;
-  margin-top: 1.4rem;
+  margin-top: 0.2rem;
   padding-top: 0.35rem;
   background: var(--paper);
   border-bottom: 1px solid var(--line);
 }
 
-/* On a narrow screen the tabs scroll sideways inside the bar, and the dial stays in view */
+/* Should the tabs ever outgrow the bar, they scroll sideways inside it */
 .explorer .view-tablist {
   display: flex;
   gap: 0.25rem;
@@ -923,6 +923,12 @@ html.modal-open {
   border: 0;
   padding: 0.25rem 0.35rem;
   cursor: pointer;
+}
+
+/* The page's own, at the right above the tabs, which need the bar's full width (#250) */
+.explorer #detail-dial {
+  width: fit-content;
+  margin: 1rem 0 0 auto;
 }
 
 .explorer .detail-dial:hover {
@@ -999,13 +1005,13 @@ html.modal-open {
 
 .explorer .view-tabs [role="tab"] {
   font: inherit;
-  font-size: 1rem;
+  font-size: 0.95rem;
   font-weight: 600;
   color: var(--ink-soft);
   background: none;
   border: 0;
   border-radius: 8px 8px 0 0;
-  padding: 0.55rem 1rem;
+  padding: 0.55rem 0.7rem;
   margin-bottom: -1px;
   cursor: pointer;
 }
@@ -1030,7 +1036,7 @@ html.modal-open {
 }
 
 /* Where the tabs would run past the bar's edge, they become a grid of buttons, all in sight,
-   with the dial in the grid's sixth cell. The grid is too tall to keep pinned on a phone, so it
+   three across and two down. The grid is too tall to keep pinned on a phone, so it
    scrolls away with the page; the docked controls pin to the top in its place (explorer.ts). */
 @media (max-width: 860px) {
   .explorer .view-tabs {
@@ -1067,29 +1073,6 @@ html.modal-open {
 
   .explorer .view-tabs [role="tab"]:focus-visible {
     outline-offset: 2px;
-  }
-
-  /* One column wide and one row high, bottom right; the bar is its containing block */
-  .explorer .view-tabs .detail-dial {
-    position: absolute;
-    right: 0;
-    bottom: 0.45rem;
-    width: calc((100% - 0.7rem) / 3);
-    height: calc((100% - 0.9rem - 0.35rem) / 2);
-    justify-content: center;
-    gap: 0.3rem;
-    padding: 0;
-  }
-
-  .explorer .view-tabs .dial-face {
-    flex: none;
-  }
-}
-
-/* Too narrow for the word beside the knob; the knob's turn still shows on or off */
-@media (max-width: 380px) {
-  .explorer .view-tabs .dial-state {
-    display: none;
   }
 }
 
@@ -2214,6 +2197,12 @@ html.modal-open {
 /* The notes have the Data tab to themselves, so no rule above them */
 .explorer .notes {
   margin-top: 1rem;
+}
+
+/* Who built it, and where the data and code are, before the notes begin (#250) */
+.explorer .notes .notes-credit {
+  margin: 0 0 1.4rem;
+  font-size: 0.95rem;
 }
 
 /* About the data: its contents in a column beside the notes, held under the tabs as the page scrolls, the
