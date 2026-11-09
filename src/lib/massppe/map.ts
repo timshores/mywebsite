@@ -74,6 +74,8 @@ interface Measure {
   /** How many went each way, of n towns or districts (what): up, down, and the rest, unchanged, which had been counted
    * as down (#242) */
   split?: (up: number, down: number, n: number, what: string) => string;
+  /** What the measure shows when set beside others, after the map's own sentences: an exploratory finding (#248) */
+  finding?: string;
   /** After a level's median: its unit, if the number needs one (" residents per square mile") */
   unit?: string;
   /** Growth in dollars, which the Dollars switch shows before or after inflation */
@@ -149,6 +151,13 @@ const TOWN_MEASURES: Measure[] = [
     about: (m, real, y) => `The share of each town's taxable property value in FY${y.to} that is residential: single-family ` +
       "homes, condominiums, multifamily buildings of two or more units, and other residential property, vacant lots " +
       "included. The rest is mixed use, commercial, industrial, farmland, forest and open space, and personal property.",
+    // An exploratory finding Tim asked for (#247, #248); schools ppe_report/evidence/res_overrides.py recomputes it
+    finding: "Towns whose property is mostly homes have passed more Proposition 2½ overrides. Of the quarter of towns with the " +
+      "highest residential share in FY2025, 78 of 88 passed at least one from FY2005 on, against 28 of 88 in the lowest " +
+      "quarter. The link holds with income, property value per resident, population and density held steady. " +
+      "Commercial and industrial building raises a town's levy limit each year without a vote, which the Division of " +
+      "Local Services counts as new growth. Towns of mostly homes get little of it, and that accounts for about half " +
+      "of the link. It is a pattern across towns, not a cause shown.",
   },
   {
     key: "pop", label: "Population change", kind: "change", fmt: change, short: change, subject: "population", years: "range",
@@ -1042,6 +1051,7 @@ export function startMap(root: HTMLElement, data: MapData, opts: {
     if (bySeries && measure.years === "year" && ys.length > 1) {
       about.append(` Each color covers the same range in every year, FY${ys[0]} to FY${ys[ys.length - 1]}.`);
     }
+    if (measure.finding) about.append(` ${measure.finding}`);
     if (!onTowns && !at.grouping) about.append(gradeNote(measure));
     if (at.grouping) about.append(groupNote(at.grouping, onTowns));
   }
