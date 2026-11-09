@@ -3031,13 +3031,15 @@ html.modal-open {
 }
 
 /* The 82.5% cap tab */
-.explorer .cap-title {
+.explorer .cap-title,
+.explorer .hs-title {
   font-size: 1.6rem;
   margin: 0.4rem 0 0.6rem;
 }
 
 .explorer .cap-lede,
-.explorer .cap-method {
+.explorer .cap-method,
+.explorer .hs-lede {
   line-height: 1.6;
 }
 

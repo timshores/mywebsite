@@ -197,7 +197,7 @@ async function overflow() {
     const page = await browser.newPage({ viewport: { width, height: 812 } });
     const errors = errorsOf(page);
     const row = [];
-    for (const v of ["districts", "towns", "commonwealth", "cap", "data"]) {
+    for (const v of ["districts", "towns", "commonwealth", "cap", "housing", "data"]) {
       await page.goto(`${base}?view=${v}`, { waitUntil: "networkidle" });
       await settle(page);
       const over = await page.evaluate(() => document.documentElement.scrollWidth - innerWidth);

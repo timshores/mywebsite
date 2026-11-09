@@ -76,6 +76,8 @@ interface Measure {
   split?: (up: number, down: number, n: number, what: string) => string;
   /** What the measure shows when set beside others, after the map's own sentences: an exploratory finding (#248) */
   finding?: string;
+  /** A paragraph of its own after those: how the measure enters a formula, such as Chapter 70's (#249) */
+  detail?: string;
   /** After a level's median: its unit, if the number needs one (" residents per square mile") */
   unit?: string;
   /** Growth in dollars, which the Dollars switch shows before or after inflation */
@@ -182,6 +184,22 @@ const TOWN_MEASURES: Measure[] = [
     notes: ["income-fifths"],
     about: (m) => `Each town's residents' income for the Chapter 70 formula, from ${m.fifths.year} state tax returns, ` +
       `divided by its population in July ${m.fifths.year}. The five colors are the income fifths, 70 or 71 towns each.`,
+  },
+  {
+    // DLS's own percentage (#249): new growth applied to the levy limit over the prior year's limit
+    key: "new_growth", label: "New growth", kind: "level", fmt: share, short: share, years: "year", tail: 0.95,
+    notes: ["new-growth", "the-property-tax-levy"],
+    about: (m, real, y) => `Each town's new growth in FY${y.to}, as the Division of Local Services certifies it: the tax on ` +
+      "new construction and other new taxable value, which Proposition 2½ adds to the town's levy limit on top of the " +
+      "yearly 2.5%, as a share of the year before's limit.",
+    // M.G.L. c. 70, § 2 (the municipal revenue growth factor) and DESE's FY2027 summary, Appendix A (Tim, #249)
+    detail: "New growth enters Chapter 70 in two places. Each year DESE starts a town's required local contribution from " +
+      "the year before's and raises it by the town's municipal revenue growth factor, which the Department of Revenue " +
+      "figures from the growth in the town's local revenue. State law counts the levy limit's 2.5% and the town's average new growth over the last three years, with " +
+      "unrestricted state aid and other recurring receipts. So more new growth makes the requirement rise faster, until " +
+      "it passes the town's target and the formula brings it back down to the target. New buildings also add to the " +
+      "town's equalized valuation, the state's estimate of all its taxable property, which sets the property part of " +
+      "the town's target.",
   },
   {
     key: "levy_room", label: "Excess levy capacity", kind: "level", fmt: share, short: share, years: "year",
@@ -374,7 +392,7 @@ const shortGroup = (n: string) => groupName(n).replace(/ (enrollment|peer) group
 const GROUPS: Record<Layer, [string, string[]][]> = {
   towns: [
     ["Place and people", ["ct", "density", "pop", "income", "unemp", "older", "poc", "disability"]],
-    ["Town finances", ["spend", "edu", "eqv", "res_share", "levy_room", "override", "overrides", "reserves", "debt_service", "debt_pc", "bill_income"]],
+    ["Town finances", ["spend", "edu", "eqv", "res_share", "new_growth", "levy_room", "override", "overrides", "reserves", "debt_service", "debt_pc", "bill_income"]],
     ["Schools", ["cap_hh"]],
   ],
   districts: [
@@ -703,12 +721,14 @@ export function startMap(root: HTMLElement, data: MapData, opts: {
   // The measure's name heads a fold holding what it means; closed, it stays closed in this browser if
   // choices are remembered (the explorer's fold memory, mass-school-spending:map-about)
   const about = el("p", "map-about");
+  // A measure's paragraph on how it enters a formula, when it has one
+  const aboutDetail = el("p", "map-about map-about-detail");
   const fold = el("details", "map-about-fold");
   fold.dataset.remember = "map-about";
   const measureTitle = el("h4", "map-measure-title");
   const foldHead = el("summary");
   foldHead.append(measureTitle);
-  fold.append(foldHead, about);
+  fold.append(foldHead, about, aboutDetail);
   let closed = false;
   try {
     closed = localStorage.getItem("mass-school-spending:remember") === "yes" &&
@@ -1052,6 +1072,8 @@ export function startMap(root: HTMLElement, data: MapData, opts: {
       about.append(` Each color covers the same range in every year, FY${ys[0]} to FY${ys[ys.length - 1]}.`);
     }
     if (measure.finding) about.append(` ${measure.finding}`);
+    aboutDetail.textContent = measure.detail ?? "";
+    aboutDetail.hidden = !measure.detail;
     if (!onTowns && !at.grouping) about.append(gradeNote(measure));
     if (at.grouping) about.append(groupNote(at.grouping, onTowns));
   }

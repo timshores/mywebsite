@@ -97,6 +97,16 @@ const SOURCE_FILES: { group: string; files: { file: string; holds: string; sourc
     { file: "town_boundaries.json", holds: "Town outlines for the map, and each town's land area",
       source: "Census Bureau, 2023 cartographic boundary file", url: "https://www2.census.gov/geo/tiger/GENZ2023/shp/cb_2023_25_cousub_500k.zip", retrieved: "Oct 22, 2026" },
   ] },
+  { group: "Housing and enrollment", files: [
+    { file: "census_town_housing.csv", holds: "Every city and town's housing units and occupied units, April 1, 2010 and 2020",
+      source: "Census Bureau, decennial census redistricting data (P.L. 94-171), table H1", url: "https://www.census.gov/programs-surveys/decennial-census/about/rdo/summary-files.html", retrieved: "Nov 9, 2026" },
+    { file: "mapc_community_types.csv", holds: "Every city and town's MAPC community type and subtype (MAPC's 2008 classification)",
+      source: "Metropolitan Area Planning Council, municipal data keys", url: "https://github.com/MAPC/mapcdatakeys", retrieved: "Nov 9, 2026" },
+    { file: "mapc_enrollment_2017.csv", holds: "Each municipal district's housing permits, 2010 to 2016, and enrollment, 2010/11 and 2016/17, as MAPC published them",
+      source: "Metropolitan Area Planning Council, The Waning Influence of Housing Production on Public School Enrollment (2017), data file", url: "https://www.mapc.org/learn/research-analysis/enrollment-2017/", retrieved: "Nov 9, 2026" },
+    { file: "aft_cocs_studies.csv", holds: "Every study in American Farmland Trust's summary of cost of community services studies, with its three ratios",
+      source: "American Farmland Trust, Cost of Community Services Studies (October 2025)", url: "https://farmlandinfo.org/?p=19267", retrieved: "Nov 9, 2026" },
+  ] },
   { group: "Prices", files: [
     { file: "inflation_indices.csv", holds: "Fiscal-year averages of the Northeast consumer price index",
       source: "Bureau of Labor Statistics, CPI-U Northeast", url: "https://data.bls.gov/timeseries/CUUR0100SA0", retrieved: "Oct 18, 2026" },
@@ -261,6 +271,7 @@ const asFirst = (c: Chart) => (c.svg + KEYS)
       <button type="button" role="tab" id="tab-towns" data-view="towns" aria-controls="view-panel" aria-selected="false" tabindex="-1">Towns</button>
       <button type="button" role="tab" id="tab-commonwealth" data-view="commonwealth" aria-controls="view-panel" aria-selected="false" tabindex="-1">Common&shy;wealth</button>
       <button type="button" role="tab" id="tab-cap" data-view="cap" aria-controls="view-panel" aria-selected="false" tabindex="-1">The 82.5% cap</button>
+      <button type="button" role="tab" id="tab-housing" data-view="housing" aria-controls="view-panel" aria-selected="false" tabindex="-1">Housing and enroll&shy;ment</button>
       <button type="button" role="tab" id="tab-data" data-view="data" aria-controls="view-panel" aria-selected="false" tabindex="-1">Data</button>
       </div>
       <!-- Extra detail on or off: off leaves the controls, tiles, charts and legends -->
@@ -515,6 +526,47 @@ const asFirst = (c: Chart) => (c.svg + KEYS)
         Per-resident figures use the Census Bureau's July 2024 population
         estimates; income per capita divides the formula's income by the estimate for July of that year.
       </p>
+    </section>
+
+    <section id="housing-view" class="housing-view" data-view-only="housing" hidden>
+      <h2 class="hs-title">Housing and enrollment</h2>
+      <details class="intro" id="housing-intro" data-remember="housing-intro">
+      <summary>About this tab</summary>
+      <p class="hs-lede">
+        When a town weighs new housing, someone usually cites cost of community services studies: homes cost a town
+        more in services than they pay in taxes, so new homes are a loss. I heard it during Leverett's comprehensive
+        planning, from 2021 to 2024, and I'm hearing it again as Amherst considers
+        <a href="https://www.amherstindy.org/2026/11/05/one-year-moratorium-proposed-for-rezoning-hampshire-college/">a moratorium on rezoning the Hampshire College campus</a>.
+      </p>
+      <p class="hs-lede">
+        Much of that argument rests on the idea that new homes bring new students. The Metropolitan Area Planning
+        Council tested it across the state.
+        <a href="https://www.mapc.org/learn/research-analysis/enrollment-2017/">Its 2017 brief</a> compared the homes
+        towns permitted from 2010 to 2016 with their districts' enrollment, and
+        <a href="https://www.mapc.org/learn/research-analysis/enrollment/">its 2024 update</a> compared the 2010 and
+        2020 censuses' housing counts with enrollment over the same decade. Neither found a meaningful link.
+      </p>
+      <p class="hs-lede">
+        I like this work, and I'm curious about it. Rebuilt from the Census Bureau's and DESE's own counts, MAPC's 2024
+        comparison comes out as MAPC reported it. This tab shows that rebuild, the towns' new growth beside it, MAPC's
+        2017 data with single-family and multifamily permits apart, and the cost of community services studies
+        themselves.
+      </p>
+      </details>
+      <script is:inline>
+        // Open unless this browser remembers it closed; decided here, before the page paints, so it
+        // never flashes. The section is the element just before this script (explorer.ts remembers changes).
+        (function () {
+          var d = document.currentScript.previousElementSibling;
+          var closed = false;
+          try {
+            closed = localStorage.getItem("mass-school-spending:remember") === "yes" &&
+              localStorage.getItem("mass-school-spending:" + d.dataset.remember) === "closed";
+          } catch (e) {}
+          if (!closed) d.open = true;
+        })();
+      </script>
+      <div id="housing-root"><p class="tab-loading">Loading the housing and enrollment figures…</p></div>
     </section>
 
     {PANELS.map((p, i) => (
@@ -861,6 +913,13 @@ const asFirst = (c: Chart) => (c.svg + KEYS)
         raise.
       </p>
       <p class="notes-sub">
+        <strong>New growth</strong> is the tax on new construction and other new taxable value, at the year before's tax
+        rate, that Proposition 2½ adds to a town's levy limit each year without a vote. The
+        <a href="https://dls-gw.dor.state.ma.us/reports/rdPage.aspx?rdReport=NewGrowth.NewGrowth_dash_v2_test">Division of Local Services</a>
+        certifies it, and the map shows DLS's own figure, new growth over the year before's limit. Chapter 70 counts
+        it in two places, which the Housing and enrollment tab spells out.
+      </p>
+      <p class="notes-sub">
         <strong>Proposition 2½ votes</strong>, listed under the levy chart, come from DLS's records of override,
         underride, debt exclusion, capital exclusion, and stabilization fund votes
         (<a href="/muni-spending/data/towns-prop25-votes.csv" download>CSV</a>), with the result and, where DLS has
@@ -947,6 +1006,19 @@ const asFirst = (c: Chart) => (c.svg + KEYS)
         miscellaneous revenue and revenue from other governments; transfers and other financing are transfers and
         other financing sources. Figures are as each town filed them, and a few look like one-time entries: Lee's
         FY2024 revenue includes $27.3 million of miscellaneous revenue, more than half its total.
+      </p>
+      <p>
+        <strong>Housing and enrollment.</strong> The tab of that name sets each town's housing units in the
+        <a href="https://www.census.gov/programs-surveys/decennial-census/about/rdo/summary-files.html">2010 and 2020 censuses</a>
+        beside its own school district's enrollment, as the Metropolitan Area Planning Council's
+        <a href="https://www.mapc.org/learn/research-analysis/enrollment/">2024 update</a> did, with each town's
+        community type from <a href="https://github.com/MAPC/mapcdatakeys">MAPC's data keys</a>. It also charts the data
+        MAPC published with its <a href="https://www.mapc.org/learn/research-analysis/enrollment-2017/">2017 brief</a>,
+        and American Farmland Trust's
+        <a href="https://farmlandinfo.org/?p=19267">summary of cost of community services studies</a>, read from the
+        table in its October 2025 fact sheet. The
+        <a href="https://github.com/timshores/schools/blob/main/ppe_report/evidence/housing_enrollment.md">evidence record</a>
+        checks the tab's figures against MAPC's, AFT's and DESE's published ones.
       </p>
       <p>
         <strong>FY<span data-latest>2025</span> dollars</strong> adjust for inflation with the Bureau of Labor

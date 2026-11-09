@@ -16,6 +16,7 @@ import { showWork } from "./showWork";
 import evidence from "../../data/massppe/evidence.json";
 import type { CapData } from "./cap";
 import type { CwData } from "./commonwealth";
+import type { HousingData } from "./housing";
 import type { MapData, MapSeries } from "./map";
 import { notesContents, plainClick, type NoteUse } from "./notes";
 import { groupedPicker, type Picker } from "./picker";
@@ -217,8 +218,8 @@ const DPERS: DPer[] = ["pupil", "total"];
 /** The Years slider keeps at least three years in view, enough for a trend */
 const MIN_SPAN = 2;
 const PER_WORD: Record<Per, string> = { resident: "resident", household: "household", parcel: "taxable property", total: "town" };
-type View = "districts" | "towns" | "commonwealth" | "cap" | "data";
-const VIEWS: View[] = ["districts", "towns", "commonwealth", "cap", "data"];
+type View = "districts" | "towns" | "commonwealth" | "cap" | "housing" | "data";
+const VIEWS: View[] = ["districts", "towns", "commonwealth", "cap", "housing", "data"];
 /** The explorer's state: what the controls pick, which its address and the saved choices hold (PARAMS) */
 interface State { view: View; d: string; cmp: Compare; vs: string | null; dper: DPer; hist: "on" | "off"; t: string; tcmp: TownCompare;
   tvs: string | null; per: Per; usd: Dollars; detail: "on" | "off"; from: number; to: number }
@@ -1883,6 +1884,8 @@ export async function startExplorer() {
         await loadCommonwealth();
       } else if (state.view === "cap") {
         await loadCap();
+      } else if (state.view === "housing") {
+        await loadHousing();
       } else {
         if (!towns) {
           $("entity-name").textContent = "Loading towns…";
@@ -1938,6 +1941,7 @@ export async function startExplorer() {
     commonwealth: () => void Promise.all([import("./commonwealth"), import("../../data/massppe/commonwealth.json"), import("./map"),
       import("../../data/massppe/map.json"), import("../../data/massppe/map-years.json")]).catch(() => {}),
     cap: () => void Promise.all([import("./cap"), import("../../data/massppe/cap.json")]).catch(() => {}),
+    housing: () => void Promise.all([import("./housing"), import("../../data/massppe/housing.json")]).catch(() => {}),
   };
   for (const tab of tabs) {
     const go = warm[tab.dataset.view ?? ""];
@@ -1950,10 +1954,24 @@ export async function startExplorer() {
   const idle = (fn: () => void) => ("requestIdleCallback" in window ? requestIdleCallback(fn, { timeout: 4000 }) : setTimeout(fn, 1500));
   const background = () => idle(() => {
     warm.commonwealth();
-    idle(warm.cap);
+    idle(() => {
+      warm.cap();
+      idle(warm.housing);
+    });
   });
   if (document.readyState === "complete") background();
   else window.addEventListener("load", background, { once: true });
+
+  // The Housing and enrollment tab, loaded the first time it opens (#249)
+  let housing: { render(): void } | null = null;
+  async function loadHousing() {
+    if (housing) return;
+    const [mod, json] = await Promise.all([import("./housing"), import("../../data/massppe/housing.json")]);
+    housing = mod.startHousing($("housing-root"), json.default as unknown as HousingData, {
+      openDistrict: (id) => update({ view: "districts", d: id }),
+    });
+    housing.render();
+  }
 
   // The 82.5% cap tab, loaded the first time it opens; it starts on the town last viewed
   let cap: { render(): void } | null = null;
@@ -2735,7 +2753,7 @@ export async function startExplorer() {
       if (entity(state.d)) renderDistricts();
     }
     else if (state.view === "commonwealth") map?.refresh();
-    else if (state.view === "cap" || state.view === "data") { /* these draw themselves */ }
+    else if (state.view === "cap" || state.view === "housing" || state.view === "data") { /* these draw themselves */ }
     else if (towns && townById.has(state.t)) renderTowns();
     else if (towns) { /* still loading */ }
     else {
@@ -3620,6 +3638,8 @@ export async function startExplorer() {
       } catch { /* the charts' lines still show */ }
       list.push({ parts: ["equalized-valuation-eqv", "income-fifths"], where: "The 82.5% cap", name: "The 82.5% cap",
         href: hrefFor({ view: "cap" }), open: () => update({ view: "cap" }) });
+      list.push({ parts: ["new-growth", "housing-and-enrollment"], where: "Housing and enrollment", name: "Housing and enrollment",
+        href: hrefFor({ view: "housing" }), open: () => update({ view: "housing" }) });
       notes.shownIn(list);
     })();
     return uses;
