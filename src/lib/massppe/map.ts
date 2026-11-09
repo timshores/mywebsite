@@ -143,6 +143,14 @@ const TOWN_MEASURES: Measure[] = [
       "school department and what it paid regional and vocational school districts.",
   },
   {
+    // The four residential classes over every class, as the plots' district measure adds them (Tim, #247)
+    key: "res_share", label: "Residential share of property value", kind: "level", fmt: share, short: share, years: "year",
+    notes: ["property"],
+    about: (m, real, y) => `The share of each town's taxable property value in FY${y.to} that is residential: single-family ` +
+      "homes, condominiums, multifamily buildings of two or more units, and other residential property, vacant lots " +
+      "included. The rest is mixed use, commercial, industrial, farmland, forest and open space, and personal property.",
+  },
+  {
     key: "pop", label: "Population change", kind: "change", fmt: change, short: change, subject: "population", years: "range",
     notes: ["population-estimates"],
     about: (m, real, y) => `How much each town's population changed from July ${y.from - 1} to July ${y.to - 1}.`,
@@ -357,7 +365,7 @@ const shortGroup = (n: string) => groupName(n).replace(/ (enrollment|peer) group
 const GROUPS: Record<Layer, [string, string[]][]> = {
   towns: [
     ["Place and people", ["ct", "density", "pop", "income", "unemp", "older", "poc", "disability"]],
-    ["Town finances", ["spend", "edu", "eqv", "levy_room", "override", "overrides", "reserves", "debt_service", "debt_pc", "bill_income"]],
+    ["Town finances", ["spend", "edu", "eqv", "res_share", "levy_room", "override", "overrides", "reserves", "debt_service", "debt_pc", "bill_income"]],
     ["Schools", ["cap_hh"]],
   ],
   districts: [
