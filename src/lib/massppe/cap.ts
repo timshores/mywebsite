@@ -16,7 +16,7 @@ import { groupedPicker } from "./picker";
 import { chartRoom, enlargeButton, isEnlarged } from "./enlarge";
 import { pointsAtGroup, scatter, ticksFor, type Group, type Point, type ScatterView } from "./scatter";
 import { BLUE, FIFTH_RAMP, ORANGE, VIOLET } from "./palette";
-import { atCap, requiredFor, solve, solveArrays, targetAt } from "./capModel";
+import { atCap, incomeFifths, requiredFor, solve, solveArrays, targetAt } from "./capModel";
 import { showWork, type Work, type WorkStep } from "./showWork";
 import evidence from "../../data/massppe/evidence.json";
 import css from "./cap.css?inline"; // the styles for what this module builds (#237), added as it loads (#238)
@@ -133,12 +133,8 @@ function capContext(data: CapData, fy: string, townId: string, scenario: number 
   const downSum = down.reduce((a, x) => a + change(x), 0);
 
   // Income fifths: who is in each, for the explanation, the tiles and the table
-  // Every town with income and population, as the explorer's income fifths count them elsewhere
-  const withIncome = towns.filter((x) => x.pop_income && x.income).map((x) => ({ x, inc: x.income / x.pop_income! }))
-    .sort((a, b) => a.inc - b.inc);
-  const n = withIncome.length;
-  const fifthOf = new Map<string, number>();
-  withIncome.forEach(({ x }, k) => fifthOf.set(x.id, Math.min(4, Math.floor((k * 5) / n))));
+  // Every town with income and population, as the explorer's income fifths count them elsewhere (capModel.ts)
+  const { withIncome, n, fifthOf } = incomeFifths(towns);
   const upTop = up.filter((x) => fifthOf.get(x.id) === 4).length;
   return { y, towns, t, scenario, f, alt, change, scenName, means, atScenarioCap, up, down, upSum, downSum, withIncome, n, fifthOf, upTop };
 }
@@ -270,7 +266,8 @@ function helpParts({ y, t }: Ctx, sp: Spending | undefined) {
 }
 
 /** By income: each fifth of towns, highest first */
-function fifthsParts({ y, withIncome, fifthOf, change, scenName, n }: Ctx) {
+function fifthsParts(ctx: Ctx) {
+  const { y, withIncome, fifthOf, change, scenName, n } = ctx;
   const tbl = el("table", "cap-fifths-table");
   const hr = tbl.createTHead().insertRow();
   for (const h of ["Towns by income per capita", "Towns", "At today's cap", "Median income per capita",
@@ -299,7 +296,13 @@ function fifthsParts({ y, withIncome, fifthOf, change, scenName, n }: Ctx) {
     el("p", "cap-note", `All ${n} towns, in five groups by income per capita (${y.income_year} ` +
       `income over the July ${y.income_year} population estimate). A negative change means the group's targets are ` +
       `higher with today's cap than they would be ${scenName}: the cap raises them.`),
-    scroll];
+    scroll, (() => {
+      // The table's work, for the town shown, kept open across redraws (#246)
+      const work = showWork(fifthsWork(ctx));
+      work.open = fifthsOpen;
+      work.addEventListener("toggle", () => (fifthsOpen = work.open));
+      return work;
+    })()];
 }
 
 /** Whether a reader has the verdict's work open, kept across redraws */
@@ -308,11 +311,49 @@ let workOpen = false;
 /** "Nov 8, 2026" from "2026-11-08" */
 const onDate = (iso: string) => new Date(`${iso}T12:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 
+/** The evidence record's last result for a year (schools ppe_report/evidence/cap.py), if it has one */
+const evidenceFor = (fy: number) => (evidence.cap.years as Record<string, { links: number; passed: number; outside: boolean;
+  outside_required: boolean; fifths: boolean; reviewed: string | null }>)[String(fy)];
+const reviewedText = (ev: { reviewed: string | null }) =>
+  `An AI wrote the checks; ${ev.reviewed ? `${ev.reviewed} reviewed them` : "no person has reviewed them yet"}.`;
+/** Whether a reader has the income table's work open, kept across redraws */
+let fifthsOpen = false;
+
+/** The income table's work (#246), for the town shown: its income and population, where they put it among the fifths,
+ * and its change in target, which the table sums by fifth */
+function fifthsWork({ y, t, change, scenName, fifthOf }: Ctx): Work {
+  const ev = evidenceFor(y.fy);
+  const q = fifthOf.get(t.id);
+  const fifth = q == null ? null : ["lowest", "second", "middle", "fourth", "highest"][q];
+  const ch = change(t);
+  const steps: WorkStep[] = [
+    { value: usd(t.income), label: "Residents' income", detail: `${t.name}'s ${y.income_year} income on state tax returns`,
+      kind: "reported", source: "DESE" },
+    ...(t.pop_income ? [
+      { value: t.pop_income.toLocaleString("en-US"), label: "Population", detail: `The Census Bureau's estimate for July ${y.income_year}`,
+        kind: "reported" as const, source: "Census" },
+      { value: usd(t.income / t.pop_income), label: "Income per capita",
+        detail: `Income over population. Ranked against the other 350 towns, it puts ${t.name} in the ${fifth} fifth`, kind: "computed" as const },
+    ] : []),
+    { value: `${signFor(ch, big(ch), true)}${usd(Math.abs(ch))}`, label: `Change in target ${scenName}`,
+      detail: "The model's target less today's; the table adds these up for each fifth", kind: "modeled" },
+    ...(t.pop ? [{ value: signed(ch / t.pop), label: "Change per resident",
+      detail: "Over the latest population estimate; the table gives each fifth's median", kind: "modeled" as const }] : []),
+  ];
+  const status = !ev ? `FY${y.fy} isn't checked yet.`
+    : `Checked ${onDate(evidence.cap.checked)}: ` + (ev.fifths ? "the record reproduces every town's population from the " +
+      "Census Bureau's file and puts every town in the same fifth as this table" : "the record's check of the fifths fails") +
+      `; each town's change comes from the same model as the result above. ${reviewedText(ev)}`;
+  return { steps, status, record: evidence.cap.record,
+    sources: [{ text: `DESE's FY${y.fy} formula spreadsheet`, href: y.source },
+      { text: "the Census Bureau's population estimates", href: "https://www.census.gov/programs-surveys/popest.html" }] };
+}
+
 /** The verdict's work (Project Regain Custody, Pass 3; #244): the town's figures as DESE's spreadsheet gives them, the
  * percentages and targets the model makes from them, what it assumes, and the evidence record's last result for the
  * year (schools ppe_report/evidence/cap.py writes evidence.json) */
 function capWork({ y, t, f, alt, scenario, scenName }: Ctx, reqAlt: number | null): Work {
-  const ev = (evidence.cap.years as Record<string, { links: number; passed: number; outside: boolean; reviewed: string | null }>)[String(y.fy)];
+  const ev = evidenceFor(y.fy);
   const dese = { kind: "reported" as const, source: "DESE" };
   const steps: WorkStep[] = [
     { value: usd(t.eqv), label: "Equalized valuation", detail: `The state's estimate of all its taxable property, January ${y.eqv_year}`, ...dese },
@@ -331,13 +372,15 @@ function capWork({ y, t, f, alt, scenario, scenName }: Ctx, reqAlt: number | nul
   ];
   const status = !ev ? `FY${y.fy} isn't checked yet.`
     : `Checked ${onDate(evidence.cap.checked)}: ${ev.passed} of ${ev.links} links from DESE's spreadsheet to the model this ` +
-      "page draws with pass" + (ev.outside ? ", and Michael Naughton's workbook agrees with every town's targets with a " +
-        "100% cap and with no cap, within $1" : "") +
-      `. An AI wrote the checks; ${ev.reviewed ? `${ev.reviewed} reviewed them` : "no person has reviewed them yet"}.`;
+      "page draws with pass" + (ev.outside ? ". Michael Naughton's workbook agrees with every town's targets with a " +
+        "100% cap and with no cap, within $1" + (ev.outside_required ? ", and with its required contributions wherever " +
+          "the 90% rule below doesn't apply" : "") : "") + `. ${reviewedText(ev)}`;
   return {
     steps,
     assumptions: ["The towns' targets keep the year's statewide total, and both percentages change by the same factor.",
-      "The cap changes this year only; every other rule stays as DESE applied it."],
+      "The cap changes this year only; every other rule stays as DESE applied it, including the one that a required " +
+        "contribution can't exceed 90% of the foundation budget. Michael Naughton's workbook leaves that rule out, so " +
+        "its required contributions for the wealthiest towns run higher."],
     status, record: evidence.cap.record,
     sources: [{ text: `DESE's FY${y.fy} formula spreadsheet`, href: y.source }],
   };

@@ -4,15 +4,19 @@
   "record": "https://github.com/timshores/schools/blob/main/ppe_report/evidence/cap.md",
   "years": {
    "2026": {
-    "links": 6,
-    "passed": 6,
+    "links": 10,
+    "passed": 10,
     "outside": true,
+    "outside_required": true,
+    "fifths": true,
     "reviewed": null
    },
    "2027": {
-    "links": 5,
-    "passed": 5,
+    "links": 7,
+    "passed": 7,
     "outside": false,
+    "outside_required": false,
+    "fifths": true,
     "reviewed": null
    }
   }

@@ -65,3 +65,15 @@ export function solve(towns: ModelTown[], total: number, cap: number | null): nu
   }
   return (lo + hi) / 2;
 }
+
+/** The towns ranked by income per capita (the formula's income over the population estimate for July of the income
+ * year) and cut into five groups as near equal in size as the count allows, as the explorer's income fifths are: each
+ * town's fifth, 0 (lowest) to 4, and the ranked towns with their income per capita (#246) */
+export function incomeFifths<T extends { id: string; income: number; pop_income: number | null }>(towns: T[]) {
+  const withIncome = towns.filter((x) => x.pop_income && x.income).map((x) => ({ x, inc: x.income / x.pop_income! }))
+    .sort((a, b) => a.inc - b.inc);
+  const n = withIncome.length;
+  const fifthOf = new Map<string, number>();
+  withIncome.forEach(({ x }, k) => fifthOf.set(x.id, Math.min(4, Math.floor((k * 5) / n))));
+  return { withIncome, n, fifthOf };
+}
