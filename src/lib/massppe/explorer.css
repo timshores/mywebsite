@@ -2840,10 +2840,13 @@ html.modal-open {
     padding: 0.2rem 0.45rem;
   }
 
-  /* The dials a row of their own, over Collapse and Enlarge */
+  /* The dials a row of their own, over Collapse and Enlarge; three (One bar, #251) wrap rather than run off the
+     left edge at phone width */
   .explorer .chart-dials {
     flex: 1 0 100%;
+    flex-wrap: wrap;
     justify-content: flex-end;
+    row-gap: 0.3rem;
   }
 }
 

@@ -512,6 +512,13 @@ const SWITCH_NOTE = "Adds FY1990 to FY2004, from DESE's per-pupil reports, which
   "Former districts.";
 // The site accent (Layout.astro --accent), dashed, so the trend reads apart from the comparison
 const TREND_COLOR = "#b65c3d";
+// A chart of stacked columns drawn as one bar a year, its total (#251): the palette's first hue, as a chart of one
+// measure draws its columns
+const ONE_COLOR = BLUE;
+/** The charts whose columns stack categories, each of which its One bar dial can draw as one bar a year (#251). Not
+ * the charts of shares, whose one bar would always read 100%, nor out-of-district, whose columns have one part. */
+const ONE_BAR = new Set<string>(["ppe", "rev", "sped", "nss", "tspend", "trev", "tres", "tdebt", "tcap", "tlevy", "tval",
+  "tpar", "tfc"]);
 
 // The report's comparison shading (ppe_report/compose_pdf.py): amber above the
 // baseline, teal below, darker as the gap grows. Dollars and enrollment shade
@@ -916,7 +923,8 @@ function drawLegend(list: HTMLElement, items: LegendItem[], panel: StackPanel | 
     li.append(btn);
     return li;
   });
-  if (set?.size) {
+  // Only where there are categories to pick: with One bar on, the picks wait, and so does Show all (#251)
+  if (set?.size && toggles.length) {
     const li = document.createElement("li");
     const reset = text("button", "Show all", "legend-reset") as HTMLButtonElement;
     reset.type = "button";
@@ -1433,6 +1441,11 @@ export async function startExplorer() {
   // And its Comps dial, and whether the chart has a comparison to show, as it last drew
   const compDials = new Map<StackPanel, HTMLButtonElement>();
   const hasComps = new Map<StackPanel, boolean>();
+  // One bar (#251): the charts drawn as one bar a year, each year's total, without its categories; their dials; and
+  // what each chart's columns stack ("categories", "sources") where it has more than one, as it last drew
+  const oneBar = new Set<StackPanel>();
+  const oneDials = new Map<StackPanel, HTMLButtonElement>();
+  const stacksOf = new Map<StackPanel, string>();
   // The labor force chart: the unemployment rate, or the residents, labor force and employed behind it
   let popView: "rate" | "people" = "rate";
   // What was last written, so a redraw that changes nothing writes nothing (#237: every render wrote)
@@ -1731,6 +1744,12 @@ export async function startExplorer() {
     const comps = allComps();
     const any = compsInView().length > 0;
     setDial(compsSwitch, comps, !any ? "Pick a comparison to compare with" : comps ? "Hide the comparison on every chart" : "Show the comparison on every chart", !any);
+    for (const [p, b] of oneDials) {
+      const noun = stacksOf.get(p);
+      const on = !!noun && oneBar.has(p);
+      setDial(b, on, !noun ? "This chart has nothing to combine" : on ? `Show the ${noun} again`
+        : `Show each year's total as one bar, without its ${noun}`, !noun);
+    }
   }
 
   select.value = state.d;
@@ -2564,11 +2583,15 @@ export async function startExplorer() {
     const cTotal = s.cSeries ? totals(s.cSeries) : null;
     // A share chart of one group (women, with a disability) shows it as one picked would
     const single = !!s.share && s.series.length === 1;
-    const shown = single ? s.series : visible(s.series, s.key);
-    const sel = !s.share ? selectionName(shown, s.series, s.noun)
+    // One bar (#251): every category, as with nothing picked, drawn as each year's total in one color, and the
+    // legend's picks set aside until it's off. The tables keep their categories.
+    if (ONE_BAR.has(s.key) && !s.share && s.series.length > 1) stacksOf.set(s.key, s.noun);
+    const one = stacksOf.has(s.key) && oneBar.has(s.key);
+    const shown = single || one ? s.series : visible(s.series, s.key);
+    const sel = one ? null : !s.share ? selectionName(shown, s.series, s.noun)
       : single ? s.series[0].label : shown.length === s.series.length ? null : shown.length === 1 ? shown[0].label : `${shown.length} selected groups`;
     const shownTotal = totals(shown);
-    const cShownTotal = s.cSeries ? totals(single ? s.cSeries : visible(s.cSeries, s.key)) : null;
+    const cShownTotal = s.cSeries ? totals(single || one ? s.cSeries : visible(s.cSeries, s.key)) : null;
     const overlayAll = s.cmp && cShownTotal && (sel || !s.share)
       ? { key: "cmp", label: `${s.cmp.name}, ${sel ?? "total"}`, color: COMPARE_COLOR, values: cShownTotal } : null;
     const trendAll = s.share && !sel ? null : trendOf(s.name, sel, shownTotal, stepFmt);
@@ -2600,12 +2623,13 @@ export async function startExplorer() {
     const panel = stackedColumns($(`svg-${s.key}`) as unknown as SVGSVGElement,
       { width: s.width, height: s.height, years, yTitle: s.yTitle, yTitleShort: s.yShort, ...(s.sparse ? { sparse: true } : {}),
         trendsOnly: tv.only },
-      alone ? [] : shown, alone ? null : overlay,
+      alone ? [] : one ? [{ key: "one", label: s.totalLabel || "Total", color: ONE_COLOR, values: total }] : shown,
+      alone ? null : overlay,
       alone ? niceTicks((amountMax || max) * 1.04) : sel ? fitTicks(shown, lineTops) : s.ticks ?? niceTicks(max * 1.04),
       s.axis ?? fmtUsd, setHover, alone ? undefined : { value: end >= 0 ? shownTotal[end] : null, text: fmt, index: end }, [],
       alone ? [] : tv.trends, extras, marks);
     legend($(`legend-${s.key}`), [
-      ...s.series.map((x) => ({ ...(single ? { spot: x.key } : { key: x.key }), label: x.label, color: x.color, mark: "rect" as const })),
+      ...(one ? [] : s.series.map((x) => ({ ...(single ? { spot: x.key } : { key: x.key }), label: x.label, color: x.color, mark: "rect" as const }))),
       ...lineLegend(trendAll, overlayAll, stepFmt),
       ...(s.legend ?? []),
       ...(vm ? [{ label: "Prop 2½ votes passed", color: VOTE_COLOR, mark: "diamond" as const, line: "votes" as const,
@@ -2631,7 +2655,7 @@ export async function startExplorer() {
         ...(overlay && overlay.values[i] != null
           ? [{ value: fmt(overlay.values[i]!), label: overlay.label, color: COMPARE_COLOR, mark: "linedot" as const, role: "cmp" as const }] : [])] };
       const t0 = alone ? { title: `FY${years[i]}`, rows: [] as TipRow[] }
-        : stackTip(i, shown, sel, shownTotal, total, overlay, trend, s.totalLabel, s.noun, fmt);
+        : stackTip(i, one ? [] : shown, sel, shownTotal, total, overlay, trend, s.totalLabel, s.noun, fmt);
       // Parcels: each type's share of all of them beside its count
       const t = s.partShares && total[i] ? { ...t0, rows: t0.rows.map((r) => {
         const part = shown.find((x) => x.label === r.label);
@@ -2746,6 +2770,7 @@ export async function startExplorer() {
     // district's or town's lingers on its hidden dials (#237)
     hasTrends.clear();
     hasComps.clear();
+    stacksOf.clear();
     cmpTrends.clear();
     // A redraw can come before a district's or town's data does (a resize as a tab opens);
     // refresh() draws once it arrives
@@ -3145,8 +3170,11 @@ export async function startExplorer() {
   function nssPanel(ctx: DistrictCtx): PanelEntry {
     const { e, c, cName, dollarsNote, whole, pp, wholeNote, tableOpts, nss, cNss, nssTotal, cNssTotal, dollarTicks, tall, frame } = ctx;
     // Panel 3: Chapter 70 and net school spending
-    const nssShown = visible(nss, "nss");
-    const nssSel = selectionName(nssShown, nss, "components");
+    // One bar (#251): every component, as with nothing picked, drawn as each year's actual net school spending
+    stacksOf.set("nss", "components");
+    const nssOne = oneBar.has("nss");
+    const nssShown = nssOne ? nss : visible(nss, "nss");
+    const nssSel = nssOne ? null : selectionName(nssShown, nss, "components");
     const showsAbove = nssShown.some((s) => s.key === "above_required");
     const nssShownTotal = nssSel ? strictTotals(nssShown) : nssTotal;
     const cNssShownTotal = cNss ? (nssSel ? strictTotals(visible(cNss, "nss")) : cNssTotal) : null;
@@ -3164,7 +3192,7 @@ export async function startExplorer() {
       (unreported.length ? ` Faded: DESE has not reported FY${unreported.join(", FY")} actual spending.` : "");
     // With only the trends shown, each component its own trend, in its color, and the comparison's of each, as the
     // charts of several measures do (#241); otherwise the total's trend
-    const perMeasure = trendsAlone.has("nss") && nssShown.some(hasLine);
+    const perMeasure = !nssOne && trendsAlone.has("nss") && nssShown.some(hasLine);
     const ownTrends = nssShown.filter(hasLine).map((s) => ((values) => ({ key: s.key, label: `${e.name} trend, ${lower(s.label)}`,
       color: s.color, values, ...trendEnds(trendName(e.name, lower(s.label)), `${s.label} trend`, values, usd) }))(linearTrend(s.values)));
     const cmpTrendsEach = c && cNss ? visible(cNss, "nss").filter(hasLine).map((s) => ((ct) => ({ ...ct, key: `cmptrend:${s.key}`,
@@ -3173,15 +3201,17 @@ export async function startExplorer() {
     if (perMeasure) cmpTrends.set("nss", { trend: null, value: usd, step: usd });
     const nssTv = perMeasure ? trendsOf("nss", ownTrends, cmpTrendsEach, !!nssOverlayAll) : trendView("nss", nssTrend, nssOverlayAll, cName);
     const p3 = stackedColumns($("svg-nss") as unknown as SVGSVGElement,
-      { ...frame(tall, `Net school spending${pp}`, `Spending${pp}`), trendsOnly: nssTv.only }, nssShown, nssOverlay,
+      { ...frame(tall, `Net school spending${pp}`, `Spending${pp}`), trendsOnly: nssTv.only },
+      // A year DESE hasn't reported actual spending for stands at the required spending, faded, as its stack does
+      nssOne ? [{ key: "one", label: "Actual net school spending", color: ONE_COLOR, values: totals(nss) }] : nssShown, nssOverlay,
       nssSel ? fitTicks(nssShown, nssOverlay?.values ?? null) : dollarTicks, fmtUsd, setHover,
       { value: nssShownTotal[last], text: usd }, years.map((_, i) => showsAbove && nss[2].values[i] == null), nssTv.trends);
     // The hatch only appears when a shortfall sits on top of other segments
-    const hasShortfall = showsAbove && nssShown.length > 1 && nss[2].values.some((v) => v != null && v < 0);
+    const hasShortfall = !nssOne && showsAbove && nssShown.length > 1 && nss[2].values.some((v) => v != null && v < 0);
     legend($("legend-nss"), [
       // With only the trends shown, each component's entry gives its trend's yearly figure (#241)
-      ...nss.map((s) => ({ key: s.key, label: s.label, color: s.color, mark: "rect" as const,
-        detail: perMeasure && nssShown.includes(s) && hasLine(s) ? trendDetail(linearTrend(s.values), usd) : undefined })),
+      ...(nssOne ? [] : nss.map((s) => ({ key: s.key, label: s.label, color: s.color, mark: "rect" as const,
+        detail: perMeasure && nssShown.includes(s) && hasLine(s) ? trendDetail(linearTrend(s.values), usd) : undefined }))),
       ...(hasShortfall ? [{ label: "Below required (shortfall)", color: "#524f45", mark: "hatch" as const, spot: "shortfall" }] : []),
       ...(perMeasure
         ? (nssOverlayAll ? [{ label: cName, color: COMPARE_COLOR, mark: "linedot" as const, line: "cmp" as const }] : [])
@@ -3203,10 +3233,13 @@ export async function startExplorer() {
           title: `FY${years[i]}`,
           rows: [
             { value: reported ? usd(nssTotal[i]!) : "Not reported", label: "Actual net school spending", strong: true },
-            ...(reported ? [{ value: usd(nss[2].values[i]!), label: nss[2].values[i]! < 0 ? "Below required" : nss[2].label, color: nss[2].color, mark: "line" as const }] : []),
+            // One bar gives the required spending without its components
+            ...(reported && !nssOne ? [{ value: usd(nss[2].values[i]!), label: nss[2].values[i]! < 0 ? "Below required" : nss[2].label, color: nss[2].color, mark: "line" as const }] : []),
             { value: usd(required), label: "Required net school spending" },
-            { value: nss[1].values[i] != null ? usd(nss[1].values[i]!) : "–", label: nss[1].label, color: nss[1].color, mark: "line" as const },
-            { value: nss[0].values[i] != null ? usd(nss[0].values[i]!) : "–", label: nss[0].label, color: nss[0].color, mark: "line" as const },
+            ...(nssOne ? [] : [
+              { value: nss[1].values[i] != null ? usd(nss[1].values[i]!) : "–", label: nss[1].label, color: nss[1].color, mark: "line" as const },
+              { value: nss[0].values[i] != null ? usd(nss[0].values[i]!) : "–", label: nss[0].label, color: nss[0].color, mark: "line" as const },
+            ]),
             // Each component's trend and the comparison's, with only the trends shown; else the total's (#241)
             ...(perMeasure ? nssTv.trends.filter((t) => !t.key.startsWith("cmptrend")).flatMap((t) => trendRow(t, i)) : trendRow(nssTrend, i)),
             ...(perMeasure
@@ -4126,9 +4159,12 @@ export async function startExplorer() {
     const fyears = years.slice(a, b + 1);
     const cut = (v: Values) => v.slice(a, b + 1);
     const fc = fcAll.map((s) => ({ ...s, values: cut(s.values) }));
-    // The legend picks the sources shown; their sum, its trend and the comparison's follow
-    const fcShown = visible(fc, "tfc");
-    const fcSel = selectionName(fcShown, fc, "sources");
+    // The legend picks the sources shown; their sum, its trend and the comparison's follow. One bar (#251): every
+    // source, as with nothing picked, drawn as each year's free cash identified
+    if (fc.length > 1) stacksOf.set("tfc", "sources");
+    const fcOne = stacksOf.has("tfc") && oneBar.has("tfc");
+    const fcShown = fcOne ? fc : visible(fc, "tfc");
+    const fcSel = fcOne ? null : selectionName(fcShown, fc, "sources");
     const net = cut(deflate(per(t.fc_identified!, kT)));
     const shownNet = fcSel ? totals(fcShown) : net;
     const cFc = c?.fc_proof ? fcOf(c, kC!)!.map((s) => ({ ...s, values: cut(s.values) })) : null;
@@ -4149,14 +4185,14 @@ export async function startExplorer() {
       values: years.map((_, i) => (i < a || i > b ? null : fcCmp.trend!.values[i - a])) } });
     const inner = stackedColumns($("svg-tfc") as unknown as SVGSVGElement,
       { width, height: width < 520 ? 260 : 300, years: fyears, yTitle: `Free cash${perP}`, yTitleShort: "Free cash", trendsOnly: fcTv.only },
-      fcShown, overlay,
+      fcOne ? [{ key: "one", label: `Free cash identified${perP}`, color: ONE_COLOR, values: net }] : fcShown, overlay,
       fcSel ? fitTicks(fcShown, overlay?.values ?? null) : niceTicks(fMax * 1.04), fmtUsd, (i, src) => setHover(i == null ? null : i + a, src),
       { value: shownNet[shownNet.length - 1], text: usd }, [], fcTv.trends);
     const l = t.fc_proof_latest;
     // The sources only: an adjustment can add a little, but it isn't where free cash comes from
     const top3 = l ? FC_SERIES.filter((q) => q.key !== "adjust" && l[q.key] > 0).sort((x, y) => l[y.key] - l[x.key]).slice(0, 3) : [];
     $("tfc-sub").replaceChildren(`${dollarsNote}${perP}, each year's free cash as the state calculates it from the town's ` +
-      "June 30 balance sheet; shortfalls and adjustments take some back (hatched)." + (fcSel ? " Scale fitted to the selection." : "") +
+      `June 30 balance sheet; shortfalls and adjustments take some back${fcOne ? "" : " (hatched)"}.` + (fcSel ? " Scale fitted to the selection." : "") +
       (l && top3.length ? ` For FY${l.fy}, ${t.kind === "town" ? `${t.name}'s` : "these towns'"} ${amount(l.identified)} came ` +
         `mostly from ${andList(top3.map((q) => `${amount(l[q.key])} ${q.words}`))}.` : "") + " ",
       helpTip("Local receipts are what a town collects besides the property tax and state aid: motor vehicle excise, " +
@@ -4168,8 +4204,10 @@ export async function startExplorer() {
         "the town didn't spend the year before carries into this year's. The state then subtracts what the town is still " +
         "owed, such as unpaid taxes, and makes other adjustments, which can also add a little back."));
     legend($("legend-tfc"), [
-      ...fc.map((s) => ({ key: s.key, label: s.label, color: s.color, mark: "rect" as const })),
-      { label: "Taken back by shortfalls and adjustments", color: GRAY, mark: "hatch" as const, spot: "shortfall" },
+      ...(fcOne ? [] : [
+        ...fc.map((s) => ({ key: s.key, label: s.label, color: s.color, mark: "rect" as const })),
+        { label: "Taken back by shortfalls and adjustments", color: GRAY, mark: "hatch" as const, spot: "shortfall" },
+      ]),
       // As on the other charts: the trend, then the comparison
       ...lineLegend(fcTrend, overlayAll, usd),
     ], "tfc");
@@ -4185,7 +4223,7 @@ export async function startExplorer() {
         if (k < 0 || k >= fyears.length) return { title: `FY${years[i]}`, rows: [{ value: "–", label: `The state's proofs cover FY${fyears[0]} on` }] };
         return { title: `FY${years[i]}`, rows: [
           { value: shownNet[k] != null ? usd(shownNet[k]!) : "–", label: fcSel ? `${capital(fcSel)}${perP}` : `Free cash identified${perP}`, strong: true },
-          ...fcShown.filter((s) => s.values[k] != null && s.values[k] !== 0).reverse()
+          ...(fcOne ? [] : fcShown).filter((s) => s.values[k] != null && s.values[k] !== 0).reverse()
             .map((s) => ({ value: usd(s.values[k]!), label: s.label, color: s.color, mark: "rect" as const })),
           ...trendRow(fcTrendPage, i),
           ...(overlay && overlay.values[k] != null ? [{ value: usd(overlay.values[k]!), label: overlay.label, color: COMPARE_COLOR, mark: "linedot" as const, role: "cmp" as const }] : []),
@@ -4673,6 +4711,12 @@ export async function startExplorer() {
     const group = document.createElement("span");
     group.className = "chart-dials";
     group.append(comps, trends);
+    // One bar, last, on a chart whose columns stack categories (#251)
+    if (ONE_BAR.has(p)) {
+      const one = dial("One bar", () => (oneBar.has(p) ? oneBar.delete(p) : oneBar.add(p)));
+      group.append(one);
+      oneDials.set(p, one);
+    }
     tools.prepend(group);
     compDials.set(p, comps);
     trendDials.set(p, trends);
