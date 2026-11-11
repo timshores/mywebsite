@@ -1943,6 +1943,8 @@ export async function startExplorer() {
           $("entity-meta").textContent = "";
           relations(null);
           $("tiles").replaceChildren();
+          // The list of charts waits too: it still names the district view's (applyView shows it again)
+          $("chart-jump").hidden = true;
         }
         await loadTowns();
         await ensureTowns([state.t, state.tvs]);
