@@ -206,7 +206,7 @@ html.modal-open {
 /* The pill buttons: Swap, Show controls, Collapse and Enlarge, the map's switches and Play, a plot's Settings, the cap
    tab's years and zoom. One rule for what they share (#237); :where() weighs nothing, so each button's own rule
    sets its size, color and padding over it */
-.explorer :where(.swap-btn, .controls-dock-toggle, .enlarge-open, .collapse-toggle, .map-seg-btn, .map-play,
+.explorer :where(.swap-btn, .controls-dock-toggle, .enlarge-open, .collapse-toggle, .chart-view > summary, .map-seg-btn, .map-play,
   .cw-drawer-toggle, .cap-year-btn, .cap-zoom-btn) {
   font: inherit;
   background: var(--white);
@@ -907,7 +907,7 @@ html.modal-open {
   flex: none;
 }
 
-/* The detail dial: a knob turned left for off, right for on */
+/* The Detail switch, and every switch drawn like it */
 .explorer .detail-dial {
   margin-left: auto;
   align-self: center;
@@ -941,34 +941,36 @@ html.modal-open {
   border-radius: 6px;
 }
 
+/* Each switch slides: a track with a thumb at the left for off, at the right, on green, for on (#253: these were
+   knobs, turned left and right; the class names keep "dial") */
 .explorer .dial-face {
   position: relative;
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
-  border: 1.5px solid var(--ink-soft);
-  background: radial-gradient(circle at 40% 35%, var(--white) 0%, var(--cream) 75%);
-  box-shadow: 0 1px 2px rgba(var(--ink-rgb), 0.25);
-  transform: rotate(50deg);
-  transition: transform 0.25s ease;
+  flex: none;
+  width: 34px;
+  height: 20px;
+  border-radius: 999px;
+  background: var(--accent-2);
+  transition: background 0.15s ease;
 }
 
 .explorer .dial-pointer {
   position: absolute;
-  top: 2px;
-  left: 50%;
-  width: 3px;
-  height: 9px;
-  border-radius: 2px;
-  background: var(--accent);
-  transform: translateX(-50%);
+  top: 3px;
+  left: 17px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--white);
+  transition: left 0.15s ease;
 }
 
 .explorer .detail-dial[aria-checked="false"] .dial-face {
-  transform: rotate(-50deg);
+  background: var(--line);
+  box-shadow: inset 0 0 0 1.5px var(--ink-soft);
 }
 
 .explorer .detail-dial[aria-checked="false"] .dial-pointer {
+  left: 3px;
   background: var(--ink-soft);
 }
 
@@ -978,7 +980,8 @@ html.modal-open {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .explorer .dial-face {
+  .explorer .dial-face,
+  .explorer .dial-pointer {
     transition: none;
   }
 }
@@ -1661,8 +1664,28 @@ html.modal-open {
 }
 
 /* The census estimates' bands, joining each group's columns */
+/* Between columns years apart: each part's band from one to the next, with a line in its color along the top, whose
+   slope is the change (#253: the bands alone, at 16%, were hard to tell apart) */
 .explorer .panel .stack-area {
-  opacity: 0.16;
+  opacity: 0.3;
+}
+
+.explorer .panel .stack-edge {
+  fill: none;
+  stroke-width: 1.5;
+  opacity: 0.85;
+}
+
+/* A part's figure beside its segment, haloed against the band it sits on */
+.explorer .panel .seg-label {
+  font-size: 11px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  fill: var(--ink);
+  stroke: var(--surface, var(--paper));
+  stroke-width: 3;
+  paint-order: stroke;
+  pointer-events: none;
 }
 
 /* Prop 2½ votes: a stem to the year's amount with an open head, haloed against the columns it crosses, and a diamond
@@ -2142,29 +2165,56 @@ html.modal-open {
 }
 
 /* Asks once, after the first change, whether to remember choices; never blocks the page */
+/* The question to remember choices: a strip along the bottom of the window (#253: it was a card over the page's
+   corner, a fifth of a phone's screen) */
 .explorer .remember-prompt {
   position: fixed;
-  right: 16px;
-  bottom: 16px;
+  left: 0;
+  right: 0;
+  bottom: 0;
   z-index: 20;
-  max-width: min(24rem, calc(100vw - 32px));
-  padding: 1rem 1.1rem;
-  font-size: 0.9rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem 1rem;
+  padding: 0.55rem 1rem;
+  font-size: 0.85rem;
   color: var(--ink);
   background: var(--paper);
-  border: 1px solid var(--line);
-  border-radius: 14px;
-  box-shadow: 0 16px 40px rgba(var(--ink-rgb), 0.22);
+  border-top: 1px solid var(--line);
+  box-shadow: 0 -6px 18px rgba(var(--ink-rgb), 0.12);
+}
+
+.explorer .remember-prompt[hidden] {
+  display: none;
+}
+
+.explorer .remember-prompt p + p {
+  flex: 0 1 34rem;
+}
+
+@media (max-width: 640px) {
+  .explorer .remember-prompt {
+    justify-content: space-between;
+    padding: 0.45rem 0.8rem;
+  }
+
+  .explorer .remember-prompt p + p {
+    order: 3;
+    flex-basis: 100%;
+    font-size: 0.76rem;
+    line-height: 1.3;
+  }
 }
 
 .explorer .remember-prompt p {
-  margin: 0 0 0.4rem;
+  margin: 0;
 }
 
 .explorer .remember-actions {
   display: flex;
   gap: 0.5rem;
-  margin-top: 0.7rem;
 }
 
 .explorer .remember-actions button {
@@ -2792,31 +2842,79 @@ html.modal-open {
   color: var(--ink-soft);
 }
 
-/* Comps and Trends only, chart by chart, together first in the row, the same place on every chart */
-.explorer .chart-dials {
+/* View: a chart's switches (Comps, Trends only, One bar) under one button, first in its row, the same place on every
+   chart (#253). The button looks as Collapse and Enlarge do, and names what's switched on. */
+.explorer .chart-view {
+  position: relative;
+  display: inline-block;
+}
+
+.explorer .chart-view > summary {
   display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
-}
-
-/* Each in the Detail dial's look (explorer.ts borrows its styles), smaller */
-.explorer .chart-dial {
-  margin: 0 0.15rem 0 0;
-  padding: 0 0.2rem;
-  gap: 0.35rem;
+  gap: 0.3rem;
+  padding: 0.2rem 0.6rem;
   font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--ink-soft);
+  list-style: none;
 }
 
-.explorer .chart-dial .dial-face {
-  width: 20px;
-  height: 20px;
+.explorer .chart-view > summary::-webkit-details-marker {
+  display: none;
 }
 
-.explorer .chart-dial .dial-pointer {
-  top: 1px;
-  width: 2.5px;
-  height: 7px;
+.explorer .chart-view > summary::after {
+  content: "";
+  width: 5px;
+  height: 5px;
+  margin-left: 0.15rem;
+  border: solid currentColor;
+  border-width: 0 1.5px 1.5px 0;
+  transform: translateY(-2px) rotate(45deg);
 }
+
+.explorer .chart-view > summary strong {
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.explorer .chart-view > summary:hover,
+.explorer .chart-view > summary:focus-visible {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.explorer .chart-dials {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 25;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.75rem 0.9rem;
+  white-space: nowrap;
+  background: var(--white);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: 0 10px 28px rgba(var(--ink-rgb), 0.18);
+}
+
+/* Each in the Detail switch's look: its name at the left, the switch and its On or Off at the right */
+.explorer .chart-dial {
+  margin: 0;
+  padding: 0 0.2rem;
+  gap: 0.45rem;
+  min-height: 32px;
+  font-size: 0.85rem;
+}
+
+.explorer .chart-dial .dial-label {
+  margin-right: auto;
+  padding-right: 0.8rem;
+}
+
 
 .explorer .chart-dial[aria-disabled="true"] {
   opacity: 0.45;
@@ -2840,13 +2938,14 @@ html.modal-open {
     padding: 0.2rem 0.45rem;
   }
 
-  /* The dials a row of their own, over Collapse and Enlarge; three (One bar, #251) wrap rather than run off the
-     left edge at phone width */
-  .explorer .chart-dials {
-    flex: 1 0 100%;
-    flex-wrap: wrap;
+  /* View, Collapse and Enlarge at the right; the menu opens from View's left edge, inside the screen */
+  .explorer .enlarge-tools {
     justify-content: flex-end;
-    row-gap: 0.3rem;
+  }
+
+  .explorer .chart-dials {
+    right: auto;
+    left: 0;
   }
 }
 
@@ -2864,13 +2963,13 @@ html.modal-open {
 
 .explorer .is-collapsed > :not(h2, h3, h4, .enlarge-tools),
 .explorer .is-collapsed .enlarge-open,
-.explorer .is-collapsed .chart-dials,
+.explorer .is-collapsed .chart-view,
 .explorer .is-enlarged .collapse-toggle {
   display: none !important;
 }
 
 /* Nothing to enlarge, or to show the trends of, where a note stands in for the chart */
-.explorer figure.panel:has(> .panel-none:not([hidden])) :is(.enlarge-open, .chart-dials) {
+.explorer figure.panel:has(> .panel-none:not([hidden])) :is(.enlarge-open, .chart-view) {
   display: none;
 }
 
@@ -3150,4 +3249,283 @@ html.modal-open {
 .explorer .show-work-status,
 .explorer .show-work-sources {
   margin: 0.6rem 0 0;
+}
+
+/* ---- Arriving (#253, from the 2026-11-10 UX evaluation): what the first screen holds ---- */
+
+/* A smaller title, so the first figures start on the first screen */
+.explorer h1 {
+  font-size: clamp(1.7rem, 3.1vw, 2.3rem);
+  line-height: 1.1;
+  margin-bottom: 0.35rem;
+}
+
+.explorer .eyebrow {
+  margin-bottom: 0.1rem;
+}
+
+.explorer .lede {
+  margin-bottom: 0.55rem;
+}
+
+/* Detail sits on the tab bar's line where the bar has room beside its tabs, and on the introduction's line where
+   that's closed; the tabs still take the bar's full width between (#250) */
+@media (min-width: 1100px) {
+  .explorer #detail-dial {
+    position: relative;
+    z-index: 31;
+    margin: 0 0 -2.55rem auto;
+  }
+}
+
+@media (max-width: 1099px) {
+  .explorer .intro:not([open]) ~ #detail-dial {
+    margin-top: -2.9rem;
+  }
+
+  .explorer .intro[hidden] ~ #detail-dial {
+    margin-top: 0;
+  }
+}
+
+/* The note about desktops is for the phones it describes */
+@media (min-width: 641px) {
+  .explorer .phone-note {
+    display: none;
+  }
+}
+
+/* The menus say what to do first */
+.explorer .pick-label {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.explorer .controls > .control:has(select) {
+  align-self: flex-start;
+}
+
+.explorer .controls > .control:has(select) > span:first-child {
+  display: flex;
+  align-items: flex-end;
+  min-height: 22px;
+}
+
+/* With No comparison: the offer of the size group in its region, under the menu */
+.explorer .cmp-offer:not([hidden]) {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  min-height: 32px;
+  padding: 0.2rem 0.75rem;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--accent);
+  text-align: left;
+  background: var(--paper);
+  border: 1px dashed var(--accent);
+  border-radius: 16px;
+  cursor: pointer;
+}
+
+.explorer .cmp-offer:hover {
+  background: var(--white);
+  border-style: solid;
+}
+
+.explorer .cmp-offer:focus-visible,
+.explorer .controls-more button:focus-visible,
+.explorer .chart-jump > summary:focus-visible {
+  outline: 2px dashed var(--accent);
+  outline-offset: 2px;
+}
+
+/* Display options: the settings fold under a line that says what they are */
+.explorer .controls {
+  margin-top: 1rem;
+  margin-bottom: 1.1rem;
+}
+
+.explorer .controls:not(.options-open) .opt {
+  display: none !important;
+}
+
+.explorer .controls-more {
+  flex: 1 0 100%;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 0.75rem;
+}
+
+.explorer .controls-more button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: 32px;
+  padding: 0.3rem 0;
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--accent);
+  background: none;
+  border: 0;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.explorer .controls-more button::before,
+.explorer .chart-jump > summary::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border: solid currentColor;
+  border-width: 0 1.5px 1.5px 0;
+  transform: rotate(-45deg);
+  transition: transform 0.12s ease;
+}
+
+.explorer .controls-more button[aria-expanded="true"]::before,
+.explorer .chart-jump[open] > summary::before {
+  transform: rotate(45deg);
+}
+
+.explorer #options-sum {
+  font-size: 0.85rem;
+  color: var(--ink-soft);
+}
+
+/* ---- Reading: the charts on the tab, as links, set off by the site's green rule at the left, a dot between ---- */
+.explorer .chart-jump {
+  margin: 0 0 1.5rem;
+  padding: 0.35rem 0 0.4rem 0.9rem;
+  font-size: 0.9rem;
+  border-left: 4px solid var(--accent-2);
+}
+
+.explorer .chart-jump > summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-height: 30px;
+  font-weight: 700;
+  color: var(--ink);
+  list-style: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.explorer .chart-jump > summary::-webkit-details-marker {
+  display: none;
+}
+
+.explorer .chart-jump ol {
+  display: flex;
+  flex-wrap: wrap;
+  margin: 0.1rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.explorer .chart-jump li {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+}
+
+.explorer .chart-jump li:not(:last-child)::after {
+  content: "";
+  flex: none;
+  width: 4px;
+  height: 4px;
+  margin: 0 0.7rem;
+  border-radius: 50%;
+  background: var(--accent-2);
+}
+
+.explorer figure.panel {
+  scroll-margin-top: calc(var(--tabs-h, 3rem) + 4.25rem);
+}
+
+/* The first legend on a tab says its entries filter */
+.explorer .legend-hint {
+  margin: 0.15rem 0 0.2rem;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+/* On a phone: the charts listed one to a line, and targets a finger can hit */
+@media (max-width: 640px) {
+  .explorer .chart-jump ol {
+    flex-direction: column;
+  }
+
+  .explorer .chart-jump li {
+    min-height: 40px;
+  }
+
+  .explorer .chart-jump li:not(:last-child)::after {
+    content: none;
+  }
+}
+
+@media (max-width: 860px) {
+  .explorer .cw-help::before {
+    content: "";
+    position: absolute;
+    inset: -8px;
+  }
+
+  .explorer .legend-btn {
+    min-height: 32px;
+  }
+
+  .explorer .table-open,
+  .explorer .compare-view > summary {
+    display: inline-flex;
+    align-items: center;
+    min-height: 36px;
+  }
+
+  .explorer .cmp-name {
+    display: inline-block;
+    padding: 0.5rem 0;
+  }
+
+  .explorer .swap-btn {
+    min-height: 32px;
+    padding-inline: 0.7rem;
+  }
+
+  .explorer .intro summary {
+    min-height: 36px;
+  }
+
+  .explorer .about-links a {
+    display: inline-block;
+    padding: 0.4rem 0;
+  }
+}
+
+/* Show the work, in parts: a heading over each run of steps, and each step's arithmetic in its own figures (#253) */
+.explorer .show-work-part th {
+  padding-top: 0.9rem;
+  font-weight: 700;
+  color: var(--ink);
+  border-bottom: 2px solid var(--ink-soft);
+}
+
+.explorer .show-work-calc {
+  display: block;
+  margin-top: 0.1rem;
+  font-size: 0.86rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+
+.explorer .show-work-calc::before {
+  content: "= ";
+  color: var(--ink-soft);
 }

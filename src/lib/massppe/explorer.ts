@@ -1092,6 +1092,20 @@ function drawCompareTable(holder: HTMLElement, years: number[], caption: string,
 
 // ---- Stat tiles ----
 /** A headline tile; with a share, a small pie of it beside the value */
+/** The district tiles' terms, behind a "?" on each (#253): the page's own definitions, from the enrollment chart's
+ * note, About the data and the map's note, a sentence or two each */
+const TILE_NOTES = {
+  spending: "What the district spent on the pupils in its own schools, divided by those pupils (in-district FTE). " +
+    "It leaves out tuition for the district's pupils educated elsewhere.",
+  enrollment: "The pupils taught in the district's own schools, including those who come from other towns by school " +
+    "choice or tuition. Full-time equivalents (FTE) averaged over the year: a pupil enrolled for half the year counts as half.",
+  aid: "Chapter 70 aid is the state's aid toward the net school spending it requires of each district each year. " +
+    "Foundation pupils are the count Chapter 70 uses: every pupil the district is financially responsible for on " +
+    "October 1, the fall before the fiscal year begins.",
+  above: "How far the district's actual net school spending ran above the level the state requires. Anything above " +
+    "the requirement is a local choice, paid from local revenues.",
+};
+
 function tile(label: string, value: string, details: string[],
   share?: { v: number; title: string; own?: string; cmp?: { v: number; title: string; detail: string } | null } | null,
   help?: string) {
@@ -1445,6 +1459,8 @@ export async function startExplorer() {
   // what each chart's columns stack ("categories", "sources") where it has more than one, as it last drew
   const oneBar = new Set<StackPanel>();
   const oneDials = new Map<StackPanel, HTMLButtonElement>();
+  // Each chart's View menu, which holds its switches (#253)
+  const viewMenus = new Map<StackPanel, HTMLDetailsElement>();
   const stacksOf = new Map<StackPanel, string>();
   // The labor force chart: the unemployment rate, or the residents, labor force and employed behind it
   let popView: "rate" | "people" = "rate";
@@ -1467,8 +1483,16 @@ export async function startExplorer() {
   const folds = () => [...document.querySelectorAll<HTMLDetailsElement>("details[data-remember]")];
   const foldKey = (d: HTMLDetailsElement) => `mass-school-spending:${d.dataset.remember}`;
   // toggle doesn't bubble, so listen as it passes down
+  // The browser marks a toggle trusted even when a script set `open`, so isTrusted can't tell the two apart (#253: the
+  // folds the map and the cap tab build brought the question up on arrival). A click on the summary just before can.
+  let foldClicked: { fold: Element | null; at: number } = { fold: null, at: 0 };
+  document.addEventListener("click", (ev) => {
+    const sum = ev.isTrusted && ev.target instanceof Element ? ev.target.closest("summary") : null;
+    if (sum) foldClicked = { fold: sum.parentElement, at: Date.now() };
+  }, true);
   document.addEventListener("toggle", (ev) => {
-    if (!(ev.target instanceof HTMLDetailsElement) || !ev.target.dataset.remember || !ev.isTrusted) return;
+    if (!(ev.target instanceof HTMLDetailsElement) || !ev.target.dataset.remember) return;
+    if (ev.target !== foldClicked.fold || Date.now() - foldClicked.at > 1500) return;
     askToRemember();
     remember();
   }, true);
@@ -1744,11 +1768,19 @@ export async function startExplorer() {
     const comps = allComps();
     const any = compsInView().length > 0;
     setDial(compsSwitch, comps, !any ? "Pick a comparison to compare with" : comps ? "Hide the comparison on every chart" : "Show the comparison on every chart", !any);
+    for (const [p, menu] of viewMenus) {
+      const says = [...(hasComps.get(p) && hiddenLines[p].has("cmp") ? ["no comps"] : []),
+        ...(hasTrends.get(p) && trendsAlone.has(p) ? ["trends only"] : []),
+        ...(stacksOf.has(p) && oneBar.has(p) && !trendsAlone.has(p) ? ["one bar"] : [])];
+      menu.firstElementChild!.replaceChildren("View", ...(says.length ? [": ", text("strong", says.join(", "))] : []));
+    }
     for (const [p, b] of oneDials) {
       const noun = stacksOf.get(p);
-      const on = !!noun && oneBar.has(p);
-      setDial(b, on, !noun ? "This chart has nothing to combine" : on ? `Show the ${noun} again`
-        : `Show each year's total as one bar, without its ${noun}`, !noun);
+      // With only the trends shown there are no columns to combine: the switch waits, and keeps its setting (#253)
+      const trends = trendsAlone.has(p);
+      const on = !!noun && oneBar.has(p) && !trends;
+      setDial(b, on, !noun ? "This chart has nothing to combine" : trends ? "Turn Trends only off to use One bar"
+        : on ? `Show the ${noun} again` : `Show each year's total as one bar, without its ${noun}`, !noun || trends);
     }
   }
 
@@ -2469,7 +2501,61 @@ export async function startExplorer() {
     const rest = [cmp, amounts, `FY${years[0]}–FY${years[last]}`,
       state.usd === "nominal" ? "Nominal dollars" : `FY${state.usd} dollars`, ...(allTrends() ? ["Trends only"] : [])];
     dockSum.replaceChildren(text("strong", name), ` · ${rest.join(" · ")}`);
+    // Display options says the same settings, less who and compared with whom, which show beside it
+    $("options-sum").textContent = [...rest.slice(1), ...(!onTowns && state.hist === "on" ? [`Since ${fullYears[0]}`] : [])].join(" · ");
+    // With No comparison, the offer of the district's or town's own size group in its region
+    for (const [offer, sel] of [[offerCompare, compareSelect], [offerTownCompare, townCompareSelect]] as const) {
+      const opt = sel.querySelector<HTMLOptionElement>(`option[value="${offer.dataset.value}"]`);
+      offer.hidden = sel.value !== "none" || !opt || opt.disabled;
+    }
+    jumpList();
     dockSum.setAttribute("aria-label", `Show controls: ${name}, ${rest.join(", ")}`);
+  }
+  // Display options (#253): the settings fold under one line; who and compared with whom stay in view
+  const optionsToggle = $<HTMLButtonElement>("options-toggle");
+  optionsToggle.addEventListener("click", () => {
+    const open = controlsForm.classList.toggle("options-open");
+    optionsToggle.setAttribute("aria-expanded", String(open));
+  });
+  const offerCompare = $<HTMLButtonElement>("offer-compare");
+  const offerTownCompare = $<HTMLButtonElement>("offer-town-compare");
+  for (const [offer, sel] of [[offerCompare, compareSelect], [offerTownCompare, townCompareSelect]] as const) {
+    offer.addEventListener("click", () => {
+      sel.value = offer.dataset.value!;
+      sel.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+  }
+  // The charts on this tab, each a link to it (#253: 9 on the district view and 16 on the town view, and nothing
+  // listed them). Redrawn only when the charts shown change. Open on arrival, except on a phone.
+  const jump = $<HTMLDetailsElement>("chart-jump");
+  jump.open = !matchMedia("(max-width: 640px)").matches;
+  let jumpDrawn = "";
+  function jumpList() {
+    const box = panelBox();
+    const figs = [...box.querySelectorAll<HTMLElement>(":scope > figure.panel")].filter((f) => !f.hidden);
+    const items = figs.map((f) => [f.id, (f.querySelector("h3")?.textContent ?? "").replace(/\s+/g, " ").trim()] as const);
+    const drawn = JSON.stringify(items);
+    if (drawn === jumpDrawn) return;
+    jumpDrawn = drawn;
+    $("chart-jump-sum").textContent = `Charts on this tab (${items.length})`;
+    $("chart-jump-list").replaceChildren(...items.map(([id, title]) => {
+      const li = document.createElement("li");
+      const a = text("a", title) as HTMLAnchorElement;
+      a.href = `#${id}`;
+      a.dataset.sameTab = "";
+      a.addEventListener("click", (ev) => {
+        ev.preventDefault();
+        const fig = $(id);
+        const h = fig.querySelector<HTMLElement>("h3");
+        fig.scrollIntoView({ block: "start" });
+        if (h) {
+          h.tabIndex = -1;
+          h.focus({ preventScroll: true });
+        }
+      });
+      li.append(a);
+      return li;
+    }));
   }
   function dockCheck() {
     const on = (state.view === "districts" || state.view === "towns") &&
@@ -2586,7 +2672,7 @@ export async function startExplorer() {
     // One bar (#251): every category, as with nothing picked, drawn as each year's total in one color, and the
     // legend's picks set aside until it's off. The tables keep their categories.
     if (ONE_BAR.has(s.key) && !s.share && s.series.length > 1) stacksOf.set(s.key, s.noun);
-    const one = stacksOf.has(s.key) && oneBar.has(s.key);
+    const one = stacksOf.has(s.key) && oneBar.has(s.key) && !trendsAlone.has(s.key);
     const shown = single || one ? s.series : visible(s.series, s.key);
     const sel = one ? null : !s.share ? selectionName(shown, s.series, s.noun)
       : single ? s.series[0].label : shown.length === s.series.length ? null : shown.length === 1 ? shown[0].label : `${shown.length} selected groups`;
@@ -2626,7 +2712,9 @@ export async function startExplorer() {
       alone ? [] : one ? [{ key: "one", label: s.totalLabel || "Total", color: ONE_COLOR, values: total }] : shown,
       alone ? null : overlay,
       alone ? niceTicks((amountMax || max) * 1.04) : sel ? fitTicks(shown, lineTops) : s.ticks ?? niceTicks(max * 1.04),
-      s.axis ?? fmtUsd, setHover, alone ? undefined : { value: end >= 0 ? shownTotal[end] : null, text: fmt, index: end }, [],
+      s.axis ?? fmtUsd, setHover,
+      // No figure over the last column where the groups fill the whole: it would always say 100%
+      alone || (s.share && !sel) ? undefined : { value: end >= 0 ? shownTotal[end] : null, text: fmt, index: end }, [],
       alone ? [] : tv.trends, extras, marks);
     legend($(`legend-${s.key}`), [
       ...(one ? [] : s.series.map((x) => ({ ...(single ? { spot: x.key } : { key: x.key }), label: x.label, color: x.color, mark: "rect" as const }))),
@@ -2683,7 +2771,11 @@ export async function startExplorer() {
   function shareStack(s: Pick<StackSpec, "key" | "name" | "series" | "cSeries" | "cmp" | "width" | "height" | "yTitle" | "sparse" |
     "end"> & { sub: string; help: string; full: string; base: { values: Values; label: string; fmt: (v: number) => string } }) {
     const p = stackPanel({ ...s, share: true, noun: "groups", yShort: "Share", totalLabel: "", fmt: pctFmt, axis: (v) => `${v}%`,
-      ticks: [0, 25, 50, 75, 100], sub: (fitted) => [s.sub + fitted + " ", helpTip(s.help)],
+      ticks: [0, 25, 50, 75, 100],
+      // Years far apart: what the bands between the columns are (#253)
+      sub: (fitted) => [s.sub + (!s.sparse ? "" : s.series.length === 1 ? " The band joins the share from one estimate to the next; its top line slopes with the change."
+          : " Each band joins a group's share from one estimate to the next; its top line slopes with the change.") +
+        fitted + " ", helpTip(s.help)],
       full: { caption: s.full, cols: [
         ...s.series.map((x) => ({ label: x.label, values: x.values, fmt: pctFmt })),
         { label: s.base.label, values: s.base.values, fmt: s.base.fmt },
@@ -2948,7 +3040,7 @@ export async function startExplorer() {
         g != null ? `${change(g)} a year on trend since FY${years[Math.max(0, colFirst)]}${real ? ", after inflation" : ", before inflation"}` : "",
         c && cPpeTotal?.[tl] != null ? `${cName}: ${money(cPpeTotal[tl]!)}` : "",
         dayGrowth && colFirst > 0 ? `Older measure: ${dayGrowth}` : "",
-      ]);
+      ], null, TILE_NOTES.spending);
     // Before FY2005, the older counts: DESE's day-program membership, or before FY1997, NCES's
     const earlyPupils = e.enroll.in_district[tl] == null && histOn
       ? (e.day_memb?.[tl] != null ? { v: e.day_memb[tl]!, src: "day-program membership (DESE)" }
@@ -2970,15 +3062,15 @@ export async function startExplorer() {
           "Full-time equivalents (FTE)",
           enrollChange != null ? `${change(enrollChange)} since FY${years[enrollFirst]}` : "",
           e.kind === "district" ? "" : "Average per district",
-        ]),
+        ], null, TILE_NOTES.enrollment),
       tile(`Chapter 70 aid${whole ? "" : " per foundation pupil"}, FY${years[tl]}`, aid != null ? money(aid) : "–", [aidLine, cAidLine],
         aidShare != null ? { v: aidShare, title: `Chapter 70 aid: ${aidLine}`, own: aidLine,
-          cmp: cAidShare != null ? { v: cAidShare, title: cAidLine, detail: cAidLine } : null } : null),
+          cmp: cAidShare != null ? { v: cAidShare, title: cAidLine, detail: cAidLine } : null } : null, TILE_NOTES.aid),
       tile(`Spending above required, FY${years[tl]}`, above != null ? money(above) : aid != null ? "Not reported" : "–", [
         above == null ? (aid != null ? `DESE has not reported FY${years[tl]} actual spending` : "")
           : !whole ? "Per foundation pupil" : e.kind === "district" ? "In total" : "For the average district",
         cNss && cNss[2].values[tl] != null ? `${cName}: ${money(cNss[2].values[tl]!)}` : "",
-      ]),
+      ], null, TILE_NOTES.above),
     );
   }
 
@@ -3172,7 +3264,7 @@ export async function startExplorer() {
     // Panel 3: Chapter 70 and net school spending
     // One bar (#251): every component, as with nothing picked, drawn as each year's actual net school spending
     stacksOf.set("nss", "components");
-    const nssOne = oneBar.has("nss");
+    const nssOne = oneBar.has("nss") && !trendsAlone.has("nss");
     const nssShown = nssOne ? nss : visible(nss, "nss");
     const nssSel = nssOne ? null : selectionName(nssShown, nss, "components");
     const showsAbove = nssShown.some((s) => s.key === "above_required");
@@ -4162,7 +4254,7 @@ export async function startExplorer() {
     // The legend picks the sources shown; their sum, its trend and the comparison's follow. One bar (#251): every
     // source, as with nothing picked, drawn as each year's free cash identified
     if (fc.length > 1) stacksOf.set("tfc", "sources");
-    const fcOne = stacksOf.has("tfc") && oneBar.has("tfc");
+    const fcOne = stacksOf.has("tfc") && oneBar.has("tfc") && !trendsAlone.has("tfc");
     const fcShown = fcOne ? fc : visible(fc, "tfc");
     const fcSel = fcOne ? null : selectionName(fcShown, fc, "sources");
     const net = cut(deflate(per(t.fc_identified!, kT)));
@@ -4717,10 +4809,28 @@ export async function startExplorer() {
       group.append(one);
       oneDials.set(p, one);
     }
-    tools.prepend(group);
+    // The switches under one View button, first in the chart's row, the same place on every chart (#253: 19 switches
+    // on the district view and 41 on the town view stood before the charts' titles)
+    const menu = document.createElement("details");
+    menu.className = "chart-view";
+    menu.append(text("summary", "View"), group);
+    tools.prepend(menu);
+    viewMenus.set(p, menu);
     compDials.set(p, comps);
     trendDials.set(p, trends);
   }
+  // A View menu closes on a click outside it, and on Escape, which hands focus back to its button
+  document.addEventListener("click", (ev) => {
+    for (const m of viewMenus.values()) if (m.open && !(ev.target instanceof Node && m.contains(ev.target))) m.open = false;
+  });
+  document.addEventListener("keydown", (ev) => {
+    if (ev.key !== "Escape") return;
+    for (const m of viewMenus.values()) {
+      if (!m.open) continue;
+      m.open = false;
+      (m.firstElementChild as HTMLElement).focus();
+    }
+  });
   syncDials();
   for (const k of PANELS) keyboard($(`svg-${k}`) as unknown as SVGSVGElement);
   root.classList.remove("is-loading");

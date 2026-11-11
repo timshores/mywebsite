@@ -236,7 +236,7 @@ const asFirst = (c: Chart) => (c.svg + KEYS)
   <section id="explorer" class="explorer is-loading">
     <p class="eyebrow">Massachusetts</p>
     <h1>Municipal spending explorer</h1>
-    <details class="intro" id="intro" data-remember="intro">
+    <details class="intro" id="intro" data-remember="intro" data-view-only="districts towns">
     <summary>About this explorer</summary>
     <p class="lede">
       Why do our <span class="swap" data-districts="schools" data-towns="municipal services">schools</span> cost so
@@ -249,19 +249,21 @@ const asFirst = (c: Chart) => (c.svg + KEYS)
       This explorer continues the work of my report on
       <a href="/artifacts/western-ma-ppe-report-fy2025.pdf">per-pupil expenditure in Western Massachusetts</a>.
     </p>
-    <p class="lede"><em>You'll probably have a better experience exploring on a desktop than a mobile browser. I'll work on making that better.</em></p>
+    <p class="lede phone-note"><em>You'll probably have a better experience exploring on a desktop than a mobile browser. I'll work on making that better.</em></p>
     </details>
     <script is:inline>
-      // Open unless this browser remembers it closed; decided here, before the page paints, so it
-      // never flashes. The section is the element just before this script (explorer.ts remembers changes).
+      // Open unless this browser remembers it closed, and on a phone, where it would fill the first screen, closed
+      // unless this browser remembers it open (#253). Decided here, before the page paints, so it never flashes.
+      // The section is the element just before this script (explorer.ts remembers changes).
       (function () {
         var d = document.currentScript.previousElementSibling;
-        var closed = false;
+        var was = null;
         try {
-          closed = localStorage.getItem("mass-school-spending:remember") === "yes" &&
-            localStorage.getItem("mass-school-spending:" + d.dataset.remember) === "closed";
+          if (localStorage.getItem("mass-school-spending:remember") === "yes") {
+            was = localStorage.getItem("mass-school-spending:" + d.dataset.remember);
+          }
         } catch (e) {}
-        if (!closed) d.open = true;
+        if (was ? was === "open" : !matchMedia("(max-width: 640px)").matches) d.open = true;
       })();
     </script>
 
@@ -288,7 +290,7 @@ const asFirst = (c: Chart) => (c.svg + KEYS)
     <form class="controls" onsubmit="return false" data-view-only="districts towns">
       <div class="control" data-view-only="districts">
         <!-- Districts that no longer exist: a link at the foot of this menu lists them (explorer.ts, switchMenu) -->
-        <span id="pick-district-label">District</span>
+        <span id="pick-district-label" class="pick-label">Find a school district</span>
         <select id="pick-district" aria-labelledby="pick-district-label"></select>
       </div>
       <div class="control" data-view-only="districts">
@@ -313,13 +315,15 @@ const asFirst = (c: Chart) => (c.svg + KEYS)
           <!-- The group a relative choice resolves to, by name, or all the groups (explorer.ts, groupLink) -->
           <a class="cmp-name" id="cmp-name" href="/muni-spending/?view=data#groups">All groups</a>
         </div>
+        <!-- With No comparison: the district's own size group in its region, in one click (#253) -->
+        <button type="button" class="cmp-offer" id="offer-compare" data-value="cohort" hidden>+ Compare with districts its size in its region</button>
       </div>
       <div class="control" id="vs-control" hidden>
         <span id="pick-vs-label">Comparison district</span>
         <select id="pick-vs" aria-labelledby="pick-vs-label"></select>
       </div>
       <div class="control" data-view-only="towns" hidden>
-        <span id="pick-town-label">Town</span>
+        <span id="pick-town-label" class="pick-label">Find a city or town</span>
         <select id="pick-town" aria-labelledby="pick-town-label"></select>
       </div>
       <div class="control" data-view-only="towns" hidden>
@@ -342,19 +346,25 @@ const asFirst = (c: Chart) => (c.svg + KEYS)
           </select>
           <a class="cmp-name" id="town-cmp-name" href="/muni-spending/?view=data#groups">All groups</a>
         </div>
+        <button type="button" class="cmp-offer" id="offer-town-compare" data-value="peer" hidden>+ Compare with towns its size in its region</button>
       </div>
       <div class="control" id="town-vs-control" hidden>
         <span id="pick-town-vs-label">Comparison town or group</span>
         <select id="pick-town-vs" aria-labelledby="pick-town-vs-label"></select>
       </div>
-      <fieldset class="control toggle">
+      <!-- Display options (#253): the settings under one line that says what they are; who and compared with whom stay -->
+      <div class="controls-more">
+        <button type="button" id="options-toggle" aria-expanded="false" aria-controls="view-panel">Display options</button>
+        <span id="options-sum"></span>
+      </div>
+      <fieldset class="control toggle opt">
         <legend>Dollars</legend>
         <div class="toggle-options">
           <label><input type="radio" name="dollars" value="nominal" checked /><span>Nominal</span></label>
           <label><input type="radio" name="dollars" value="real" /><span>FY<span data-latest>2025</span> dollars</span></label>
         </div>
       </fieldset>
-      <div class="control years-control">
+      <div class="control years-control opt">
         <span id="years-label">Years</span>
         <div class="years-slider" role="group" aria-labelledby="years-label">
           <div class="years-track">
@@ -369,7 +379,7 @@ const asFirst = (c: Chart) => (c.svg + KEYS)
         <div class="years-ends" aria-hidden="true"><span>FY<span id="years-first">2005</span></span><span>FY<span data-latest>2025</span></span></div>
       </div>
       <!-- The earlier years, FY1990 to FY2004, from DESE's archive -->
-      <div class="control hist-control" data-view-only="districts">
+      <div class="control hist-control opt" data-view-only="districts">
         <span class="hist-head"><span id="hist-label">Since 1990</span></span>
         <button type="button" class="detail-dial hist-dial" id="hist-switch" role="switch" aria-checked="false" aria-labelledby="hist-label">
           <span class="dial-face" aria-hidden="true"><span class="dial-pointer"></span></span>
@@ -377,7 +387,7 @@ const asFirst = (c: Chart) => (c.svg + KEYS)
         </button>
       </div>
       <!-- The comparison on every chart; each chart's own dial, at its top right, turns one. Picking a comparison turns it on -->
-      <div class="control">
+      <div class="control opt">
         <span id="comps-label">Comps</span>
         <button type="button" class="detail-dial hist-dial" id="comps-switch" role="switch" aria-checked="true" aria-labelledby="comps-label">
           <span class="dial-face" aria-hidden="true"><span class="dial-pointer"></span></span>
@@ -385,21 +395,21 @@ const asFirst = (c: Chart) => (c.svg + KEYS)
         </button>
       </div>
       <!-- Only the trend lines, on every chart; each chart's own dial, at its top right, turns one -->
-      <div class="control">
+      <div class="control opt">
         <span id="trends-label">Trends only</span>
         <button type="button" class="detail-dial hist-dial" id="trends-switch" role="switch" aria-checked="false" aria-labelledby="trends-label">
           <span class="dial-face" aria-hidden="true"><span class="dial-pointer"></span></span>
           <span class="dial-state" aria-hidden="true">Off</span>
         </button>
       </div>
-      <fieldset class="control toggle" data-view-only="districts">
+      <fieldset class="control toggle opt" data-view-only="districts">
         <legend>Amounts</legend>
         <div class="toggle-options">
           <label><input type="radio" name="dper" value="pupil" checked /><span>Per pupil</span></label>
           <label><input type="radio" name="dper" value="total" /><span>Total</span></label>
         </div>
       </fieldset>
-      <fieldset class="control toggle" data-view-only="towns" hidden>
+      <fieldset class="control toggle opt" data-view-only="towns" hidden>
         <legend>Amounts</legend>
         <div class="toggle-options">
           <label><input type="radio" name="per" value="resident" checked /><span>Per resident</span></label>
@@ -408,8 +418,8 @@ const asFirst = (c: Chart) => (c.svg + KEYS)
           <label><input type="radio" name="per" value="total" /><span>Total</span></label>
         </div>
       </fieldset>
-      <p class="controls-note" id="dollars-note"></p>
-      <p class="controls-note" id="per-note" data-view-only="towns" hidden></p>
+      <p class="controls-note opt" id="dollars-note"></p>
+      <p class="controls-note opt" id="per-note" data-view-only="towns" hidden></p>
       <div class="relations" id="relations" hidden></div>
     </form>
 
@@ -420,6 +430,11 @@ const asFirst = (c: Chart) => (c.svg + KEYS)
     </header>
 
     <div id="tiles" class="tiles" data-view-only="districts towns"></div>
+    <!-- The charts on this tab, each a link to it (#253); explorer.ts lists the ones drawn -->
+    <details class="chart-jump" id="chart-jump" data-view-only="districts towns">
+      <summary id="chart-jump-sum">Charts on this tab</summary>
+      <ol id="chart-jump-list"></ol>
+    </details>
 
     <section id="cw-view" class="cw-view" data-view-only="commonwealth" hidden>
       <div id="cw-map"></div>
@@ -468,16 +483,14 @@ const asFirst = (c: Chart) => (c.svg + KEYS)
       </p>
       </details>
       <script is:inline>
-        // Open unless this browser remembers it closed; decided here, before the page paints, so it
-        // never flashes. The section is the element just before this script (explorer.ts remembers changes).
+        // Closed, so the tab's tool comes first (#253), unless this browser remembers it open; decided here, before
+        // the page paints, so it never flashes. The section is the element just before this script.
         (function () {
           var d = document.currentScript.previousElementSibling;
-          var closed = false;
           try {
-            closed = localStorage.getItem("mass-school-spending:remember") === "yes" &&
-              localStorage.getItem("mass-school-spending:" + d.dataset.remember) === "closed";
+            if (localStorage.getItem("mass-school-spending:remember") === "yes" &&
+              localStorage.getItem("mass-school-spending:" + d.dataset.remember) === "open") d.open = true;
           } catch (e) {}
-          if (!closed) d.open = true;
         })();
       </script>
       <div id="cap-root"><p class="tab-loading">Loading the Chapter 70 figures…</p></div>
@@ -550,16 +563,14 @@ const asFirst = (c: Chart) => (c.svg + KEYS)
       </p>
       </details>
       <script is:inline>
-        // Open unless this browser remembers it closed; decided here, before the page paints, so it
-        // never flashes. The section is the element just before this script (explorer.ts remembers changes).
+        // Closed, so the tab's tool comes first (#253), unless this browser remembers it open; decided here, before
+        // the page paints, so it never flashes. The section is the element just before this script.
         (function () {
           var d = document.currentScript.previousElementSibling;
-          var closed = false;
           try {
-            closed = localStorage.getItem("mass-school-spending:remember") === "yes" &&
-              localStorage.getItem("mass-school-spending:" + d.dataset.remember) === "closed";
+            if (localStorage.getItem("mass-school-spending:remember") === "yes" &&
+              localStorage.getItem("mass-school-spending:" + d.dataset.remember) === "open") d.open = true;
           } catch (e) {}
-          if (!closed) d.open = true;
         })();
       </script>
       <div id="housing-root"><p class="tab-loading">Loading the housing and enrollment figures…</p></div>
@@ -584,7 +595,9 @@ const asFirst = (c: Chart) => (c.svg + KEYS)
                   <> <label><input type="radio" name={`${c.key}-view`} value={o.value}
                     checked={k === 0} /><span>{o.text}</span></label></>
                 ))} </div></>
-              )}{" "}<ul class="legend" id={`legend-${c.key}`} aria-label={c.legend}></ul>
+              )}{" "}<ul class="legend" id={`legend-${c.key}`} aria-label={c.legend}></ul>{["ppe", "tspend"].includes(c.key) && (
+                <> <p class="legend-hint" data-detail>Select a category to show it alone; select more to add them.</p></>
+              )}
               <svg id={`svg-${c.key}`} tabindex="0" role="img"
                 data-aria-dper={c.svg.includes("{dper}") ? c.svg + KEYS : undefined}
                 data-aria-per={c.svg.includes("{per}") ? c.svg + KEYS : undefined} aria-label={asFirst(c)}></svg>
@@ -700,13 +713,13 @@ const asFirst = (c: Chart) => (c.svg + KEYS)
         that carries the line from its first year to its last; because the line weighs every year, an unusual first or
         last year moves it less than it would move growth measured from the first year's value to the last year's.
         Where the line starts at or below zero, the rate is its yearly rise as a share of its average value. With a
-        chart's Trends only dial on, the comparison's trend is drawn too, in the comparison's color.
+        chart's Trends only on, the comparison's trend is drawn too, in the comparison's color.
       </p>
       <p>
-        <strong>Legends and dials.</strong> A chart's legend picks what it shows: a category or a line alone, or
+        <strong>Legends and switches.</strong> A chart's legend picks what it shows: a category or a line alone, or
         several. A line picked alone draws as a single measure does, with its trend and the comparison's line. Each
-        chart's Comps dial shows or hides its comparison, and the Comps dial in the controls does it for every chart;
-        picking a comparison turns it on everywhere. A chart of stacked columns also has a One bar dial, which draws
+        chart's View menu holds its switches. Comps shows or hides its comparison, and Comps in the controls does it for every chart;
+        picking a comparison turns it on everywhere. A chart of stacked columns also has One bar, which draws
         each year's total as a single bar, without its categories or their legend; turned off, the chart's categories
         and the legend's picks return.
       </p>

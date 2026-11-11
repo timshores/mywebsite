@@ -729,12 +729,11 @@ export function startMap(root: HTMLElement, data: MapData, opts: {
   const foldHead = el("summary");
   foldHead.append(measureTitle);
   fold.append(foldHead, about, aboutDetail);
-  let closed = false;
+  // Closed, so the map comes first (#253), unless this browser remembers it open
   try {
-    closed = localStorage.getItem("mass-school-spending:remember") === "yes" &&
-      localStorage.getItem("mass-school-spending:map-about") === "closed";
+    fold.open = localStorage.getItem("mass-school-spending:remember") === "yes" &&
+      localStorage.getItem("mass-school-spending:map-about") === "open";
   } catch { /* storage blocked */ }
-  fold.open = !closed;
   const figure = el("figure", "map-figure");
   const legend = el("ul", "map-legend");
   const svg = svgEl("svg");

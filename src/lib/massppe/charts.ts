@@ -346,6 +346,9 @@ export function stackedColumns(
         const top = at.map((i, k) => `${ax.x(i).toFixed(1)},${ax.y(hi[k]).toFixed(1)}`);
         const bottom = at.map((i, k) => `${ax.x(i).toFixed(1)},${ax.y(lo[k]).toFixed(1)}`).reverse();
         svgEl("path", { d: `M${top.join("L")}L${bottom.join("L")}Z`, fill: s.color, class: "stack-area", "data-key": markKey(s.key) }, ag);
+        // And a line along the band's top, in the series' color: its slope is the change between two estimates,
+        // which the band's pale fill alone didn't show (#253)
+        svgEl("path", { d: `M${top.join("L")}`, stroke: s.color, class: "stack-edge", "data-key": markKey(s.key) }, ag);
       }
       lo = hi;
     }
@@ -388,6 +391,13 @@ export function stackedColumns(
         svgEl("path", { d: topRoundedRect(x, yTop, w, h, RADIUS), fill: s.color, "data-key": markKey(s.key) }, g);
       } else {
         svgEl("rect", { x, y: yTop, width: w, height: h, fill: s.color, "data-key": markKey(s.key) }, g);
+      }
+      // Years far apart: each part's figure beside its segment, at the start of its band, where the segment is tall
+      // enough for a line of type, so the change a band shows can be read off (#253). One part alone has its figure over
+      // its last column already.
+      if (frame.sparse && stacks.length > 1 && h >= 13) {
+        const t = svgEl("text", { x: x + w + 4, y: yTop + h / 2 + 4, class: "seg-label", "data-key": markKey(s.key) }, g);
+        t.textContent = fmt(Math.round(hi - lo));
       }
     });
     if (positiveTop > solidTop) {

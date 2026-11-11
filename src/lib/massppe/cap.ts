@@ -16,7 +16,7 @@ import { groupedPicker } from "./picker";
 import { chartRoom, enlargeButton, isEnlarged } from "./enlarge";
 import { pointsAtGroup, scatter, ticksFor, type Group, type Point, type ScatterView } from "./scatter";
 import { BLUE, FIFTH_RAMP, ORANGE, VIOLET } from "./palette";
-import { atCap, incomeFifths, requiredFor, solve, solveArrays, targetAt } from "./capModel";
+import { atCap, incomeFifths, requiredFor, requiredSteps, solve, solveArrays, targetAt } from "./capModel";
 import { showWork, type Work, type WorkStep } from "./showWork";
 import evidence from "../../data/massppe/evidence.json";
 import css from "./cap.css?inline"; // the styles for what this module builds (#237), added as it loads (#238)
@@ -355,20 +355,102 @@ function fifthsWork({ y, t, change, scenName, fifthOf }: Ctx): Work {
 function capWork({ y, t, f, alt, scenario, scenName }: Ctx, reqAlt: number | null): Work {
   const ev = evidenceFor(y.fy);
   const dese = { kind: "reported" as const, source: "DESE" };
+  const computed = { kind: "computed" as const };
+  const modeled = { kind: "modeled" as const };
+  const points = (v: number) => `${v < 0 ? "−" : ""}${Math.abs(v).toFixed(2)} points`;
+  const H = t.foundation;
+  const share = (v: number) => (H ? pct(v / H, 1) : "–");
+  const altTarget = alt.get(t.id)!;
+  const altYield = t.cey * f;
+  const altMax = scenario == null ? null : scenario * H;
+  const sums = new Map<number, string>();
+  // The steps from a target to a required contribution, DESE's and then the model's with the same rules
+  const required = (target: number, yieldShare: number, k: { kind: "computed" | "modeled" }, whose: string): WorkStep[] => {
+    const r = requiredSteps(t, target, yieldShare);
+    if (!r || t.preliminary == null || t.prior == null) return [];
+    // The sum the required contribution is: the preliminary contribution and each adjustment made, by name
+    sums.set(target, [usd(t.preliminary), ...(r.increment > 0 ? [`+ ${usd(r.increment)}`] : []), ...(r.excess > 0 ? [`− ${usd(r.excess)}`] : []),
+      ...(r.special > 0 ? [`+ ${usd(r.special)}`] : [])].join(" ") + (r.limited ? `, held to ${usd(r.limit)}` : ""));
+    const P = t.preliminary;
+    const rule: WorkStep = r.excess > 0
+      ? { value: usd(-r.excess, true), label: "Brought down to the target",
+        detail: "The preliminary contribution is above the target, so all of the difference comes off (the year's effort reduction is 100%)",
+        calc: `${usd(target)} − ${usd(P)}`, ...k }
+      : r.increment > 0
+        ? { value: usd(r.increment, true), label: `Increment toward the target: ${(r.rate * 100).toFixed(0)}% of last year's required contribution`,
+          detail: `The gap is ${r.rate >= 0.02 ? "more than 7.5 points" : "between 2.5 and 7.5 points"}, so the formula adds ` +
+            `${(r.rate * 100).toFixed(0)}%. Under 2.5 points it adds nothing; over 7.5, 2%.`,
+          calc: `${(r.rate * 100).toFixed(0)}% × ${usd(t.prior)}`, ...k }
+        : { value: usd(0), label: "No increment toward the target",
+          detail: "The gap is under 2.5 points. From 2.5 to 7.5 points the formula adds 1% of last year's required contribution; over 7.5, 2%.", ...k };
+    return [
+      { value: points(r.gap), label: `Gap between ${whose} and the preliminary contribution`,
+        detail: "As shares of the foundation budget, in percentage points. Above zero, the preliminary contribution falls short of the target.",
+        calc: `${share(target)} − ${share(P)}, before rounding`, ...k },
+      rule,
+      ...(r.special > 0 ? [{ value: usd(r.special, true), label: "Special increment to the target",
+        detail: "A town whose yield is more than 175% of its foundation budget is required to contribute its whole target",
+        calc: `yield at ${share(yieldShare * H)} of the foundation budget`, ...k }] : []),
+      ...(r.limited ? [{ value: usd(r.limit), label: "Limit: 90% of the foundation budget",
+        detail: "A required contribution can't be more than this, and here it would be", calc: `90% × ${usd(H)}`, ...k }] : []),
+    ];
+  };
+  const has = t.required != null && t.prior != null && t.mrgf != null && t.preliminary != null;
   const steps: WorkStep[] = [
-    { value: usd(t.eqv), label: "Equalized valuation", detail: `The state's estimate of all its taxable property, January ${y.eqv_year}`, ...dese },
+    { part: `${t.name}'s target local contribution, FY${y.fy}, as DESE sets it`,
+      value: usd(t.eqv), label: "Equalized valuation", detail: `The state's estimate of all the town's taxable property, as of January ${y.eqv_year}`, ...dese },
+    { value: usd(t.eqv * y.property_pct), label: "Effort from property",
+      detail: "The year's statewide property percentage, the same for every town, times the valuation",
+      calc: `${rate(y.property_pct)} × ${usd(t.eqv)}`, ...computed },
     { value: usd(t.income), label: "Residents' income", detail: `From their ${y.income_year} state tax returns`, ...dese },
-    { value: usd(t.cey), label: "Combined effort yield", detail: `${rate(y.property_pct)} of the valuation plus ${rate(y.income_pct)} of the income`, ...dese },
-    { value: usd(t.foundation), label: "Foundation budget", detail: "What the formula says its schools need", ...dese },
-    { value: usd(t.target), label: "Target local contribution", detail: `The lesser of the yield and ${pct(y.max_pct, 1)} of the foundation budget`, ...dese },
-    { value: `${rate(y.property_pct * f)} · ${rate(y.income_pct * f)}`, label: `Percentages ${scenName}`,
-      detail: `Today's two, times one factor, ${f.toFixed(4)}, so the towns' targets still total ${big(y.totals.target)}`, kind: "modeled" },
-    { value: usd(alt.get(t.id)!), label: `Target ${scenName}`,
-      detail: `The yield at those percentages${scenario == null ? "" : `, or ${capPct(scenario)} of the foundation budget if that's less`}`, kind: "modeled" },
-    ...(t.required != null ? [{ value: usd(t.required), label: "Required local contribution",
-      detail: "The least the town must appropriate this year, moving toward its target", ...dese }] : []),
-    ...(reqAlt != null ? [{ value: usd(reqAlt), label: `Required local contribution ${scenName}`,
-      detail: "The year's rules applied to the target above, starting from last year's", kind: "modeled" as const }] : []),
+    { value: usd(t.income * y.income_pct), label: "Effort from income",
+      detail: "The year's statewide income percentage, the same for every town, times the income",
+      calc: `${rate(y.income_pct)} × ${usd(t.income)}`, ...computed },
+    { value: usd(t.cey), label: "Combined effort yield", detail: "Steps 2 and 4 together: what the town would contribute at the statewide percentages",
+      calc: `${usd(t.eqv * y.property_pct)} + ${usd(t.income * y.income_pct)}`, ...dese },
+    { value: usd(H), label: "Foundation budget", detail: "What the formula says the schooling of the town's pupils needs", ...dese },
+    { value: usd(t.max), label: `Maximum: ${pct(y.max_pct, 1)} of the foundation budget`, detail: "The cap. No town's target can be more than this.",
+      calc: `${pct(y.max_pct, 1)} × ${usd(H)}`, ...dese },
+    { value: usd(t.target), label: "Target local contribution",
+      detail: t.capped ? `The lesser of steps 5 and 7. The yield is ${share(t.cey)} of the foundation budget, above the cap, so ${t.name}'s target is the maximum: it is at the cap.`
+        : `The lesser of steps 5 and 7. The yield is ${share(t.cey)} of the foundation budget, below the cap, so ${t.name}'s target is its yield.`, ...dese },
+
+    { part: `The same target ${scenName}`,
+      value: big(y.totals.target), label: "All towns' targets together, held fixed",
+      detail: "The state sets the two percentages so that every town's target adds up to 59% of all foundation budgets. The model keeps that total.", ...dese },
+    { value: f.toFixed(4), label: "One factor on both percentages",
+      detail: scenario == null ? "With no cap, the towns now at the cap would owe their full yields, and the total would rise. The factor lowers both percentages, for every town, until the targets add up to step 9 again. It is found by trial across all the towns at once."
+        : scenario > y.max_pct ? "With a higher cap, the towns at the cap owe more, and the total would rise. The factor lowers both percentages, for every town, until the targets add up to step 9 again. It is found by trial across all the towns at once."
+          : scenario < y.max_pct ? "With a lower cap, the towns at the cap owe less, and the total would fall. The factor raises both percentages, for every town, until the targets add up to step 9 again. It is found by trial across all the towns at once."
+            : "This is today's cap, so the factor is 1 and nothing changes.",
+      calc: `${f.toFixed(4)} × ${rate(y.property_pct)} is ${rate(y.property_pct * f)}; ${f.toFixed(4)} × ${rate(y.income_pct)} is ${rate(y.income_pct * f)}`, ...modeled },
+    { value: usd(altYield), label: `Combined effort yield ${scenName}`, detail: "The town's yield at the new percentages",
+      calc: `${f.toFixed(4)} × ${usd(t.cey)}`, ...modeled },
+    ...(altMax != null ? [{ value: usd(altMax), label: `Maximum: ${capPct(scenario!)} of the foundation budget`, detail: "The cap being tried",
+      calc: `${capPct(scenario!)} × ${usd(H)}`, ...modeled }] : []),
+    { value: usd(altTarget), label: `Target ${scenName}`,
+      detail: altMax == null ? "With no cap, the target is the yield in step 11."
+        : altYield > altMax ? "The lesser of the two steps above: the maximum. The town would be at this cap." : "The lesser of the two steps above: the yield.", ...modeled },
+    { value: usd(altTarget - t.target, true), label: "Change in the target", calc: `${usd(altTarget)} − ${usd(t.target)}`, ...modeled },
+
+    ...(has ? [
+      { part: `${t.name}'s required local contribution, FY${y.fy}, as DESE sets it`,
+        value: usd(t.prior!), label: `Last year's required local contribution, FY${y.fy - 1}`, ...dese },
+      { value: `${(t.mrgf! * 100).toFixed(2)}%`, label: "Municipal revenue growth factor",
+        detail: "The Department of Revenue's estimate of how much the town's own revenue grew", ...dese },
+      { value: usd(t.preliminary!), label: "Preliminary local contribution", detail: "Last year's requirement, raised by the growth factor",
+        calc: `${usd(t.prior!)} × (1 + ${(t.mrgf! * 100).toFixed(2)}%)`, ...dese },
+      ...required(t.target, H ? t.cey / H : 0, computed, "the target (step 8)"),
+      { value: usd(t.required!), label: "Required local contribution", detail: "The least the town must appropriate toward its schools this year: the preliminary contribution and the adjustments above",
+        calc: sums.get(t.target), ...dese },
+
+      ...(reqAlt != null ? [
+        ...required(altTarget, H ? altYield / H : 0, modeled, `the target ${scenName}`).map((st, k) => (k === 0
+          ? { ...st, part: `The same requirement ${scenName}`, detail: `The same rules, starting from the same preliminary contribution, toward the target ${scenName}. ${st.detail}` } : st)),
+        { value: usd(reqAlt), label: `Required local contribution ${scenName}`, detail: "The preliminary contribution and the adjustments above", calc: sums.get(altTarget), ...modeled },
+        { value: usd(reqAlt - t.required!, true), label: "Change in the required contribution", calc: `${usd(reqAlt)} − ${usd(t.required!)}`, ...modeled },
+      ] : []),
+    ] : []),
   ];
   const status = !ev ? `FY${y.fy} isn't checked yet.`
     : `Checked ${onDate(evidence.cap.checked)}: ${ev.passed} of ${ev.links} links from DESE's spreadsheet to the model this ` +
@@ -376,7 +458,7 @@ function capWork({ y, t, f, alt, scenario, scenName }: Ctx, reqAlt: number | nul
         "100% cap and with no cap, within $1" + (ev.outside_required ? ", and with its required contributions wherever " +
           "the 90% rule below doesn't apply" : "") : "") + `. ${reviewedText(ev)}`;
   return {
-    steps,
+    steps, numbered: true,
     assumptions: ["The towns' targets keep the year's statewide total, and both percentages change by the same factor.",
       "The cap changes this year only; every other rule stays as DESE applied it, including the one that a required " +
         "contribution can't exceed 90% of the foundation budget. Michael Naughton's workbook leaves that rule out, so " +
@@ -416,12 +498,11 @@ export function startCap(root: HTMLElement, data: CapData, opts: { town: string 
   const howText = el("div");
   howFold.append(howText);
   how.append(howFold);
+  // Closed, so the tool comes first (#253), unless this browser remembers it open
   try {
-    howFold.open = !(localStorage.getItem("mass-school-spending:remember") === "yes" &&
-      localStorage.getItem("mass-school-spending:cap-how") === "closed");
-  } catch {
-    howFold.open = true;
-  }
+    howFold.open = localStorage.getItem("mass-school-spending:remember") === "yes" &&
+      localStorage.getItem("mass-school-spending:cap-how") === "open";
+  } catch { /* storage blocked */ }
   const tiles = el("div", "cap-tiles");
 
   // The scenario: no cap, or a cap of the reader's choosing

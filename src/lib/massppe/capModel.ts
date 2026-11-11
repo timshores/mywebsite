@@ -17,16 +17,26 @@ export interface ModelTown {
  * with no foundation budget has none, as it has no target (#242).
  */
 export function requiredFor(t: ModelTown, target: number, yieldPct: number): number | null {
+  return requiredSteps(t, target, yieldPct)?.required ?? null;
+}
+
+/** The same, step by step, for the cap tab's Show the work (#253): the gap between the target and the preliminary
+ * contribution in points of foundation, the increment it earns (as a rate and in dollars), what comes off where the
+ * preliminary contribution is above the target, what the 175% rule adds, the limit of 90% of foundation, and the
+ * required contribution those make. Null where DESE gives no prior-year figures. */
+export function requiredSteps(t: ModelTown, target: number, yieldPct: number) {
   if (t.preliminary == null || t.prior == null) return null;
-  if (!t.foundation) return 0;
   const P = t.preliminary;
   const H = t.foundation;
-  const shortfall = Math.round((target * 100) / H * 100) / 100 - (P * 100) / H;
-  const step = shortfall > 7.5 ? 0.02 : shortfall > 2.5 ? 0.01 : 0;
-  const T = Math.round(step * t.prior);
-  const V = Math.max(P - target, 0);
-  const W = yieldPct > 1.75 ? Math.max(target - (P + T), 0) : 0;
-  return Math.min(H * 0.9, Math.round(P + T - V + W));
+  if (!H) return { gap: 0, rate: 0, increment: 0, excess: 0, special: 0, limit: 0, limited: false, required: 0 };
+  const gap = Math.round((target * 100) / H * 100) / 100 - (P * 100) / H;
+  const rate = gap > 7.5 ? 0.02 : gap > 2.5 ? 0.01 : 0;
+  const increment = Math.round(rate * t.prior);
+  const excess = Math.max(P - target, 0);
+  const special = yieldPct > 1.75 ? Math.max(target - (P + increment), 0) : 0;
+  const before = Math.round(P + increment - excess + special);
+  const limit = H * 0.9;
+  return { gap, rate, increment, excess, special, limit, limited: before > limit, required: Math.min(limit, before) };
 }
 
 /** Whether the cap held a target below the yield it would otherwise be: the one test for "at the cap" on this tab, as

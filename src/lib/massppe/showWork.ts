@@ -9,10 +9,13 @@ import { el } from "./dom";
  * modeled: a figure that depends on an assumption no agency made */
 export type WorkKind = "reported" | "computed" | "modeled";
 
-export interface WorkStep { value: string; label: string; detail?: string; kind: WorkKind; source?: string }
+/** part: a heading over this step and the ones after it; calc: the step's arithmetic, in its own figures */
+export interface WorkStep { value: string; label: string; detail?: string; calc?: string; part?: string; kind: WorkKind; source?: string }
 
 export interface Work {
   steps: WorkStep[];
+  /** Number the steps, so one can refer to another ("step 5") */
+  numbered?: boolean;
   assumptions?: string[];
   /** The heading over the assumptions: what a model assumes, or what a measure counts */
   notesHead?: string;
@@ -33,16 +36,22 @@ export function showWork(work: Work, summary = "Show the work"): HTMLDetailsElem
   // Two columns at any width: whose figure it is sits under the figure, so a phone keeps room for the words
   for (const h of ["Figure", "What it is"]) head.append(el("th", undefined, h));
   const body = table.createTBody();
-  for (const s of work.steps) {
+  work.steps.forEach((s, k) => {
+    if (s.part) {
+      const head = body.insertRow();
+      head.className = "show-work-part";
+      head.append(Object.assign(el("th", undefined, s.part), { colSpan: 2, scope: "colgroup" }));
+    }
     const r = body.insertRow();
     r.className = `show-work-${s.kind}`;
     const what = el("td");
-    what.append(el("span", "show-work-label", s.label));
+    what.append(el("span", "show-work-label", work.numbered ? `${k + 1}. ${s.label}` : s.label));
     if (s.detail) what.append(el("span", "show-work-detail", s.detail));
+    if (s.calc) what.append(el("span", "show-work-calc", s.calc));
     const fig = el("td", "num", s.value);
     fig.append(el("span", "show-work-kind", s.kind === "reported" && s.source ? s.source : KIND[s.kind]));
     r.append(fig, what);
-  }
+  });
   const scroll = Object.assign(el("div", "table-scroll"), { tabIndex: 0 });
   scroll.append(table);
   box.append(scroll);
