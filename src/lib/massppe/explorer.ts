@@ -2392,7 +2392,9 @@ export async function startExplorer() {
     const shown = picked.length ? picked : all;
     const one = shown.length === 1 ? shown[0] : null;
     const cmpLine = (x: Measure): Series | null => ((v) => (v && v.some((y) => y != null)
-      ? { key: one ? "cmp" : `cmp:${x.key}`, label: names.cmpLabel(x), color: COMPARE_COLOR, values: v, ...(x.dash ? { dash: x.dash } : {}) }
+      ? { key: one ? "cmp" : `cmp:${x.key}`, label: names.cmpLabel(x), color: COMPARE_COLOR, values: v, ...(x.dash ? { dash: x.dash } : {}),
+        // Among several, each comparison line's dots take the color of the line it is compared with (#263)
+        ...(one ? {} : { dot: x.color }) }
       : null))(cmpOf?.(x));
     const cmpShown = shown.map(cmpLine).filter(hasLine);
     let trend: Series | null = null;
@@ -2415,7 +2417,8 @@ export async function startExplorer() {
         mark: x.dash ? "dash" as const : "line" as const,
         detail: !one && tv.only && x.trend !== false && shown.includes(x) ? trendDetail(linearTrend(x.values), fmt) : undefined })),
       ...(one ? lineLegend(trend, cmpShown[0] ?? null, fmt)
-        : cmpShown.length ? [{ label: names.cmpEntry, color: COMPARE_COLOR, mark: "linedot" as const, line: "cmp" as const }] : []),
+        : cmpShown.length ? [{ label: names.cmpEntry + (cmpShown.length > 1 ? ": a black line for each colored line, with dots in that line's color" : ""),
+          color: COMPARE_COLOR, mark: "linedot" as const, line: "cmp" as const }] : []),
     ];
     return { all, shown, one, cmpShown, trend, only: tv.only, trends: tv.trends, legend: legendItems,
       fitted: shown.length < all.length,
@@ -4723,14 +4726,17 @@ export async function startExplorer() {
     const k = towns!.meta.c70_target;
     const at = k ? years.indexOf(k.eqv_year + 1) : -1;
     const base = k && t.kind === "town" && at >= 0 ? t.eqv_total?.[at] ?? null : null;
-    $("teqv-sub").textContent = `${dollarsNote}${perP}. Every two years the state sets each town's equalized ` +
-      "valuation, its estimate of what all the town's taxable property would sell for on January 1; each is shown at the " +
-      "fiscal year whose assessments share that date." +
-      // The yield's property half, not the target's: a capped town's target is less than its yield (#242)
-      (k && base != null ? ` For FY${k.fy}, Chapter 70 counted ${usd(base * k.property_pct / 100)} of ${t.name}'s ` +
-        `combined effort yield from property, ${k.property_pct}% of its January ${k.eqv_year} equalized valuation, and ` +
-        `added ${k.income_pct}% of its residents' ${k.income_year} income. Its target local contribution is that yield or ` +
-        `${k.cap}% of its foundation budget, whichever is less.` : "");
+    // The note says what the chart shows; the dates and the Chapter 70 arithmetic wait behind a "?" each (#263)
+    $("teqv-sub").replaceChildren(`${dollarsNote}${perP}. The state's estimate of what all the taxable property in ` +
+      `${t.kind === "town" ? "town" : "a town"} would sell for. `, helpTip(
+      "Every two years the state sets each town's equalized valuation as of January 1. Each one is shown at the fiscal " +
+      "year whose assessments share that date, and the line joins them across the years between."));
+    // The yield's property half, not the target's: a capped town's target is less than its yield (#242)
+    if (k && base != null) $("teqv-sub").append(` Chapter 70 counts it, with residents' income, toward what ${t.name} is expected to pay for its schools. `, helpTip(
+      `For FY${k.fy}, Chapter 70 counted ${usd(base * k.property_pct / 100)} of ${t.name}'s combined effort yield from ` +
+      `property. That is ${k.property_pct}% of its January ${k.eqv_year} equalized valuation. It then added ` +
+      `${k.income_pct}% of its residents' ${k.income_year} income.\n\n${t.name}'s target local contribution is that ` +
+      `yield or ${k.cap}% of its foundation budget, whichever is less.`));
     fullTables.teqv = { caption: `Equalized valuation, ${t.name} (${lower(dollarsNote)})`, cols: [
       { label: inTotal ? (t.kind === "town" ? "Total" : "Average town") : `Per ${perWord}`, values: deflate(per(t.eqv!, kT)), fmt: usd },
       { label: t.kind === "town" ? "In all (nominal)" : "Towns combined (nominal)", values: t.eqv_total ?? [], fmt: (v) => amount(v) },

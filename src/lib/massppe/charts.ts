@@ -21,6 +21,9 @@ export interface Series {
   values: Val[];
   /** A dashed line's dash pattern (SVG stroke-dasharray), for a measure drawn apart from the rest */
   dash?: string;
+  /** Its dots in another color, ringed in its own: a comparison's line among several, in the color of the line it is
+   * compared with (#263) */
+  dot?: string;
   /** With only the trends shown, the trend's name, at one end of its line, and a shorter one for a narrow chart */
   endLabel?: string;
   endShort?: string;
@@ -565,13 +568,14 @@ export function lines(
     svgEl("path", { d: linePath(ax, s.values, sparse), stroke: s.color, class: "series-line", ...(s.dash ? { "stroke-dasharray": s.dash } : {}) }, sg);
     if (sparse || s.key.startsWith("cmp")) {
       s.values.forEach((v, i) => {
-        if (v != null) svgEl("circle", { cx: ax.x(i), cy: ax.y(v), r: 3, fill: s.color, class: "dot" }, sg);
+        if (v != null) svgEl("circle", { cx: ax.x(i), cy: ax.y(v), r: s.dot ? 3.5 : 3, fill: s.dot ?? s.color, class: "dot",
+          ...(s.dot ? { stroke: s.color, "stroke-width": 1.25 } : {}) }, sg);
       });
     }
     const last = s.values.map((v, i) => [v, i] as const).filter(([v]) => v != null).pop();
     if (last) {
       const [v, i] = last;
-      svgEl("circle", { cx: ax.x(i), cy: ax.y(v!), r: 4, fill: s.color, class: "dot" }, sg);
+      svgEl("circle", { cx: ax.x(i), cy: ax.y(v!), r: 4, fill: s.dot ?? s.color, class: "dot", ...(s.dot ? { stroke: s.color, "stroke-width": 1.25 } : {}) }, sg);
       if (i === frame.years.length - 1) ends.push({ y: ax.y(v!), text: endFmt(v!) });
     }
   }
