@@ -1,6 +1,6 @@
 {
  "cap": {
-  "checked": "2026-11-09",
+  "checked": "2026-11-12",
   "record": "https://github.com/timshores/schools/blob/main/ppe_report/evidence/cap.md",
   "years": {
    "2026": {
@@ -22,7 +22,7 @@
   }
  },
  "bill_income": {
-  "checked": "2026-11-09",
+  "checked": "2026-11-12",
   "record": "https://github.com/timshores/schools/blob/main/ppe_report/evidence/bill_income.md",
   "links": 4,
   "passed": 4,
@@ -33,7 +33,7 @@
   "reviewed": null
  },
  "housing": {
-  "checked": "2026-11-09",
+  "checked": "2026-11-12",
   "record": "https://github.com/timshores/schools/blob/main/ppe_report/evidence/housing_enrollment.md",
   "links": 9,
   "passed": 9,

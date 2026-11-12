@@ -62,7 +62,7 @@ interface Entity {
   rev_fte?: Values;
   /** Districts only: the town itself, or a regional district's member towns, each with what it must
    * contribute to this district and the other districts it belongs to */
-  towns?: { id: string; name: string; contribution: number | null; also: TownDistrict[] }[];
+  towns?: { id: string; name: string; contribution: number | null; mrgf?: number | null; also: TownDistrict[] }[];
   towns_kind?: "members" | "town";
   /** With Since 1990 on: DESE's older day-program spending per pupil, in total and, for a district, by
    * program; DESE's average membership (FY1997 on) and NCES fall enrollment (before); for an average,
@@ -986,6 +986,167 @@ function cmpRows(shown: Series[], cAll: Series[] | null, sel: string | null, tot
   return rows;
 }
 
+// ---- Trend and total change: under each chart with a comparison table, a drawer of small cards (Tim, #256, #257).
+// Each line the chart draws a trend for has a row of two: what its trend rises each year, and what that comes to over
+// the years shown, with the first and last years' own figures. A stacked chart has one row, for its total; its trend's
+// legend entry gives way to the first card while the drawer is open, and the card hides and shows the line as the
+// entry does. Pointing at a row lights its line on the chart. ----
+/** Whether the drawers are open: one choice for every chart, remembered with the other folds ("totals") */
+let totalsOpen = (() => {
+  try {
+    return !(localStorage.getItem(CONSENT) === "yes" && localStorage.getItem("mass-school-spending:totals") === "closed");
+  } catch {
+    return true;
+  }
+})();
+/** A row's trend, its yearly rise, its change along the trend, and from its first year's figure to its last's, up to
+ * the year at `end` */
+function totalChange(values: Values, end: number) {
+  const vals = values.map((v, i) => (i <= end ? v : null));
+  const f = firstAt(vals);
+  const l = lastAt(vals);
+  if (f < 0 || l <= f || !vals[f]) return null;
+  const trend = linearTrend(vals);
+  const [tf, tl] = [trend[f], trend[l]];
+  // A trend needs three years, and a line that starts at or below zero has no percentage
+  const fits = vals.filter((v) => v != null).length >= 3 && tf != null && tl != null;
+  return { f, l, first: vals[f]!, last: vals[l]!, ends: vals[l]! / vals[f]! - 1, onTrend: fits && tf! > 0 ? tl! / tf! - 1 : null,
+    yearly: fits ? trendRate(trend) : null, trendFirst: fits ? tf! : null, trendLast: fits ? tl! : null };
+}
+/** The chart's Trends only switch sits with the trend cards while the drawer is open (Tim, 2026-11-12), and goes back
+ * to the View menu, after Comps, when the drawer is closed, so it can always be reached */
+function placeTrendDial(drawer: HTMLDetailsElement) {
+  const figure = drawer.closest("figure");
+  const dial = [...(figure?.querySelectorAll<HTMLElement>(".chart-dial") ?? [])]
+    .find((b) => b.querySelector(".dial-label")?.textContent === "Trends only");
+  const menu = figure?.querySelector<HTMLElement>(".chart-view .chart-dials");
+  const tools = drawer.querySelector<HTMLElement>(".totals-tools");
+  if (!dial || !menu || !tools) return;
+  if (drawer.open && dial.parentElement !== tools) tools.append(dial);
+  else if (!drawer.open && dial.parentElement !== menu) menu.insertBefore(dial, menu.children[1] ?? null);
+}
+/** A card: its caption, its figure, and the sentences under it */
+function totalCard(tag: "div" | "button", caption: Node, value: string, details: (string | HTMLElement)[]) {
+  const card = document.createElement(tag);
+  card.className = "total-card";
+  const head = text("span", "", "total-head");
+  head.append(caption, text("span", value, "total-value"));
+  card.append(head, ...details.map((d) => (typeof d === "string" ? text("span", d, "total-detail") : d)));
+  return card;
+}
+/** dollars: for a chart in dollars, "before inflation" or "after inflation", as the Dollars switch has it */
+function drawTotals(holder: HTMLElement, years: number[], rows: CmpRow[], kind: "usd" | "fte" | "count", cmp: Named | null, end: number,
+  dollars: string) {
+  const figure = holder.closest("figure");
+  const key = holder.id.replace(/^cmp-/, "");
+  const svg = figure?.querySelector(`#svg-${key}`);
+  if (!figure || !svg) return;
+  const fmt = kind === "usd" ? usd : kind === "count" ? (v: number) => Math.round(v).toLocaleString("en-US") : fte;
+  const tenth = (v: number) => change(v, Math.abs(v) >= 0.0995 ? 0 : 1);
+  // The total where the chart stacks its parts; each line where it doesn't
+  const stacked = rows.some((r) => r.total);
+  const picked = (stacked ? rows.filter((r) => r.total) : rows).slice(0, 4);
+  // One row, for the line the chart's own trend follows: a stack's total, or a chart's one line
+  const totals = stacked || rows.length === 1;
+  const spans: { f: number; l: number }[] = [];
+  const items = picked.flatMap((r) => {
+    const t = totalChange(r.values, end);
+    if (!t) return [];
+    spans.push(t);
+    const b = r.base && cmp ? totalChange(r.base, end) : null;
+    const row = document.createElement("li");
+    row.className = "total-row";
+    // What the row lights on the chart: the chart's own trend, or the line whose legend entry has the row's name
+    row.dataset.key = totals ? "line:trend" : "";
+    if (!totals) row.dataset.label = r.label;
+    const dash = text("span", "", "key dash");
+    dash.style.setProperty("--c", totals ? TREND_COLOR : r.color || TREND_COLOR);
+    const each = text("span", "", "total-label");
+    each.append(dash, totals && picked.length === 1 ? "Trend line, each year" : `${r.label}: trend line, each year`);
+    const y = t.yearly;
+    const yearly = totalCard(totals ? "button" : "div", each, y ? `${signed(y.perYear, fmt)}${kind === "fte" ? " pupils" : ""}` : "–", [
+      ...(y?.rate != null ? [`${change(y.rate)} a year along the trend${dollars ? `, ${dollars}` : ""}.`] : []),
+      ...(b?.yearly ? [`${cmp!.name}: ${signed(b.yearly.perYear, fmt)}${b.yearly.rate != null ? `, ${change(b.yearly.rate)}` : ""} a year.`] : []),
+    ]);
+    if (yearly instanceof HTMLButtonElement) {
+      // The trend's legend entry is hidden while the drawer is open; this card does its work
+      yearly.type = "button";
+      yearly.classList.add("total-toggle");
+      yearly.addEventListener("click", () => figure.querySelector<HTMLButtonElement>('.legend [data-key="line:trend"]')?.click());
+    }
+    // The headline is the years' own figures, first to last, which anyone can read off the chart; the trend's change
+    // comes after, and where the two are far apart or point opposite ways, a sentence says why (Tim, #259: "+4.5%"
+    // under a headline of "−1.7%" read as a contradiction)
+    const apart = t.onTrend != null && (Math.sign(t.onTrend) !== Math.sign(t.ends) || Math.abs(t.onTrend - t.ends) >= 0.05);
+    const side = (v: number, line: number) => (v >= line ? "above" : "below");
+    const [a, z] = apart ? [side(t.first, t.trendFirst!), side(t.last, t.trendLast!)] : ["", ""];
+    const why = !apart ? []
+      // Says which figure is which, and that this is why they differ (Tim, #261: "the two changes differ" was ambiguous)
+      : [`The actual change, ${change(t.ends)}, is measured from FY${years[t.f]}'s figure to FY${years[t.l]}'s. The trend line's ` +
+        `change, ${change(t.onTrend!)}, is measured along the line fitted to every year. ` +
+        (a !== z ? `FY${years[t.f]} was ${a} the trend line and FY${years[t.l]} was ${z} it`
+          : `FY${years[t.f]} and FY${years[t.l]} were both ${a} the trend line, by different amounts`) +
+        ". That is why the actual change is different from what the trend predicts."];
+    const total = totalCard("div", text("span", `Actual, FY${years[t.f]} to FY${years[t.l]}`, "total-label"), tenth(t.ends), [
+      `From ${fmt(t.first)} in FY${years[t.f]} to ${fmt(t.last)} in FY${years[t.l]}${dollars ? `, ${dollars}` : ""}.`,
+      // Why the two differ, behind a "?" (Tim, #260)
+      ...(t.onTrend != null ? [((line) => {
+        if (why.length) line.append(" ", helpTip(why[0]));
+        return line;
+      })(text("span", `Along the trend line: ${change(t.onTrend)}.`, "total-detail"))] : []),
+      ...(b ? [`${cmp!.name}: ${change(b.ends)}${b.onTrend != null ? `; along its trend line, ${change(b.onTrend)}` : ""}.`] : []),
+    ]);
+    row.append(yearly, total);
+    return [row];
+  });
+  let drawer = figure.querySelector<HTMLDetailsElement>(`details.totals[data-for="${key}"]`);
+  if (!items.length) {
+    drawer?.remove();
+    return;
+  }
+  if (!drawer) {
+    drawer = document.createElement("details");
+    drawer.className = "totals";
+    drawer.dataset.for = key;
+    drawer.dataset.remember = "totals";
+    drawer.append(document.createElement("summary"), text("div", "", "totals-tools"), document.createElement("ul"));
+    // One choice for every chart: opening or closing one drawer does the same to the rest
+    drawer.addEventListener("toggle", (ev) => {
+      const d = ev.currentTarget as HTMLDetailsElement;
+      placeTrendDial(d);
+      if (d.open === totalsOpen) return;
+      totalsOpen = d.open;
+      document.querySelectorAll<HTMLDetailsElement>("details.totals").forEach((o) => (o.open = totalsOpen));
+    });
+  }
+  drawer.open = totalsOpen;
+  drawer.classList.toggle("has-trend-card", totals);
+  const from = Math.min(...spans.map((t) => t.f));
+  const to = Math.max(...spans.map((t) => t.l));
+  drawer.querySelector("summary")!.textContent = `Trend and total change, FY${years[from]}–FY${years[to]}`;
+  drawer.querySelector("ul")!.replaceChildren(...items);
+  const box = drawer;
+  // Once the chart's legends are drawn: the drawer sits straight under the chart, above the lines' legend; each row
+  // takes its line's key from the legend entry of its name; and the trend's card shows whether its line is hidden
+  const settle = () => {
+    if (svg.nextElementSibling !== box) svg.after(box);
+    placeTrendDial(box);
+    for (const row of box.querySelectorAll<HTMLElement>(".total-row[data-label]")) {
+      const entry = [...figure.querySelectorAll<HTMLElement>(".legend [data-key]")].find((e) => e.textContent?.trim().startsWith(row.dataset.label!));
+      if (entry?.dataset.key) row.dataset.key = entry.dataset.key;
+    }
+    const line = figure.querySelector<HTMLButtonElement>('.legend [data-key="line:trend"]');
+    for (const b of box.querySelectorAll<HTMLButtonElement>(".total-toggle")) {
+      b.disabled = !line;
+      b.classList.toggle("is-off", !!line?.classList.contains("is-off"));
+      b.setAttribute("aria-pressed", String(!line?.classList.contains("is-off")));
+      b.title = line?.classList.contains("is-off") ? "Show the trend line" : "Hide the trend line";
+    }
+  };
+  settle();
+  queueMicrotask(settle);
+}
+
 /** The comparison table, over years; hist, with Since 1990 on; link, the "above" that goes to the comparison menu */
 function drawCompareTable(holder: HTMLElement, years: number[], caption: string, rowLabel: string, rows: CmpRow[],
   kind: "usd" | "fte" | "count", cmp: Named | null,
@@ -1183,7 +1344,7 @@ function nameList(items: HTMLElement[]): HTMLElement {
   return list;
 }
 
-interface RelRow { name: HTMLElement; kind?: string; amount?: number | null; extra: [string, HTMLElement[]] | null }
+interface RelRow { name: HTMLElement; kind?: string; amount?: number | null; factor?: number | null; extra: [string, HTMLElement[]] | null }
 
 /** Swap beside Compare with: shown while there's a comparison, and active when the comparison can be the
  * focus (it's in the District or Town menu) and the focus can be its comparison */
@@ -1195,7 +1356,7 @@ function swapButton(b: HTMLButtonElement, name: string, c: (Named & { id: string
   b.setAttribute("aria-label", `Swap: ${what}`);
 }
 
-function relations(spec: { root: string; note: string; rows: RelRow[] } | null) {
+function relations(spec: { root: string; note: string; help?: string; rows: RelRow[] } | null) {
   const box = $("relations");
   box.hidden = !spec;
   if (!spec) {
@@ -1204,7 +1365,7 @@ function relations(spec: { root: string; note: string; rows: RelRow[] } | null) 
   }
   const head = document.createElement("div");
   head.className = "rel-head";
-  head.append(text("strong", spec.root), text("span", spec.note, "rel-note"));
+  head.append(text("strong", spec.root), text("span", spec.note, "rel-note"), ...(spec.help ? [helpTip(spec.help)] : []));
   const tree = document.createElement("ul");
   tree.className = "rel-tree";
   for (const r of spec.rows) {
@@ -1215,6 +1376,7 @@ function relations(spec: { root: string; note: string; rows: RelRow[] } | null) 
     li.append(name);
     if (r.kind != null) li.append(text("span", r.kind, "rel-kind"));
     if (r.amount !== undefined) li.append(text("span", r.amount != null ? amount(r.amount) : "–", "rel-amt"));
+    if (r.factor !== undefined) li.append(text("span", r.factor != null ? `${pct(r.factor, 2)} growth factor` : "–", "rel-factor"));
     if (r.extra) {
       const extra = document.createElement("span");
       extra.className = "rel-extra";
@@ -2314,7 +2476,7 @@ export async function startExplorer() {
       svg.classList.toggle("is-spotlit", on && !!svg.querySelector("[data-key]"));
     }
   }
-  const legendEntry = (ev: Event) => (ev.target instanceof Element ? ev.target.closest<HTMLElement>(".legend [data-key]") : null);
+  const legendEntry = (ev: Event) => (ev.target instanceof Element ? ev.target.closest<HTMLElement>(".legend [data-key], .totals .total-row[data-key]") : null);
   document.addEventListener("pointerover", (ev) => ev.pointerType !== "touch" && spotlight(legendEntry(ev), true));
   document.addEventListener("pointerout", (ev) => ev.pointerType !== "touch" && spotlight(legendEntry(ev), false));
   document.addEventListener("focusin", (ev) => {
@@ -2577,8 +2739,11 @@ export async function startExplorer() {
   dockLabel();
 
   const compareTable = (holder: HTMLElement, caption: string, rowLabel: string, rows: CmpRow[], kind: "usd" | "fte" | "count",
-    cmp: Named | null, opts: CmpOpts = {}) =>
+    cmp: Named | null, opts: CmpOpts = {}) => {
     drawCompareTable(holder, years, caption, rowLabel, rows, kind, cmp, { ...opts, hist: state.hist === "on", link: compareLink });
+    drawTotals(holder, years, rows, kind, cmp, opts.end ?? years.length - 1,
+      kind === "usd" ? (state.usd === "nominal" ? "before inflation" : "after inflation") : "");
+  };
 
 
 
@@ -3014,10 +3179,16 @@ export async function startExplorer() {
     relations(e.towns?.length ? {
       root: e.name,
       note: e.former ? `${e.towns_kind === "members" ? "Member towns · their" : "Town · its"} school districts today`
-        : `${e.towns_kind === "members" ? "Member towns" : "Town"} · FY${meta.latest} required local contribution`,
+        : `${e.towns_kind === "members" ? "Member towns" : "Town"} · FY${meta.latest} required local contribution, and ` +
+          `${e.towns_kind === "members" ? "each town's" : "the town's"} municipal revenue growth factor that year`,
+      help: e.former ? undefined : "The municipal revenue growth factor is the Department of Revenue's estimate of how much a town's own " +
+        "general revenue grows in a year. Each year the Chapter 70 formula starts a town's required local contribution from the " +
+        "year before's and raises it by the town's factor, then adjusts it toward the town's target. The Commonwealth tab maps " +
+        "every town's factor.",
       rows: e.towns.map((t) => ({
         name: viewLink(t.name, { view: "towns", t: t.id }),
         amount: e.former ? undefined : t.contribution,
+        factor: e.former ? undefined : t.mrgf ?? null,
         extra: t.also.length ? [e.former ? "now in" : "also funds", t.also.map((a) => districtName(a, true))] : null,
       })),
     } : null);

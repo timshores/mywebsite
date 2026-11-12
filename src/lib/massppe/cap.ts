@@ -198,9 +198,11 @@ function tileParts({ y }: Ctx) {
         "budget, below its combined effort yield, what this year's percentages of its property value and income would set."]),
     tile("Statewide percentages", `${rate(y.property_pct)} · ${rate(y.income_pct)}`,
       ["Of property value and of income, with the cap", `With no cap: ${rate(y.property_pct * y.factor)} · ${rate(y.income_pct * y.factor)}`]),
-    tile("Targets shifted by the cap", big(y.totals.up_sum), [
-      `${y.totals.up} towns' targets are ${big(y.totals.up_sum)} lower because of the cap`,
-      `${y.totals.down} towns' targets are ${big(-y.totals.down_sum)} higher`]),
+    // One year's amount, not a running total (Tim, #255)
+    tile(`Targets shifted by the cap in FY${y.fy}`, big(y.totals.up_sum), [
+      `In this one year, the cap makes ${y.totals.up} towns' targets ${big(y.totals.up_sum)} lower in all`,
+      `It makes the other ${y.totals.down} towns' targets ${big(-y.totals.down_sum)} higher in all`,
+      "The cap shifts a new amount every year. This is not a total over the years."]),
   ];
 }
 

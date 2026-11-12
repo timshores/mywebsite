@@ -278,6 +278,24 @@ const TOWN_MEASURES: Measure[] = [
     split: (up, down, n) => `With no cap, ${up} of ${n} towns would have higher targets and ${down} lower ones.` +
       (n - up - down ? ` The other ${n - up - down} would have the same target.` : ""),
   },
+  {
+    // DESE's figure, to the two decimals it gives (Tim, #254); M.G.L. c. 70, § 2 says what the factor counts
+    key: "mrgf", label: "Municipal revenue growth factor", kind: "level", fmt: (v) => pct(v, 2), short: share, years: "year",
+    notes: ["new-growth"],
+    // Alice's tighten pass, 2026-11-12: a sentence in place of a colon, new growth and DESE said in full, and what
+    // "moves with" meant
+    about: (m, real, y) => "The municipal revenue growth factor is the Department of Revenue's estimate of how much a " +
+      `town's own general revenue grows in a year. The map shows each town's factor for FY${y.to}. State law counts the ` +
+      "2.5% that Proposition 2½ adds to the levy limit, the town's average new growth (the tax on new construction and " +
+      "other new taxable value) over the last three years, its unrestricted state aid, and its other recurring local receipts.",
+    detail: "Chapter 70 uses the factor once a year. The Department of Elementary and Secondary Education (DESE) starts a " +
+      "town's required local contribution from the year before's and raises it by the factor. If the result is below the " +
+      "town's target, the formula adds 1% or 2% more, and if it is above the target, the formula lowers it to the target. " +
+      "A town's requirement is divided among the school districts it belongs to, so the member towns of one regional " +
+      "district see their requirements for it rise at different rates. " +
+      "The factor is also a yardstick for effort: a town whose school spending grows as fast as its factor is giving " +
+      "its schools the same share of its revenue as the year before.",
+  },
 ];
 
 const DISTRICT_MEASURES: Measure[] = [
@@ -393,7 +411,7 @@ const GROUPS: Record<Layer, [string, string[]][]> = {
   towns: [
     ["Place and people", ["ct", "density", "pop", "income", "unemp", "older", "poc", "disability"]],
     ["Town finances", ["spend", "edu", "eqv", "res_share", "new_growth", "levy_room", "override", "overrides", "reserves", "debt_service", "debt_pc", "bill_income"]],
-    ["Schools", ["cap_hh"]],
+    ["Schools", ["cap_hh", "mrgf"]],
   ],
   districts: [
     ["Place", ["ct", "density", "income"]],
@@ -1053,7 +1071,7 @@ export function startMap(root: HTMLElement, data: MapData, opts: {
   function drawAbout({ onTowns, measure, at, classes, real, y, ys, bySeries }: Shown) {
     const { what } = at;
     measureTitle.textContent = measure.label;
-    const yy = y ?? { from: meta.start, to: measure.key === "cap_hh" ? meta.cap_fy : meta.latest };
+    const yy = y ?? { from: meta.start, to: measure.key === "cap_hh" || measure.key === "mrgf" ? meta.cap_fy : meta.latest };
     // A census figure held between releases: the words name the release it comes from
     const release = measure.hold && y ? Math.max(...classes.units.map((u) => u[1]).filter((x) => x <= y.to), -Infinity) : -Infinity;
     about.replaceChildren(measure.about(meta, real, release > 0 ? { from: release, to: release } : yy));
