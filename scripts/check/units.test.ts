@@ -1,7 +1,7 @@
 // The explorer's number formats and statistics, case by case (#237): each pair is what a function returns and what
 // a reader should see. scripts/check/units.mjs runs these before every build.
 import * as f from "../../src/lib/massppe/format";
-import { cagr, linearFit, median, quantile, spearman } from "../../src/lib/massppe/stats";
+import { cagr, hingeFit, linearFit, median, quantile, spearman } from "../../src/lib/massppe/stats";
 import { endsOn, trendOn, type MapSeries } from "../../src/lib/massppe/series";
 import { checkPair, sharedParts } from "../../src/lib/massppe/cautions";
 import { lower } from "../../src/lib/massppe/dom";
@@ -86,6 +86,11 @@ export const cases: [string, unknown, unknown][] = [
   ["linearFit across gaps", JSON.stringify(linearFit([null, 2, null, 5, 5, null]).map((v) => (v == null ? v : f.round(v, 6)))),
     JSON.stringify([null, 2.214286, 3.285714, 4.357143, 5.428571, null])],
   ["linearFit too few", JSON.stringify(linearFit([1, null, 2])), "[null,null,null]"],
+  // The connected trend: one fit that turns at each knot; with no knots, the straight line
+  ["hingeFit follows a bend", JSON.stringify(hingeFit([0, 1, 2, 3, 2, 1, 0], [3]).map((v) => f.round(v!, 6))), "[0,1,2,3,2,1,0]"],
+  ["hingeFit no knots", JSON.stringify(hingeFit([null, 2, null, 5, 5, null], []).map((v) => (v == null ? v : f.round(v, 6)))),
+    JSON.stringify([null, 2.214286, 3.285714, 4.357143, 5.428571, null])],
+  ["hingeFit too few", JSON.stringify(hingeFit([1, 2, null, 3], [1, 2])), "[null,null,null,null]"],
   ["cagr", f.round(cagr(100, 121, 2)!, 10), 0.1],
   ["cagr from zero", cagr(0, 121, 2), null],
   ["quantile nearest rank", quantile([5, 1, 4, 2, 3], 0.6), 3],

@@ -402,6 +402,15 @@ const asFirst = (c: Chart) => (c.svg + KEYS)
           <span class="dial-state" aria-hidden="true">Off</span>
         </button>
       </div>
+      <!-- Where the trend lines break, on every chart; each drawer of trend cards has the same choice (#266) -->
+      <fieldset class="control toggle opt">
+        <legend>Trend breaks</legend>
+        <div class="toggle-options">
+          <label><input type="radio" name="brk" value="none" checked /><span>None</span></label>
+          <label><input type="radio" name="brk" value="2015" /><span>At 2015</span></label>
+          <label><input type="radio" name="brk" value="5" /><span>Every 5 years</span></label>
+        </div>
+      </fieldset>
       <fieldset class="control toggle opt" data-view-only="districts">
         <legend>Amounts</legend>
         <div class="toggle-options">
@@ -714,6 +723,20 @@ const asFirst = (c: Chart) => (c.svg + KEYS)
         last year moves it less than it would move growth measured from the first year's value to the last year's.
         Where the line starts at or below zero, the rate is its yearly rise as a share of its average value. With a
         chart's Trends only on, the comparison's trend is drawn too, in the comparison's color.
+      </p>
+      <p>
+        <strong>Trend breaks</strong> let the trend line turn at FY2015, or at FY2010, FY2015 and FY2020. The line
+        stays connected: it is straight between two breaks, it can change direction at a break, and it never jumps.
+        It comes from one least-squares calculation over every year the chart shows, which settles the line's
+        starting height, its first slope, and the change of slope at each break, all together (a linear spline, or
+        segmented regression). Fitting each stretch separately would leave two heights at every break year. The
+        breaks are calendar years, not events, so nothing suggests a jump at them, and a connected line treats the
+        stretches as parts of one longer trend. Because the stretches share one calculation, a stretch's slope
+        depends a little on the years beside it. Setting the chart's years to FY2015 through FY2020 fits a line to
+        those six years alone, and its slope will differ from the FY2015–20 stretch of a line fitted to FY2005
+        through FY2025. A stretch with fewer than three years of figures joins the one beside it. Each stretch's
+        actual change is measured from its first year's figure to its last year's.
+        <a href="/muni-spending/trend-and-change/">The calculation, worked through with an example</a>.
       </p>
       <p>
         <strong>Legends and switches.</strong> A chart's legend picks what it shows: a category or a line alone, or

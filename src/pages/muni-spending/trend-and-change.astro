@@ -1,0 +1,338 @@
+---
+import Layout from "../../layouts/Layout.astro";
+import explorer from "../../data/massppe/explorer.json";
+import western from "../../data/massppe/districts/western.json";
+import { change, digits } from "../../lib/massppe/format";
+import { cagr, linearFit } from "../../lib/massppe/stats";
+import { BLUE } from "../../lib/massppe/palette";
+// How the cards under each chart get their two figures, the trend line's change and the actual change, worked through
+// with Leverett's in-district pupils (Tim, #265, after #264: "my brain has trouble accepting that it can be as big a
+// delta as −2.6% and −19.5%"). Each drawer of cards links here (explorer.ts, drawTotals). The numbers are worked at
+// build time from the explorer's own data with the explorer's own fit (stats.ts), so they match the card's.
+const years = explorer.meta.years as number[];
+const lev = (western.entities as { id: string; name: string; enroll: { in_district: (number | null)[] }; students: { total: (number | null)[] } }[]).find((e) => e.id === "leverett")!;
+const pupils = lev.enroll.in_district.map((v) => v!);
+// DESE's separate October 1 head count, which shows the same jump
+const heads = lev.students.total;
+const n = pupils.length;
+const last = n - 1;
+const [fy0, fy1] = [years[0], years[last]];
+const meanX = (n - 1) / 2;
+const meanY = pupils.reduce((a, v) => a + v, 0) / n;
+const sxy = pupils.reduce((a, v, i) => a + (i - meanX) * (v - meanY), 0);
+const sxx = pupils.reduce((a, _, i) => a + (i - meanX) ** 2, 0);
+const slope = sxy / sxx;
+const trend = linearFit(pupils).map((v) => v!);
+const actual = pupils[last] / pupils[0] - 1;
+const along = trend[last] / trend[0] - 1;
+const rate = cagr(trend[0], trend[last], last)!;
+const gap = pupils.map((v, i) => v - trend[i]);
+// The page's account is of these years' shape: a first year below the line, a last year above it, and two changes far
+// apart. New data that changes that should stop the build, not publish a page whose words no longer fit its numbers.
+if (!(gap[0] < -10 && gap[last] > 0 && actual - along > 0.1)) throw new Error("trend-and-change: Leverett's enrollment no longer fits this page's account");
+const avg = (from: number, to: number) => {
+  const part = pupils.filter((_, i) => years[i] >= from && years[i] <= to);
+  return part.reduce((a, v) => a + v, 0) / part.length;
+};
+const [high, since] = [avg(2006, 2011), avg(2014, fy1)];
+
+const one = (v: number) => digits(v, 1);
+const signedOne = (v: number) => `${v < 0 ? "−" : "+"}${digits(Math.abs(v), 1)}`;
+
+// The chart: the explorer's own marks, drawn here as a fixed picture
+const [W, H, L, R, T, B] = [760, 300, 84, 64, 14, 34];
+const yMax = 200;
+const x = (i: number) => L + (i * (W - L - R)) / last;
+const y = (v: number) => T + (1 - v / yMax) * (H - T - B);
+const path = (vs: number[]) => vs.map((v, i) => `${i ? "L" : "M"}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join("");
+const ticks = [0, 50, 100, 150, 200];
+const TREND = "#b65c3d";
+---
+
+<Layout title="Trend and actual change, worked through - Tim Shores"
+  description="How the Municipal spending explorer calculates a chart's trend line and its actual change, worked through with Leverett's enrollment">
+  <p class="back"><a href="/muni-spending/?d=leverett">Municipal spending explorer</a></p>
+  <h1>Trend and actual change, worked through</h1>
+
+  <p>
+    Under each chart, the explorer's cards give two figures for the same years: the change along the trend line, and
+    the actual change from the first year to the last. Sometimes they are far apart. {lev.name}'s in-district pupils
+    are an example. From fiscal year {fy0} to fiscal year {fy1} (FY{fy0} to FY{fy1}), the actual change is
+    {change(actual)}, and the change along the trend line is {change(along)}. Both figures are correct.
+  </p>
+
+  <figure>
+    <svg viewBox={`0 0 ${W} ${H}`} role="img"
+      aria-label={`${lev.name}'s in-district pupils, FY${fy0} to FY${fy1}, with the trend line. Pupils go from ${one(pupils[0])} to ${one(pupils[last])}. The trend line goes from ${one(trend[0])} to ${one(trend[last])}.`}>
+      {ticks.map((t) => (
+        <g>
+          <line x1={36} x2={W - R} y1={y(t)} y2={y(t)} class="grid" />
+          <text x={28} y={y(t)} dy="0.32em" text-anchor="end" class="tick">{t}</text>
+        </g>
+      ))}
+      {years.map((yr, i) => (i % 5 === 0 ? <text x={x(i)} y={H - B + 18} text-anchor="middle" class="tick">{yr}</text> : null))}
+      <path d={path(trend)} class="trend" stroke={TREND} />
+      <path d={path(pupils)} class="line" stroke={BLUE} />
+      {pupils.map((v, i) => <circle cx={x(i)} cy={y(v)} r={i === 0 || i === last ? 4.5 : 3} fill={BLUE} class="dot" />)}
+      <text x={x(0) - 9} y={y(pupils[0])} dy="0.32em" text-anchor="end" class="end" fill={BLUE}>{one(pupils[0])}</text>
+      <text x={x(last) + 9} y={y(pupils[last])} dy="-0.1em" class="end" fill={BLUE}>{one(pupils[last])}</text>
+      <text x={x(0) - 9} y={y(trend[0])} dy="0.32em" text-anchor="end" class="end" fill={TREND}>{one(trend[0])}</text>
+      <text x={x(last) + 9} y={y(trend[last])} dy="0.9em" class="end" fill={TREND}>{one(trend[last])}</text>
+    </svg>
+    <figcaption>
+      <span class="key" style={`--c:${BLUE}`}></span> {lev.name}'s in-district pupils each year
+      <span class="key dash" style={`--c:${TREND}`}></span> Trend line
+    </figcaption>
+  </figure>
+
+  <h2>The actual change uses two years</h2>
+  <p>
+    {lev.name}'s schools taught {one(pupils[0])} pupils in FY{fy0} and {one(pupils[last])} in FY{fy1}. (These are
+    full-time equivalents, so a pupil enrolled for half the year counts as half.) The actual change divides the last
+    year by the first:
+  </p>
+  <p class="work">{one(pupils[last])} ÷ {one(pupils[0])} − 1 = {change(actual)}</p>
+  <p>The {n - 2} years between them play no part in it.</p>
+
+  <h2>The trend line uses every year</h2>
+  <p>
+    The trend line is the straight line that comes closest to all {n} years at once. "Closest" means the line with the
+    smallest sum of squared distances from each year's figure, called a least-squares line.
+  </p>
+  <ol>
+    <li>Number the years from 0 (FY{fy0}) to {last} (FY{fy1}). The middle year is {digits(meanX)}, which is FY{years[Math.round(meanX)]}.</li>
+    <li>Average the pupils over all {n} years: {one(meanY)}. The line passes through that average at the middle year.</li>
+    <li>
+      Find the slope. For each year, multiply its distance from the middle year by its pupils' distance from the
+      average, and add those up: {signedOne(sxy)}. Divide by the sum of the squared distances from the middle year,
+      {digits(sxx)}. The slope is {signedOne(slope)} pupils a year (−{digits(Math.abs(slope), 2)} before rounding).
+    </li>
+    <li>
+      Follow the line out to both ends. {digits(meanX)} years before the middle it stands at {one(trend[0])}, and
+      {digits(meanX)} years after at {one(trend[last])}.
+    </li>
+  </ol>
+  <p>The change along the trend line divides the line's last year by its first, as the actual change does with the pupils:</p>
+  <p class="work">{one(trend[last])} ÷ {one(trend[0])} − 1 = {change(along)}</p>
+  <p>
+    The card's yearly figures come from the same line. It falls {one(Math.abs(slope))} pupils each year. As a yearly
+    rate that compounds from {one(trend[0])} to {one(trend[last])} over {last} years, that's {change(rate)} a year.
+  </p>
+
+  <h2>Why the two differ here</h2>
+  <p>
+    The actual change starts from FY{fy0}'s {one(pupils[0])} pupils. The trend line starts from {one(trend[0])},
+    which is {one(Math.abs(gap[0]))} more, because the years after FY{fy0} pull the line up. Enrollment rose to
+    {one(pupils[1])} in FY{years[1]} and averaged {one(high)} from FY2006 to FY2011. It fell back by FY2014 and has
+    averaged {one(since)} since then. At the other end, FY{fy1}'s {one(pupils[last])} pupils are {one(gap[last])} above
+    the line.
+  </p>
+  <p>
+    A change measured between those two years is small. A line fitted to high years early and lower years late slopes
+    down.
+  </p>
+  <p>
+    The jump in FY{years[1]} is in the state's figures, not a slip in the explorer. The Department of Elementary and
+    Secondary Education's separate head count on October 1 shows it too: {digits(heads[0]!)} students in the FY{fy0} school year
+    and {digits(heads[1]!)} the next.
+  </p>
+
+  <table>
+    <thead>
+      <tr><th>Fiscal year</th><th class="num">Pupils</th><th class="num">Trend line</th><th class="num">Pupils minus trend line</th></tr>
+    </thead>
+    <tbody>
+      {years.map((yr, i) => (
+        <tr class={i === 0 || i === last ? "end-row" : undefined}>
+          <th scope="row">FY{yr}</th>
+          <td class="num">{one(pupils[i])}</td>
+          <td class="num">{one(trend[i])}</td>
+          <td class="num">{signedOne(gap[i])}</td>
+        </tr>
+      ))}
+    </tbody>
+  </table>
+
+  <h2>Reading the two figures together</h2>
+  <ul>
+    <li>
+      The actual change is exact, and anyone can check it against the chart. It depends on two years only, so an
+      unusual first or last year moves it a lot.
+    </li>
+    <li>
+      The trend line uses every year, so one unusual year moves it less than it moves the actual change. It assumes
+      the change was steady. Where
+      the years rose and then fell, as {lev.name}'s pupils did, a straight line describes them poorly.
+    </li>
+    <li>
+      When the two figures are far apart, the first year or the last sits far from the trend line, and the change
+      between them was not steady. Look at the chart's line to see what happened in between.
+    </li>
+  </ul>
+  <p>
+    The explorer fits each trend line to the years the chart shows, so switching on Since 1990 gives a different line.
+    On a chart in dollars, the line is fitted to the dollars the chart shows, before or after inflation as the Dollars
+    switch is set.
+  </p>
+
+  <h2>Trend breaks</h2>
+  <p>
+    One straight line can't follow years that rose and then fell. The Trend breaks choice, under each chart and in the
+    display options, lets the trend line turn at FY2015, or at FY2010, FY2015 and FY2020. The line stays connected:
+    it is straight between two breaks, it can change direction at a break, and it never jumps. The cards then give
+    each stretch's yearly figure and its own actual change. The breaks are the same years on every chart. A stretch
+    with fewer than three years of figures joins the one beside it.
+  </p>
+  <p>
+    The connected line is still one least-squares calculation over every year the chart shows. With no breaks the
+    calculation settles two numbers, the line's starting height and its slope. Each break adds one more, the amount
+    the slope changes at that year, and all of them are chosen together to make the sum of squared gaps as small as it
+    can be. This is called a linear spline, or segmented regression.
+  </p>
+  <p>
+    Fitting each stretch separately would leave two heights at every break year, one where the earlier line stops and
+    one where the later line starts. The break years are calendar years, not events, so nothing suggests a jump at
+    them, and a connected line treats the stretches as parts of one longer trend. Because the stretches share one
+    calculation, a stretch's slope depends a little on the years beside it. Setting the chart's years to FY2015
+    through FY2020 fits a line to those six years alone, and its slope will differ from the FY2015–20 stretch of a
+    line fitted to FY2005 through FY2025.
+  </p>
+  <p>
+    Broken every five years, {lev.name}'s in-district pupils show what the single line hides. Enrollment rose from
+    FY2005 to FY2010, fell from FY2010 to FY2015, and has changed little since.
+  </p>
+</Layout>
+
+<style>
+  .back {
+    font-size: 0.9rem;
+    margin-bottom: 0.4rem;
+  }
+
+  .back a::before {
+    content: "← ";
+  }
+
+  h2 {
+    font-size: 1.2rem;
+    margin: 1.6rem 0 0.4rem;
+  }
+
+  figure {
+    margin: 1rem 0 1.2rem;
+    max-width: 760px;
+  }
+
+  svg {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+
+  .grid {
+    stroke: var(--line);
+    stroke-width: 1;
+  }
+
+  .tick {
+    font-size: 11px;
+    fill: var(--ink-soft);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .line,
+  .trend {
+    fill: none;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  .line {
+    stroke-width: 2;
+  }
+
+  .trend {
+    stroke-width: 2.25;
+    stroke-dasharray: 7 5;
+  }
+
+  .dot {
+    stroke: var(--paper);
+    stroke-width: 1.5;
+  }
+
+  .end {
+    font-size: 12px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+
+  figcaption {
+    font-size: 0.85rem;
+    color: var(--ink-soft);
+    margin-top: 0.3rem;
+  }
+
+  .key {
+    display: inline-block;
+    width: 1.4rem;
+    height: 0;
+    border-top: 2px solid var(--c);
+    vertical-align: middle;
+    margin-right: 0.3rem;
+  }
+
+  .key.dash {
+    border-top-style: dashed;
+    margin-left: 1rem;
+  }
+
+  .work {
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+    margin-left: 1.2rem;
+  }
+
+  ol,
+  ul {
+    padding-left: 1.3rem;
+  }
+
+  li {
+    margin-bottom: 0.4rem;
+  }
+
+  table {
+    border-collapse: collapse;
+    margin: 0.8rem 0 1.2rem;
+    font-size: 0.92rem;
+    font-variant-numeric: tabular-nums;
+  }
+
+  th,
+  td {
+    padding: 0.25rem 0.8rem;
+    border-bottom: 1px solid var(--line);
+    text-align: left;
+    font-weight: 400;
+  }
+
+  thead th {
+    font-weight: 600;
+    color: var(--ink-soft);
+  }
+
+  tbody th {
+    color: var(--ink-soft);
+  }
+
+  .num {
+    text-align: right;
+  }
+
+  .end-row th,
+  .end-row td {
+    font-weight: 600;
+    color: var(--ink);
+  }
+</style>

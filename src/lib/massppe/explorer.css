@@ -1738,6 +1738,12 @@ html.modal-open {
   stroke-width: 1.5;
 }
 
+/* Each trend line's two ends: a hollow ring in the line's color */
+.explorer .panel .trend-end {
+  fill: var(--surface);
+  stroke-width: 2;
+}
+
 .explorer .panel .trend-label {
   font-size: 12px;
   font-weight: 600;
@@ -1850,6 +1856,86 @@ html.modal-open {
 .explorer .totals .totals-tools {
   display: flex;
   margin-top: 0.3rem;
+}
+
+/* Trend breaks (#266): three small buttons beside Trends only, and in each card a row for each stretch of years */
+.explorer .totals .totals-tools {
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.3rem 1.2rem;
+}
+
+.explorer .totals .totals-breaks {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--paper);
+}
+
+.explorer .totals .breaks-label {
+  padding: 0.2rem 0.55rem;
+  font-weight: 500;
+  color: var(--ink-soft);
+  background: var(--canvas);
+  border-right: 1px solid var(--line);
+}
+
+.explorer .totals .breaks-btn {
+  border: 0;
+  background: none;
+  font: inherit;
+  color: var(--ink-soft);
+  padding: 0.2rem 0.55rem;
+  cursor: pointer;
+}
+
+.explorer .totals .breaks-btn + .breaks-btn {
+  border-left: 1px solid var(--line);
+}
+
+.explorer .totals .breaks-btn[aria-pressed="true"] {
+  background: var(--accent);
+  color: var(--white);
+}
+
+.explorer .totals.is-broken .total-row {
+  grid-template-columns: repeat(2, minmax(0, 24rem));
+}
+
+.explorer .totals .total-segs {
+  display: grid;
+  grid-template-columns: auto auto;
+  justify-content: start;
+  gap: 0.1rem 1rem;
+  margin-top: 0.25rem;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.35;
+}
+
+.explorer .totals .total-segs.has-cmp {
+  grid-template-columns: auto auto minmax(0, 1fr);
+}
+
+.explorer .totals .total-segs .seg-head,
+.explorer .totals .total-segs .seg-years,
+.explorer .totals .total-segs .seg-cmp {
+  color: var(--muted);
+}
+
+.explorer .totals .total-segs .seg-head {
+  font-size: 0.72rem;
+  align-self: end;
+}
+
+.explorer .totals .total-segs .seg-own {
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.explorer .totals .totals-how {
+  margin: 0.4rem 0 0;
 }
 
 .explorer .totals .totals-tools:empty {

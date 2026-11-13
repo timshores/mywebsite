@@ -29,6 +29,11 @@ export interface Series {
   endShort?: string;
 }
 
+/** A trend fitted in stretches (the explorer's Trend breaks, #266): its values, and each stretch's own line, as long
+ * as the values and empty outside its years. Two stretches share the year they break at, so the values hold the
+ * earlier stretch's figure there, and the lines are drawn from these. */
+export const trendParts = new WeakMap<Val[], Val[][]>();
+
 /** With only the trends shown, each trend named in its own color at one end of its line: the top line's name above
  * it, the bottom line's below. Where the lines cross, the lower line's name moves to its other end, where it's the
  * top line; where a name would run into the axis, it moves too. Where lines run too close together for a name beside
@@ -268,6 +273,16 @@ function bottomRoundedRect(x: number, y: number, w: number, h: number, r: number
 }
 
 /** A line through the values; a gap lifts the pen unless `bridge` joins across it. */
+/** A dot at each end of every trend line, the standard mark of where a fitted line starts and stops (#267) */
+function trendEnds(ax: Axis, tr: Series, into: SVGElement) {
+  for (const part of trendParts.get(tr.values) ?? [tr.values]) {
+    const first = part.findIndex((v) => v != null);
+    const last = part.findLastIndex((v) => v != null);
+    if (first < 0 || first === last) continue;
+    for (const i of [first, last]) svgEl("circle", { cx: ax.x(i), cy: ax.y(part[i] as number), r: 4.5, stroke: tr.color, class: "trend-end" }, into);
+  }
+}
+
 function linePath(ax: Axis, values: Val[], bridge = false) {
   let d = "";
   let pen = false;
@@ -422,14 +437,16 @@ export function stackedColumns(
   }
   for (const tr of trends) {
     const tg = svgEl("g", { class: "trend", "clip-path": `url(#${svg.id}-plot)`, "data-key": trendKey(tr) }, svg);
-    const d = linePath(ax, tr.values);
-    svgEl("path", { d, class: "trend-halo" }, tg);
-    svgEl("path", { d, class: "trend-line", stroke: tr.color }, tg);
+    for (const part of trendParts.get(tr.values) ?? [tr.values]) {
+      const d = linePath(ax, part);
+      svgEl("path", { d, class: "trend-halo" }, tg);
+      svgEl("path", { d, class: "trend-line", stroke: tr.color }, tg);
+    }
     if (frame.sparse && frame.trendsOnly) {
       tr.values.forEach((v, i) => {
         if (v != null && surveyed[i]) svgEl("circle", { cx: ax.x(i), cy: ax.y(v), r: 3.5, fill: tr.color, class: "trend-dot" }, tg);
       });
-    }
+    } else trendEnds(ax, tr, tg);
   }
   if (frame.trendsOnly) trendLabels(svg, ax, trends);
 
@@ -555,9 +572,12 @@ export function lines(
   const trends = (Array.isArray(trend) ? trend : [trend]).filter((s): s is Series => !!s && s.values.some((v) => v != null));
   for (const tr of trends) {
     const tg = svgEl("g", { class: "trend", "data-key": trendKey(tr) }, svg);
-    const d = linePath(ax, tr.values);
-    svgEl("path", { d, class: "trend-halo" }, tg);
-    svgEl("path", { d, class: "trend-line", stroke: tr.color }, tg);
+    for (const part of trendParts.get(tr.values) ?? [tr.values]) {
+      const d = linePath(ax, part);
+      svgEl("path", { d, class: "trend-halo" }, tg);
+      svgEl("path", { d, class: "trend-line", stroke: tr.color }, tg);
+    }
+    trendEnds(ax, tr, tg);
   }
   if (frame.trendsOnly) trendLabels(svg, ax, trends);
   const g = svgEl("g", { class: "lines" }, svg);

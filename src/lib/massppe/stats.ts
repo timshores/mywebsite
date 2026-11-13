@@ -27,6 +27,40 @@ export function linearFit(values: (number | null)[]): (number | null)[] {
   return values.map((_, i) => (i < first || i > last ? null : my + slope * (i - mx)));
 }
 
+/** The least-squares connected line: straight between the knots (indexes), free to turn at each, and never jumping.
+ * One fit over every point, of a starting value, a first slope, and a change of slope at each knot. Values as
+ * linearFit gives them; all null with too few points to settle every slope. The trend with Trend breaks on (#268). */
+export function hingeFit(values: (number | null)[], knots: number[]): (number | null)[] {
+  const pts = values.flatMap((v, i) => (v == null ? [] : [[i, v] as const]));
+  const none = values.map(() => null);
+  const m = knots.length + 2;
+  if (pts.length < Math.max(3, m)) return none;
+  const row = (x: number) => [1, x, ...knots.map((k) => Math.max(0, x - k))];
+  // The normal equations, solved by elimination with pivoting
+  const a = Array.from({ length: m }, () => new Array<number>(m + 1).fill(0));
+  for (const [x, y] of pts) {
+    const r = row(x);
+    for (let i = 0; i < m; i++) {
+      for (let j = 0; j < m; j++) a[i][j] += r[i] * r[j];
+      a[i][m] += r[i] * y;
+    }
+  }
+  for (let c = 0; c < m; c++) {
+    let p = c;
+    for (let r = c + 1; r < m; r++) if (Math.abs(a[r][c]) > Math.abs(a[p][c])) p = r;
+    if (Math.abs(a[p][c]) < 1e-9) return none;
+    [a[c], a[p]] = [a[p], a[c]];
+    for (let r = 0; r < m; r++) {
+      if (r === c) continue;
+      const k = a[r][c] / a[c][c];
+      for (let j = c; j <= m; j++) a[r][j] -= k * a[c][j];
+    }
+  }
+  const beta = a.map((r, i) => r[m] / r[i]);
+  const [first, last] = [pts[0][0], pts[pts.length - 1][0]];
+  return values.map((_, i) => (i < first || i > last ? null : row(i).reduce((s, v, j) => s + v * beta[j], 0)));
+}
+
 /** Compound growth a year from first to last over years; null where either isn't above zero */
 export function cagr(first: number | null, last: number | null, years: number): number | null {
   if (first == null || last == null || first <= 0 || last <= 0 || years <= 0) return null;

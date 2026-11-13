@@ -7,9 +7,9 @@
 // rather than fetched, the data ships as hashed JavaScript chunks, which the host
 // compresses (it sends .json uncompressed).
 
-import { gapColumns, lines, markKey, niceTicks, niceTicksRange, ratingSteps, stackedColumns, type Marks, type Panel, type Series, type Val } from "./charts";
+import { gapColumns, lines, markKey, niceTicks, niceTicksRange, ratingSteps, stackedColumns, trendParts, type Marks, type Panel, type Series, type Val } from "./charts";
 import { capital, lower, svgEl, text } from "./dom";
-import { cagr, linearFit } from "./stats";
+import { cagr, hingeFit, linearFit } from "./stats";
 import { andList, change, compact, measured as fte, pct, points, signFor, total as amount, usd } from "./format";
 import { closeEnlarged, enlargeButton } from "./enlarge";
 import { showWork } from "./showWork";
@@ -222,7 +222,13 @@ type View = "districts" | "towns" | "commonwealth" | "cap" | "housing" | "data";
 const VIEWS: View[] = ["districts", "towns", "commonwealth", "cap", "housing", "data"];
 /** The explorer's state: what the controls pick, which its address and the saved choices hold (PARAMS) */
 interface State { view: View; d: string; cmp: Compare; vs: string | null; dper: DPer; hist: "on" | "off"; t: string; tcmp: TownCompare;
-  tvs: string | null; per: Per; usd: Dollars; detail: "on" | "off"; from: number; to: number }
+  tvs: string | null; per: Per; usd: Dollars; detail: "on" | "off"; from: number; to: number; brk: Breaks }
+/** Where the trends break (#266): nowhere, at FY2015, or every five years. The same years on every chart, whatever
+ * year its figures start, and none before FY2010: the earlier years' figures were collected too differently for a
+ * closer look to say much (Tim). */
+type Breaks = "none" | "2015" | "5";
+const BREAKS: Record<Breaks, number[]> = { none: [], "2015": [2015], "5": [2010, 2015, 2020] };
+const BREAK_NAMES: [Breaks, string][] = [["none", "None"], ["2015", "At 2015"], ["5", "Every 5 years"]];
 /** The district, and the town, a plain first visit opens on */
 const HOME = "leverett";
 /** Every chart, by its key: its figure is #fig-<key>, its drawing #svg-<key> (#237: the one list of them) */
@@ -557,10 +563,38 @@ function sumStrict(groups: Values[], i: number): number | null {
 
 /** The trend: the least-squares line through the years that have a value (stats.ts linearFit). Its growth
  * (trendRate) is the yearly growth of the charts and the tiles; the map's follows the pipeline's rule. */
-const linearTrend = (values: Values): Values => linearFit(values);
+/** The years the charts are drawn over and the years their trends break at, as the page last drew (render). fitAlt:
+ * the free cash chart's shorter run of years. */
+let fitYears: number[] = [];
+let fitAlt: number[] = [];
+let fitBreaks: number[] = [];
+/** With Trend breaks on (#266), the trend is one connected line that can turn at each break year: a single
+ * least-squares fit over the years shown, of a starting value, a slope, and a change of slope at each break (#268;
+ * stats.ts hingeFit), so two stretches meet at the year they share. A stretch needs three years with a figure; one
+ * with fewer joins its neighbor. Each stretch's part of the line is kept in trendParts, by the values returned. */
+function linearTrend(values: Values, ys: number[] = values.length === fitYears.length ? fitYears : values.length === fitAlt.length ? fitAlt : []): Values {
+  const whole = linearFit(values);
+  const at = values.flatMap((v, i) => (v == null ? [] : [i]));
+  if (!fitBreaks.length || at.length < 3) return whole;
+  const [first, last] = [at[0], at[at.length - 1]];
+  const count = (a: number, b: number) => at.filter((i) => i >= a && i <= b).length;
+  const bounds = [first];
+  for (const c of fitBreaks.map((y) => ys.indexOf(y)).filter((i) => i > first && i < last)) if (count(bounds[bounds.length - 1], c) >= 3) bounds.push(c);
+  while (bounds.length > 1 && count(bounds[bounds.length - 1], last) < 3) bounds.pop();
+  bounds.push(last);
+  if (bounds.length < 3) return whole;
+  const fit = hingeFit(values, bounds.slice(1, -1));
+  if (fit[first] == null) return whole;
+  trendParts.set(fit, bounds.slice(0, -1).map((a, k) => fit.map((v, i) => (i < a || i > bounds[k + 1] ? null : v))));
+  return fit;
+}
+/** "FY2005–15", a stretch's years */
+const stretch = (ys: number[], f: number, l: number) => `FY${ys[f]}–${String(ys[l]).slice(2)}`;
 
-/** A trend line's rise each year, and its yearly growth, compounded from its first year to its last */
+/** A trend line's rise each year, and its yearly growth, compounded from its first year to its last; none for a
+ * trend in stretches, which has one for each */
 function trendRate(trend: Values) {
+  if (trendParts.has(trend)) return null;
   const at = trend.flatMap((v, i) => (v == null ? [] : [i]));
   if (at.length < 2) return null;
   const [f, l] = [at[0], at[at.length - 1]];
@@ -1001,17 +1035,22 @@ let totalsOpen = (() => {
 })();
 /** A row's trend, its yearly rise, its change along the trend, and from its first year's figure to its last's, up to
  * the year at `end` */
-function totalChange(values: Values, end: number) {
+function totalChange(values: Values, end: number, years: number[]) {
   const vals = values.map((v, i) => (i <= end ? v : null));
   const f = firstAt(vals);
   const l = lastAt(vals);
   if (f < 0 || l <= f || !vals[f]) return null;
-  const trend = linearTrend(vals);
+  const trend = linearFit(vals);
   const [tf, tl] = [trend[f], trend[l]];
   // A trend needs three years, and a line that starts at or below zero has no percentage
   const fits = vals.filter((v) => v != null).length >= 3 && tf != null && tl != null;
+  // With Trend breaks on, each stretch: its years, its line's yearly rise, and its own first-to-last change
+  const segs = (trendParts.get(linearTrend(vals, years)) ?? []).map((p) => {
+    const [pf, pl] = [firstAt(p), lastAt(p)];
+    return { f: pf, l: pl, yearly: trendRate(p), ends: vals[pf]! > 0 ? vals[pl]! / vals[pf]! - 1 : null };
+  });
   return { f, l, first: vals[f]!, last: vals[l]!, ends: vals[l]! / vals[f]! - 1, onTrend: fits && tf! > 0 ? tl! / tf! - 1 : null,
-    yearly: fits ? trendRate(trend) : null, trendFirst: fits ? tf! : null, trendLast: fits ? tl! : null };
+    yearly: fits ? trendRate(trend) : null, trendFirst: fits ? tf! : null, trendLast: fits ? tl! : null, segs };
 }
 /** The chart's Trends only switch sits with the trend cards while the drawer is open (Tim, 2026-11-12), and goes back
  * to the View menu, after Comps, when the drawer is closed, so it can always be reached */
@@ -1022,7 +1061,7 @@ function placeTrendDial(drawer: HTMLDetailsElement) {
   const menu = figure?.querySelector<HTMLElement>(".chart-view .chart-dials");
   const tools = drawer.querySelector<HTMLElement>(".totals-tools");
   if (!dial || !menu || !tools) return;
-  if (drawer.open && dial.parentElement !== tools) tools.append(dial);
+  if (drawer.open && dial.parentElement !== tools) tools.prepend(dial);
   else if (!drawer.open && dial.parentElement !== menu) menu.insertBefore(dial, menu.children[1] ?? null);
 }
 /** A card: its caption, its figure, and the sentences under it */
@@ -1036,7 +1075,7 @@ function totalCard(tag: "div" | "button", caption: Node, value: string, details:
 }
 /** dollars: for a chart in dollars, "before inflation" or "after inflation", as the Dollars switch has it */
 function drawTotals(holder: HTMLElement, years: number[], rows: CmpRow[], kind: "usd" | "fte" | "count", cmp: Named | null, end: number,
-  dollars: string) {
+  dollars: string, breaks: { mode: Breaks; set: (m: Breaks) => void }) {
   const figure = holder.closest("figure");
   const key = holder.id.replace(/^cmp-/, "");
   const svg = figure?.querySelector(`#svg-${key}`);
@@ -1050,10 +1089,23 @@ function drawTotals(holder: HTMLElement, years: number[], rows: CmpRow[], kind: 
   const totals = stacked || rows.length === 1;
   const spans: { f: number; l: number }[] = [];
   const items = picked.flatMap((r) => {
-    const t = totalChange(r.values, end);
+    const t = totalChange(r.values, end, years);
     if (!t) return [];
     spans.push(t);
-    const b = r.base && cmp ? totalChange(r.base, end) : null;
+    const b = r.base && cmp ? totalChange(r.base, end, years) : null;
+    // With Trend breaks on: a small table in each card, a row for each stretch, the comparison's beside it where its
+    // stretches are the same years
+    const broken = t.segs.length > 1;
+    const bSegs = b && b.segs.length === t.segs.length && b.segs.every((s, k) => s.f === t.segs[k].f && s.l === t.segs[k].l) ? b.segs : null;
+    const each1 = (y: { perYear: number; rate: number | null } | null) =>
+      (y ? `${signed(y.perYear, fmt)}${y.rate != null ? ` (${change(y.rate)})` : ""}` : "–");
+    const segTable = (head: string, cell: (s: NonNullable<ReturnType<typeof totalChange>>["segs"][number]) => string) => {
+      const g = text("span", "", `total-segs${bSegs ? " has-cmp" : ""}`);
+      g.append(text("span", "Years", "seg-head"), text("span", head, "seg-head"), ...(bSegs ? [text("span", cmp!.name, "seg-head")] : []));
+      t.segs.forEach((s, k) => g.append(text("span", stretch(years, s.f, s.l), "seg-years"), text("span", cell(s), "seg-own"),
+        ...(bSegs ? [text("span", cell(bSegs[k]), "seg-cmp")] : [])));
+      return g;
+    };
     const row = document.createElement("li");
     row.className = "total-row";
     // What the row lights on the chart: the chart's own trend, or the line whose legend entry has the row's name
@@ -1064,10 +1116,13 @@ function drawTotals(holder: HTMLElement, years: number[], rows: CmpRow[], kind: 
     const each = text("span", "", "total-label");
     each.append(dash, totals && picked.length === 1 ? "Trend line, each year" : `${r.label}: trend line, each year`);
     const y = t.yearly;
-    const yearly = totalCard(totals ? "button" : "div", each, y ? `${signed(y.perYear, fmt)}${kind === "fte" ? " pupils" : ""}` : "–", [
-      ...(y?.rate != null ? [`${change(y.rate)} a year along the trend${dollars ? `, ${dollars}` : ""}.`] : []),
-      ...(b?.yearly ? [`${cmp!.name}: ${signed(b.yearly.perYear, fmt)}${b.yearly.rate != null ? `, ${change(b.yearly.rate)}` : ""} a year.`] : []),
-    ]);
+    const yearly = broken
+      ? totalCard(totals ? "button" : "div", each, "", [
+        segTable(kind === "fte" ? "Pupils a year" : dollars ? `A year, ${dollars}` : "A year", (s) => each1(s.yearly))])
+      : totalCard(totals ? "button" : "div", each, y ? `${signed(y.perYear, fmt)}${kind === "fte" ? " pupils" : ""}` : "–", [
+        ...(y?.rate != null ? [`${change(y.rate)} a year along the trend${dollars ? `, ${dollars}` : ""}.`] : []),
+        ...(b?.yearly ? [`${cmp!.name}: ${signed(b.yearly.perYear, fmt)}${b.yearly.rate != null ? `, ${change(b.yearly.rate)}` : ""} a year.`] : []),
+      ]);
     if (yearly instanceof HTMLButtonElement) {
       // The trend's legend entry is hidden while the drawer is open; this card does its work
       yearly.type = "button";
@@ -1090,11 +1145,13 @@ function drawTotals(holder: HTMLElement, years: number[], rows: CmpRow[], kind: 
     const total = totalCard("div", text("span", `Actual, FY${years[t.f]} to FY${years[t.l]}`, "total-label"), tenth(t.ends), [
       `From ${fmt(t.first)} in FY${years[t.f]} to ${fmt(t.last)} in FY${years[t.l]}${dollars ? `, ${dollars}` : ""}.`,
       // Why the two differ, behind a "?" (Tim, #260)
-      ...(t.onTrend != null ? [((line) => {
+      // The one trend line's change, while the chart draws one line
+      ...(t.onTrend != null && !broken ? [((line) => {
         if (why.length) line.append(" ", helpTip(why[0]));
         return line;
       })(text("span", `Along the trend line: ${change(t.onTrend)}.`, "total-detail"))] : []),
-      ...(b ? [`${cmp!.name}: ${change(b.ends)}${b.onTrend != null ? `; along its trend line, ${change(b.onTrend)}` : ""}.`] : []),
+      ...(b ? [`${cmp!.name}: ${change(b.ends)}${b.onTrend != null && !broken ? `; along its trend line, ${change(b.onTrend)}` : ""}.`] : []),
+      ...(broken ? [segTable("Actual change", (s) => (s.ends != null ? change(s.ends) : "–"))] : []),
     ]);
     row.append(yearly, total);
     return [row];
@@ -1109,7 +1166,25 @@ function drawTotals(holder: HTMLElement, years: number[], rows: CmpRow[], kind: 
     drawer.className = "totals";
     drawer.dataset.for = key;
     drawer.dataset.remember = "totals";
-    drawer.append(document.createElement("summary"), text("div", "", "totals-tools"), document.createElement("ul"));
+    // Under the cards, the page that works both figures through (#265)
+    const how = text("p", "", "totals-how");
+    const link = text("a", "How the trend and the actual change are calculated, with an example");
+    link.href = "/muni-spending/trend-and-change/";
+    how.append(link);
+    // Trend breaks, with the trend cards as Trends only is: one choice for every chart
+    const brk = text("span", "", "totals-breaks");
+    brk.setAttribute("role", "group");
+    brk.setAttribute("aria-label", "Trend breaks");
+    brk.append(text("span", "Trend breaks", "breaks-label"), ...BREAK_NAMES.map(([m, name]) => {
+      const b = text("button", name, "breaks-btn");
+      b.type = "button";
+      b.dataset.mode = m;
+      b.addEventListener("click", () => breaks.set(m));
+      return b;
+    }));
+    const tools = text("div", "", "totals-tools");
+    tools.append(brk);
+    drawer.append(document.createElement("summary"), tools, document.createElement("ul"), how);
     // One choice for every chart: opening or closing one drawer does the same to the rest
     drawer.addEventListener("toggle", (ev) => {
       const d = ev.currentTarget as HTMLDetailsElement;
@@ -1121,6 +1196,8 @@ function drawTotals(holder: HTMLElement, years: number[], rows: CmpRow[], kind: 
   }
   drawer.open = totalsOpen;
   drawer.classList.toggle("has-trend-card", totals);
+  drawer.classList.toggle("is-broken", breaks.mode !== "none");
+  drawer.querySelectorAll<HTMLElement>(".breaks-btn").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.mode === breaks.mode)));
   const from = Math.min(...spans.map((t) => t.f));
   const to = Math.max(...spans.map((t) => t.l));
   drawer.querySelector("summary")!.textContent = `Trend and total change, FY${years[from]}–FY${years[to]}`;
@@ -1550,6 +1627,9 @@ export async function startExplorer() {
       write: (s) => (s.usd === "nominal" ? null : s.usd) },
     // Extra detail: the explanations around the charts, on unless turned off
     detail: { read: (src) => (src.detail === "off" ? "off" : "on"), write: (s) => (s.detail === "off" ? "off" : null) },
+    // Where the trends break (#266)
+    brk: { on: ["districts", "towns"], read: (src) => (src.brk === "2015" || src.brk === "5" ? src.brk : "none"),
+      write: (s) => (s.brk === "none" ? null : s.brk) },
     // The first and last years shown, at least MIN_SPAN apart (normalize); a former district whose figures all come
     // before FY{start} opens on the earlier years
     from: { on: ["districts", "towns"], read: (src) => (fullYears.includes(Number(src.from)) ? Number(src.from) : histAsked(src) ? fullYears[0] : meta.start),
@@ -1976,6 +2056,8 @@ export async function startExplorer() {
     showDetail();
     legends.forEach(fitLegend);  // Detail hides each trend's "?", which changes what its entry needs
   });
+  const brkInputs = document.querySelectorAll<HTMLInputElement>('input[name="brk"]');
+  brkInputs.forEach((r) => r.addEventListener("change", () => r.checked && update({ brk: r.value as Breaks })));
   const dperInputs = document.querySelectorAll<HTMLInputElement>('input[name="dper"]');
   dperInputs.forEach((r) => (r.checked = r.value === state.dper));
   dperInputs.forEach((r) => r.addEventListener("change", () => r.checked && update({ dper: r.value as DPer })));
@@ -2354,9 +2436,14 @@ export async function startExplorer() {
   const drawn = (panel: StackPanel, line: Line, s: Series | null): Series | null => (hiddenLines[panel].has(line) ? null : s);
   /** Legend entries for the lines the chart can draw, hidden ones included so they can come back. */
   /** A trend's yearly figure for its legend entry: "+$43 (+3.7%) a year, before inflation" */
-  const trendDetail = (values: Values, fmt: (v: number) => string) => ((r) => (r ? `${signed(r.perYear, fmt)}` +
-    `${r.rate != null ? ` (${signedPct(r.rate)})` : ""} a year` +
-    (fmt === usd ? (state.usd === "nominal" ? ", before inflation" : ", after inflation") : "") : undefined))(trendRate(values));
+  const trendDetail = (values: Values, fmt: (v: number) => string): string | undefined => {
+    const each = (r: ReturnType<typeof trendRate>) => (r ? `${signed(r.perYear, fmt)}${r.rate != null ? ` (${signedPct(r.rate)})` : ""}` : "");
+    const parts = trendParts.get(values);
+    const ys = values.length === years.length ? years : fitAlt;
+    // A trend in stretches (#266) gives each stretch's figure after its years
+    const said = parts ? parts.map((p) => `${stretch(ys, firstAt(p), lastAt(p))} ${each(trendRate(p))}`).join("; ") : each(trendRate(values));
+    return said ? `${said} a year${fmt === usd ? (state.usd === "nominal" ? ", before inflation" : ", after inflation") : ""}` : undefined;
+  };
   /** The comparison's trend figure, for the comparison's legend entry */
   const cmpDetail = (cmp: Series, fmt: (v: number) => string = usd) => (hasLine(cmpTrendOf(cmp)) ? trendDetail(cmpTrendOf(cmp).values, fmt) : undefined);
   /** The trends a chart draws, and whether it draws them alone: its own, and with only the trends shown, the
@@ -2438,9 +2525,12 @@ export async function startExplorer() {
   // The trend's value, and its step from the year before: the same in dollars each year, a shrinking share as it grows
   // (a share's step in points: stepFmt)
   const trendRow = (trend: Series | null, i: number, fmt: (v: number) => string = usd, stepFmt = fmt): TipRow[] => {
-    const v = trend?.values[i];
-    if (!trend || v == null) return [];
-    const prev = trend.values[i - 1];
+    // A trend in stretches (#266): the stretch this year and the year before are both in, so the step is along one line
+    const parts = trend ? trendParts.get(trend.values) : undefined;
+    const vals = parts?.find((p) => p[i] != null && p[i - 1] != null) ?? parts?.find((p) => p[i] != null) ?? trend?.values;
+    const v = vals?.[i];
+    if (!trend || !vals || v == null) return [];
+    const prev = vals[i - 1];
     const step = prev == null ? "" : `, ${signed(v - prev, stepFmt)}${prev > 0 ? ` (${signedPct((v - prev) / prev)})` : ""} on FY${years[i - 1]}`;
     // In the trend's own color: the trend's, or a measure's where each has its own (#241)
     return [{ value: fmt(v), label: trend.label + step, color: trend.color, mark: "dash", role: "trend" }];
@@ -2666,7 +2756,8 @@ export async function startExplorer() {
     const amounts = onTowns ? (state.per === "total" ? "Totals" : `Per ${PER_WORD[state.per]}`)
       : state.dper === "total" ? "Totals" : "Per pupil";
     const rest = [cmp, amounts, `FY${years[0]}–FY${years[last]}`,
-      state.usd === "nominal" ? "Nominal dollars" : `FY${state.usd} dollars`, ...(allTrends() ? ["Trends only"] : [])];
+      state.usd === "nominal" ? "Nominal dollars" : `FY${state.usd} dollars`, ...(allTrends() ? ["Trends only"] : []),
+      ...(state.brk !== "none" ? [`Trend breaks ${state.brk === "2015" ? "at 2015" : "every 5 years"}`] : [])];
     dockSum.replaceChildren(text("strong", name), ` · ${rest.join(" · ")}`);
     // Display options says the same settings, less who and compared with whom, which show beside it
     $("options-sum").textContent = [...rest.slice(1), ...(!onTowns && state.hist === "on" ? [`Since ${fullYears[0]}`] : [])].join(" · ");
@@ -2745,7 +2836,8 @@ export async function startExplorer() {
     cmp: Named | null, opts: CmpOpts = {}) => {
     drawCompareTable(holder, years, caption, rowLabel, rows, kind, cmp, { ...opts, hist: state.hist === "on", link: compareLink });
     drawTotals(holder, years, rows, kind, cmp, opts.end ?? years.length - 1,
-      kind === "usd" ? (state.usd === "nominal" ? "before inflation" : "after inflation") : "");
+      kind === "usd" ? (state.usd === "nominal" ? "before inflation" : "after inflation") : "",
+      { mode: state.brk, set: (m) => update({ brk: m }) });
   };
 
 
@@ -3023,6 +3115,10 @@ export async function startExplorer() {
 
   function render() {
     setWindow();
+    // What every trend drawn from here on is fitted over (linearTrend)
+    fitYears = years;
+    fitBreaks = BREAKS[state.brk];
+    brkInputs.forEach((r) => (r.checked = r.value === state.brk));
     applyView();
     showDollars();
     showYears();
@@ -3108,7 +3204,7 @@ export async function startExplorer() {
     const programs: Series[] = hasPrograms && showPrograms && !whole
       ? PROGRAM_SERIES.flatMap((p) => (e.day![p.key] ? [{ key: p.key, label: p.label, color: p.color, dash: "2 3", values: dayValues(e, e.day![p.key])! }] : []))
       : [];
-    const dayRate = dayAll ? trendRate(linearTrend(dayAll.values)) : null;
+    const dayRate = dayAll ? trendRate(linearFit(dayAll.values)) : null;
     const dayEnds = dayAll ? [firstAt(dayAll.values), lastAt(dayAll.values)] : [-1, -1];
     const dayGrowth = dayRate?.rate != null
       ? `${change(dayRate.rate)} a year on trend, FY${years[dayEnds[0]]}–FY${years[dayEnds[1]]}${real ? ", after inflation" : ", before inflation"}` : "";
@@ -3203,7 +3299,7 @@ export async function startExplorer() {
     // the first year with figures, and a window before FY2005 shows the older measure. A former district's
     // are for its last year in the window.
     const tl = e.former && years.indexOf(e.former.last) >= 0 ? years.indexOf(e.former.last) : last;
-    const g = trendRate(linearTrend(ppeTotal))?.rate ?? null;
+    const g = trendRate(linearFit(ppeTotal))?.rate ?? null;
     const enrollFirst = histOn ? Math.max(0, firstAt(e.enroll.in_district)) : 0;
     const enrollChange =
       e.enroll.in_district[enrollFirst] && e.enroll.in_district[tl]
@@ -4257,7 +4353,7 @@ export async function startExplorer() {
     const cSpendTotal = cSpend ? totals(cSpend) : null;
     const revTotal = totals(rev);
     const cRevTotal = cRev ? totals(cRev) : null;
-    const g = trendRate(linearTrend(spendTotal))?.rate ?? null;
+    const g = trendRate(linearFit(spendTotal))?.rate ?? null;
     const eduShare = share(spend[0].values[end], spendTotal[end]);
     const cEduShare = cSpend ? share(cSpend[0].values[end], cSpendTotal![end]) : null;
     const taxShare = share(rev[0].values[end], revTotal[end]);
@@ -4425,6 +4521,7 @@ export async function startExplorer() {
     $("fig-tfc").hidden = a < 0;
     if (a < 0 || !fcAll) return null;
     const fyears = years.slice(a, b + 1);
+    fitAlt = fyears;
     const cut = (v: Values) => v.slice(a, b + 1);
     const fc = fcAll.map((s) => ({ ...s, values: cut(s.values) }));
     // The legend picks the sources shown; their sum, its trend and the comparison's follow. One bar (#251): every
